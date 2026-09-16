@@ -1,8 +1,8 @@
 //|     DivergenceOB_EA.mq5|
 //|Version 8.1 - MTF + Tooltips|
 #property copyright "Divergence EA v9.0 - MTF + Full Research Dataset"
-#property version   "9.24-aggr-step"
-#property description "Aggressive direct-entry + per-step feature research export"
+#property version   "9.241"
+#property description "Multimode default aggressive + per-step feature research export"
 // Frozen v9.23 source metadata (do not derive trading decisions from these).
 #define V923_BASELINE_COMMIT "5d926eed3daf312d7810863a3786293984c991b1"
 #define V923_BASELINE_SHA256 "34c7e44e89019e46fb4b93a3ac7e556c392839a536990c8508c8c4378fe5fdce"
@@ -647,6 +647,13 @@ enum ENUM_DIV3_RSI_ALIGNMENT { DIV3_RSI_SAME_BAR=0, DIV3_RSI_LOCAL_EXTREME=1 };
 // CONFIRMED keeps the stable historical engine. LIVE_P3 uses two confirmed
 // pivots plus the forming current-bar P3. DUAL evaluates both streams.
 enum ENUM_DIV3_SIGNAL_MODE { DIV3_CONFIRMED_ONLY=0, DIV3_LIVE_P3_ONLY=1, DIV3_DUAL_MODE=2 };
+enum ENUM_LIVE_P3_PROFILE
+{
+   LIVE_P3_PROFILE_CLASSIC = 0,
+   LIVE_P3_PROFILE_SMART = 1,
+   LIVE_P3_PROFILE_AGGRESSIVE = 2,
+   LIVE_P3_PROFILE_ULTRA = 3
+};
 enum ENUM_TEST_PROFILE
 {
    PROFILE_A_STRUCTURE = 0,
@@ -873,7 +880,6 @@ input ENUM_PIVOT_SOURCE inp_pivot_source = PIVOT_WICK;
 input ENUM_PIVOT_TYPE   inp_pivot_type   = PIVOT_MINOR;
 input ENUM_DIV3_PIVOT_ENGINE inp_div3_pivot_engine = DIV3_PRECISION_HYBRID;
 input ENUM_DIV3_SIGNAL_MODE inp_div3_signal_mode = DIV3_DUAL_MODE;
-input bool     inp_live_p3_direct_execute = true;
 input group "=============== Entry Test Profile ==============="
 input ENUM_TEST_PROFILE TestProfile = PROFILE_D_FULL;
 input group "=============== Passive Research Protocol ==============="
@@ -892,6 +898,17 @@ input double   inp_div3_min_same_side_excursion_atr = 0.35;
 input ENUM_DIV3_RSI_ALIGNMENT inp_div3_rsi_alignment = DIV3_RSI_SAME_BAR;
 input int      inp_div3_rsi_alignment_tolerance = 0;
 input bool     inp_div3_require_rsi_turn = false;
+input group "=============== Smart LIVE P3 Patch ==============="
+input ENUM_LIVE_P3_PROFILE inp_live_p3_profile   = LIVE_P3_PROFILE_AGGRESSIVE;
+input bool     inp_use_smart_live_p3            = true;
+input bool     inp_live_p3_relaxed_bridge       = true;
+input bool     inp_live_p3_require_rejection    = false;
+input double   inp_live_p3_min_rejection_clv    = 0.45;
+input bool     inp_live_p3_require_close_back_p2 = false;
+input bool     inp_live_p3_require_ob_when_live = false;
+input int      inp_live_p3_arm_score            = 55;
+input bool     inp_live_p3_log_debug            = false;
+input double   inp_live_p3_bridge_tolerance      = 1.50;
 input bool     inp_use_rsi_pivot_gate_filter = false;
 input bool     inp_use_pivot_zone_filter = false;
 input bool     inp_use_div_rsi_delta_filter = false;
@@ -17499,9 +17516,59 @@ bool DIV3_GetLiveRSI(double &out_rsi)
    out_rsi = v[0];
    return true;
 }
+bool DIV3_ModeClassic()    { return (inp_live_p3_profile == LIVE_P3_PROFILE_CLASSIC); }
+bool DIV3_ModeSmart()      { return (inp_live_p3_profile == LIVE_P3_PROFILE_SMART); }
+bool DIV3_ModeAggressive() { return (inp_live_p3_profile == LIVE_P3_PROFILE_AGGRESSIVE); }
+bool DIV3_ModeUltra()      { return (inp_live_p3_profile == LIVE_P3_PROFILE_ULTRA); }
+bool DIV3_ShouldUseSmartLiveP3()
+{
+   return (inp_use_smart_live_p3 && !DIV3_ModeClassic());
+}
+int DIV3_RuntimeLiveLeftBars()
+{
+   int base = MathMax(1, g_pivot_left);
+   if(DIV3_ModeUltra())      return MathMax(1, base - 2);
+   if(DIV3_ModeAggressive()) return MathMax(1, base - 1);
+   return MathMax(2, base);
+}
+double DIV3_RuntimeBridgeTolerance()
+{
+   if(DIV3_ModeUltra())      return MathMax(inp_live_p3_bridge_tolerance, 2.50);
+   if(DIV3_ModeAggressive()) return MathMax(inp_live_p3_bridge_tolerance, 1.50);
+   return inp_live_p3_bridge_tolerance;
+}
+double DIV3_RuntimeMinRejectionCLV()
+{
+   if(DIV3_ModeUltra())      return MathMin(inp_live_p3_min_rejection_clv, 0.35);
+   if(DIV3_ModeAggressive()) return MathMin(inp_live_p3_min_rejection_clv, 0.45);
+   return MathMax(inp_live_p3_min_rejection_clv, 0.55);
+}
+int DIV3_RuntimeArmScore()
+{
+   if(DIV3_ModeUltra())      return MathMin(inp_live_p3_arm_score, 45);
+   if(DIV3_ModeAggressive()) return inp_live_p3_arm_score;
+   return MathMax(inp_live_p3_arm_score, 70);
+}
+string DIV3_RuntimeLiveSource()
+{
+   if(DIV3_ModeUltra())      return "LIVE_P3_ULTRA";
+   if(DIV3_ModeAggressive()) return "LIVE_P3_AGGRESSIVE";
+   return "LIVE_P3_SMART";
+}
+string DIV3_RuntimeLiveLabel()
+{
+   if(DIV3_ModeUltra())      return "LIVE P3 ULTRA ";
+   if(DIV3_ModeAggressive()) return "LIVE P3 AGGR ";
+   return "LIVE P3 SMART ";
+}
+bool DIV3_RuntimeUseRelaxedBridge()
+{
+   return (inp_rsi_relaxed_3pivot || inp_live_p3_relaxed_bridge || DIV3_ModeAggressive() || DIV3_ModeUltra());
+}
+
 bool DIV3_IsLivePricePivotCandidate(bool is_bull, double live_price)
 {
-   int left = MathMax(2, g_pivot_left);
+   int left = DIV3_RuntimeLiveLeftBars();
    for(int sh = 1; sh <= left; sh++)
    {
       double p = is_bull ? iLow(_Symbol, PERIOD_CURRENT, sh)
@@ -17512,6 +17579,132 @@ bool DIV3_IsLivePricePivotCandidate(bool is_bull, double live_price)
    }
    return true;
 }
+double DIV3_GetLiveCandleStrength(bool is_bull)
+{
+   double h = iHigh(_Symbol, PERIOD_CURRENT, 0);
+   double l = iLow(_Symbol, PERIOD_CURRENT, 0);
+   double c = iClose(_Symbol, PERIOD_CURRENT, 0);
+   double range = h - l;
+   if(h <= 0.0 || l <= 0.0 || c <= 0.0 || range <= 0.0)
+      return 0.0;
+   if(is_bull)
+      return (c - l) / range;
+   return (h - c) / range;
+}
+bool DIV3_LiveCloseBackInsideP2(bool is_bull, double p2_price)
+{
+   double c = iClose(_Symbol, PERIOD_CURRENT, 0);
+   if(c <= 0.0 || p2_price <= 0.0)
+      return false;
+   return is_bull ? (c > p2_price) : (c < p2_price);
+}
+bool DIV3_LiveRSITurnNow(bool is_bull, double live_rsi)
+{
+   double r1 = DIV3_RSIAtShift(1);
+   double r2 = DIV3_RSIAtShift(2);
+   if(r1 == EMPTY_VALUE || r2 == EMPTY_VALUE)
+      return false;
+   if(!MathIsValidNumber(r1) || !MathIsValidNumber(r2))
+      return false;
+   if(is_bull)
+      return (live_rsi > r1 && r1 <= r2);
+   return (live_rsi < r1 && r1 >= r2);
+}
+bool DIV3_EvaluateLiveStructure(bool is_bull, CPivotPoint &p1, CPivotPoint &p2,
+                                double live_price, double live_rsi,
+                                bool &price_ok, bool &rsi_ok)
+{
+   price_ok = is_bull ? (live_price < p2.price_level && p2.price_level < p1.price_level)
+                      : (live_price > p2.price_level && p2.price_level > p1.price_level);
+   rsi_ok = false;
+   bool use_relaxed = DIV3_RuntimeUseRelaxedBridge();
+   bool bridge_ok = is_bull ? (p2.rsi_value > p1.rsi_value)
+                            : (p2.rsi_value < p1.rsi_value);
+   if(use_relaxed)
+   {
+      bool live_beats_p2 = is_bull ? (live_rsi > p2.rsi_value)
+                                   : (live_rsi < p2.rsi_value);
+      bool live_beats_both = is_bull ? (live_rsi > MathMax(p2.rsi_value, p1.rsi_value))
+                                     : (live_rsi < MathMin(p2.rsi_value, p1.rsi_value));
+      double bridge_tol = DIV3_RuntimeBridgeTolerance();
+      bool soft_bridge_ok = is_bull
+         ? (p2.rsi_value >= (p1.rsi_value - bridge_tol))
+         : (p2.rsi_value <= (p1.rsi_value + bridge_tol));
+      rsi_ok = (live_beats_both || (live_beats_p2 && soft_bridge_ok));
+   }
+   else
+      rsi_ok = is_bull ? (live_rsi > p2.rsi_value && bridge_ok)
+                       : (live_rsi < p2.rsi_value && bridge_ok);
+
+   if(rsi_ok && inp_use_div_rsi_delta_filter && inp_min_rsi_delta > 0.0)
+   {
+      if(use_relaxed)
+      {
+         if(is_bull)
+            rsi_ok = ((live_rsi - MathMax(p2.rsi_value, p1.rsi_value)) >= inp_min_rsi_delta);
+         else
+            rsi_ok = ((MathMin(p2.rsi_value, p1.rsi_value) - live_rsi) >= inp_min_rsi_delta);
+      }
+      else
+      {
+         if(is_bull)
+            rsi_ok = ((live_rsi - p2.rsi_value) >= inp_min_rsi_delta &&
+                      (p2.rsi_value - p1.rsi_value) >= inp_min_rsi_delta);
+         else
+            rsi_ok = ((p2.rsi_value - live_rsi) >= inp_min_rsi_delta &&
+                      (p1.rsi_value - p2.rsi_value) >= inp_min_rsi_delta);
+      }
+   }
+
+   if(price_ok && inp_use_div_price_delta_filter && inp_min_price_delta_atr > 0.0)
+   {
+      double atr = g_tf[0].GetBufferValue(g_tf[0].buffer_atr, 0);
+      if(atr > 0.0)
+      {
+         if(is_bull)
+            price_ok = ((p2.price_level - live_price) >= atr * inp_min_price_delta_atr &&
+                        (p1.price_level - p2.price_level) >= atr * inp_min_price_delta_atr);
+         else
+            price_ok = ((live_price - p2.price_level) >= atr * inp_min_price_delta_atr &&
+                        (p2.price_level - p1.price_level) >= atr * inp_min_price_delta_atr);
+      }
+   }
+   return (price_ok && rsi_ok);
+}
+int DIV3_ComputeLiveP3Score(bool is_bull, CPivotPoint &p1, CPivotPoint &p2,
+                            double live_price, double live_rsi,
+                            bool price_ok, bool rsi_ok,
+                            bool &close_back_inside, bool &ob_ok, bool &rsi_turn,
+                            double &candle_strength)
+{
+   close_back_inside = DIV3_LiveCloseBackInsideP2(is_bull, p2.price_level);
+   candle_strength = DIV3_GetLiveCandleStrength(is_bull);
+   rsi_turn = DIV3_LiveRSITurnNow(is_bull, live_rsi);
+   ob_ok = false;
+   if(inp_require_ob_confluence || inp_live_p3_require_ob_when_live)
+      ob_ok = CheckOBConfluence(is_bull, live_price);
+
+   if(inp_live_p3_require_ob_when_live && !ob_ok)
+      return -1;
+   if(inp_live_p3_require_rejection && candle_strength < DIV3_RuntimeMinRejectionCLV())
+      return -1;
+   if(inp_live_p3_require_close_back_p2 && !close_back_inside)
+      return -1;
+
+   int score = 0;
+   if(price_ok) score += 35;
+   if(rsi_ok) score += 35;
+   if(is_bull ? (live_rsi > MathMax(p2.rsi_value, p1.rsi_value))
+              : (live_rsi < MathMin(p2.rsi_value, p1.rsi_value)))
+      score += 10;
+   if(candle_strength >= DIV3_RuntimeMinRejectionCLV()) score += 10;
+   if(close_back_inside) score += 5;
+   if(rsi_turn) score += 5;
+   if(ob_ok) score += 5;
+   if(score < 0) score = 0;
+   if(score > 100) score = 100;
+   return score;
+}
 // Three-pivot live detector: P1/P2 are stable confirmed same-side pivots and
 // P3 is the forming current-bar extreme. Signals may disappear before bar
 // close by design; confirmed detections are recorded separately in DUAL mode.
@@ -17521,131 +17714,184 @@ void CheckLiveThreePivotDivergence()
    if(inp_div3_signal_mode == DIV3_CONFIRMED_ONLY) return;
    if(CountActiveSetups() > 0 || !IsSessionActive()) return;
    if(g_bull_piv_cnt < 2 && g_bear_piv_cnt < 2) return;
-   // Keep current main-TF ATR/EMA buffers synchronized for live entry metadata.
+
    g_tf[0].CopyIndicatorBuffers(MIN_BUFFER_DEPTH);
+
    double live_rsi = EMPTY_VALUE;
    if(!DIV3_GetLiveRSI(live_rsi)) return;
+
    datetime bar_time = iTime(_Symbol, PERIOD_CURRENT, 0);
    if(bar_time == 0) return;
+
    double live_low = iLow(_Symbol, PERIOD_CURRENT, 0);
    double live_high = iHigh(_Symbol, PERIOD_CURRENT, 0);
+
    bool bull = false, bear = false;
    int bull_span = 0, bear_span = 0;
+   int bull_score = -1, bear_score = -1;
+
    if(g_bull_piv_cnt >= 2 && DIV3_IsLivePricePivotCandidate(true, live_low))
    {
-      CPivotPoint p1, p2; // oldest, middle
+      CPivotPoint p1, p2;
       p1.CopyFrom(g_bull_pivots[g_bull_piv_cnt - 2]);
       p2.CopyFrom(g_bull_pivots[g_bull_piv_cnt - 1]);
       int s1 = p1.GetCurrentBarShift();
       int s2 = p2.GetCurrentBarShift();
       if(s1 > s2 && s2 > 0)
       {
-         bool price_ok = (live_low < p2.price_level && p2.price_level < p1.price_level);
-         bool rsi_ok = inp_rsi_relaxed_3pivot
-            ? (live_rsi > MathMax(p2.rsi_value, p1.rsi_value))
-            : (live_rsi > p2.rsi_value && p2.rsi_value > p1.rsi_value);
-         if(rsi_ok && inp_use_div_rsi_delta_filter && inp_min_rsi_delta > 0.0)
-            rsi_ok = inp_rsi_relaxed_3pivot
-               ? (live_rsi - MathMax(p2.rsi_value, p1.rsi_value) >= inp_min_rsi_delta)
-               : (live_rsi - p2.rsi_value >= inp_min_rsi_delta &&
-                  p2.rsi_value - p1.rsi_value >= inp_min_rsi_delta);
-         if(price_ok && inp_use_div_price_delta_filter && inp_min_price_delta_atr > 0.0)
-         {
-            double atr = g_tf[0].GetBufferValue(g_tf[0].buffer_atr, 0);
-            if(atr > 0.0)
-               price_ok = (p2.price_level - live_low >= atr * inp_min_price_delta_atr &&
-                           p1.price_level - p2.price_level >= atr * inp_min_price_delta_atr);
-         }
-         bull = price_ok && rsi_ok;
+         bool price_ok = false, rsi_ok = false;
+         bool base_ok = DIV3_EvaluateLiveStructure(true, p1, p2, live_low, live_rsi, price_ok, rsi_ok);
          bull_span = s1;
+         if(DIV3_ShouldUseSmartLiveP3())
+         {
+            bool close_back_inside = false, ob_ok = false, rsi_turn = false;
+            double candle_strength = 0.0;
+            bull_score = DIV3_ComputeLiveP3Score(true, p1, p2, live_low, live_rsi,
+                                                 price_ok, rsi_ok,
+                                                 close_back_inside, ob_ok, rsi_turn, candle_strength);
+            bull = (base_ok && bull_score >= DIV3_RuntimeArmScore());
+            if(inp_live_p3_log_debug && (bull || bull_score >= (DIV3_RuntimeArmScore() - 10)))
+            {
+               Print(DIV3_RuntimeLiveSource(),"|Side=BUY|Score=", bull_score,
+                     "|BaseOK=", (base_ok ? "1" : "0"),
+                     "|PriceOK=", (price_ok ? "1" : "0"),
+                     "|RSIOK=", (rsi_ok ? "1" : "0"),
+                     "|CloseBackP2=", (close_back_inside ? "1" : "0"),
+                     "|RSITurn=", (rsi_turn ? "1" : "0"),
+                     "|OB=", (ob_ok ? "1" : "0"),
+                     "|CLV=", DoubleToString(candle_strength, 3));
+            }
+         }
+         else
+         {
+            bull = base_ok;
+         }
+
          if(bull)
          {
-            g_live_div_price[0]=p1.price_level; g_live_div_price[1]=p2.price_level; g_live_div_price[2]=live_low;
-            g_live_div_rsi[0]=p1.rsi_value; g_live_div_rsi[1]=p2.rsi_value; g_live_div_rsi[2]=live_rsi;
-            g_live_div_time[0]=p1.pivot_time; g_live_div_time[1]=p2.pivot_time; g_live_div_time[2]=bar_time;
-            g_live_div_geometry_ready=true;
+            g_live_div_price[0] = p1.price_level;
+            g_live_div_price[1] = p2.price_level;
+            g_live_div_price[2] = live_low;
+            g_live_div_rsi[0] = p1.rsi_value;
+            g_live_div_rsi[1] = p2.rsi_value;
+            g_live_div_rsi[2] = live_rsi;
+            g_live_div_time[0] = p1.pivot_time;
+            g_live_div_time[1] = p2.pivot_time;
+            g_live_div_time[2] = bar_time;
+            g_live_div_geometry_ready = true;
          }
       }
    }
+
    if(g_bear_piv_cnt >= 2 && DIV3_IsLivePricePivotCandidate(false, live_high))
    {
-      CPivotPoint p1, p2; // oldest, middle
+      CPivotPoint p1, p2;
       p1.CopyFrom(g_bear_pivots[g_bear_piv_cnt - 2]);
       p2.CopyFrom(g_bear_pivots[g_bear_piv_cnt - 1]);
       int s1 = p1.GetCurrentBarShift();
       int s2 = p2.GetCurrentBarShift();
       if(s1 > s2 && s2 > 0)
       {
-         bool price_ok = (live_high > p2.price_level && p2.price_level > p1.price_level);
-         bool rsi_ok = inp_rsi_relaxed_3pivot
-            ? (live_rsi < MathMin(p2.rsi_value, p1.rsi_value))
-            : (live_rsi < p2.rsi_value && p2.rsi_value < p1.rsi_value);
-         if(rsi_ok && inp_use_div_rsi_delta_filter && inp_min_rsi_delta > 0.0)
-            rsi_ok = inp_rsi_relaxed_3pivot
-               ? (MathMin(p2.rsi_value, p1.rsi_value) - live_rsi >= inp_min_rsi_delta)
-               : (p2.rsi_value - live_rsi >= inp_min_rsi_delta &&
-                  p1.rsi_value - p2.rsi_value >= inp_min_rsi_delta);
-         if(price_ok && inp_use_div_price_delta_filter && inp_min_price_delta_atr > 0.0)
-         {
-            double atr = g_tf[0].GetBufferValue(g_tf[0].buffer_atr, 0);
-            if(atr > 0.0)
-               price_ok = (live_high - p2.price_level >= atr * inp_min_price_delta_atr &&
-                           p2.price_level - p1.price_level >= atr * inp_min_price_delta_atr);
-         }
-         bear = price_ok && rsi_ok;
+         bool price_ok = false, rsi_ok = false;
+         bool base_ok = DIV3_EvaluateLiveStructure(false, p1, p2, live_high, live_rsi, price_ok, rsi_ok);
          bear_span = s1;
+         if(DIV3_ShouldUseSmartLiveP3())
+         {
+            bool close_back_inside = false, ob_ok = false, rsi_turn = false;
+            double candle_strength = 0.0;
+            bear_score = DIV3_ComputeLiveP3Score(false, p1, p2, live_high, live_rsi,
+                                                 price_ok, rsi_ok,
+                                                 close_back_inside, ob_ok, rsi_turn, candle_strength);
+            bear = (base_ok && bear_score >= DIV3_RuntimeArmScore());
+            if(inp_live_p3_log_debug && (bear || bear_score >= (DIV3_RuntimeArmScore() - 10)))
+            {
+               Print(DIV3_RuntimeLiveSource(),"|Side=SELL|Score=", bear_score,
+                     "|BaseOK=", (base_ok ? "1" : "0"),
+                     "|PriceOK=", (price_ok ? "1" : "0"),
+                     "|RSIOK=", (rsi_ok ? "1" : "0"),
+                     "|CloseBackP2=", (close_back_inside ? "1" : "0"),
+                     "|RSITurn=", (rsi_turn ? "1" : "0"),
+                     "|OB=", (ob_ok ? "1" : "0"),
+                     "|CLV=", DoubleToString(candle_strength, 3));
+            }
+         }
+         else
+         {
+            bear = base_ok;
+         }
+
          if(bear)
          {
-            g_live_div_price[0]=p1.price_level; g_live_div_price[1]=p2.price_level; g_live_div_price[2]=live_high;
-            g_live_div_rsi[0]=p1.rsi_value; g_live_div_rsi[1]=p2.rsi_value; g_live_div_rsi[2]=live_rsi;
-            g_live_div_time[0]=p1.pivot_time; g_live_div_time[1]=p2.pivot_time; g_live_div_time[2]=bar_time;
-            g_live_div_geometry_ready=true;
+            g_live_div_price[0] = p1.price_level;
+            g_live_div_price[1] = p2.price_level;
+            g_live_div_price[2] = live_high;
+            g_live_div_rsi[0] = p1.rsi_value;
+            g_live_div_rsi[1] = p2.rsi_value;
+            g_live_div_rsi[2] = live_rsi;
+            g_live_div_time[0] = p1.pivot_time;
+            g_live_div_time[1] = p2.pivot_time;
+            g_live_div_time[2] = bar_time;
+            g_live_div_geometry_ready = true;
          }
       }
    }
-   // A single forming candle cannot produce an unambiguous long and short P3.
-   if(bull == bear) { g_live_div_geometry_ready=false; return; }
+
+   if(bull && bear)
+   {
+      if(inp_use_smart_live_p3 && bull_score != bear_score)
+      {
+         if(bull_score > bear_score) bear = false;
+         else                        bull = false;
+      }
+      else
+      {
+         g_live_div_geometry_ready = false;
+         return;
+      }
+   }
+
+   if(!(bull || bear))
+   {
+      g_live_div_geometry_ready = false;
+      return;
+   }
+
    static datetime last_live_bull_bar = 0;
    static datetime last_live_bear_bar = 0;
    if(bull && last_live_bull_bar == bar_time) return;
    if(bear && last_live_bear_bar == bar_time) return;
+
    g_piv1_dist = 0;
    g_piv2_dist = bull ? bull_span : bear_span;
-   CPivotPoint lp1,lp2,lp3;
-   int kind=bull?1:0;
-   lp1.Set(g_live_div_price[0],g_live_div_rsi[0],g_live_div_time[0],
-           iBarShift(_Symbol,PERIOD_CURRENT,g_live_div_time[0],false),kind,TimeCurrent(),-1,0.0);
-   lp2.Set(g_live_div_price[1],g_live_div_rsi[1],g_live_div_time[1],
-           iBarShift(_Symbol,PERIOD_CURRENT,g_live_div_time[1],false),kind,TimeCurrent(),-1,0.0);
-   lp3.Set(g_live_div_price[2],g_live_div_rsi[2],g_live_div_time[2],0,kind,TimeCurrent(),0,0.0);
-   ArmThreePivotDivergence(bull,lp1,lp2,lp3,false,"LIVE_P3_DISPLAY_ONLY");
+
+   CPivotPoint lp1, lp2, lp3;
+   int kind = bull ? 1 : 0;
+   lp1.Set(g_live_div_price[0], g_live_div_rsi[0], g_live_div_time[0],
+           iBarShift(_Symbol, PERIOD_CURRENT, g_live_div_time[0], false), kind, TimeCurrent(), -1, 0.0);
+   lp2.Set(g_live_div_price[1], g_live_div_rsi[1], g_live_div_time[1],
+           iBarShift(_Symbol, PERIOD_CURRENT, g_live_div_time[1], false), kind, TimeCurrent(), -1, 0.0);
+   lp3.Set(g_live_div_price[2], g_live_div_rsi[2], g_live_div_time[2],
+           0, kind, TimeCurrent(), 0, 0.0);
+
+   string live_source = DIV3_ShouldUseSmartLiveP3() ? DIV3_RuntimeLiveSource() : "LIVE_P3_DISPLAY_ONLY";
+   ArmThreePivotDivergence(bull, lp1, lp2, lp3, false, live_source);
+
    if(inp_show_divergence_lines && (!g_testing || g_visual))
    {
-      string nm="DIV_LIVE_"+(bull?"B_":"S_")+IntegerToString((int)bar_time);
-      DrawLine(nm,lp2.pivot_time,lp2.price_level,lp3.pivot_time,lp3.price_level,
-               bull?inp_bullish_color:inp_bearish_color,inp_divergence_line_width,STYLE_DOT);
-      DrawLabel(nm+"_ARM",lp3.pivot_time,lp3.price_level,"LIVE P3 ARMED",
-                bull?inp_bullish_color:inp_bearish_color);
+      string nm = "DIV_LIVE_" + (bull ? "B_" : "S_") + IntegerToString((int)bar_time);
+      DrawLine(nm, lp2.pivot_time, lp2.price_level, lp3.pivot_time, lp3.price_level,
+               bull ? inp_bullish_color : inp_bearish_color, inp_divergence_line_width, STYLE_DOT);
+      string lbl = DIV3_ShouldUseSmartLiveP3()
+         ? (DIV3_RuntimeLiveLabel() + IntegerToString(bull ? bull_score : bear_score))
+         : "LIVE P3 ARMED";
+      DrawLabel(nm + "_ARM", lp3.pivot_time, lp3.price_level, lbl,
+                bull ? inp_bullish_color : inp_bearish_color);
    }
-   if(inp_live_p3_direct_execute)
-   {
-      string live_source = "LIVE_P3_AGGRESSIVE_DIRECT";
-      Print("PROFILE_PIPE|Profile=LIVE_DIRECT|Source=", live_source,
-            "|Direction=", (bull?"BUY":"SELL"),
-            "|RawDivergence=PASS|Confirmed=0|State=DIVERGENCE_ARMED|Entry=LIVE_DIRECT_ATTEMPT");
-      int expected_setup_id = g_next_setup_id;
-      bool opened = FireSignal(bull, 0, live_source);
-      if(opened)
-      {
-         RP_MarkLatestExecuted(expected_setup_id, bull, g_armed_divergence.p3_time);
-         ME_MarkExecuted(expected_setup_id, bull, g_armed_divergence.p3_time);
-         g_armed_divergence.Reset();
-      }
-   }
+
    g_last_was_bull = bull;
    if(bull) last_live_bull_bar = bar_time;
    else     last_live_bear_bar = bar_time;
-   g_live_div_geometry_ready=false;
+   g_live_div_geometry_ready = false;
 }
 int CalculateCurrentStability(bool is_bull)
 {
@@ -18198,7 +18444,7 @@ bool FireSignal(bool is_bull, int signal_shift = 1, string signal_source = "CONF
    // ============================================================
    // Counter EMA200 target mode
    // ============================================================
-   double ema200_now = g_tf[0].GetBufferValue(g_tf[0].buffer_ema_200, signal_shift);
+   double ema200_now = g_tf[0].GetBufferValue(g_tf[0].buffer_ema_200, 1);
    bool use_counter_ema_target_shadow = false;
    if(inp_use_counter_ema200_target && ema200_now > 0.0)
    {
@@ -23962,7 +24208,7 @@ string RL_TargetName(ENUM_RL_TARGET t)
    }
    return "Unknown";
 }
-// مرتب‌سازی index بر اساس vals — ascending — Shell Sort O(n log^2 n)
+// مرتب‌سا��ی index بر اساس vals — ascending — Shell Sort O(n log^2 n)
 void RL_ArgSort(double &vals[], int &idx[], int n)
 {
    for(int i = 0; i < n; i++) idx[i] = i;
@@ -51968,7 +52214,7 @@ void WriteDashboardRowV3(int h, int step, bool is_buy, int rank, int tf)
          int cnt = g_adx_buy[tf][step].di_status[rank].count;
          pct = (total > 0) ? (cnt * 100.0 / total) : 0;
          string di_cls = "empty";
-         string di_text = "❓";
+         string di_text = "��";
          if(di == "+" || di == "-")
          {
             di_text = di;
