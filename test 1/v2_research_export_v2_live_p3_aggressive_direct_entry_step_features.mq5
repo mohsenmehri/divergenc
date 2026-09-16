@@ -1,8 +1,8 @@
 //|     DivergenceOB_EA.mq5|
 //|Version 8.1 - MTF + Tooltips|
 #property copyright "Divergence EA v9.0 - MTF + Full Research Dataset"
-#property version   "9.24"
-#property description "v9.23 passive target + immutable T0 Feature Snapshot V2"
+#property version   "9.24-aggr-step"
+#property description "Aggressive direct-entry + per-step feature research export"
 // Frozen v9.23 source metadata (do not derive trading decisions from these).
 #define V923_BASELINE_COMMIT "5d926eed3daf312d7810863a3786293984c991b1"
 #define V923_BASELINE_SHA256 "34c7e44e89019e46fb4b93a3ac7e556c392839a536990c8508c8c4378fe5fdce"
@@ -873,6 +873,7 @@ input ENUM_PIVOT_SOURCE inp_pivot_source = PIVOT_WICK;
 input ENUM_PIVOT_TYPE   inp_pivot_type   = PIVOT_MINOR;
 input ENUM_DIV3_PIVOT_ENGINE inp_div3_pivot_engine = DIV3_PRECISION_HYBRID;
 input ENUM_DIV3_SIGNAL_MODE inp_div3_signal_mode = DIV3_DUAL_MODE;
+input bool     inp_live_p3_direct_execute = true;
 input group "=============== Entry Test Profile ==============="
 input ENUM_TEST_PROFILE TestProfile = PROFILE_D_FULL;
 input group "=============== Passive Research Protocol ==============="
@@ -891,17 +892,6 @@ input double   inp_div3_min_same_side_excursion_atr = 0.35;
 input ENUM_DIV3_RSI_ALIGNMENT inp_div3_rsi_alignment = DIV3_RSI_SAME_BAR;
 input int      inp_div3_rsi_alignment_tolerance = 0;
 input bool     inp_div3_require_rsi_turn = false;
-input group "=============== Smart LIVE P3 Patch ==============="
-input bool     inp_use_smart_live_p3             = true;
-input bool     inp_live_p3_relaxed_bridge        = true;
-input bool     inp_live_p3_require_rejection     = false;
-input double   inp_live_p3_min_rejection_clv     = 0.45;
-input bool     inp_live_p3_require_close_back_p2 = false;
-input bool     inp_live_p3_require_ob_when_live  = false;
-input int      inp_live_p3_arm_score             = 55;
-input bool     inp_live_p3_log_debug             = false;
-input double   inp_live_p3_bridge_tolerance      = 1.50;
-input bool     inp_live_p3_direct_execute        = true;
 input bool     inp_use_rsi_pivot_gate_filter = false;
 input bool     inp_use_pivot_zone_filter = false;
 input bool     inp_use_div_rsi_delta_filter = false;
@@ -2960,6 +2950,81 @@ struct SPositionOpenRecord
    int      mtf_di_align;
    int      mtf_squeeze_count;
    int      mtf_valid_count;
+   //=========== v10 NEW: step-level research + smart placement ===========
+   double   base_atr_distance;
+   int      remaining_steps;
+   double   ladder_progress_ratio;
+   double   adverse_fill_vs_planned_points;
+   double   adverse_fill_vs_planned_atr;
+   double   step_gap_from_prev_points;
+   double   step_gap_from_prev_atr;
+   double   step_gap_from_step1_points;
+   double   step_gap_from_step1_atr;
+   double   actual_basket_be;
+   double   nominal_prev_be;
+   double   recovery_to_actual_be_points;
+   double   recovery_to_actual_be_atr;
+   double   recovery_to_prev_be_points;
+   double   recovery_to_prev_be_atr;
+   double   current_target_price;
+   double   recovery_to_current_target_points;
+   double   recovery_to_current_target_atr;
+   double   next_step_price;
+   double   adverse_to_next_step_points;
+   double   adverse_to_next_step_atr;
+   double   fill_vs_planned_ladder_ratio;
+   int      signal_age_minutes;
+   int      minutes_since_prev_step;
+   int      bars_since_signal_live;
+   double   fill_bar_open;
+   double   fill_bar_high;
+   double   fill_bar_low;
+   double   fill_bar_close;
+   double   fill_bar_range;
+   double   fill_bar_body;
+   double   fill_bar_upper_wick;
+   double   fill_bar_lower_wick;
+   double   fill_bar_clv;
+   double   fill_bar_body_ratio;
+   double   fill_bar_atr_norm;
+   long     fill_bar_tick_volume;
+   double   fill_bar_tick_volume_ratio_20;
+   double   fill_bar_tick_volume_zscore_20;
+   bool     fill_bar_bull;
+   bool     fill_bar_bear;
+   bool     fill_bar_pin;
+   bool     fill_bar_long_body;
+   bool     fill_bar_inside;
+   bool     fill_bar_outside;
+   int      bars_since_swing_high;
+   int      bars_since_swing_low;
+   double   distance_to_swing_high_atr;
+   double   distance_to_swing_low_atr;
+   bool     swept_prior_high;
+   bool     swept_prior_low;
+   double   sweep_depth_atr;
+   bool     close_back_inside_prior_range;
+   double   sweep_rejection_wick_ratio;
+   double   distance_to_prior_day_high_atr;
+   double   distance_to_prior_day_low_atr;
+   bool     break_of_structure_flag;
+   bool     change_of_character_flag;
+   int      bars_since_bos;
+   int      bars_since_choch;
+   double   range_position_last_n;
+   double   bos_break_distance_atr;
+   double   choch_break_distance_atr;
+   int      bars_between_swing_and_bos;
+   int      last_structure_event_type;
+   bool     structure_event_direction_match;
+   double   ob_dist_pct;
+   int      ob_in_tol;
+   int      ob_age_bars;
+   double   ob_width_atr;
+   bool     rsi_gate_enabled;
+   int      rsi_high_gate;
+   int      rsi_low_gate;
+   bool     rsi_gate_passed;
    void Reset()
    {
       record_id = 0;
@@ -3050,6 +3115,80 @@ struct SPositionOpenRecord
       mtf_di_align = 0;
       mtf_squeeze_count = 0;
       mtf_valid_count = 0;
+      base_atr_distance = 0.0;
+      remaining_steps = 0;
+      ladder_progress_ratio = 0.0;
+      adverse_fill_vs_planned_points = 0.0;
+      adverse_fill_vs_planned_atr = 0.0;
+      step_gap_from_prev_points = 0.0;
+      step_gap_from_prev_atr = 0.0;
+      step_gap_from_step1_points = 0.0;
+      step_gap_from_step1_atr = 0.0;
+      actual_basket_be = 0.0;
+      nominal_prev_be = 0.0;
+      recovery_to_actual_be_points = 0.0;
+      recovery_to_actual_be_atr = 0.0;
+      recovery_to_prev_be_points = 0.0;
+      recovery_to_prev_be_atr = 0.0;
+      current_target_price = 0.0;
+      recovery_to_current_target_points = 0.0;
+      recovery_to_current_target_atr = 0.0;
+      next_step_price = 0.0;
+      adverse_to_next_step_points = 0.0;
+      adverse_to_next_step_atr = 0.0;
+      fill_vs_planned_ladder_ratio = 0.0;
+      signal_age_minutes = 0;
+      minutes_since_prev_step = 0;
+      bars_since_signal_live = 0;
+      fill_bar_open = 0.0;
+      fill_bar_high = 0.0;
+      fill_bar_low = 0.0;
+      fill_bar_close = 0.0;
+      fill_bar_range = 0.0;
+      fill_bar_body = 0.0;
+      fill_bar_upper_wick = 0.0;
+      fill_bar_lower_wick = 0.0;
+      fill_bar_clv = 0.0;
+      fill_bar_body_ratio = 0.0;
+      fill_bar_atr_norm = 0.0;
+      fill_bar_tick_volume = 0;
+      fill_bar_tick_volume_ratio_20 = 0.0;
+      fill_bar_tick_volume_zscore_20 = 0.0;
+      fill_bar_bull = false;
+      fill_bar_bear = false;
+      fill_bar_pin = false;
+      fill_bar_long_body = false;
+      fill_bar_inside = false;
+      fill_bar_outside = false;
+      bars_since_swing_high = -1;
+      bars_since_swing_low = -1;
+      distance_to_swing_high_atr = 0.0;
+      distance_to_swing_low_atr = 0.0;
+      swept_prior_high = false;
+      swept_prior_low = false;
+      sweep_depth_atr = 0.0;
+      close_back_inside_prior_range = false;
+      sweep_rejection_wick_ratio = 0.0;
+      distance_to_prior_day_high_atr = 0.0;
+      distance_to_prior_day_low_atr = 0.0;
+      break_of_structure_flag = false;
+      change_of_character_flag = false;
+      bars_since_bos = -1;
+      bars_since_choch = -1;
+      range_position_last_n = 0.0;
+      bos_break_distance_atr = 0.0;
+      choch_break_distance_atr = 0.0;
+      bars_between_swing_and_bos = -1;
+      last_structure_event_type = 0;
+      structure_event_direction_match = false;
+      ob_dist_pct = -1.0;
+      ob_in_tol = 0;
+      ob_age_bars = -1;
+      ob_width_atr = 0.0;
+      rsi_gate_enabled = false;
+      rsi_high_gate = 0;
+      rsi_low_gate = 0;
+      rsi_gate_passed = false;
    }
 };
 SPositionOpenRecord g_position_open_records[];
@@ -17362,7 +17501,7 @@ bool DIV3_GetLiveRSI(double &out_rsi)
 }
 bool DIV3_IsLivePricePivotCandidate(bool is_bull, double live_price)
 {
-   int left = MathMax(1, g_pivot_left - 1);
+   int left = MathMax(2, g_pivot_left);
    for(int sh = 1; sh <= left; sh++)
    {
       double p = is_bull ? iLow(_Symbol, PERIOD_CURRENT, sh)
@@ -17373,131 +17512,6 @@ bool DIV3_IsLivePricePivotCandidate(bool is_bull, double live_price)
    }
    return true;
 }
-double DIV3_GetLiveCandleStrength(bool is_bull)
-{
-   double h = iHigh(_Symbol, PERIOD_CURRENT, 0);
-   double l = iLow(_Symbol, PERIOD_CURRENT, 0);
-   double c = iClose(_Symbol, PERIOD_CURRENT, 0);
-   double range = h - l;
-   if(h <= 0.0 || l <= 0.0 || c <= 0.0 || range <= 0.0)
-      return 0.0;
-   if(is_bull)
-      return (c - l) / range;
-   return (h - c) / range;
-}
-bool DIV3_LiveCloseBackInsideP2(bool is_bull, double p2_price)
-{
-   double c = iClose(_Symbol, PERIOD_CURRENT, 0);
-   if(c <= 0.0 || p2_price <= 0.0)
-      return false;
-   return is_bull ? (c > p2_price) : (c < p2_price);
-}
-bool DIV3_LiveRSITurnNow(bool is_bull, double live_rsi)
-{
-   double r1 = DIV3_RSIAtShift(1);
-   double r2 = DIV3_RSIAtShift(2);
-   if(r1 == EMPTY_VALUE || r2 == EMPTY_VALUE)
-      return false;
-   if(!MathIsValidNumber(r1) || !MathIsValidNumber(r2))
-      return false;
-   if(is_bull)
-      return (live_rsi > r1 && r1 <= r2);
-   return (live_rsi < r1 && r1 >= r2);
-}
-bool DIV3_EvaluateLiveStructure(bool is_bull, CPivotPoint &p1, CPivotPoint &p2,
-                                double live_price, double live_rsi,
-                                bool &price_ok, bool &rsi_ok)
-{
-   price_ok = is_bull ? (live_price < p2.price_level && p2.price_level < p1.price_level)
-                      : (live_price > p2.price_level && p2.price_level > p1.price_level);
-   rsi_ok = false;
-   bool use_relaxed = (inp_rsi_relaxed_3pivot || inp_live_p3_relaxed_bridge);
-   bool bridge_ok = is_bull ? (p2.rsi_value > p1.rsi_value)
-                            : (p2.rsi_value < p1.rsi_value);
-   if(use_relaxed)
-   {
-      bool live_beats_p2 = is_bull ? (live_rsi > p2.rsi_value)
-                                   : (live_rsi < p2.rsi_value);
-      bool live_beats_both = is_bull ? (live_rsi > MathMax(p2.rsi_value, p1.rsi_value))
-                                     : (live_rsi < MathMin(p2.rsi_value, p1.rsi_value));
-      bool soft_bridge_ok = is_bull
-         ? (p2.rsi_value >= (p1.rsi_value - inp_live_p3_bridge_tolerance))
-         : (p2.rsi_value <= (p1.rsi_value + inp_live_p3_bridge_tolerance));
-      rsi_ok = (live_beats_both || (live_beats_p2 && soft_bridge_ok));
-   }
-   else
-      rsi_ok = is_bull ? (live_rsi > p2.rsi_value && bridge_ok)
-                       : (live_rsi < p2.rsi_value && bridge_ok);
-
-   if(rsi_ok && inp_use_div_rsi_delta_filter && inp_min_rsi_delta > 0.0)
-   {
-      if(use_relaxed)
-      {
-         if(is_bull)
-            rsi_ok = ((live_rsi - MathMax(p2.rsi_value, p1.rsi_value)) >= inp_min_rsi_delta);
-         else
-            rsi_ok = ((MathMin(p2.rsi_value, p1.rsi_value) - live_rsi) >= inp_min_rsi_delta);
-      }
-      else
-      {
-         if(is_bull)
-            rsi_ok = ((live_rsi - p2.rsi_value) >= inp_min_rsi_delta &&
-                      (p2.rsi_value - p1.rsi_value) >= inp_min_rsi_delta);
-         else
-            rsi_ok = ((p2.rsi_value - live_rsi) >= inp_min_rsi_delta &&
-                      (p1.rsi_value - p2.rsi_value) >= inp_min_rsi_delta);
-      }
-   }
-
-   if(price_ok && inp_use_div_price_delta_filter && inp_min_price_delta_atr > 0.0)
-   {
-      double atr = g_tf[0].GetBufferValue(g_tf[0].buffer_atr, 0);
-      if(atr > 0.0)
-      {
-         if(is_bull)
-            price_ok = ((p2.price_level - live_price) >= atr * inp_min_price_delta_atr &&
-                        (p1.price_level - p2.price_level) >= atr * inp_min_price_delta_atr);
-         else
-            price_ok = ((live_price - p2.price_level) >= atr * inp_min_price_delta_atr &&
-                        (p2.price_level - p1.price_level) >= atr * inp_min_price_delta_atr);
-      }
-   }
-   return (price_ok && rsi_ok);
-}
-int DIV3_ComputeLiveP3Score(bool is_bull, CPivotPoint &p1, CPivotPoint &p2,
-                            double live_price, double live_rsi,
-                            bool price_ok, bool rsi_ok,
-                            bool &close_back_inside, bool &ob_ok, bool &rsi_turn,
-                            double &candle_strength)
-{
-   close_back_inside = DIV3_LiveCloseBackInsideP2(is_bull, p2.price_level);
-   candle_strength = DIV3_GetLiveCandleStrength(is_bull);
-   rsi_turn = DIV3_LiveRSITurnNow(is_bull, live_rsi);
-   ob_ok = false;
-   if(inp_require_ob_confluence || inp_live_p3_require_ob_when_live)
-      ob_ok = CheckOBConfluence(is_bull, live_price);
-
-   if(inp_live_p3_require_ob_when_live && !ob_ok)
-      return -1;
-   if(inp_live_p3_require_rejection && candle_strength < inp_live_p3_min_rejection_clv)
-      return -1;
-   if(inp_live_p3_require_close_back_p2 && !close_back_inside)
-      return -1;
-
-   int score = 0;
-   if(price_ok) score += 35;
-   if(rsi_ok) score += 35;
-   if(is_bull ? (live_rsi > MathMax(p2.rsi_value, p1.rsi_value))
-              : (live_rsi < MathMin(p2.rsi_value, p1.rsi_value)))
-      score += 10;
-   if(candle_strength >= inp_live_p3_min_rejection_clv) score += 10;
-   if(close_back_inside) score += 5;
-   if(rsi_turn) score += 5;
-   if(ob_ok) score += 5;
-   if(score < 0) score = 0;
-   if(score > 100) score = 100;
-   return score;
-}
 // Three-pivot live detector: P1/P2 are stable confirmed same-side pivots and
 // P3 is the forming current-bar extreme. Signals may disappear before bar
 // close by design; confirmed detections are recorded separately in DUAL mode.
@@ -17507,163 +17521,117 @@ void CheckLiveThreePivotDivergence()
    if(inp_div3_signal_mode == DIV3_CONFIRMED_ONLY) return;
    if(CountActiveSetups() > 0 || !IsSessionActive()) return;
    if(g_bull_piv_cnt < 2 && g_bear_piv_cnt < 2) return;
-
+   // Keep current main-TF ATR/EMA buffers synchronized for live entry metadata.
    g_tf[0].CopyIndicatorBuffers(MIN_BUFFER_DEPTH);
-
    double live_rsi = EMPTY_VALUE;
    if(!DIV3_GetLiveRSI(live_rsi)) return;
-
    datetime bar_time = iTime(_Symbol, PERIOD_CURRENT, 0);
    if(bar_time == 0) return;
-
    double live_low = iLow(_Symbol, PERIOD_CURRENT, 0);
    double live_high = iHigh(_Symbol, PERIOD_CURRENT, 0);
-
    bool bull = false, bear = false;
    int bull_span = 0, bear_span = 0;
-   int bull_score = -1, bear_score = -1;
-
    if(g_bull_piv_cnt >= 2 && DIV3_IsLivePricePivotCandidate(true, live_low))
    {
-      CPivotPoint p1, p2;
+      CPivotPoint p1, p2; // oldest, middle
       p1.CopyFrom(g_bull_pivots[g_bull_piv_cnt - 2]);
       p2.CopyFrom(g_bull_pivots[g_bull_piv_cnt - 1]);
       int s1 = p1.GetCurrentBarShift();
       int s2 = p2.GetCurrentBarShift();
       if(s1 > s2 && s2 > 0)
       {
-         bool price_ok = false, rsi_ok = false;
-         bool base_ok = DIV3_EvaluateLiveStructure(true, p1, p2, live_low, live_rsi, price_ok, rsi_ok);
-         bull_span = s1;
-         if(inp_use_smart_live_p3)
+         bool price_ok = (live_low < p2.price_level && p2.price_level < p1.price_level);
+         bool rsi_ok = inp_rsi_relaxed_3pivot
+            ? (live_rsi > MathMax(p2.rsi_value, p1.rsi_value))
+            : (live_rsi > p2.rsi_value && p2.rsi_value > p1.rsi_value);
+         if(rsi_ok && inp_use_div_rsi_delta_filter && inp_min_rsi_delta > 0.0)
+            rsi_ok = inp_rsi_relaxed_3pivot
+               ? (live_rsi - MathMax(p2.rsi_value, p1.rsi_value) >= inp_min_rsi_delta)
+               : (live_rsi - p2.rsi_value >= inp_min_rsi_delta &&
+                  p2.rsi_value - p1.rsi_value >= inp_min_rsi_delta);
+         if(price_ok && inp_use_div_price_delta_filter && inp_min_price_delta_atr > 0.0)
          {
-            bool close_back_inside = false, ob_ok = false, rsi_turn = false;
-            double candle_strength = 0.0;
-            bull_score = DIV3_ComputeLiveP3Score(true, p1, p2, live_low, live_rsi,
-                                                 price_ok, rsi_ok,
-                                                 close_back_inside, ob_ok, rsi_turn, candle_strength);
-            bull = (base_ok && bull_score >= inp_live_p3_arm_score);
+            double atr = g_tf[0].GetBufferValue(g_tf[0].buffer_atr, 0);
+            if(atr > 0.0)
+               price_ok = (p2.price_level - live_low >= atr * inp_min_price_delta_atr &&
+                           p1.price_level - p2.price_level >= atr * inp_min_price_delta_atr);
          }
-         else
+         bull = price_ok && rsi_ok;
+         bull_span = s1;
+         if(bull)
          {
-            bull = base_ok;
+            g_live_div_price[0]=p1.price_level; g_live_div_price[1]=p2.price_level; g_live_div_price[2]=live_low;
+            g_live_div_rsi[0]=p1.rsi_value; g_live_div_rsi[1]=p2.rsi_value; g_live_div_rsi[2]=live_rsi;
+            g_live_div_time[0]=p1.pivot_time; g_live_div_time[1]=p2.pivot_time; g_live_div_time[2]=bar_time;
+            g_live_div_geometry_ready=true;
          }
       }
    }
-
    if(g_bear_piv_cnt >= 2 && DIV3_IsLivePricePivotCandidate(false, live_high))
    {
-      CPivotPoint p1, p2;
+      CPivotPoint p1, p2; // oldest, middle
       p1.CopyFrom(g_bear_pivots[g_bear_piv_cnt - 2]);
       p2.CopyFrom(g_bear_pivots[g_bear_piv_cnt - 1]);
       int s1 = p1.GetCurrentBarShift();
       int s2 = p2.GetCurrentBarShift();
       if(s1 > s2 && s2 > 0)
       {
-         bool price_ok = false, rsi_ok = false;
-         bool base_ok = DIV3_EvaluateLiveStructure(false, p1, p2, live_high, live_rsi, price_ok, rsi_ok);
+         bool price_ok = (live_high > p2.price_level && p2.price_level > p1.price_level);
+         bool rsi_ok = inp_rsi_relaxed_3pivot
+            ? (live_rsi < MathMin(p2.rsi_value, p1.rsi_value))
+            : (live_rsi < p2.rsi_value && p2.rsi_value < p1.rsi_value);
+         if(rsi_ok && inp_use_div_rsi_delta_filter && inp_min_rsi_delta > 0.0)
+            rsi_ok = inp_rsi_relaxed_3pivot
+               ? (MathMin(p2.rsi_value, p1.rsi_value) - live_rsi >= inp_min_rsi_delta)
+               : (p2.rsi_value - live_rsi >= inp_min_rsi_delta &&
+                  p1.rsi_value - p2.rsi_value >= inp_min_rsi_delta);
+         if(price_ok && inp_use_div_price_delta_filter && inp_min_price_delta_atr > 0.0)
+         {
+            double atr = g_tf[0].GetBufferValue(g_tf[0].buffer_atr, 0);
+            if(atr > 0.0)
+               price_ok = (live_high - p2.price_level >= atr * inp_min_price_delta_atr &&
+                           p2.price_level - p1.price_level >= atr * inp_min_price_delta_atr);
+         }
+         bear = price_ok && rsi_ok;
          bear_span = s1;
-         if(inp_use_smart_live_p3)
+         if(bear)
          {
-            bool close_back_inside = false, ob_ok = false, rsi_turn = false;
-            double candle_strength = 0.0;
-            bear_score = DIV3_ComputeLiveP3Score(false, p1, p2, live_high, live_rsi,
-                                                 price_ok, rsi_ok,
-                                                 close_back_inside, ob_ok, rsi_turn, candle_strength);
-            bear = (base_ok && bear_score >= inp_live_p3_arm_score);
-         }
-         else
-         {
-            bear = base_ok;
+            g_live_div_price[0]=p1.price_level; g_live_div_price[1]=p2.price_level; g_live_div_price[2]=live_high;
+            g_live_div_rsi[0]=p1.rsi_value; g_live_div_rsi[1]=p2.rsi_value; g_live_div_rsi[2]=live_rsi;
+            g_live_div_time[0]=p1.pivot_time; g_live_div_time[1]=p2.pivot_time; g_live_div_time[2]=bar_time;
+            g_live_div_geometry_ready=true;
          }
       }
    }
-
-   if(bull && bear)
-   {
-      if(bull_score != bear_score)
-      {
-         if(bull_score > bear_score) bear = false;
-         else                        bull = false;
-      }
-      else
-      {
-         g_live_div_geometry_ready = false;
-         return;
-      }
-   }
-
-   if(!(bull || bear))
-   {
-      g_live_div_geometry_ready = false;
-      return;
-   }
-
+   // A single forming candle cannot produce an unambiguous long and short P3.
+   if(bull == bear) { g_live_div_geometry_ready=false; return; }
    static datetime last_live_bull_bar = 0;
    static datetime last_live_bear_bar = 0;
    if(bull && last_live_bull_bar == bar_time) return;
    if(bear && last_live_bear_bar == bar_time) return;
-
    g_piv1_dist = 0;
    g_piv2_dist = bull ? bull_span : bear_span;
-
-   CPivotPoint lp1, lp2, lp3;
-   int kind = bull ? 1 : 0;
-   lp1.Set(g_live_div_price[0], g_live_div_rsi[0], g_live_div_time[0],
-           iBarShift(_Symbol, PERIOD_CURRENT, g_live_div_time[0], false), kind, TimeCurrent(), -1, 0.0);
-   lp2.Set(g_live_div_price[1], g_live_div_rsi[1], g_live_div_time[1],
-           iBarShift(_Symbol, PERIOD_CURRENT, g_live_div_time[1], false), kind, TimeCurrent(), -1, 0.0);
-   // fill arrays right before signal arm / fire
-   if(bull)
-   {
-      g_live_div_price[0] = g_bull_pivots[g_bull_piv_cnt - 2].price_level;
-      g_live_div_price[1] = g_bull_pivots[g_bull_piv_cnt - 1].price_level;
-      g_live_div_price[2] = live_low;
-      g_live_div_rsi[0] = g_bull_pivots[g_bull_piv_cnt - 2].rsi_value;
-      g_live_div_rsi[1] = g_bull_pivots[g_bull_piv_cnt - 1].rsi_value;
-      g_live_div_rsi[2] = live_rsi;
-      g_live_div_time[0] = g_bull_pivots[g_bull_piv_cnt - 2].pivot_time;
-      g_live_div_time[1] = g_bull_pivots[g_bull_piv_cnt - 1].pivot_time;
-      g_live_div_time[2] = bar_time;
-   }
-   else
-   {
-      g_live_div_price[0] = g_bear_pivots[g_bear_piv_cnt - 2].price_level;
-      g_live_div_price[1] = g_bear_pivots[g_bear_piv_cnt - 1].price_level;
-      g_live_div_price[2] = live_high;
-      g_live_div_rsi[0] = g_bear_pivots[g_bear_piv_cnt - 2].rsi_value;
-      g_live_div_rsi[1] = g_bear_pivots[g_bear_piv_cnt - 1].rsi_value;
-      g_live_div_rsi[2] = live_rsi;
-      g_live_div_time[0] = g_bear_pivots[g_bear_piv_cnt - 2].pivot_time;
-      g_live_div_time[1] = g_bear_pivots[g_bear_piv_cnt - 1].pivot_time;
-      g_live_div_time[2] = bar_time;
-   }
-   g_live_div_geometry_ready = true;
-
-   lp1.Set(g_live_div_price[0], g_live_div_rsi[0], g_live_div_time[0],
-           iBarShift(_Symbol, PERIOD_CURRENT, g_live_div_time[0], false), kind, TimeCurrent(), -1, 0.0);
-   lp2.Set(g_live_div_price[1], g_live_div_rsi[1], g_live_div_time[1],
-           iBarShift(_Symbol, PERIOD_CURRENT, g_live_div_time[1], false), kind, TimeCurrent(), -1, 0.0);
-   lp3.Set(g_live_div_price[2], g_live_div_rsi[2], g_live_div_time[2],
-           0, kind, TimeCurrent(), 0, 0.0);
-
-   string live_source = "LIVE_P3_AGGRESSIVE";
-   ArmThreePivotDivergence(bull, lp1, lp2, lp3, false, live_source);
-
+   CPivotPoint lp1,lp2,lp3;
+   int kind=bull?1:0;
+   lp1.Set(g_live_div_price[0],g_live_div_rsi[0],g_live_div_time[0],
+           iBarShift(_Symbol,PERIOD_CURRENT,g_live_div_time[0],false),kind,TimeCurrent(),-1,0.0);
+   lp2.Set(g_live_div_price[1],g_live_div_rsi[1],g_live_div_time[1],
+           iBarShift(_Symbol,PERIOD_CURRENT,g_live_div_time[1],false),kind,TimeCurrent(),-1,0.0);
+   lp3.Set(g_live_div_price[2],g_live_div_rsi[2],g_live_div_time[2],0,kind,TimeCurrent(),0,0.0);
+   ArmThreePivotDivergence(bull,lp1,lp2,lp3,false,"LIVE_P3_DISPLAY_ONLY");
    if(inp_show_divergence_lines && (!g_testing || g_visual))
    {
-      string nm = "DIV_LIVE_" + (bull ? "B_" : "S_") + IntegerToString((int)bar_time);
-      DrawLine(nm, lp2.pivot_time, lp2.price_level, lp3.pivot_time, lp3.price_level,
-               bull ? inp_bullish_color : inp_bearish_color, inp_divergence_line_width, STYLE_DOT);
-      string lbl = "LIVE P3 AGGR " + IntegerToString(bull ? bull_score : bear_score);
-      DrawLabel(nm + "_ARM", lp3.pivot_time, lp3.price_level, lbl,
-                bull ? inp_bullish_color : inp_bearish_color);
+      string nm="DIV_LIVE_"+(bull?"B_":"S_")+IntegerToString((int)bar_time);
+      DrawLine(nm,lp2.pivot_time,lp2.price_level,lp3.pivot_time,lp3.price_level,
+               bull?inp_bullish_color:inp_bearish_color,inp_divergence_line_width,STYLE_DOT);
+      DrawLabel(nm+"_ARM",lp3.pivot_time,lp3.price_level,"LIVE P3 ARMED",
+                bull?inp_bullish_color:inp_bearish_color);
    }
-
    if(inp_live_p3_direct_execute)
    {
-      Print("PROFILE_PIPE|Profile=",TestProfileName(TestProfile),
-            "|Source=LIVE_P3_AGGRESSIVE|Direction=",(bull?"BUY":"SELL"),
+      string live_source = "LIVE_P3_AGGRESSIVE_DIRECT";
+      Print("PROFILE_PIPE|Profile=LIVE_DIRECT|Source=", live_source,
+            "|Direction=", (bull?"BUY":"SELL"),
             "|RawDivergence=PASS|Confirmed=0|State=DIVERGENCE_ARMED|Entry=LIVE_DIRECT_ATTEMPT");
       int expected_setup_id = g_next_setup_id;
       bool opened = FireSignal(bull, 0, live_source);
@@ -17671,16 +17639,13 @@ void CheckLiveThreePivotDivergence()
       {
          RP_MarkLatestExecuted(expected_setup_id, bull, g_armed_divergence.p3_time);
          ME_MarkExecuted(expected_setup_id, bull, g_armed_divergence.p3_time);
-         g_profile_stats[(int)TestProfile].entries++;
          g_armed_divergence.Reset();
-         g_live_div_geometry_ready = false;
       }
    }
-
    g_last_was_bull = bull;
    if(bull) last_live_bull_bar = bar_time;
    else     last_live_bear_bar = bar_time;
-   g_live_div_geometry_ready = false;
+   g_live_div_geometry_ready=false;
 }
 int CalculateCurrentStability(bool is_bull)
 {
@@ -18542,6 +18507,164 @@ ulong GetLatestSetupPositionId(int setup_id)
    }
    return best_id;
 }
+double PO_PointsToATR(const double points,const double atr_value)
+{
+   return (atr_value > 0.0) ? (points * _Point / atr_value) : 0.0;
+}
+// Positive when the fill moved further in the adverse direction relative to ref_price.
+double PO_AdversePoints(const bool is_buy,const double ref_price,const double fill_price)
+{
+   if(ref_price <= 0.0 || fill_price <= 0.0) return 0.0;
+   return (is_buy ? (ref_price - fill_price) : (fill_price - ref_price)) / _Point;
+}
+// Positive when price must move in the favorable direction to recover to target_price.
+double PO_RecoveryPoints(const bool is_buy,const double fill_price,const double target_price)
+{
+   if(fill_price <= 0.0 || target_price <= 0.0) return 0.0;
+   return (is_buy ? (target_price - fill_price) : (fill_price - target_price)) / _Point;
+}
+bool PO_CalcActualBasketBE(const int setup_idx,const int upto_step,double &out_be)
+{
+   out_be = 0.0;
+   if(setup_idx < 0 || setup_idx >= g_setup_cnt || upto_step < 1) return false;
+   double weighted_sum = 0.0, total_weight = 0.0;
+   for(int i = 0; i < upto_step && i < 5; i++)
+   {
+      double px = g_setups[setup_idx].step_prices[i];
+      if(px <= 0.0) px = g_setups[setup_idx].stop_levels[i];
+      if(px <= 0.0) continue;
+      double w = (double)(i + 1);
+      weighted_sum += px * w;
+      total_weight += w;
+   }
+   if(total_weight <= 0.0) return false;
+   out_be = weighted_sum / total_weight;
+   return true;
+}
+void PO_FillLivePriceAction(SEntrySnapshot &sn)
+{
+   double o = iOpen(_Symbol, PERIOD_CURRENT, 0);
+   double h = iHigh(_Symbol, PERIOD_CURRENT, 0);
+   double l = iLow(_Symbol, PERIOD_CURRENT, 0);
+   double c = iClose(_Symbol, PERIOD_CURRENT, 0);
+   if(o <= 0.0 || h <= 0.0 || l <= 0.0 || c <= 0.0)
+   {
+      o = iOpen(_Symbol, PERIOD_CURRENT, 1);
+      h = iHigh(_Symbol, PERIOD_CURRENT, 1);
+      l = iLow(_Symbol, PERIOD_CURRENT, 1);
+      c = iClose(_Symbol, PERIOD_CURRENT, 1);
+   }
+   sn.candle_open  = o;
+   sn.candle_high  = h;
+   sn.candle_low   = l;
+   sn.candle_close = c;
+   double range = h - l;
+   double body  = MathAbs(c - o);
+   sn.candle_range      = range;
+   sn.candle_body       = body;
+   sn.candle_upper_wick = h - MathMax(o, c);
+   sn.candle_lower_wick = MathMin(o, c) - l;
+   sn.signal_clv        = (range > 0.0) ? ((c - l) / range) : 0.5;
+   sn.signal_body_ratio = (range > 0.0) ? (body / range) : 0.0;
+   double atr_m1 = g_tf[TF_IDX_MAIN].GetBufferValue(g_tf[TF_IDX_MAIN].buffer_atr, 0);
+   if(atr_m1 <= 0.0) atr_m1 = g_tf[TF_IDX_MAIN].GetBufferValue(g_tf[TF_IDX_MAIN].buffer_atr, 1);
+   sn.candle_atr_norm = (atr_m1 > 0.0) ? (range / atr_m1) : 0.0;
+   sn.spread_entry = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   sn.spread_atr_ratio = (atr_m1 > 0.0) ? (sn.spread_entry * _Point / atr_m1) : 0.0;
+   sn.tick_volume = iVolume(_Symbol, PERIOD_CURRENT, 0);
+   sn.is_bull_candle = (c > o);
+   sn.is_bear_candle = (c < o);
+   double lower_wick = sn.candle_lower_wick;
+   double upper_wick = sn.candle_upper_wick;
+   sn.is_pin_bar   = (range > 0.0) &&
+                     ((lower_wick > body * 2.0 && upper_wick < body * 0.5) ||
+                      (upper_wick > body * 2.0 && lower_wick < body * 0.5));
+   sn.is_long_body = (range > 0.0) && (body > range * 0.6);
+   double prev_h = iHigh(_Symbol, PERIOD_CURRENT, 1);
+   double prev_l = iLow(_Symbol, PERIOD_CURRENT, 1);
+   sn.is_inside_bar  = (h <= prev_h && l >= prev_l);
+   sn.is_outside_bar = (h >= prev_h && l <= prev_l);
+}
+void PO_FillLiveTickVolumeNormalized(SEntrySnapshot &sn)
+{
+   sn.tick_volume_ratio_20  = 0.0;
+   sn.tick_volume_zscore_20 = 0.0;
+   long vol0 = iVolume(_Symbol, PERIOD_CURRENT, 0);
+   if(vol0 <= 0) return;
+   double sum = 0.0, sumsq = 0.0;
+   int cnt = 0;
+   for(int sh = 1; sh <= 20; sh++)
+   {
+      long v = iVolume(_Symbol, PERIOD_CURRENT, sh);
+      if(v <= 0) continue;
+      double dv = (double)v;
+      sum += dv;
+      sumsq += dv * dv;
+      cnt++;
+   }
+   if(cnt < 10) return;
+   double mean = sum / cnt;
+   if(mean <= 0.0) return;
+   double var = (sumsq / cnt) - (mean * mean);
+   if(var < 0.0) var = 0.0;
+   double std = MathSqrt(var);
+   sn.tick_volume_ratio_20 = (double)vol0 / mean;
+   sn.tick_volume_zscore_20 = (std > 0.0000001) ? (((double)vol0 - mean) / std) : 0.0;
+}
+void PO_CaptureStepContextSnapshot(const int setup_idx,const bool is_buy,const datetime fill_time,SEntrySnapshot &sn)
+{
+   sn.Reset();
+   Fill_Meta(sn, g_setups[setup_idx].setup_id, is_buy);
+   sn.entry_time = fill_time;
+   sn.is_bullish = is_buy;
+   Fill_TimeContext(sn);
+   PO_FillLivePriceAction(sn);
+   PO_FillLiveTickVolumeNormalized(sn);
+   CaptureMarketStructureFeatures(sn);
+   CaptureLiquiditySweepFeatures(sn);
+   CaptureBOSCHOCHRangeFeatures(sn);
+   CaptureStructureEventFeatures(sn);
+   double atr_main = g_tf[TF_IDX_MAIN].GetBufferValue(g_tf[TF_IDX_MAIN].buffer_atr, 0);
+   if(atr_main <= 0.0) atr_main = g_tf[TF_IDX_MAIN].GetBufferValue(g_tf[TF_IDX_MAIN].buffer_atr, 1);
+   double pivot_price = 0.0;
+   if(is_buy && g_bull_piv_cnt >= 1)
+      pivot_price = g_bull_pivots[g_bull_piv_cnt - 1].price_level;
+   else if(!is_buy && g_bear_piv_cnt >= 1)
+      pivot_price = g_bear_pivots[g_bear_piv_cnt - 1].price_level;
+   if(pivot_price <= 0.0) pivot_price = sn.candle_close;
+   sn.ob_dist_pct = -1.0;
+   sn.ob_in_tol = 0;
+   if(pivot_price > 0.0)
+   {
+      sn.ob_dist_pct = ComputeOBMinDistancePct(is_buy, pivot_price);
+      if(sn.ob_dist_pct >= 0.0 && sn.ob_dist_pct <= inp_ob_touch_precision_pct)
+         sn.ob_in_tol = 1;
+   }
+   FindNearestOBFeatures(is_buy, pivot_price, atr_main, sn.ob_age_bars, sn.ob_width_atr);
+   sn.rsi_gate_enabled = inp_use_rsi_pivot_gate_filter;
+   sn.rsi_high_gate = inp_rsi_high_gate;
+   sn.rsi_low_gate  = inp_rsi_low_gate;
+   double current_pivot_rsi = 0.0;
+   if(is_buy && g_bull_piv_cnt >= 1)
+      current_pivot_rsi = g_bull_pivots[g_bull_piv_cnt - 1].rsi_value;
+   else if(!is_buy && g_bear_piv_cnt >= 1)
+      current_pivot_rsi = g_bear_pivots[g_bear_piv_cnt - 1].rsi_value;
+   sn.rsi_gate_passed = false;
+   if(inp_use_rsi_pivot_gate_filter && current_pivot_rsi > 0.0)
+   {
+      if(is_buy && current_pivot_rsi <= inp_rsi_low_gate)
+         sn.rsi_gate_passed = true;
+      else if(!is_buy && current_pivot_rsi >= inp_rsi_high_gate)
+         sn.rsi_gate_passed = true;
+   }
+   if(g_setups[setup_idx].created_time > 0)
+   {
+      sn.minutes_since_signal = (int)MathMax(0, (fill_time - g_setups[setup_idx].created_time) / 60);
+      int sig_shift = iBarShift(_Symbol, PERIOD_CURRENT, g_setups[setup_idx].created_time, false);
+      sn.bars_since_signal = (sig_shift >= 0) ? sig_shift : 0;
+   }
+}
+
 void RecordPositionOpenBySetup(int setup_idx,
                                int step_no,
                                ulong position_id,
@@ -18586,6 +18709,105 @@ void RecordPositionOpenBySetup(int setup_idx,
    rec.open_day_of_week = dt.day_of_week;
    rec.open_month       = dt.mon;
    PO_GetSessionNameAndId(fill_time, rec.session_name, rec.session_id);
+   double atr_main_live = g_tf[TF_IDX_MAIN].GetBufferValue(g_tf[TF_IDX_MAIN].buffer_atr, 0);
+   if(atr_main_live <= 0.0) atr_main_live = g_tf[TF_IDX_MAIN].GetBufferValue(g_tf[TF_IDX_MAIN].buffer_atr, 1);
+   rec.base_atr_distance = g_setups[setup_idx].atr_distance;
+   rec.remaining_steps = 5 - step_no;
+   rec.ladder_progress_ratio = ((double)step_no) / 5.0;
+   rec.adverse_fill_vs_planned_points = PO_AdversePoints(rec.is_buy, rec.planned_entry_level, fill_price);
+   rec.adverse_fill_vs_planned_atr = PO_PointsToATR(rec.adverse_fill_vs_planned_points, atr_main_live);
+   double step1_fill_price = g_setups[setup_idx].step_prices[0];
+   if(step1_fill_price <= 0.0) step1_fill_price = g_setups[setup_idx].stop_levels[0];
+   rec.step_gap_from_step1_points = PO_AdversePoints(rec.is_buy, step1_fill_price, fill_price);
+   rec.step_gap_from_step1_atr = PO_PointsToATR(rec.step_gap_from_step1_points, atr_main_live);
+   if(step_no > 1)
+   {
+      double prev_fill_price = g_setups[setup_idx].step_prices[step_no - 2];
+      if(prev_fill_price <= 0.0) prev_fill_price = g_setups[setup_idx].stop_levels[step_no - 2];
+      rec.step_gap_from_prev_points = PO_AdversePoints(rec.is_buy, prev_fill_price, fill_price);
+      rec.step_gap_from_prev_atr = PO_PointsToATR(rec.step_gap_from_prev_points, atr_main_live);
+      if(g_setups[setup_idx].step_times[step_no - 2] > 0)
+         rec.minutes_since_prev_step = (int)MathMax(0, (fill_time - g_setups[setup_idx].step_times[step_no - 2]) / 60);
+      rec.nominal_prev_be = g_setups[setup_idx].break_even_levels[step_no - 2];
+      rec.recovery_to_prev_be_points = PO_RecoveryPoints(rec.is_buy, fill_price, rec.nominal_prev_be);
+      rec.recovery_to_prev_be_atr = PO_PointsToATR(rec.recovery_to_prev_be_points, atr_main_live);
+   }
+   if(PO_CalcActualBasketBE(setup_idx, step_no, rec.actual_basket_be))
+   {
+      rec.recovery_to_actual_be_points = PO_RecoveryPoints(rec.is_buy, fill_price, rec.actual_basket_be);
+      rec.recovery_to_actual_be_atr = PO_PointsToATR(rec.recovery_to_actual_be_points, atr_main_live);
+   }
+   rec.current_target_price = g_setups[setup_idx].target_levels[MathMax(0, MathMin(step_no - 1, 4))];
+   rec.recovery_to_current_target_points = PO_RecoveryPoints(rec.is_buy, fill_price, rec.current_target_price);
+   rec.recovery_to_current_target_atr = PO_PointsToATR(rec.recovery_to_current_target_points, atr_main_live);
+   if(step_no < 5)
+   {
+      rec.next_step_price = g_setups[setup_idx].stop_levels[step_no];
+      rec.adverse_to_next_step_points = PO_AdversePoints(rec.is_buy, fill_price, rec.next_step_price);
+      rec.adverse_to_next_step_atr = PO_PointsToATR(rec.adverse_to_next_step_points, atr_main_live);
+   }
+   double planned_step1 = g_setups[setup_idx].stop_levels[0];
+   double planned_stepn = g_setups[setup_idx].stop_levels[step_no - 1];
+   double planned_gap_from_step1_points = PO_AdversePoints(rec.is_buy, planned_step1, planned_stepn);
+   if(planned_gap_from_step1_points > 0.0)
+      rec.fill_vs_planned_ladder_ratio = rec.step_gap_from_step1_points / planned_gap_from_step1_points;
+   if(g_setups[setup_idx].created_time > 0)
+   {
+      rec.signal_age_minutes = (int)MathMax(0, (fill_time - g_setups[setup_idx].created_time) / 60);
+      int live_sig_shift = iBarShift(_Symbol, PERIOD_CURRENT, g_setups[setup_idx].created_time, false);
+      rec.bars_since_signal_live = (live_sig_shift >= 0) ? live_sig_shift : 0;
+   }
+   SEntrySnapshot step_ctx;
+   PO_CaptureStepContextSnapshot(setup_idx, rec.is_buy, fill_time, step_ctx);
+   rec.fill_bar_open = step_ctx.candle_open;
+   rec.fill_bar_high = step_ctx.candle_high;
+   rec.fill_bar_low = step_ctx.candle_low;
+   rec.fill_bar_close = step_ctx.candle_close;
+   rec.fill_bar_range = step_ctx.candle_range;
+   rec.fill_bar_body = step_ctx.candle_body;
+   rec.fill_bar_upper_wick = step_ctx.candle_upper_wick;
+   rec.fill_bar_lower_wick = step_ctx.candle_lower_wick;
+   rec.fill_bar_clv = step_ctx.signal_clv;
+   rec.fill_bar_body_ratio = step_ctx.signal_body_ratio;
+   rec.fill_bar_atr_norm = step_ctx.candle_atr_norm;
+   rec.fill_bar_tick_volume = step_ctx.tick_volume;
+   rec.fill_bar_tick_volume_ratio_20 = step_ctx.tick_volume_ratio_20;
+   rec.fill_bar_tick_volume_zscore_20 = step_ctx.tick_volume_zscore_20;
+   rec.fill_bar_bull = step_ctx.is_bull_candle;
+   rec.fill_bar_bear = step_ctx.is_bear_candle;
+   rec.fill_bar_pin = step_ctx.is_pin_bar;
+   rec.fill_bar_long_body = step_ctx.is_long_body;
+   rec.fill_bar_inside = step_ctx.is_inside_bar;
+   rec.fill_bar_outside = step_ctx.is_outside_bar;
+   rec.bars_since_swing_high = step_ctx.bars_since_swing_high;
+   rec.bars_since_swing_low = step_ctx.bars_since_swing_low;
+   rec.distance_to_swing_high_atr = step_ctx.distance_to_swing_high_atr;
+   rec.distance_to_swing_low_atr = step_ctx.distance_to_swing_low_atr;
+   rec.swept_prior_high = step_ctx.swept_prior_high;
+   rec.swept_prior_low = step_ctx.swept_prior_low;
+   rec.sweep_depth_atr = step_ctx.sweep_depth_atr;
+   rec.close_back_inside_prior_range = step_ctx.close_back_inside_prior_range;
+   rec.sweep_rejection_wick_ratio = step_ctx.sweep_rejection_wick_ratio;
+   rec.distance_to_prior_day_high_atr = step_ctx.distance_to_prior_day_high_atr;
+   rec.distance_to_prior_day_low_atr = step_ctx.distance_to_prior_day_low_atr;
+   rec.break_of_structure_flag = step_ctx.break_of_structure_flag;
+   rec.change_of_character_flag = step_ctx.change_of_character_flag;
+   rec.bars_since_bos = step_ctx.bars_since_bos;
+   rec.bars_since_choch = step_ctx.bars_since_choch;
+   rec.range_position_last_n = step_ctx.range_position_last_n;
+   rec.bos_break_distance_atr = step_ctx.bos_break_distance_atr;
+   rec.choch_break_distance_atr = step_ctx.choch_break_distance_atr;
+   rec.bars_between_swing_and_bos = step_ctx.bars_between_swing_and_bos;
+   rec.last_structure_event_type = step_ctx.last_structure_event_type;
+   rec.structure_event_direction_match = step_ctx.structure_event_direction_match;
+   rec.ob_dist_pct = step_ctx.ob_dist_pct;
+   rec.ob_in_tol = step_ctx.ob_in_tol;
+   rec.ob_age_bars = step_ctx.ob_age_bars;
+   rec.ob_width_atr = step_ctx.ob_width_atr;
+   rec.rsi_gate_enabled = step_ctx.rsi_gate_enabled;
+   rec.rsi_high_gate = step_ctx.rsi_high_gate;
+   rec.rsi_low_gate = step_ctx.rsi_low_gate;
+   rec.rsi_gate_passed = step_ctx.rsi_gate_passed;
    for(int tf = 0; tf < TF_COUNT; tf++)
    {
       // Refresh and capture the forming values that existed at actual fill time.
@@ -18854,7 +19076,16 @@ void ExportPositionOpenDatasetCSV()
       "DIV_P1_Shift,DIV_P2_Shift,DIV_P3_Shift,"
       "DIV_Gap12,DIV_Gap23,DIV_Span,DIV_GapRatio,"
       "DIV_RSISpread,DIV_PriceSpreadATR,DIV_ProminenceATR_P3,DIV_DistToEntry,"
-      "MTF_EMA200_Align,MTF_DI_Align,MTF_Squeeze_Count,MTF_Valid_Count";
+      "MTF_EMA200_Align,MTF_DI_Align,MTF_Squeeze_Count,MTF_Valid_Count,"
+      "BaseATRDistance,RemainingSteps,LadderProgressRatio,AdverseFillVsPlannedPoints,AdverseFillVsPlannedATR,"
+      "StepGapFromPrevPoints,StepGapFromPrevATR,StepGapFromStep1Points,StepGapFromStep1ATR,"
+      "ActualBasketBE,NominalPrevBE,RecoveryToActualBEPoints,RecoveryToActualBEATR,RecoveryToPrevBEPoints,RecoveryToPrevBEATR,"
+      "CurrentTargetPrice,RecoveryToCurrentTargetPoints,RecoveryToCurrentTargetATR,NextStepPrice,AdverseToNextStepPoints,AdverseToNextStepATR,FillVsPlannedLadderRatio,"
+      "SignalAgeMinutes,MinutesSincePrevStep,BarsSinceSignalLive,"
+      "FillBarOpen,FillBarHigh,FillBarLow,FillBarClose,FillBarRange,FillBarBody,FillBarUpperWick,FillBarLowerWick,FillBarCLV,FillBarBodyRatio,FillBarATRNorm,FillBarTickVolume,FillBarTickVolumeRatio20,FillBarTickVolumeZ20,FillBarBull,FillBarBear,FillBarPin,FillBarLongBody,FillBarInside,FillBarOutside,"
+      "BarsSinceSwingHigh,BarsSinceSwingLow,DistToSwingHighATR,DistToSwingLowATR,SweptPriorHigh,SweptPriorLow,SweepDepthATR,CloseBackInsidePriorRange,SweepRejectionWickRatio,DistToPriorDayHighATR,DistToPriorDayLowATR,"
+      "BreakOfStructureFlag,ChangeOfCharacterFlag,BarsSinceBOS,BarsSinceCHOCH,RangePositionLastN,BOSBreakDistanceATR,CHOCHBreakDistanceATR,BarsBetweenSwingAndBOS,LastStructureEventType,StructureEventDirectionMatch,"
+      "OBDistPct,OBInTol,OBAgeBars,OBWidthATR,RSIGateEnabled,RSIHighGate,RSILowGate,RSIGatePassed";
    for(int tf = 0; tf < TF_COUNT; tf++)
    {
       string t = g_tf[tf].name;
@@ -18984,6 +19215,80 @@ void ExportPositionOpenDatasetCSV()
       row += "," + IntegerToString(r.mtf_di_align);
       row += "," + IntegerToString(r.mtf_squeeze_count);
       row += "," + IntegerToString(r.mtf_valid_count);
+      row += "," + DoubleToString(r.base_atr_distance, _Digits);
+      row += "," + IntegerToString(r.remaining_steps);
+      row += "," + DoubleToString(r.ladder_progress_ratio, 6);
+      row += "," + DoubleToString(r.adverse_fill_vs_planned_points, 2);
+      row += "," + DoubleToString(r.adverse_fill_vs_planned_atr, 6);
+      row += "," + DoubleToString(r.step_gap_from_prev_points, 2);
+      row += "," + DoubleToString(r.step_gap_from_prev_atr, 6);
+      row += "," + DoubleToString(r.step_gap_from_step1_points, 2);
+      row += "," + DoubleToString(r.step_gap_from_step1_atr, 6);
+      row += "," + DoubleToString(r.actual_basket_be, _Digits);
+      row += "," + DoubleToString(r.nominal_prev_be, _Digits);
+      row += "," + DoubleToString(r.recovery_to_actual_be_points, 2);
+      row += "," + DoubleToString(r.recovery_to_actual_be_atr, 6);
+      row += "," + DoubleToString(r.recovery_to_prev_be_points, 2);
+      row += "," + DoubleToString(r.recovery_to_prev_be_atr, 6);
+      row += "," + DoubleToString(r.current_target_price, _Digits);
+      row += "," + DoubleToString(r.recovery_to_current_target_points, 2);
+      row += "," + DoubleToString(r.recovery_to_current_target_atr, 6);
+      row += "," + DoubleToString(r.next_step_price, _Digits);
+      row += "," + DoubleToString(r.adverse_to_next_step_points, 2);
+      row += "," + DoubleToString(r.adverse_to_next_step_atr, 6);
+      row += "," + DoubleToString(r.fill_vs_planned_ladder_ratio, 6);
+      row += "," + IntegerToString(r.signal_age_minutes);
+      row += "," + IntegerToString(r.minutes_since_prev_step);
+      row += "," + IntegerToString(r.bars_since_signal_live);
+      row += "," + DoubleToString(r.fill_bar_open, _Digits);
+      row += "," + DoubleToString(r.fill_bar_high, _Digits);
+      row += "," + DoubleToString(r.fill_bar_low, _Digits);
+      row += "," + DoubleToString(r.fill_bar_close, _Digits);
+      row += "," + DoubleToString(r.fill_bar_range, _Digits);
+      row += "," + DoubleToString(r.fill_bar_body, _Digits);
+      row += "," + DoubleToString(r.fill_bar_upper_wick, _Digits);
+      row += "," + DoubleToString(r.fill_bar_lower_wick, _Digits);
+      row += "," + DoubleToString(r.fill_bar_clv, 6);
+      row += "," + DoubleToString(r.fill_bar_body_ratio, 6);
+      row += "," + DoubleToString(r.fill_bar_atr_norm, 6);
+      row += "," + IntegerToString((int)r.fill_bar_tick_volume);
+      row += "," + DoubleToString(r.fill_bar_tick_volume_ratio_20, 6);
+      row += "," + DoubleToString(r.fill_bar_tick_volume_zscore_20, 6);
+      row += "," + (r.fill_bar_bull ? "1" : "0");
+      row += "," + (r.fill_bar_bear ? "1" : "0");
+      row += "," + (r.fill_bar_pin ? "1" : "0");
+      row += "," + (r.fill_bar_long_body ? "1" : "0");
+      row += "," + (r.fill_bar_inside ? "1" : "0");
+      row += "," + (r.fill_bar_outside ? "1" : "0");
+      row += "," + IntegerToString(r.bars_since_swing_high);
+      row += "," + IntegerToString(r.bars_since_swing_low);
+      row += "," + DoubleToString(r.distance_to_swing_high_atr, 6);
+      row += "," + DoubleToString(r.distance_to_swing_low_atr, 6);
+      row += "," + (r.swept_prior_high ? "1" : "0");
+      row += "," + (r.swept_prior_low ? "1" : "0");
+      row += "," + DoubleToString(r.sweep_depth_atr, 6);
+      row += "," + (r.close_back_inside_prior_range ? "1" : "0");
+      row += "," + DoubleToString(r.sweep_rejection_wick_ratio, 6);
+      row += "," + DoubleToString(r.distance_to_prior_day_high_atr, 6);
+      row += "," + DoubleToString(r.distance_to_prior_day_low_atr, 6);
+      row += "," + (r.break_of_structure_flag ? "1" : "0");
+      row += "," + (r.change_of_character_flag ? "1" : "0");
+      row += "," + IntegerToString(r.bars_since_bos);
+      row += "," + IntegerToString(r.bars_since_choch);
+      row += "," + DoubleToString(r.range_position_last_n, 6);
+      row += "," + DoubleToString(r.bos_break_distance_atr, 6);
+      row += "," + DoubleToString(r.choch_break_distance_atr, 6);
+      row += "," + IntegerToString(r.bars_between_swing_and_bos);
+      row += "," + IntegerToString(r.last_structure_event_type);
+      row += "," + (r.structure_event_direction_match ? "1" : "0");
+      row += "," + DoubleToString(r.ob_dist_pct, 6);
+      row += "," + IntegerToString(r.ob_in_tol);
+      row += "," + IntegerToString(r.ob_age_bars);
+      row += "," + DoubleToString(r.ob_width_atr, 6);
+      row += "," + (r.rsi_gate_enabled ? "1" : "0");
+      row += "," + IntegerToString(r.rsi_high_gate);
+      row += "," + IntegerToString(r.rsi_low_gate);
+      row += "," + (r.rsi_gate_passed ? "1" : "0");
       for(int tf = 0; tf < TF_COUNT; tf++)
       {
          row += "," + DoubleToString(r.rsi[tf], 4);
@@ -19171,6 +19476,110 @@ void ExportStep1OutcomeComparisonSummaryCSV()
    FileFlush(h);FileClose(h);
    Print("Step1 outcome comparison summary exported: ",fn);
 }
+void ExportStepPlacementResearchCSV()
+{
+   if(g_position_open_count <= 0)
+   {
+      Print("ExportStepPlacementResearchCSV: no records.");
+      return;
+   }
+   string fn = "StepPlacementResearch_" + _Symbol + ".csv";
+   int h = SafeOpenCSV(fn);
+   if(h == INVALID_HANDLE)
+   {
+      Print("ExportStepPlacementResearchCSV: cannot create file.");
+      return;
+   }
+   string hdr = "RecordID,SetupID,StepNo,OpenTime,Signal,SignalSource,FillPrice,PlannedEntryLevel,BaseATRDistance,"                "AdverseFillVsPlannedPoints,AdverseFillVsPlannedATR,StepGapFromPrevPoints,StepGapFromPrevATR,StepGapFromStep1Points,StepGapFromStep1ATR,"                "ActualBasketBE,RecoveryToActualBEPoints,RecoveryToActualBEATR,NominalPrevBE,RecoveryToPrevBEPoints,RecoveryToPrevBEATR,"                "CurrentTargetPrice,RecoveryToCurrentTargetPoints,RecoveryToCurrentTargetATR,NextStepPrice,AdverseToNextStepPoints,AdverseToNextStepATR,FillVsPlannedLadderRatio,"                "SignalAgeMinutes,MinutesSincePrevStep,BarsSinceSignalLive,FillBarATRNorm,FillBarBodyRatio,FillBarCLV,FillBarTickVolumeRatio20,FillBarTickVolumeZ20,"                "BarsSinceSwingHigh,BarsSinceSwingLow,DistToSwingHighATR,DistToSwingLowATR,SweptPriorHigh,SweptPriorLow,SweepDepthATR,CloseBackInsidePriorRange,SweepRejectionWickRatio,DistToPriorDayHighATR,DistToPriorDayLowATR,"                "BreakOfStructureFlag,ChangeOfCharacterFlag,BarsSinceBOS,BarsSinceCHOCH,RangePositionLastN,BOSBreakDistanceATR,CHOCHBreakDistanceATR,BarsBetweenSwingAndBOS,LastStructureEventType,StructureEventDirectionMatch,"                "OBDistPct,OBInTol,OBAgeBars,OBWidthATR,RSIGateEnabled,RSIHighGate,RSILowGate,RSIGatePassed,"                "M1_RSI,M1_ADX,M1_ATR,M1_EMA200DistATR,SetupFinalEvent,SetupMaxStep,SetupFinalProfit,SetupFinalStop,SetupFinalTarget,SetupReachedStep5,PositionRealizedProfit";
+   FileWriteString(h, hdr + "\r\n");
+   for(int i = 0; i < g_position_open_count; i++)
+   {
+      SPositionOpenRecord r = g_position_open_records[i];
+      string row = "";
+      row += IntegerToString(r.record_id) + ",";
+      row += IntegerToString(r.setup_id) + ",";
+      row += IntegerToString(r.step_no) + ",";
+      row += TimeToString(r.open_time, TIME_DATE|TIME_MINUTES|TIME_SECONDS) + ",";
+      row += (r.is_buy ? "BUY" : "SELL") + ",";
+      row += EscapeCSV(r.signal_source) + ",";
+      row += DoubleToString(r.fill_price, _Digits) + ",";
+      row += DoubleToString(r.planned_entry_level, _Digits) + ",";
+      row += DoubleToString(r.base_atr_distance, _Digits) + ",";
+      row += DoubleToString(r.adverse_fill_vs_planned_points, 2) + ",";
+      row += DoubleToString(r.adverse_fill_vs_planned_atr, 6) + ",";
+      row += DoubleToString(r.step_gap_from_prev_points, 2) + ",";
+      row += DoubleToString(r.step_gap_from_prev_atr, 6) + ",";
+      row += DoubleToString(r.step_gap_from_step1_points, 2) + ",";
+      row += DoubleToString(r.step_gap_from_step1_atr, 6) + ",";
+      row += DoubleToString(r.actual_basket_be, _Digits) + ",";
+      row += DoubleToString(r.recovery_to_actual_be_points, 2) + ",";
+      row += DoubleToString(r.recovery_to_actual_be_atr, 6) + ",";
+      row += DoubleToString(r.nominal_prev_be, _Digits) + ",";
+      row += DoubleToString(r.recovery_to_prev_be_points, 2) + ",";
+      row += DoubleToString(r.recovery_to_prev_be_atr, 6) + ",";
+      row += DoubleToString(r.current_target_price, _Digits) + ",";
+      row += DoubleToString(r.recovery_to_current_target_points, 2) + ",";
+      row += DoubleToString(r.recovery_to_current_target_atr, 6) + ",";
+      row += DoubleToString(r.next_step_price, _Digits) + ",";
+      row += DoubleToString(r.adverse_to_next_step_points, 2) + ",";
+      row += DoubleToString(r.adverse_to_next_step_atr, 6) + ",";
+      row += DoubleToString(r.fill_vs_planned_ladder_ratio, 6) + ",";
+      row += IntegerToString(r.signal_age_minutes) + ",";
+      row += IntegerToString(r.minutes_since_prev_step) + ",";
+      row += IntegerToString(r.bars_since_signal_live) + ",";
+      row += DoubleToString(r.fill_bar_atr_norm, 6) + ",";
+      row += DoubleToString(r.fill_bar_body_ratio, 6) + ",";
+      row += DoubleToString(r.fill_bar_clv, 6) + ",";
+      row += DoubleToString(r.fill_bar_tick_volume_ratio_20, 6) + ",";
+      row += DoubleToString(r.fill_bar_tick_volume_zscore_20, 6) + ",";
+      row += IntegerToString(r.bars_since_swing_high) + ",";
+      row += IntegerToString(r.bars_since_swing_low) + ",";
+      row += DoubleToString(r.distance_to_swing_high_atr, 6) + ",";
+      row += DoubleToString(r.distance_to_swing_low_atr, 6) + ",";
+      row += (r.swept_prior_high ? "1" : "0") + ",";
+      row += (r.swept_prior_low ? "1" : "0") + ",";
+      row += DoubleToString(r.sweep_depth_atr, 6) + ",";
+      row += (r.close_back_inside_prior_range ? "1" : "0") + ",";
+      row += DoubleToString(r.sweep_rejection_wick_ratio, 6) + ",";
+      row += DoubleToString(r.distance_to_prior_day_high_atr, 6) + ",";
+      row += DoubleToString(r.distance_to_prior_day_low_atr, 6) + ",";
+      row += (r.break_of_structure_flag ? "1" : "0") + ",";
+      row += (r.change_of_character_flag ? "1" : "0") + ",";
+      row += IntegerToString(r.bars_since_bos) + ",";
+      row += IntegerToString(r.bars_since_choch) + ",";
+      row += DoubleToString(r.range_position_last_n, 6) + ",";
+      row += DoubleToString(r.bos_break_distance_atr, 6) + ",";
+      row += DoubleToString(r.choch_break_distance_atr, 6) + ",";
+      row += IntegerToString(r.bars_between_swing_and_bos) + ",";
+      row += IntegerToString(r.last_structure_event_type) + ",";
+      row += (r.structure_event_direction_match ? "1" : "0") + ",";
+      row += DoubleToString(r.ob_dist_pct, 6) + ",";
+      row += IntegerToString(r.ob_in_tol) + ",";
+      row += IntegerToString(r.ob_age_bars) + ",";
+      row += DoubleToString(r.ob_width_atr, 6) + ",";
+      row += (r.rsi_gate_enabled ? "1" : "0") + ",";
+      row += IntegerToString(r.rsi_high_gate) + ",";
+      row += IntegerToString(r.rsi_low_gate) + ",";
+      row += (r.rsi_gate_passed ? "1" : "0") + ",";
+      row += DoubleToString(r.rsi[TF_IDX_MAIN], 4) + ",";
+      row += DoubleToString(r.adx[TF_IDX_MAIN], 4) + ",";
+      row += DoubleToString(r.atr[TF_IDX_MAIN], _Digits) + ",";
+      row += DoubleToString(r.ema200_dist_atr[TF_IDX_MAIN], 6) + ",";
+      row += EscapeCSV(r.setup_final_event) + ",";
+      row += IntegerToString(r.setup_max_step) + ",";
+      row += DoubleToString(r.setup_final_profit, 2) + ",";
+      row += (r.setup_final_stop ? "1" : "0") + ",";
+      row += (r.setup_final_target ? "1" : "0") + ",";
+      row += (r.setup_reached_step5 ? "1" : "0") + ",";
+      row += DoubleToString(r.position_realized_profit, 2);
+      FileWriteString(h, row + "\r\n");
+   }
+   FileFlush(h);
+   FileClose(h);
+   Print("Step placement research dataset exported: ", fn,
+         " | Rows=", g_position_open_count);
+}
+
 void ExportPositionOpenIndicatorStatsCSV()
 {
    if(g_position_open_count <= 0)
@@ -45592,6 +46001,7 @@ void OnDeinit(const int reason)
       {
          Print("Exporting position-open research dataset (standalone)...");
          ExportPositionOpenDatasetCSV();
+         ExportStepPlacementResearchCSV();
          ExportStep1OutcomeComparisonCSV();
          ExportStep1OutcomeComparisonSummaryCSV();
          ExportPositionOpenIndicatorStatsCSV();
@@ -49474,6 +49884,7 @@ void ExportAllAnalysis()
    // MAIN OUTPUTS FOR YOUR CURRENT GOAL
    // ============================================================
    ExportPositionOpenDatasetCSV();
+   ExportStepPlacementResearchCSV();
    ExportStep1OutcomeComparisonCSV();
    ExportStep1OutcomeComparisonSummaryCSV();
    ExportPositionOpenIndicatorStatsCSV();
