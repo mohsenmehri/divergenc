@@ -1,0 +1,6 @@
+﻿sep=,
+Profile,Selected,LiveArmed,TotalSignals,Entries,RejectedStructure,RejectedRSI,RejectedRegime,RejectedVolatility,Step1,Step2,Step3,Step4,Step5,Completed,Stops,StopRate,Deep4Plus,DeepRate,TotalPnL
+A_STRUCTURE,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000000,0,0.000000,0.00
+B_STRUCTURE_RSI,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000000,0,0.000000,0.00
+C_STRUCTURE_RSI_REGIME,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.000000,0,0.000000,0.00
+D_FULL,1,98624,12628,4780,3013,1703,2916,216,4780,2838,1071,375,161,4779,78,1.632141,375,7.846830,8951.51
