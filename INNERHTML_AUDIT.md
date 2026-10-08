@@ -46,6 +46,28 @@ exception — no HTML-string modal path remains.
   `.nav-card/.nav-group-head`, `.cat-pill/.cat-tile/.sheet-card`, `.kpi`, `.li/.sw/.vv`,
   `.feed-item`, `.empty-state` — identical class hooks.
 
+## Event-handler sinks — attribute vs JS property (the precise distinction)
+
+Inline `on*=` **HTML attribute** handlers and `.onclick=`-style **JS property assignments**
+are semantically different sinks: attribute handlers are forbidden by CSP
+(`script-src-attr 'none'`) and are the classic XSS injection point; property
+assignments are ordinary JS API calls, CSP-compatible, but their `on*` **token**
+still appears in the artifact. Earlier reviews counted only attributes. As of
+`57f4de2` both classes are zero — all handlers go through `addEventListener`
+(35 call sites) behind the single `ACTIONS` delegation table (61 `data-act` hooks).
+
+## Final sink audit (verified on the built deliverable at `57f4de2`)
+
+| Sink | Count |
+|------|-------|
+| `on*=` inline attribute handlers | **0** |
+| `.on*=` JS property assignments | **0** |
+| `innerHTML` | **1** — inside vendored SheetJS only (not app code) |
+| `outerHTML` | **0** |
+| `insertAdjacentHTML` | **0** |
+| `document.write` | **0** |
+| `opts.html` / `trustedHtml` | **0** / **0** |
+
 ## Exceptions (justified)
 
 | Location | Why it stays |
