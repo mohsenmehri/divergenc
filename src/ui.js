@@ -992,40 +992,42 @@ const VBA_MODULE_META = {
 
 function renderMacrosView() {
   const body = document.getElementById("macros-body");
+  clear(body);
   const byMod = {};
   MACRO_REGISTRY.forEach(([mod, name, desc]) => {
     (byMod[mod] = byMod[mod] || []).push({ name, desc });
   });
-  let html = "";
   Object.keys(byMod).forEach(mod => {
-    html += `<div class="macro-mod fade-in"><div class="mh">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="2" style="width:15px;height:15px"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
-      <span class="nm">${escapeHtml(mod)}</span>
-      <span class="cnt">${byMod[mod].length} macro</span></div>`;
+    const modDiv = el("div", { class: "macro-mod fade-in" },
+      el("div", { class: "mh" },
+        sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#7dd3fc", "stroke-width": "2", style: { width: "15px", height: "15px" } },
+          sEl("path", { d: "m8 6-6 6 6 6M16 6l6 6-6 6" })),
+        el("span", { class: "nm", text: mod }),
+        el("span", { class: "cnt", text: byMod[mod].length + " macro" })));
     byMod[mod].forEach(m => {
-      html += `<div class="macro-item">
-        <div class="mnm">${escapeHtml(m.name)}</div>
-        <div class="mds">${escapeHtml(m.desc)}</div>
-        <button class="macro-run" data-act="run-macro-index" data-mod="${escapeHtmlAttr(mod)}" data-name="${escapeHtmlAttr(m.name)}">▶ اجرا</button>
-      </div>`;
+      modDiv.appendChild(el("div", { class: "macro-item" },
+        el("div", { class: "mnm", text: m.name }),
+        el("div", { class: "mds", text: m.desc }),
+        el("button", { class: "macro-run", "data-act": "run-macro-index", "data-mod": mod, "data-name": m.name, text: "\u25b6 \u0627\u062c\u0631\u0627" })));
     });
-    html += "</div>";
+    body.appendChild(modDiv);
   });
-  html += `<div class="macro-mod fade-in"><div class="mh">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="2" style="width:15px;height:15px"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
-    <span class="nm">VBA Sources — فایل اصلی</span>
-    <span class="cnt">${Object.keys(VBA_MODULES || {}).length} module</span></div>`;
+  const vbaDiv = el("div", { class: "macro-mod fade-in" },
+    el("div", { class: "mh" },
+      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#c4b5fd", "stroke-width": "2", style: { width: "15px", height: "15px" } },
+        sEl("rect", { x: "3", y: "4", width: "18", height: "16", rx: "2" }),
+        sEl("path", { d: "M8 9h8M8 13h5" })),
+      el("span", { class: "nm", text: "VBA Sources \u2014 \u0641\u0627\u06cc\u0644 \u0627\u0635\u0644\u06cc" }),
+      el("span", { class: "cnt", text: Object.keys(VBA_MODULES || {}).length + " module" })));
   Object.keys(VBA_MODULES || {}).sort().forEach(name => {
     const meta = VBA_MODULE_META[name] || "";
-    html += `<div class="macro-item">
-      <div class="mnm">${escapeHtml(name)}</div>
-      <div class="mds">${escapeHtml(meta)}</div>
-      <button class="macro-run" data-act="show-vba" data-name="${escapeHtmlAttr(name)}">👁 مشاهده</button>
-      <button class="macro-dl" data-act="download-module" data-name="${escapeHtmlAttr(name)}">⬇</button>
-    </div>`;
+    vbaDiv.appendChild(el("div", { class: "macro-item" },
+      el("div", { class: "mnm", text: name }),
+      el("div", { class: "mds", text: meta }),
+      el("button", { class: "macro-run", "data-act": "show-vba", "data-name": name, text: "\ud83d\udc41 \u0645\u0634\u0627\u0647\u062f\u0647" }),
+      el("button", { class: "macro-dl", "data-act": "download-module", "data-name": name, text: "\u2b07" })));
   });
-  html += "</div>";
-  body.innerHTML = html;
+  body.appendChild(vbaDiv);
 }
 
 /* ================================================================
@@ -1048,26 +1050,29 @@ function renderDashboard() {
   const undoReady = !!(state.undo && state.undo.valid);
 
   const kpiDefs = [
-    { cls: "g-cyan", val: dataSheets, lbl: "شیت‌های داده شبکه", trend: ["info", "شعب • مراکز داده • تجهیزات"],
-      ico: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/>' },
-    { cls: "g-blue", val: totalRecords.toLocaleString("fa-IR"), lbl: "کل رکوردهای ثبت‌شده", trend: ["up", "IP • VLAN • روتر • سوییچ"],
-      ico: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>' },
-    { cls: "g-violet", val: idxCount.toLocaleString("fa-IR"), lbl: "رکوردهای ایندکس جستجو", trend: ["info", "FULLTEXT آماده"],
-      ico: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>' },
-    { cls: "g-amber", val: logCount.toLocaleString("fa-IR"), lbl: "رویداد ثبت‌شده در لاگ", trend: ["warn", "ADD • REMOVE • EDIT"],
-      ico: '<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>' },
+    { cls: "g-cyan", val: dataSheets, lbl: "\u0634\u06cc\u062a\u200c\u0647\u0627\u06cc \u062f\u0627\u062f\u0647 \u0634\u0628\u06a9\u0647", trend: ["info", "\u0634\u0639\u0628 \u2022 \u0645\u0631\u0627\u06a9\u0632 \u062f\u0627\u062f\u0647 \u2022 \u062a\u062c\u0647\u06cc\u0632\u0627\u062a"],
+      ico: [["rect", { x: "3", y: "4", width: "18", height: "16", rx: "2" }], ["path", { d: "M3 9h18M9 4v16" }]] },
+    { cls: "g-blue", val: totalRecords.toLocaleString("fa-IR"), lbl: "\u06a9\u0644 \u0631\u06a9\u0648\u0631\u062f\u0647\u0627\u06cc \u062b\u0628\u062a\u200c\u0634\u062f\u0647", trend: ["up", "IP \u2022 VLAN \u2022 \u0631\u0648\u062a\u0631 \u2022 \u0633\u0648\u06cc\u06cc\u0686"],
+      ico: [["ellipse", { cx: "12", cy: "5", rx: "8", ry: "3" }], ["path", { d: "M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" }], ["path", { d: "M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" }]] },
+    { cls: "g-violet", val: idxCount.toLocaleString("fa-IR"), lbl: "\u0631\u06a9\u0648\u0631\u062f\u0647\u0627\u06cc \u0627\u06cc\u0646\u062f\u06a9\u0633 \u062c\u0633\u062a\u062c\u0648", trend: ["info", "FULLTEXT \u0622\u0645\u0627\u062f\u0647"],
+      ico: [["circle", { cx: "11", cy: "11", r: "7" }], ["path", { d: "m20 20-3.5-3.5" }]] },
+    { cls: "g-amber", val: logCount.toLocaleString("fa-IR"), lbl: "\u0631\u0648\u06cc\u062f\u062f \u062b\u0628\u062a\u200c\u0634\u062f\u0647 \u062f\u0631 \u0644\u0627\u06af", trend: ["warn", "ADD \u2022 REMOVE \u2022 EDIT"],
+      ico: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M12 8v4l3 2" }]] },
     { cls: undoReady ? "g-green" : "g-red",
-      val: undoReady ? "آماده" : "—", lbl: "وضعیت Undo حذف",
-      trend: [undoReady ? "up" : "idle", undoReady ? state.undo.blockCount + " بلوک قابل بازگشت" : "بدون عملیات حذف"],
-      ico: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>' },
+      val: undoReady ? "\u0622\u0645\u0627\u062f\u0647" : "\u2014", lbl: "\u0648\u0636\u0639\u06cc\u062a Undo \u062d\u0630\u0641",
+      trend: [undoReady ? "up" : "idle", undoReady ? state.undo.blockCount + " \u0628\u0644\u0648\u06a9 \u0642\u0627\u0628\u0644 \u0628\u0627\u0632\u06af\u0634\u062a" : "\u0628\u062f\u0648\u0646 \u0639\u0645\u0644\u06cc\u0627\u062a \u062d\u0630\u0641"],
+      ico: [["path", { d: "M9 14 4 9l5-5" }], ["path", { d: "M4 9h10a6 6 0 0 1 0 12h-3" }]] },
   ];
-  kpis.innerHTML = kpiDefs.map(k => `
-    <div class="kpi">
-      <div class="k-ico ${k.cls}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${k.ico}</svg></div>
-      <div class="k-val">${k.val}</div>
-      <div class="k-lbl">${k.lbl}</div>
-      <div class="k-trend ${k.trend[0]}">${k.trend[1]}</div>
-    </div>`).join("");
+  clear(kpis);
+  kpiDefs.forEach(k => {
+    kpis.appendChild(el("div", { class: "kpi" },
+      el("div", { class: "k-ico " + k.cls },
+        sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2" },
+          ...k.ico.map(([tag, attrs]) => sEl(tag, attrs)))),
+      el("div", { class: "k-val", text: k.val }),
+      el("div", { class: "k-lbl", text: k.lbl }),
+      el("div", { class: "k-trend " + k.trend[0], text: k.trend[1] })));
+  });
 
   renderDonut(totalRecords);
   renderBars();
@@ -1095,36 +1100,43 @@ function renderDonut(totalRecords) {
   const total = vals.reduce((a, b) => a + b, 0) || 1;
   const R = 52, C = 2 * Math.PI * R;
   let acc = 0;
-  const segs = vals.map((v, i) => {
+  const segNodes = vals.map((v, i) => {
     const frac = v / total;
-    const seg = `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${cats[i].color}" stroke-width="17"
-      stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-acc * C).toFixed(2)}"
-      transform="rotate(-90 70 70)" stroke-linecap="butt" opacity=".92"/>`;
+    const seg = sEl("circle", {
+      cx: "70", cy: "70", r: String(R), fill: "none", stroke: cats[i].color, "stroke-width": "17",
+      "stroke-dasharray": (frac * C).toFixed(2) + " " + C.toFixed(2),
+      "stroke-dashoffset": (-acc * C).toFixed(2),
+      transform: "rotate(-90 70 70)", "stroke-linecap": "butt", opacity: ".92"
+    });
     acc += frac;
     return seg;
-  }).join("");
-  host.innerHTML = `
-    <svg width="140" height="140" viewBox="0 0 140 140">
-      <circle cx="70" cy="70" r="${R}" fill="none" stroke="rgba(120,160,255,.1)" stroke-width="17"/>
-      ${segs}
-      <text x="70" y="66" text-anchor="middle" fill="#eaf1ff" font-size="19" font-weight="800" font-family="inherit">${totalRecords.toLocaleString("fa-IR")}</text>
-      <text x="70" y="86" text-anchor="middle" fill="#64748f" font-size="9.5">کل رکوردها</text>
-    </svg>`;
-  legend.innerHTML = cats.map((c, i) => `
-    <div class="li"><span class="sw" style="background:${c.color}"></span>${c.name}
-      <span class="vv">${vals[i].toLocaleString("fa-IR")}</span></div>`).join("");
+  });
+  clear(host);
+  host.appendChild(sEl("svg", { width: "140", height: "140", viewBox: "0 0 140 140" },
+    sEl("circle", { cx: "70", cy: "70", r: String(R), fill: "none", stroke: "rgba(120,160,255,.1)", "stroke-width": "17" }),
+    ...segNodes,
+    sEl("text", { x: "70", y: "66", "text-anchor": "middle", fill: "#eaf1ff", "font-size": "19", "font-weight": "800", "font-family": "inherit", text: totalRecords.toLocaleString("fa-IR") }),
+    sEl("text", { x: "70", y: "86", "text-anchor": "middle", fill: "#64748f", "font-size": "9.5", text: "\u06a9\u0644 \u0631\u06a9\u0648\u0631\u062f\u0647\u0627" })));
+  clear(legend);
+  cats.forEach((c, i) => {
+    legend.appendChild(el("div", { class: "li" },
+      el("span", { class: "sw", style: { background: c.color } }),
+      txt(c.name),
+      el("span", { class: "vv", text: vals[i].toLocaleString("fa-IR") })));
+  });
 }
 function renderBars() {
   const host = document.getElementById("dash-bars");
   if (!host) return;
   const top = topSheetStats(7);
   const max = Math.max(...top.map(t => t.rows), 1);
-  host.innerHTML = top.map(t => `
-    <div class="bar-row" title="${escapeHtmlAttr(t.name)}">
-      <div class="nm">${escapeHtml(t.name)}</div>
-      <div class="tr"><div class="fl" style="width:${Math.max(4, Math.round(t.rows / max * 100))}%"></div></div>
-      <div class="vv">${t.rows.toLocaleString("fa-IR")}</div>
-    </div>`).join("");
+  clear(host);
+  top.forEach(t => {
+    host.appendChild(el("div", { class: "bar-row", title: t.name },
+      el("div", { class: "nm", text: t.name }),
+      el("div", { class: "tr" }, el("div", { class: "fl", style: { width: Math.max(4, Math.round(t.rows / max * 100)) + "%" } })),
+      el("div", { class: "vv", text: t.rows.toLocaleString("fa-IR") })));
+  });
 }
 function renderFeed() {
   const host = document.getElementById("dash-feed");
@@ -1132,17 +1144,21 @@ function renderFeed() {
   const log = WB.sheets[LOG_SHEET];
   const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ""));
   const colors = { ADD: "#22c55e", REMOVE: "#ef4444", UNDO: "#f59e0b", EDIT: "#3b82f6", ERROR: "#ef4444", ARCHIVE_FAIL: "#ef4444" };
+  clear(host);
   if (!rows.length) {
-    host.innerHTML = '<div class="empty-state" style="padding:22px">هنوز رویدادی ثبت نشده است.</div>';
+    host.appendChild(el("div", { class: "empty-state", style: { padding: "22px" }, text: "\u0647\u0646\u0648\u0632 \u0631\u0648\u06cc\u062f\u062f\u06cc \u062b\u0628\u062a \u0646\u0634\u062f\u0647 \u0627\u0633\u062a." }));
     return;
   }
-  host.innerHTML = rows.slice(-9).reverse().map(r => `
-    <div class="feed-item">
-      <div class="feed-dot" style="background:${colors[r[1]] || "#64748f"};box-shadow:0 0 8px ${colors[r[1]] || "#64748f"}"></div>
-      <div class="ft"><b>${escapeHtml(r[1] || "")}</b> — ${escapeHtml(r[2] || "")}
-        ${r[5] ? ' <span class="badge-soft" style="font-size:8.5px">' + escapeHtml(r[5]) + "</span>" : ""}</div>
-      <div class="fd">${escapeHtml(r[0] || "")}</div>
-    </div>`).join("");
+  rows.slice(-9).reverse().forEach(r => {
+    const dot = el("div", { class: "feed-dot" });
+    dot.style.background = colors[r[1]] || "#64748f";
+    dot.style.boxShadow = "0 0 8px " + (colors[r[1]] || "#64748f");
+    const ft = el("div", { class: "ft" },
+      el("b", { text: (r[1] || "") }), txt(" \u2014 " + (r[2] || "")));
+    if (r[5]) ft.appendChild(el("span", { class: "badge-soft", style: { fontSize: "8.5px" }, text: r[5] }));
+    host.appendChild(el("div", { class: "feed-item" }, dot, ft,
+      el("div", { class: "fd", text: (r[0] || "") })));
+  });
 }
 
 function showVbaSource(name) {
@@ -1399,15 +1415,6 @@ function catSvgNode(cat, cls) {
     stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round"
   }, ...shapes.map(([tag, attrs]) => sEl(tag, attrs)));
 }
-function catSvg(cat, cls) {
-  // TRANSITIONAL string renderer for panel templates not yet converted;
-  // builds only from the static CAT_ICON_SHAPES constants. Deleted in the
-  // panels commit once every caller uses catSvgNode.
-  const shapes = CAT_ICON_SHAPES[cat.icon] || CAT_ICON_SHAPES.layers;
-  const body = shapes.map(([tag, attrs]) =>
-    "<" + tag + Object.keys(attrs).map(k => ` ${k}="${attrs[k]}"`).join("") + "/>").join("");
-  return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${body}</svg>`;
-}
 function allCatsWithOther() {
   const list = SHEET_CATEGORIES.slice();
   const hasOther = WB.order.some(n => categoryOf(n).id === "other");
@@ -1416,36 +1423,37 @@ function allCatsWithOther() {
 }
 
 /* ---- dashboard category tiles ---- */
-function emptyStateHtml(msg) {
-  return `
-    <div class="empty-state fade-in">
-      <div class="es-ico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-      </div>
-      <h3>هنوز داده‌ای وجود ندارد</h3>
-      <p>${msg || "سیستم خام و آماده است — فایل اکسل (.xlsx / .xlsm) یا CSV خود را وارد کنید تا همه ماکروها روی داده‌های شما اجرا شوند."}</p>
-      <button class="btn btn-primary" data-act="open-file">📂 ورود فایل داده</button>
-    </div>`;
+function emptyStateNode(msg) {
+  return el("div", { class: "empty-state fade-in" },
+    el("div", { class: "es-ico" },
+      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#22d3ee", "stroke-width": "1.6", "stroke-linecap": "round" },
+        sEl("path", { d: "M12 16V4m0 0 4 4m-4-4-4 4" }),
+        sEl("path", { d: "M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" }))),
+    el("h3", { text: "\u0647\u0646\u0648\u0632 \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u0648\u062c\u0648\u062f \u0646\u062f\u0627\u0631\u062f" }),
+    el("p", { text: msg || "\u0633\u06cc\u0633\u062a\u0645 \u062e\u0627\u0645 \u0648 \u0622\u0645\u0627\u062f\u0647 \u0627\u0633\u062a \u2014 \u0641\u0627\u06cc\u0644 \u0627\u06a9\u0633\u0644 (.xlsx / .xlsm) \u06cc\u0627 CSV \u062e\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f \u062a\u0627 \u0647\u0645\u0647 \u0645\u0627\u06a9\u0631\u0647\u0627 \u0631\u0648\u06cc \u062f\u0627\u062f\u0647\u200c\u0647\u0627\u06cc \u0634\u0645\u0627 \u0627\u062c\u0631\u0627 \u0634\u0648\u0646\u062f." }),
+    el("button", { class: "btn btn-primary", "data-act": "open-file", text: "\ud83d\udcc2 \u0648\u0631\u0648\u062f \u0641\u0627\u06cc\u0644 \u062f\u0627\u062f\u0647" }));
 }
 function renderDashCats() {
   const host = document.getElementById("dash-cats");
   if (!host) return;
+  clear(host);
   if (!WB.order.some(n => IsDataSheet(n))) {
-    host.innerHTML = emptyStateHtml();
+    host.appendChild(emptyStateNode());
     return;
   }
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
-  host.innerHTML = cats.map(c => {
+  cats.forEach(c => {
     const st = catStats(c.id);
-    return `
-    <div class="cat-tile" style="color:${c.color}" data-act="open-category" data-cat="${c.id}">
-      <div class="ct-val">${st.count}</div>
-      <div class="ct-ico" style="background:${c.color}22;color:${c.color}">${catSvg(c)}</div>
-      <div class="ct-name" style="color:var(--txt-0)">${c.name}</div>
-      <div class="ct-meta">${st.rows.toLocaleString("fa-IR")} رکورد · ${c.sub}</div>
-      <div class="ct-ring"></div>
-    </div>`;
-  }).join("");
+    host.appendChild(el("div", {
+      class: "cat-tile", style: { color: c.color },
+      "data-act": "open-category", "data-cat": c.id
+    },
+      el("div", { class: "ct-val", text: String(st.count) }),
+      el("div", { class: "ct-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
+      el("div", { class: "ct-name", style: { color: "var(--txt-0)" }, text: c.name }),
+      el("div", { class: "ct-meta", text: st.rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f \u00b7 " + c.sub }),
+      el("div", { class: "ct-ring" })));
+  });
 }
 function openCategory(catId) {
   state.catFilter = catId || "all";
@@ -1457,20 +1465,24 @@ function openCategory(catId) {
 function renderCatBar() {
   const host = document.getElementById("cat-bar");
   if (!host) return;
-  const cats = [{ id: "all", name: "همه شیت‌ها", color: "#3b82f6", icon: "layers" }].concat(
+  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0634\u06cc\u062a\u200c\u0647\u0627", color: "#3b82f6", icon: "layers" }].concat(
     allCatsWithOther().filter(c => c.id !== "system" || state.showSystem));
-  host.innerHTML = cats.map(c => {
+  clear(host);
+  cats.forEach(c => {
     const st = c.id === "all"
       ? { count: WB.order.filter(n => IsDataSheet(n) || state.showSystem).length }
       : catStats(c.id);
     const active = (state.catFilter || "all") === c.id;
-    const bg = active ? `background:linear-gradient(135deg,${c.color}cc,${c.color}88)` : "";
-    return `<div class="cat-pill ${active ? "active" : ""}" style="${bg};${active ? "" : ""}" data-act="set-filter" data-cat="${c.id}">
-      <span class="cp-ico" style="color:${active ? "#fff" : c.color}">${catSvg(c)}</span>
-      ${c.name}
-      <span class="cp-n">${st.count}</span>
-    </div>`;
-  }).join("");
+    const pill = el("div", {
+      class: "cat-pill" + (active ? " active" : ""),
+      "data-act": "set-filter", "data-cat": c.id
+    },
+      el("span", { class: "cp-ico", style: { color: active ? "#fff" : c.color } }, catSvgNode(c)),
+      txt(c.name),
+      el("span", { class: "cp-n", text: String(st.count) }));
+    if (active) pill.style.background = "linear-gradient(135deg," + c.color + "cc," + c.color + "88)";
+    host.appendChild(pill);
+  });
 }
 function setCatFilter(catId) {
   state.catFilter = catId;
@@ -1492,15 +1504,16 @@ function renderSheetCatalog() {
   renderCatBar();
   const host = document.getElementById("sheet-catalog");
   if (!host) return;
+  clear(host);
   if (!WB.order.some(n => IsDataSheet(n) || (state.showSystem && IsSystemSheet(n)))) {
-    host.innerHTML = emptyStateHtml("هیچ شیت داده‌ای در کار نیست — ابتدا فایل داده خود را وارد کنید.");
+    host.appendChild(emptyStateNode("\u0647\u06cc\u0686 \u0634\u06cc\u062a \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u062f\u0631 \u06a9\u0627\u0631 \u0646\u06cc\u0633\u062a \u2014 \u0627\u0628\u062a\u062f\u0627 \u0641\u0627\u06cc\u0644 \u062f\u0627\u062f\u0647 \u062e\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f."));
     return;
   }
   const filter = state.catFilter || "all";
   const cats = filter === "all"
     ? allCatsWithOther().filter(c => c.id !== "system" || state.showSystem)
     : allCatsWithOther().filter(c => c.id === filter);
-  let html = "";
+  let rendered = 0;
   cats.forEach(c => {
     const names = WB.order.filter(n => {
       if (c.id === "system") return IsSystemSheet(n);
@@ -1508,38 +1521,35 @@ function renderSheetCatalog() {
       return categoryOf(n).id === c.id && (!IsSystemSheet(n) || state.showSystem);
     });
     if (!names.length) return;
-    html += `
-      <div class="cat-section fade-in">
-        <div class="cat-head">
-          <div class="ch-ico" style="background:${c.color}22;color:${c.color}">${catSvg(c)}</div>
-          <div>
-            <h3 style="color:var(--txt-0)">${c.name}</h3>
-            <div class="ch-sub">${c.sub}</div>
-          </div>
-          <div class="ch-line"></div>
-          <div class="ch-n">${names.length} SHEET</div>
-        </div>
-        <div class="sheet-grid">
-          ${names.map(n => {
-            const rows = Math.max(0, countRows(n) - 1);
-            const tags = sheetTags(n);
-            return `
-            <div class="sheet-card ${state.currentSheet === n ? "active" : ""}" data-act="open-sheet" data-name="${escapeHtmlAttr(n)}">
-              <div class="sc-glow" style="background:${c.color}"></div>
-              <div class="sc-top">
-                <span class="sc-dot" style="background:${c.color}"></span>
-                <div class="sc-name">${escapeHtml(n)}</div>
-              </div>
-              <div class="sc-tags">
-                <span class="sc-rows">${rows.toLocaleString("fa-IR")} رکورد</span>
-                ${tags.map(t => `<span class="sc-tag">${t}</span>`).join("")}
-              </div>
-            </div>`;
-          }).join("")}
-        </div>
-      </div>`;
+    rendered++;
+    const grid = el("div", { class: "sheet-grid" });
+    names.forEach(n => {
+      const rows = Math.max(0, countRows(n) - 1);
+      const tags = sheetTags(n);
+      const card = el("div", {
+        class: "sheet-card" + (state.currentSheet === n ? " active" : ""),
+        "data-act": "open-sheet", "data-name": n
+      },
+        el("div", { class: "sc-glow", style: { background: c.color } }),
+        el("div", { class: "sc-top" },
+          el("span", { class: "sc-dot", style: { background: c.color } }),
+          el("div", { class: "sc-name", text: n })),
+        el("div", { class: "sc-tags" },
+          el("span", { class: "sc-rows", text: rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f" }),
+          ...tags.map(t => el("span", { class: "sc-tag", text: t }))));
+      grid.appendChild(card);
+    });
+    host.appendChild(el("div", { class: "cat-section fade-in" },
+      el("div", { class: "cat-head" },
+        el("div", { class: "ch-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
+        el("div", {},
+          el("h3", { style: { color: "var(--txt-0)" }, text: c.name }),
+          el("div", { class: "ch-sub", text: c.sub })),
+        el("div", { class: "ch-line" }),
+        el("div", { class: "ch-n", text: names.length + " SHEET" })),
+      grid));
   });
-  host.innerHTML = html || '<div class="empty-state">شیتی در این دسته یافت نشد.</div>';
+  if (!rendered) host.appendChild(el("div", { class: "empty-state", text: "\u0634\u06cc\u062a\u06cc \u062f\u0631 \u0627\u06cc\u0646 \u062f\u0633\u062a\u0647 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." }));
 }
 function openSheetCard(name) {
   renderSheetView(name);
