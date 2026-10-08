@@ -194,20 +194,24 @@ async function launchBrowser() {
     await page.evaluate(() => { switchView("sheet"); openSheetCard("SampleNet"); });
     await page.waitForSelector("#sheet-body table.xl", { timeout: 5000 });
     await page.click("[data-act='save-now']");
-    await page.waitForTimeout(300);
-    const saveInfo = await page.evaluate(() => {
-      let p = null, ui = null;
-      try { p = JSON.parse(localStorage.getItem("Mohsen_FINAL_v5_state_v2") || "null"); } catch (e) {}
-      try { ui = JSON.parse(localStorage.getItem("Mohsen_FINAL_v5_state_v2_ui") || "null"); } catch (e) {}
+    await page.waitForTimeout(600);
+    const saveInfo = await page.evaluate(async () => {
+      const p = typeof readStoredState === "function" ? readStoredState() : null;
+      const ui = typeof loadUIState === "function" ? loadUIState() : null;
+      let deep = null;
+      try { deep = typeof idbGet === "function" ? await idbGet() : null; } catch (e) {}
       return {
         saved: !!p && p.order.indexOf("SampleNet") >= 0,
+        compressed: (localStorage.getItem("Mohsen_FINAL_v5_state_v2") || "").charCodeAt(0) === 0xFFFC,
+        deepSaved: !!deep && Array.isArray(deep.order) && deep.order.indexOf("SampleNet") >= 0,
         indicator: ((document.getElementById("save-indicator") || {}).textContent || ""),
         uiSheet: ui ? ui.sheet : ""
       };
     });
     check("save: Save button persists data + indicator updated",
-      saveInfo.saved && saveInfo.indicator.indexOf("ذخیره‌شده") === 0 && saveInfo.uiSheet === "SampleNet",
+      saveInfo.saved && saveInfo.compressed && saveInfo.indicator.indexOf("ذخیره‌شده") === 0 && saveInfo.uiSheet === "SampleNet",
       JSON.stringify(saveInfo));
+    check("save: deep IndexedDB mirror written", saveInfo.deepSaved === true, String(saveInfo.deepSaved));
 
     await page.reload({ waitUntil: "load" });
     // boot is async (Workbook_Open + index verify) — wait for the view restore itself

@@ -1313,7 +1313,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   WB.order = APP_SHELL.order.slice();
   WB.sheets = JSON.parse(JSON.stringify(APP_SHELL.sheets));
   // restore saved session (previously imported data), if any
-  const restored = loadState();
+  let restored = loadState();
+  // the deep store (IndexedDB) may hold the full dataset when localStorage
+  // was quota-limited or truncated — apply it when present and not older
+  if (typeof loadDeepState === "function") {
+    try { if (await loadDeepState()) restored = true; } catch (e) {}
+  }
   // stash the remembered view NOW — later boot calls (switchView/saveState)
   // rewrite the ui key and would otherwise clobber it
   const uiSavedBoot = (typeof loadUIState === "function") ? loadUIState() : null;
@@ -1620,6 +1625,7 @@ Object.assign(window, {
   renderExactToggle, renderResultsView, renderSheetView,
   resolveArchiveSheet, GoToControlPanel, RunMacro, Workbook_Open,
   IsSystemSheet, IsDataSheet, SheetExists, initUIFromState, saveNow, saveUIState, loadUIState,
+  packLZ, unpackLZ, readStoredState, loadDeepState, flushDeepSave, idbGet, idbDelete,
   FindHeaderRow, TrimText, NormalizeText, LastUsedRow, LastUsedCol,
   modImport, importWorkbookFromBuffer, importCsvText, applyJsonBackup,
   resetToEmptyData, BuildExportWorkbook, ExportWorkbookXlsx, parseCsvText,

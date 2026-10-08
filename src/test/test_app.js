@@ -398,12 +398,32 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   // ===== persistence: explicit Save button + remembered workspace =====
   check("save: save-now button present (topbar + panel)", doc.querySelectorAll("[data-act='save-now']").length >= 2,
     doc.querySelectorAll("[data-act='save-now']").length + " buttons");
-  const savedFlag = W.saveNow();
-  let savedParsed = null;
-  try { savedParsed = JSON.parse(window.localStorage.getItem("Mohsen_FINAL_v5_state_v2") || "null"); } catch (e) {}
+  const savedFlag = await W.saveNow();
+  const savedParsed = W.readStoredState();
   check("save: saveNow persists + read-back verified", savedFlag === true && !!savedParsed && savedParsed.v === 2 &&
     savedParsed.order.length === W.WB.order.length && savedParsed.savedAt > 0,
     savedFlag + "/" + (savedParsed ? savedParsed.order.length + " sheets" : "no payload"));
+  const rawStored = window.localStorage.getItem("Mohsen_FINAL_v5_state_v2") || "";
+  check("storage: localStorage payload is LZ-compressed", rawStored.charCodeAt(0) === 0xFFFC && rawStored.length > 0,
+    "len=" + rawStored.length);
+  {
+    const samples = [
+      "", "a", "hello world hello world",
+      '{"name":"مهدی","sheet":"شاخص های شبکه"}',
+      JSON.stringify({ rows: Array.from({ length: 300 }, (_, k) => ["شاخص", "استان " + (k % 11), "شعبه " + k]) }),
+      "\u0000\u0100\u0101\uFFFF" + String.fromCharCode(256, 257, 258)
+    ];
+    const roundOk = samples.every(t => W.unpackLZ(W.packLZ(t)) === t);
+    check("storage: packLZ/unpackLZ round-trip", roundOk);
+  }
+  {
+    // legacy plain-JSON payloads (pre-compression saves) must still be readable
+    const raw = window.localStorage.getItem("Mohsen_FINAL_v5_state_v2");
+    window.localStorage.setItem("Mohsen_FINAL_v5_state_v2", JSON.stringify({ v: 2, order: ["X"], sheets: { X: { rows: [], merges: [] } } }));
+    const legacy = W.readStoredState();
+    window.localStorage.setItem("Mohsen_FINAL_v5_state_v2", raw);
+    check("storage: legacy plain-JSON payload still loads", !!legacy && legacy.v === 2 && legacy.order[0] === "X");
+  }
   W.renderSheetView("SampleNet");
   W.saveUIState();
   let uiParsed = null;

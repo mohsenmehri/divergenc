@@ -7,21 +7,25 @@
 - 🔶 **MANUAL** — معادل پیاده‌سازی شده؛ تأیید رفتاری دستی لازم است
 
 > **لایه دوم اثبات (مرورگر واقعی):** مجموعه Playwright در `src/e2e/smoke.js`
-> (۲۴ سناریو در Chromium واقعی) — از جمله اجرای واقعی CSP و باز شدن واقعی
+> (۲۵ سناریو در Chromium واقعی) — از جمله اجرای واقعی CSP و باز شدن واقعی
 > پنجره فایل. با `cd src/e2e && npm install && npm test` قابل تکرار است.
 >
 > **نحوه اثبات ادعاها:** نتیجه تست‌ها را نمی‌توان از فایل HTML اثبات کرد. مرجع،
 > اجرای `node src/test/test_app.js` در همین repository و خروجی checks در PR است.
 > این سند «فهرست پوشش» است نه گزارش تست زنده.
 
-مجموعه تست خودکار: `src/test/test_app.js` — در حال حاضر **105 assertion**، همه سبز
-(۱۰۳ ادعای رفتاری + ۲ نگهبان DoD بازسازی DOM API).
+مجموعه تست خودکار: `src/test/test_app.js` — در حال حاضر **108 assertion**، همه سبز
+(۱۰۶ ادعای رفتاری + ۲ نگهبان DoD بازسازی DOM API).
 
 > **بازسازی DOM API (فاز ۹):** همه‌ی renderer ها به `el()`/`sEl()`/`textContent` تبدیل شدند؛
 > صفر `innerHTML` در سورس‌های برنامه. دو نگهبان DoD (`dom-api: zero innerHTML-family calls…`
 > و `dom-api: no HTML-string modal path…`) روی هر اجرا تضمین می‌کنند هیچ sink رشته‌-HTML
 > به سورس‌ها برنگردد. طبقه‌بندی نهایی: [INNERHTML_AUDIT.md](INNERHTML_AUDIT.md).
-> **ماندگاری (جدید):** دکمه‌ی «ذخیره» + ماندگاری داده‌ها و آخرین شیت باز روی reload —
+> **ماندگاری (سه‌لایه):** فشرده‌سازی LZ17 روی localStorage + آینه‌ی عمیق IndexedDB +
+> پشتیبان JSON — تست‌های `storage: packLZ/unpackLZ round-trip`،
+> `storage: localStorage payload is LZ-compressed`، `storage: legacy plain-JSON payload still loads`
+> (jsdom) و `save: deep IndexedDB mirror written` (مرورگر واقعی).
+> **ماندگاری (قبلی):** دکمه‌ی «ذخیره» + ماندگاری داده‌ها و آخرین شیت باز روی reload —
 > تست‌های `save: save-now button present`، `save: saveNow persists + read-back verified`،
 > `save: open sheet remembered`، `save: indicator shows saved time` (jsdom) و
 > `save: Save button persists data`، `save: reload restores data and lands on the same sheet`
