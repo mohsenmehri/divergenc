@@ -53,7 +53,7 @@ python3 src/build.py          # -> Mohsen_FINAL_v5.html
 
 ```bash
 cd src/test && npm install jsdom && node test_app.js
-# => SUMMARY: N/N passed   (در حال حاضر 90+ assertion)
+# => SUMMARY: 99/99 passed
 ```
 
 - ✅ حذف کامل inline event handler ها (0 عدد در خروجی) — event delegation با `data-act` + CSP `script-src-attr 'none'`
@@ -62,12 +62,25 @@ cd src/test && npm install jsdom && node test_app.js
   ایمنی فعلی بر پایه escape در همان template ها است.
 - 🔶 enterprise-grade نیست: فاقد backend/auth و تست‌های مرورگری واقعی (Cypress/Playwright) و CI.
 
-## تست‌ها
+## تست‌ها — دو لایه اثبات
 
+**۱) مجموعه رفتاری (jsdom) — unit/integration:**
 ```bash
 cd src/test
 npm install jsdom          # فقط برای تست
-node test_app.js           # مجموعه رفتاری (66+ assertion)
+node test_app.js           # => SUMMARY: 99/99 passed
 ```
+
+**۲) Playwright smoke (مرورگر واقعی Chromium — نه شبیه‌سازی):**
+```bash
+cd src/e2e
+npm install
+npm test                   # => SMOKE SUMMARY: 22/22 passed
+# با مرورگر خودتان:  CHROME_PATH=".../chrome.exe" npm test
+```
+پوشش smoke: اجرای **واقعی** CSP (مسدود شدن handler درون‌خطی + رویداد violation)،
+صفر بودن inline handler ها در DOM واقعی، **باز شدن واقعی پنجره انتخاب فایل**،
+import با filechooser واقعی، رندر merge ها مثل اکسل، اجرای ماکروها روی داده
+واردشده، بی‌اثر بودن XSS، و بازگشت به حالت خام — همه در Chromium 131 headless.
 
 فهرست معادل‌سازی رفتاری ماکروها با فایل Excel اصلی: [`BEHAVIORAL_TESTS.md`](../BEHAVIORAL_TESTS.md)
