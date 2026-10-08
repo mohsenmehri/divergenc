@@ -605,7 +605,8 @@ function renderSheetView(name) {
   const sh = WB.sheets[name];
   const body = document.getElementById("sheet-body");
   document.getElementById("sheet-title").textContent = name;
-  if (!sh) { body.innerHTML = '<div class="empty-state">شیت یافت نشد.</div>'; return; }
+  clear(body);
+  if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0634\u06cc\u062a \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
   const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
   const locked = !!state.lockedSheets[name];
   let lastRow = sh.rows.length;
@@ -622,32 +623,42 @@ function renderSheetView(name) {
         mergeMap.set(rr + "," + cc, m);
   });
   const maxC = Math.min(lastCol, MAX_DATA_COLS);
-  let html = '<div class="grid-wrap"><table class="xl"><thead><tr><th class="rn">#</th>';
-  for (let c = 1; c <= maxC; c++) html += `<th>${colLetter(c)}</th>`;
-  html += "</tr></thead><tbody>";
+  const table = el("table", { class: "xl" });
+  const thead = el("thead");
+  const htr = el("tr", {}, el("th", { class: "rn", text: "#" }));
+  for (let c = 1; c <= maxC; c++) htr.appendChild(el("th", { text: colLetter(c) }));
+  thead.appendChild(htr);
+  table.appendChild(thead);
+  const tbody = el("tbody");
   for (let r = 1; r <= limit; r++) {
-    html += `<tr data-r="${r}"><td class="rn">${r}</td>`;
+    const tr = el("tr", { "data-r": r }, el("td", { class: "rn", text: String(r) }));
     for (let c = 1; c <= maxC; c++) {
       const m = mergeMap.get(r + "," + c);
       if (m && (m.r1 !== r || m.c1 !== c)) continue; // covered by merge anchor
       const v = cellVal(name, r, c, true);
-      const editable = !locked && !IsSystemSheet(name) ? ' contenteditable="true"' : "";
-      let span = "";
+      const editable = !locked && !IsSystemSheet(name);
+      const tdAttrs = { "data-c": c, "data-r": r, text: (v === null || v === undefined ? "" : v) };
       if (m) {
         const rs = Math.min(m.r2, limit) - m.r1 + 1;
         const cs = Math.min(m.c2, maxC) - m.c1 + 1;
-        if (rs > 1) span += ` rowspan="${rs}"`;
-        if (cs > 1) span += ` colspan="${cs}"`;
+        if (rs > 1) tdAttrs.rowspan = rs;
+        if (cs > 1) tdAttrs.colspan = cs;
       }
-      html += `<td data-c="${c}" data-r="${r}"${span}${editable}>${escapeHtml(v === null || v === undefined ? "" : v)}</td>`;
+      const td = el("td", tdAttrs);
+      if (editable) td.setAttribute("contenteditable", "true");
+      tr.appendChild(td);
     }
-    html += "</tr>";
+    tbody.appendChild(tr);
   }
-  html += "</tbody></table></div>";
+  table.appendChild(tbody);
+  body.appendChild(el("div", { class: "grid-wrap" }, table));
   if (lastRow + 5 > limit) {
-    html += `<div style="text-align:center;padding:10px"><button class="mini-btn gray" data-act="show-more-rows" data-name="${escapeHtmlAttr(name)}">نمایش ردیف‌های بیشتر (تا ${Math.min(lastRow + 5, state.pageLimit + 500)})</button></div>`;
+    body.appendChild(el("div", { style: { textAlign: "center", padding: "10px" } },
+      el("button", {
+        class: "mini-btn gray", "data-act": "show-more-rows", "data-name": name,
+        text: "\u0646\u0645\u0627\u06cc\u0634 \u0631\u062f\u06cc\u0641\u200c\u0647\u0627\u06cc \u0628\u06cc\u0634\u062a\u0631 (\u062a\u0627 " + Math.min(lastRow + 5, state.pageLimit + 500) + ")"
+      })));
   }
-  body.innerHTML = html;
 
   // cell editing → write back
   if (!locked && !IsSystemSheet(name)) {
