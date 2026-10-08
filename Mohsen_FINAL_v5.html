@@ -3,420 +3,1198 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DATA MANAGER v28 — Mohsen_FINAL_v5</title>
+<title>NetScope Console — DATA MANAGER v28</title>
 <style>
-  :root{
-    --navy:#12305a; --navy2:#224880; --blue:#1f4e79; --blue-l:#d6e5f7; --blue-x:#c6daf2;
-    --green:#00704d; --green-l:#c6efce; --green-b:#00a049;
-    --red:#9b1e1e; --red-l:#fddede; --red-b:#c00000;
-    --gray:#2f3846; --gray-l:#dce0e8;
-    --teal:#006969; --teal-l:#c6ebeb; --teal-x:#e1f2f2;
-    --bg:#f1f5f9; --panel-w:430px;
-    --font:"Segoe UI",Tahoma,Arial,sans-serif;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;height:100%;}
-  body{font-family:var(--font);background:#e8edf3;color:#1e1e1e;font-size:13px;}
-  button{font-family:var(--font);cursor:pointer;}
-  input,select,textarea{font-family:var(--font);}
+/* ================================================================
+   NetScope Console — Professional Network Operations UI
+   ================================================================ */
+:root{
+  --bg-0:#070b16;
+  --bg-1:#0b1224;
+  --bg-2:#0f1830;
+  --glass:rgba(148,178,255,.055);
+  --glass-2:rgba(148,178,255,.09);
+  --stroke:rgba(126,167,255,.14);
+  --stroke-2:rgba(126,167,255,.22);
+  --txt-0:#eaf1ff;
+  --txt-1:#a8b8d4;
+  --txt-2:#64748f;
+  --cyan:#22d3ee;
+  --blue:#3b82f6;
+  --indigo:#6366f1;
+  --violet:#8b5cf6;
+  --green:#22c55e;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --pink:#ec4899;
+  --grad-main:linear-gradient(135deg,#22d3ee 0%,#3b82f6 55%,#6366f1 100%);
+  --grad-btn:linear-gradient(135deg,#0ea5e9,#2563eb);
+  --grad-green:linear-gradient(135deg,#10b981,#059669);
+  --grad-red:linear-gradient(135deg,#f43f5e,#e11d48);
+  --grad-amber:linear-gradient(135deg,#fbbf24,#f97316);
+  --grad-violet:linear-gradient(135deg,#a78bfa,#7c3aed);
+  --shadow-1:0 10px 30px -12px rgba(2,8,23,.65);
+  --shadow-2:0 22px 50px -18px rgba(2,8,23,.8);
+  --glow-c:0 0 0 1px rgba(34,211,238,.35),0 0 28px -6px rgba(34,211,238,.35);
+  --r-lg:18px; --r-md:13px; --r-sm:9px;
+  --sidebar-w:264px;
+  --topbar-h:62px;
+  --font:"Segoe UI",Tahoma,system-ui,-apple-system,"Inter","Vazirmatn",sans-serif;
+  --mono:"Cascadia Code","Consolas","JetBrains Mono",monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  font-family:var(--font);
+  background:
+    radial-gradient(1100px 520px at 85% -10%,rgba(59,130,246,.16),transparent 60%),
+    radial-gradient(900px 480px at 8% 110%,rgba(139,92,246,.13),transparent 55%),
+    var(--bg-0);
+  color:var(--txt-0);
+  font-size:13.5px;
+  overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(120,160,255,.055) 1px,transparent 1px);
+  background-size:26px 26px;
+  mask-image:radial-gradient(1200px 700px at 70% 0%,rgba(0,0,0,.55),transparent 75%);
+}
+button{font-family:var(--font);cursor:pointer;border:0;background:none;color:inherit;}
+input,select,textarea{font-family:var(--font);}
+::selection{background:rgba(34,211,238,.35);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-thumb{background:rgba(120,160,255,.22);border-radius:8px;border:2px solid transparent;background-clip:padding-box;}
+::-webkit-scrollbar-thumb:hover{background:rgba(120,160,255,.4);background-clip:padding-box;}
+::-webkit-scrollbar-track{background:transparent;}
 
-  /* ===== top tabs ===== */
-  #topbar{position:sticky;top:0;z-index:500;display:flex;align-items:center;gap:6px;
-    background:linear-gradient(90deg,#12305a,#224880);color:#fff;padding:6px 12px;box-shadow:0 2px 8px rgba(0,0,0,.25);}
-  #topbar .brand{font-weight:700;font-size:14px;letter-spacing:.5px;white-space:nowrap;}
-  #topbar .brand .fa{font-size:11px;opacity:.85;font-weight:400;}
-  #topbar .tabs{display:flex;gap:4px;flex-wrap:wrap;}
-  .tab-btn{border:0;background:rgba(255,255,255,.12);color:#dfe9f6;padding:6px 13px;border-radius:7px;font-size:12px;transition:.15s;}
-  .tab-btn:hover{background:rgba(255,255,255,.22);}
-  .tab-btn.active{background:#fff;color:#12305a;font-weight:700;}
-  #topbar .sp{flex:1;}
-  #topbar .stat{font-size:11px;opacity:.9;white-space:nowrap;}
+/* ============ LAYOUT ============ */
+#layout{display:flex;min-height:100vh;position:relative;z-index:1;}
 
-  /* ===== layout ===== */
-  #main{display:flex;min-height:calc(100vh - 46px);}
-  .view{display:none;flex:1;min-width:0;}
-  .view.active{display:flex;}
+/* ============ SIDEBAR ============ */
+#sidebar{
+  width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  position:sticky;top:0;height:100vh;
+  background:linear-gradient(180deg,rgba(15,24,48,.92),rgba(9,14,30,.96));
+  border-left:1px solid var(--stroke);
+  display:flex;flex-direction:column;
+  backdrop-filter:blur(18px);
+  z-index:60;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:18px 18px 14px;}
+.brand-logo{
+  width:42px;height:42px;border-radius:13px;background:var(--grad-main);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 22px -8px rgba(34,211,238,.55);position:relative;flex:0 0 42px;
+}
+.brand-logo::after{content:"";position:absolute;inset:-3px;border-radius:16px;
+  background:conic-gradient(from 120deg,transparent,rgba(34,211,238,.5),transparent 40%);
+  z-index:-1;animation:spin 7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand-name{font-size:16px;font-weight:800;letter-spacing:.3px;line-height:1.25;}
+.brand-name span{background:var(--grad-main);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.brand-sub{font-size:9.5px;color:var(--txt-2);letter-spacing:1.6px;text-transform:uppercase;}
+.side-sect{padding:12px 18px 6px;font-size:9.5px;letter-spacing:1.8px;color:var(--txt-2);text-transform:uppercase;font-weight:700;}
+.side-nav{display:flex;flex-direction:column;gap:4px;padding:0 11px;}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:10.5px 13px;border-radius:11px;
+  color:var(--txt-1);font-size:12.5px;font-weight:600;cursor:pointer;position:relative;
+  transition:.18s;border:1px solid transparent;
+}
+.nav-item svg{width:18px;height:18px;flex:0 0 18px;opacity:.85;}
+.nav-item:hover{background:var(--glass-2);color:var(--txt-0);transform:translateX(-3px);}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(34,211,238,.16),rgba(59,130,246,.08));
+  color:#dff6ff;border-color:rgba(34,211,238,.28);
+  box-shadow:inset 0 0 24px -10px rgba(34,211,238,.5);
+}
+.nav-item.active::before{
+  content:"";position:absolute;right:-11px;top:18%;height:64%;width:3.5px;border-radius:4px;
+  background:var(--grad-main);box-shadow:0 0 12px rgba(34,211,238,.8);
+}
+.nav-badge{
+  margin-right:auto;background:rgba(59,130,246,.22);color:#9cc6ff;font-size:9.5px;
+  padding:2px 8px;border-radius:99px;font-weight:700;min-width:26px;text-align:center;
+  border:1px solid rgba(59,130,246,.3);
+}
+.side-foot{margin-top:auto;padding:13px;}
+.side-status{
+  background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-md);
+  padding:11px 12px;font-size:10.5px;color:var(--txt-1);line-height:2.05;
+}
+.side-status b{color:var(--txt-0);}
+.side-status .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:5px;}
+.dot.g{background:var(--green);box-shadow:0 0 8px var(--green);}
+.dot.c{background:var(--cyan);box-shadow:0 0 8px var(--cyan);}
+.dot.a{background:var(--amber);box-shadow:0 0 8px var(--amber);}
 
-  /* ===== control panel (Excel-like) ===== */
-  #view-panel{padding:14px;gap:14px;flex-wrap:wrap;align-items:flex-start;justify-content:center;}
-  .cp{width:var(--panel-w);min-width:330px;background:var(--bg);border-radius:10px;overflow:hidden;
-      box-shadow:0 4px 18px rgba(18,48,90,.18);border:1px solid #d7dee8;}
-  .cp-title{background:var(--navy);color:#fff;text-align:center;font-weight:700;font-size:15px;padding:12px 8px 9px;letter-spacing:1px;}
-  .cp-accent{height:4px;background:#3469ac;}
-  .cp-sub{background:var(--navy2);color:#b4d2ff;text-align:center;font-size:10px;padding:4px;}
-  .cp-band{color:#fff;font-weight:700;font-size:12.5px;text-align:center;padding:7px;}
-  .cp-gap{height:6px;}
-  .cp-sep{height:8px;background:var(--blue-x);}
-  .cp-row{display:flex;align-items:stretch;gap:0;}
-  .cp-label{width:110px;flex:0 0 110px;display:flex;align-items:center;justify-content:flex-end;
-    font-weight:700;font-size:11px;padding:0 8px;}
-  .cp-input-wrap{flex:1;padding:3px 8px 3px 2px;}
-  .cp-input-wrap select,.cp-input-wrap input[type=text]{width:100%;height:30px;border:0;border-bottom:2px solid;
-    background:#fff;font-size:12px;padding:2px 8px;outline:none;border-radius:3px 3px 0 0;}
-  .cp-cellref{display:block;font-size:8.5px;color:#8aa;letter-spacing:.5px;text-align:left;margin-top:1px;}
-  .cp-note{font-size:8.5px;font-style:italic;text-align:center;padding:5px;color:#326;}
-  .cp-btnrow{padding:5px 12px;}
-  .cp-btn{width:100%;border:0;border-radius:6px;color:#fff;font-weight:700;font-size:11.5px;padding:9px 6px;
-    letter-spacing:.4px;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:.15s;}
-  .cp-btn:hover{filter:brightness(1.12);}
-  .cp-btn:active{transform:translateY(1px);}
-  .cp-btn.blue{background:var(--blue);} .cp-btn.green{background:var(--green);} .cp-btn.red{background:#c0392b;}
-  .cp-btn.orange{background:#d35400;} .cp-btn.gray{background:#5a5a5a;} .cp-btn.purple{background:#73559b;}
-  .cp-btn.blue2{background:#3264c8;} .cp-btn.teal{background:var(--teal);}
-  .cp-duo{display:flex;gap:6px;padding:5px 12px;}
-  .cp-duo .cp-btn{padding:8px 4px;}
-  .cp-footer{height:12px;background:#005a5a;}
-  .cp-tools-note{font-size:8.5px;font-style:italic;text-align:center;color:#505a6e;background:var(--gray-l);padding:4px;}
+/* ============ MAIN ============ */
+#main-wrap{flex:1;min-width:0;display:flex;flex-direction:column;}
 
-  /* exact toggle */
-  .toggle-wrap{display:flex;align-items:center;gap:8px;padding:4px 12px 2px;}
-  .toggle-label{font-size:10px;font-weight:700;color:#143764;}
-  .switch{width:70px;height:25px;border-radius:14px;position:relative;cursor:pointer;transition:.2s;flex:0 0 70px;}
-  .switch .thumb{position:absolute;top:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;
-    box-shadow:0 1px 3px rgba(0,0,0,.3);}
-  .switch.on{background:#00a046;} .switch.on .thumb{right:3px;}
-  .switch.off{background:#c81e1e;} .switch.off .thumb{right:calc(100% - 22px);}
-  .switch .txt{position:absolute;top:4px;font-size:9.5px;font-weight:800;color:#fff;width:100%;text-align:center;
-    direction:ltr;user-select:none;}
+/* ============ TOPBAR ============ */
+#topbar{
+  height:var(--topbar-h);position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;gap:13px;padding:0 22px;
+  background:rgba(9,14,30,.72);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--stroke);
+}
+#topbar .page-title{font-size:15px;font-weight:800;letter-spacing:.2px;}
+#topbar .page-title small{display:block;font-size:9.5px;color:var(--txt-2);font-weight:600;letter-spacing:1.3px;text-transform:uppercase;}
+.top-search{
+  display:flex;align-items:center;gap:8px;background:var(--glass);
+  border:1px solid var(--stroke);border-radius:99px;padding:7px 14px;width:min(320px,32vw);
+  transition:.2s;
+}
+.top-search:focus-within{border-color:rgba(34,211,238,.5);box-shadow:0 0 0 3px rgba(34,211,238,.12);}
+.top-search input{background:none;border:0;outline:none;color:var(--txt-0);width:100%;font-size:12px;}
+.top-search svg{width:15px;height:15px;opacity:.55;}
+.spacer{flex:1;}
+.stat-pill{
+  display:flex;align-items:center;gap:7px;background:var(--glass);border:1px solid var(--stroke);
+  border-radius:99px;padding:6.5px 13px;font-size:10.5px;color:var(--txt-1);white-space:nowrap;
+}
+.stat-pill b{color:var(--cyan);font-weight:800;}
+.icon-btn{
+  width:37px;height:37px;border-radius:11px;background:var(--glass);border:1px solid var(--stroke);
+  display:flex;align-items:center;justify-content:center;transition:.18s;position:relative;
+}
+.icon-btn:hover{background:var(--glass-2);transform:translateY(-1.5px);border-color:var(--stroke-2);}
+.icon-btn svg{width:17px;height:17px;opacity:.8;}
+.user-chip{
+  display:flex;align-items:center;gap:9px;background:var(--glass);border:1px solid var(--stroke);
+  border-radius:99px;padding:5px 6px 5px 14px;
+}
+.avatar{
+  width:31px;height:31px;border-radius:50%;background:var(--grad-main);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#04101f;
+}
+.user-chip .un{font-size:11px;font-weight:700;}
+.user-chip .ur{font-size:9px;color:var(--txt-2);display:block;}
 
-  /* side cards on panel view */
-  .side-cards{display:flex;flex-direction:column;gap:12px;min-width:280px;max-width:520px;flex:1;}
-  .side-card{background:#fff;border-radius:10px;box-shadow:0 3px 12px rgba(18,48,90,.12);overflow:hidden;}
-  .side-card h3{margin:0;background:var(--gray);color:#fff;font-size:12px;padding:8px 12px;}
-  .side-card .body{padding:10px 12px;font-size:11.5px;line-height:2;}
-  .side-card .body b{color:#12305a;}
-  .badge{display:inline-block;background:#e4ebf4;border-radius:10px;padding:1px 9px;font-size:10px;margin:0 2px;}
-  .quick-grid{display:flex;flex-wrap:wrap;gap:6px;}
-  .quick-btn{border:1px solid #c9d6e6;background:#f7fafd;border-radius:7px;padding:7px 10px;font-size:11px;color:#1f4e79;}
-  .quick-btn:hover{background:#e8f0fa;}
+/* ============ VIEWS ============ */
+.view{display:none;flex:1;flex-direction:column;min-width:0;}
+.view.active{display:flex;}
+.content{padding:20px 22px 34px;display:flex;flex-direction:column;gap:18px;}
 
-  /* ===== results view ===== */
-  #view-results,#view-sheet,#view-log,#view-macros{flex-direction:column;padding:0;}
-  .view-head{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border-bottom:1px solid #d5dde8;
-    flex-wrap:wrap;position:sticky;top:46px;z-index:100;}
-  .view-head h2{margin:0;font-size:14px;color:#12305a;}
-  .view-head .sub{font-size:11px;color:#678;}
-  .spacer{flex:1;}
-  .mini-btn{border:0;border-radius:6px;padding:7px 12px;font-size:11px;font-weight:700;color:#fff;background:#3264c8;}
-  .mini-btn.green{background:#00a049;} .mini-btn.red{background:#c0392b;} .mini-btn.gray{background:#6b7686;}
-  .mini-btn.teal{background:#006969;} .mini-btn.orange{background:#d35400;} .mini-btn.purple{background:#73559b;}
-  .mini-btn.ghost{background:#eef2f7;color:#334;}
-  .view-body{flex:1;overflow:auto;padding:12px 14px;}
+/* ============ CARDS ============ */
+.card{
+  background:linear-gradient(160deg,rgba(148,178,255,.075),rgba(148,178,255,.028));
+  border:1px solid var(--stroke);border-radius:var(--r-lg);
+  box-shadow:var(--shadow-1);position:relative;overflow:hidden;
+  transition:.22s;
+}
+.card:hover{border-color:var(--stroke-2);}
+.card-head{display:flex;align-items:center;gap:10px;padding:15px 18px 0;}
+.card-head .ico{
+  width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  flex:0 0 34px;
+}
+.card-head .ico svg{width:17px;height:17px;}
+.card-head h3{margin:0;font-size:13px;font-weight:800;}
+.card-head .eyebrow{font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--txt-2);font-weight:700;}
+.card-body{padding:14px 18px 18px;}
+.g-cyan{background:rgba(34,211,238,.14);color:var(--cyan);}
+.g-green{background:rgba(34,197,94,.14);color:var(--green);}
+.g-red{background:rgba(239,68,68,.14);color:var(--red);}
+.g-amber{background:rgba(245,158,11,.14);color:var(--amber);}
+.g-violet{background:rgba(139,92,246,.14);color:var(--violet);}
+.g-blue{background:rgba(59,130,246,.14);color:var(--blue);}
 
-  /* match blocks (search/remove results) */
-  .match-block{margin-bottom:18px;}
-  .match-title{background:#4472c4;color:#fff;font-weight:700;font-size:12px;padding:6px 10px;border-radius:5px 5px 0 0;
-    direction:ltr;text-align:left;}
-  .match-block.remove .match-title{background:#c00000;}
-  .block-table{border-collapse:collapse;width:100%;background:#fff;}
-  .block-table th{background:#dce6f1;font-size:10.5px;font-weight:700;padding:5px 7px;border:1px solid #9db4cf;
-    white-space:nowrap;text-align:center;}
-  .block-table td{padding:0;border:1px solid #b9c7d8;}
-  .block-table td .cell-in{width:100%;border:0;outline:none;padding:6px 7px;font-size:11.5px;background:#fff;
-    min-width:70px;}
-  .block-table td .cell-in:focus{background:#fffbe6;box-shadow:inset 0 0 0 2px #f0c419;}
-  .block-table td.saved .cell-in{background:#ffeb9c;}
-  .block-sep{height:10px;}
+/* ============ HERO ============ */
+.hero{
+  border-radius:var(--r-lg);position:relative;overflow:hidden;
+  background:linear-gradient(120deg,rgba(34,211,238,.13),rgba(59,130,246,.1) 45%,rgba(139,92,246,.12));
+  border:1px solid rgba(34,211,238,.22);
+  display:flex;align-items:center;gap:22px;padding:26px 28px;
+  box-shadow:var(--shadow-1);
+}
+.hero::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(500px 240px at 92% 0%,rgba(34,211,238,.2),transparent 60%),
+    radial-gradient(420px 240px at 4% 110%,rgba(139,92,246,.18),transparent 60%);
+}
+.hero-net{position:absolute;left:0;top:0;height:100%;width:44%;opacity:.85;}
+.hero-txt{position:relative;flex:1;}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:7px;background:rgba(34,211,238,.14);
+  border:1px solid rgba(34,211,238,.3);color:#a5f3fc;font-size:10px;font-weight:700;
+  letter-spacing:1.2px;padding:5px 12px;border-radius:99px;text-transform:uppercase;
+}
+.hero h1{margin:12px 0 7px;font-size:23px;font-weight:900;letter-spacing:.2px;line-height:1.5;}
+.hero h1 em{
+  font-style:normal;background:var(--grad-main);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.hero p{margin:0;color:var(--txt-1);font-size:12.5px;line-height:2.1;max-width:640px;}
+.hero-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
 
-  /* ===== sheet grid ===== */
-  .grid-wrap{overflow:auto;border:1px solid #c4cfdd;border-radius:8px;background:#fff;}
-  table.xl{border-collapse:collapse;min-width:100%;}
-  table.xl th,table.xl td{border:1px solid #d5dde8;padding:4px 7px;font-size:11px;white-space:nowrap;
-    max-width:340px;overflow:hidden;text-overflow:ellipsis;}
-  table.xl thead th{background:#1f4e79;color:#fff;position:sticky;top:0;z-index:3;font-size:10.5px;}
-  table.xl .rn{background:#e8eef6;color:#567;font-weight:700;position:sticky;right:0;z-index:2;min-width:38px;
-    text-align:center;direction:ltr;}
-  table.xl thead .rn{background:#163c63;z-index:4;}
-  table.xl tbody tr:hover td{background:#f2f8ff;}
-  table.xl td[contenteditable]{cursor:text;}
-  table.xl td[contenteditable]:focus{outline:2px solid #f0c419;background:#fffbe6;}
-  table.xl td.sys{background:#f7f7fa;}
-  .sheet-chip{display:inline-flex;align-items:center;gap:6px;background:#eef3fa;border:1px solid #ccd8e8;
-    border-radius:14px;padding:4px 11px;font-size:11px;cursor:pointer;}
-  .sheet-chip:hover{background:#dce9f8;}
-  .sheet-chip.sys{opacity:.65;}
+/* ============ BUTTONS ============ */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:11px;
+  font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden;
+  transition:.18s;letter-spacing:.2px;
+}
+.btn svg{width:15px;height:15px;}
+.btn::after{
+  content:"";position:absolute;top:0;left:-80%;width:55%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);
+  transform:skewX(-22deg);transition:.5s;
+}
+.btn:hover::after{left:130%;}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.1);}
+.btn:active{transform:translateY(0);}
+.btn-primary{background:var(--grad-btn);box-shadow:0 10px 24px -10px rgba(37,99,235,.65);}
+.btn-green{background:var(--grad-green);box-shadow:0 10px 24px -10px rgba(5,150,105,.6);}
+.btn-red{background:var(--grad-red);box-shadow:0 10px 24px -10px rgba(225,29,72,.55);}
+.btn-amber{background:var(--grad-amber);box-shadow:0 10px 24px -10px rgba(249,115,22,.55);}
+.btn-violet{background:var(--grad-violet);box-shadow:0 10px 24px -10px rgba(124,58,237,.55);}
+.btn-ghost{
+  background:var(--glass);border:1px solid var(--stroke-2);color:var(--txt-0);
+}
+.btn-ghost:hover{background:var(--glass-2);}
+.btn-cyan{background:linear-gradient(135deg,#22d3ee,#0284c7);box-shadow:0 10px 24px -10px rgba(14,165,233,.6);}
+.btn-sm{padding:7px 13px;font-size:11px;border-radius:9px;}
+.btn-block{width:100%;justify-content:center;}
 
-  /* ===== navigator cards ===== */
-  .nav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;}
-  .nav-card{color:#fff;border-radius:10px;padding:14px 12px;cursor:pointer;font-size:12.5px;font-weight:600;
-    box-shadow:0 3px 8px rgba(0,0,0,.15);transition:.15s;display:flex;align-items:center;gap:8px;}
-  .nav-card:hover{transform:translateY(-2px);filter:brightness(1.1);}
-  .nav-card .num{background:rgba(255,255,255,.25);border-radius:50%;width:24px;height:24px;display:flex;
-    align-items:center;justify-content:center;font-size:10px;flex:0 0 24px;}
+/* ============ FORM CONTROLS ============ */
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{
+  font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--txt-2);
+  display:flex;align-items:center;gap:7px;
+}
+.field label .ref{
+  font-family:var(--mono);font-size:8.5px;background:rgba(34,211,238,.12);color:#67e8f9;
+  padding:1.5px 7px;border-radius:5px;letter-spacing:.5px;border:1px solid rgba(34,211,238,.22);
+}
+.inp, select.inp{
+  height:42px;border-radius:11px;border:1px solid var(--stroke-2);
+  background:rgba(2,10,27,.55);color:var(--txt-0);padding:0 14px;font-size:12.5px;
+  outline:none;transition:.18s;width:100%;
+}
+.inp:focus{border-color:rgba(34,211,238,.65);box-shadow:0 0 0 3.5px rgba(34,211,238,.13);background:rgba(2,10,27,.8);}
+select.inp{
+  appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,#7aa7e8 50%),linear-gradient(135deg,#7aa7e8 50%,transparent 50%);
+  background-position:calc(0% + 18px) calc(50% + 1px),calc(0% + 24px) calc(50% + 1px);
+  background-size:6px 6px,6px 6px;background-repeat:no-repeat;
+}
+select.inp option{background:#0d1730;color:#eaf1ff;}
 
-  /* ===== macros view ===== */
-  .macro-mod{background:#fff;border-radius:9px;margin-bottom:12px;box-shadow:0 2px 8px rgba(18,48,90,.1);overflow:hidden;}
-  .macro-mod h4{margin:0;background:#224880;color:#fff;font-size:12px;padding:8px 12px;display:flex;gap:8px;}
-  .macro-mod h4 .cnt{background:rgba(255,255,255,.2);border-radius:9px;font-size:10px;padding:1px 9px;font-weight:400;}
-  .macro-item{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid #eef2f7;font-size:11.5px;}
-  .macro-item .nm{font-weight:700;color:#1f4e79;direction:ltr;min-width:200px;font-family:Consolas,monospace;}
-  .macro-item .ds{flex:1;color:#556;}
-  .macro-item button{border:0;border-radius:5px;background:#e2ecf9;color:#1f4e79;font-size:10.5px;
-    padding:5px 12px;font-weight:700;}
-  .macro-item button:hover{background:#c9dcf4;}
+/* exact toggle */
+.exact-wrap{display:flex;align-items:center;gap:11px;padding:2px 1px;}
+.switch{
+  width:64px;height:28px;border-radius:99px;position:relative;cursor:pointer;transition:.25s;flex:0 0 64px;
+  background:rgba(239,68,68,.75);border:1px solid rgba(239,68,68,.5);
+}
+.switch.on{background:rgba(34,197,94,.8);border-color:rgba(34,197,94,.55);box-shadow:0 0 18px -4px rgba(34,197,94,.55);}
+.switch .thumb{
+  position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.25s;
+  box-shadow:0 2px 8px rgba(0,0,0,.4);right:calc(100% - 23px);
+}
+.switch.on .thumb{right:3px;}
+.switch .txt{
+  position:absolute;top:5px;width:100%;text-align:center;font-size:9px;font-weight:900;
+  color:#fff;direction:ltr;user-select:none;letter-spacing:.8px;
+}
+.exact-label{font-size:11px;font-weight:700;color:var(--txt-1);}
 
-  /* ===== modal ===== */
-  #modal-overlay{position:fixed;inset:0;background:rgba(15,30,55,.45);z-index:2000;display:none;
-    align-items:center;justify-content:center;}
-  #modal-overlay.show{display:flex;}
-  .mbox{background:#f7f9fc;border-radius:10px;min-width:320px;max-width:620px;width:92%;
-    box-shadow:0 18px 60px rgba(0,0,0,.35);overflow:hidden;animation:pop .18s ease;}
-  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
-  .mbox .t{background:var(--blue);color:#fff;font-weight:700;font-size:13px;padding:10px 14px;display:flex;}
-  .mbox .t .x{margin-right:auto;cursor:pointer;font-size:15px;opacity:.8;}
-  .mbox .c{padding:16px 18px;font-size:12.5px;line-height:2;white-space:pre-wrap;max-height:55vh;overflow:auto;}
-  .mbox .f{padding:10px 14px;display:flex;gap:8px;justify-content:flex-start;}
-  .mbox .f button{border:0;border-radius:6px;padding:8px 22px;font-size:12px;font-weight:700;color:#fff;}
-  .mbox .f .yes{background:#00a049;} .mbox .f .no{background:#3264c8;} .mbox .f .cancel{background:#c0392b;}
-  .mbox .f .ok{background:#1f4e79;}
-  .mbox input.m-in{width:100%;height:34px;border:1px solid #b9c7d8;border-radius:6px;padding:4px 10px;
-    font-size:13px;direction:rtl;margin-top:8px;}
-  .mbox.err .t{background:#c00000;} .mbox.warn .t{background:#d35400;} .mbox.info .t{background:#1f4e79;}
-  .mbox.q .t{background:#224880;}
+/* ============ KPI ============ */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:15px;}
+.kpi{
+  background:linear-gradient(160deg,rgba(148,178,255,.09),rgba(148,178,255,.025));
+  border:1px solid var(--stroke);border-radius:var(--r-md);padding:16px 17px;
+  position:relative;overflow:hidden;transition:.2s;
+}
+.kpi:hover{transform:translateY(-3px);border-color:var(--stroke-2);box-shadow:var(--shadow-1);}
+.kpi .k-ico{
+  position:absolute;left:13px;top:13px;width:36px;height:36px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;opacity:.95;
+}
+.kpi .k-ico svg{width:17px;height:17px;}
+.kpi .k-val{font-size:25px;font-weight:900;letter-spacing:-.5px;line-height:1.25;}
+.kpi .k-val small{font-size:11px;font-weight:700;color:var(--txt-2);}
+.kpi .k-lbl{font-size:10.5px;color:var(--txt-1);font-weight:600;margin-top:3px;}
+.kpi .k-trend{
+  display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;
+  padding:2.5px 9px;border-radius:99px;margin-top:9px;
+}
+.k-trend.up{background:rgba(34,197,94,.14);color:#6ee7b7;}
+.k-trend.info{background:rgba(34,211,238,.14);color:#67e8f9;}
+.k-trend.warn{background:rgba(245,158,11,.16);color:#fcd34d;}
+.k-trend.idle{background:rgba(148,163,184,.15);color:#94a3b8;}
+.kpi::after{
+  content:"";position:absolute;inset:auto -30% -60% -30%;height:70%;
+  background:radial-gradient(closest-side,rgba(34,211,238,.16),transparent);
+}
 
-  /* wizard form (add record) */
-  .wizard-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-  .wf{background:#fff;border:1px solid #d5dde8;border-radius:7px;padding:6px 8px;}
-  .wf label{display:block;font-size:10px;color:#47607c;font-weight:700;margin-bottom:3px;}
-  .wf input{width:100%;height:28px;border:1px solid #c4cfdd;border-radius:5px;padding:2px 8px;font-size:11.5px;}
-  .wf input:focus{outline:2px solid #4472c4;}
-  .wf .ref{font-size:8.5px;color:#9ab;direction:ltr;}
-  .section-pick{display:flex;gap:10px;justify-content:center;padding:8px;}
-  .section-pick button{border:0;border-radius:8px;padding:12px 26px;font-size:13px;font-weight:700;color:#fff;}
-  .section-pick .br{background:#00704d;} .section-pick .atm{background:#3264c8;} .section-pick .cn{background:#c0392b;}
+/* ============ GRID HELPERS ============ */
+.grid-2{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.grid-add{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:18px;}
+@media (max-width:1180px){.grid-2,.grid-3,.grid-add{grid-template-columns:1fr;}}
 
-  /* toast */
-  #toasts{position:fixed;bottom:18px;right:18px;z-index:3000;display:flex;flex-direction:column;gap:8px;}
-  .toast{background:#12305a;color:#fff;border-radius:8px;padding:10px 16px;font-size:11.5px;
-    box-shadow:0 6px 20px rgba(0,0,0,.3);animation:slidein .25s ease;max-width:380px;}
-  .toast.ok{background:#00704d;} .toast.err{background:#c0392b;} .toast.warn{background:#d35400;}
-  @keyframes slidein{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+/* ============ SEARCH CARD ============ */
+.search-rows{display:grid;grid-template-columns:1.3fr 1fr;gap:13px;}
+.search-value-row{display:flex;gap:11px;align-items:flex-end;}
+.search-value-row .field{flex:1;}
+.dash-note{
+  margin-top:12px;padding:10px 13px;border-radius:var(--r-sm);font-size:10.5px;line-height:2;
+  background:rgba(34,211,238,.07);border:1px dashed rgba(34,211,238,.28);color:#9fe8f5;
+}
 
-  /* misc */
-  .hint{font-size:10.5px;color:#789;}
-  .rtl-num{direction:ltr;unicode-bidi:embed;}
-  input.searchbox{height:32px;border:1px solid #c4cfdd;border-radius:7px;padding:2px 10px;font-size:12px;width:220px;}
-  .logtable{border-collapse:collapse;width:100%;background:#fff;}
-  .logtable th{background:#224880;color:#fff;font-size:10.5px;padding:6px 8px;position:sticky;top:0;}
-  .logtable td{border:1px solid #d5dde8;padding:5px 8px;font-size:10.5px;}
-  .logtable tr.err td{background:#ffcccc;}
-  .empty-state{text-align:center;color:#89a;padding:40px 10px;font-size:12.5px;}
-  .flexchips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 14px;background:#fff;border-bottom:1px solid #d5dde8;}
-  ::-webkit-scrollbar{width:10px;height:10px;}
-  ::-webkit-scrollbar-thumb{background:#b7c4d4;border-radius:6px;}
-  ::-webkit-scrollbar-track{background:#eef2f7;}
+/* ============ TOOLS GRID ============ */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:9px;}
+.tool-tile{
+  background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-sm);
+  padding:11px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;
+  cursor:pointer;transition:.17s;text-align:center;
+}
+.tool-tile:hover{background:var(--glass-2);transform:translateY(-2.5px);border-color:var(--stroke-2);}
+.tool-tile svg{width:18px;height:18px;opacity:.9;}
+.tool-tile span{font-size:9.5px;font-weight:700;color:var(--txt-1);line-height:1.6;}
+
+/* ============ ACTION CARD ============ */
+.action-card .card-body{display:flex;flex-direction:column;gap:11px;}
+.mini-label{font-size:10px;color:var(--txt-2);font-weight:700;letter-spacing:.8px;}
+
+/* ============ CHARTS ============ */
+.donut-wrap{display:flex;align-items:center;gap:16px;}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:6px;font-size:10.5px;}
+.donut-legend .li{display:flex;align-items:center;gap:7px;color:var(--txt-1);}
+.donut-legend .sw{width:9px;height:9px;border-radius:3px;flex:0 0 9px;}
+.donut-legend .vv{margin-right:auto;font-family:var(--mono);color:var(--txt-0);font-size:10px;}
+.bars{display:flex;flex-direction:column;gap:9px;}
+.bar-row{display:flex;align-items:center;gap:9px;font-size:10.5px;}
+.bar-row .nm{width:118px;text-align:left;color:var(--txt-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-row .tr{flex:1;height:8px;border-radius:99px;background:rgba(120,160,255,.1);overflow:hidden;}
+.bar-row .fl{height:100%;border-radius:99px;background:var(--grad-main);box-shadow:0 0 10px -2px rgba(34,211,238,.6);}
+.bar-row .vv{font-family:var(--mono);font-size:9.5px;color:var(--txt-2);width:34px;text-align:left;}
+
+/* ============ ACTIVITY FEED ============ */
+.feed{display:flex;flex-direction:column;gap:2px;max-height:300px;overflow:auto;}
+.feed-item{display:flex;gap:10px;align-items:flex-start;padding:8px 6px;border-radius:9px;}
+.feed-item:hover{background:var(--glass);}
+.feed-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:0 0 8px;}
+.feed-item .ft{font-size:11px;line-height:1.75;flex:1;}
+.feed-item .ft b{color:var(--txt-0);}
+.feed-item .fd{font-family:var(--mono);font-size:8.5px;color:var(--txt-2);white-space:nowrap;margin-top:2px;}
+
+/* ============ VIEW HEAD (results/sheet/log/macros) ============ */
+.view-head{
+  display:flex;align-items:center;gap:11px;flex-wrap:wrap;
+  padding:15px 22px 0;
+}
+.view-head h2{margin:0;font-size:16px;font-weight:800;}
+.view-head .sub{font-size:10.5px;color:var(--txt-2);}
+.view-head .title-ico{
+  width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+}
+.view-head .title-ico svg{width:18px;height:18px;}
+.head-actions{margin-right:auto;display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ============ MATCH BLOCKS (results) ============ */
+.match-block{margin-bottom:16px;animation:fadeUp .3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.match-title{
+  background:linear-gradient(120deg,rgba(59,130,246,.24),rgba(34,211,238,.13));
+  border:1px solid rgba(59,130,246,.35);border-bottom:0;color:#cfe4ff;
+  font-weight:800;font-size:11.5px;padding:9px 14px;border-radius:var(--r-md) var(--r-md) 0 0;
+  direction:ltr;text-align:left;font-family:var(--mono);letter-spacing:.2px;
+  display:flex;align-items:center;gap:9px;
+}
+.match-title .tag{
+  background:rgba(34,211,238,.2);border:1px solid rgba(34,211,238,.35);color:#7dd3fc;
+  padding:1.5px 9px;border-radius:99px;font-size:8.5px;font-family:var(--font);
+}
+.match-block.remove .match-title{
+  background:linear-gradient(120deg,rgba(239,68,68,.26),rgba(244,63,94,.12));
+  border-color:rgba(239,68,68,.4);color:#fecdd3;
+}
+.block-scroll{overflow-x:auto;border:1px solid var(--stroke);border-top:0;border-radius:0 0 var(--r-md) var(--r-md);}
+table.block-table{border-collapse:collapse;width:100%;min-width:640px;}
+.block-table th{
+  background:rgba(30,58,110,.45);font-size:9.5px;font-weight:800;padding:8px 10px;
+  border-bottom:1px solid var(--stroke);white-space:nowrap;text-align:center;color:#b9cdf0;
+  letter-spacing:.4px;position:sticky;top:0;
+}
+.block-table td{border-bottom:1px solid rgba(126,167,255,.08);padding:0;}
+.block-table tr:hover td{background:rgba(59,130,246,.06);}
+.block-table td .cell-in{
+  width:100%;border:0;outline:none;padding:8px 10px;font-size:11px;background:transparent;
+  color:var(--txt-0);min-width:84px;
+}
+.block-table td .cell-in:focus{background:rgba(250,204,21,.1);box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.5);}
+.block-table td.saved{background:rgba(250,204,21,.14);}
+.block-sep{height:5px;}
+
+/* ============ SHEET CHIPS + GRID ============ */
+.chip-bar{display:flex;flex-wrap:wrap;gap:7px;}
+.sheet-chip{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--glass);border:1px solid var(--stroke);color:var(--txt-1);
+  border-radius:99px;padding:5.5px 13px;font-size:10.5px;cursor:pointer;transition:.16s;font-weight:600;
+}
+.sheet-chip:hover{background:var(--glass-2);color:var(--txt-0);transform:translateY(-1.5px);}
+.sheet-chip.active{background:rgba(34,211,238,.16);border-color:rgba(34,211,238,.45);color:#a5f3fc;}
+.sheet-chip.sys{opacity:.55;}
+.grid-wrap{
+  overflow:auto;border:1px solid var(--stroke);border-radius:var(--r-md);
+  background:rgba(2,10,27,.4);max-height:calc(100vh - 300px);
+}
+table.xl{border-collapse:separate;border-spacing:0;min-width:100%;}
+table.xl th,table.xl td{
+  border-left:1px solid rgba(126,167,255,.08);
+  border-bottom:1px solid rgba(126,167,255,.08);
+  padding:7px 11px;font-size:10.5px;white-space:nowrap;max-width:300px;
+  overflow:hidden;text-overflow:ellipsis;
+}
+table.xl thead th{
+  background:linear-gradient(180deg,rgba(30,58,130,.6),rgba(22,42,92,.6));
+  color:#c4d7f7;font-size:9.5px;font-weight:800;letter-spacing:.4px;position:sticky;top:0;z-index:3;
+}
+table.xl .rn{
+  background:rgba(15,23,55,.85);color:var(--txt-2);font-weight:700;position:sticky;right:0;z-index:2;
+  min-width:44px;text-align:center;direction:ltr;font-family:var(--mono);font-size:9px;
+}
+table.xl thead .rn{background:rgba(18,32,72,.95);z-index:4;}
+table.xl tbody tr:hover td{background:rgba(59,130,246,.08);}
+table.xl td[contenteditable]{cursor:text;}
+table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);box-shadow:inset 0 0 0 1.5px rgba(250,204,21,.5);}
+
+/* ============ LOG TABLE ============ */
+.logtable{border-collapse:separate;border-spacing:0;width:100%;}
+.logtable th{
+  background:linear-gradient(180deg,rgba(30,58,130,.55),rgba(22,42,92,.55));
+  color:#c4d7f7;font-size:9.5px;font-weight:800;padding:9px 12px;text-align:right;
+  position:sticky;top:0;letter-spacing:.5px;
+}
+.logtable td{border-bottom:1px solid rgba(126,167,255,.08);padding:8px 12px;font-size:10.5px;color:var(--txt-1);}
+.logtable tr:hover td{background:rgba(59,130,246,.06);}
+.logtable tr.err td{background:rgba(239,68,68,.09);}
+.act-badge{
+  display:inline-block;padding:2.5px 10px;border-radius:99px;font-size:8.5px;font-weight:800;letter-spacing:.5px;
+}
+.act-ADD{background:rgba(34,197,94,.16);color:#6ee7b7;}
+.act-REMOVE{background:rgba(239,68,68,.16);color:#fca5a5;}
+.act-UNDO{background:rgba(245,158,11,.16);color:#fcd34d;}
+.act-EDIT{background:rgba(59,130,246,.16);color:#93c5fd;}
+.act-ERROR,.act-ARCHIVE_FAIL{background:rgba(239,68,68,.2);color:#fecaca;}
+.act-default{background:rgba(148,163,184,.15);color:#cbd5e1;}
+
+/* ============ NAVIGATOR CARDS ============ */
+.nav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(214px,1fr));gap:11px;}
+.nav-card{
+  border-radius:12px;padding:13px 14px;cursor:pointer;font-size:11.5px;font-weight:700;
+  display:flex;align-items:center;gap:10px;transition:.17s;position:relative;overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+}
+.nav-card::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(120deg,rgba(255,255,255,.14),transparent 45%);opacity:0;transition:.2s;
+}
+.nav-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px -12px rgba(2,8,23,.8);}
+.nav-card:hover::after{opacity:1;}
+.nav-card .num{
+  background:rgba(255,255,255,.2);border-radius:8px;width:25px;height:25px;display:flex;
+  align-items:center;justify-content:center;font-size:9px;flex:0 0 25px;font-family:var(--mono);
+}
+.nav-card .rows{margin-right:auto;font-size:9px;opacity:.8;font-family:var(--mono);}
+
+/* ============ MACROS ============ */
+.macro-mod{
+  background:linear-gradient(160deg,rgba(148,178,255,.075),rgba(148,178,255,.025));
+  border:1px solid var(--stroke);border-radius:var(--r-md);overflow:hidden;
+}
+.macro-mod .mh{
+  display:flex;align-items:center;gap:10px;padding:11px 15px;
+  background:rgba(30,58,130,.28);border-bottom:1px solid var(--stroke);
+}
+.macro-mod .mh .nm{font-family:var(--mono);font-size:11px;font-weight:800;color:#9cc6ff;direction:ltr;}
+.macro-mod .mh .cnt{
+  background:rgba(34,211,238,.14);border:1px solid rgba(34,211,238,.3);color:#7dd3fc;
+  border-radius:99px;font-size:9px;padding:2px 10px;font-weight:800;
+}
+.macro-item{display:flex;align-items:center;gap:11px;padding:8.5px 15px;border-bottom:1px solid rgba(126,167,255,.06);transition:.14s;}
+.macro-item:hover{background:rgba(59,130,246,.07);}
+.macro-item .mnm{font-family:var(--mono);font-size:10.5px;font-weight:700;color:#8ab6ff;min-width:186px;direction:ltr;}
+.macro-item .mds{flex:1;font-size:10.5px;color:var(--txt-1);}
+.macro-run{
+  background:rgba(34,211,238,.13);border:1px solid rgba(34,211,238,.3);color:#7dd3fc;
+  padding:5px 13px;border-radius:8px;font-size:10px;font-weight:800;transition:.15s;
+}
+.macro-run:hover{background:rgba(34,211,238,.25);transform:translateY(-1px);}
+.macro-dl{
+  background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.25);color:#cbd5e1;
+  padding:5px 10px;border-radius:8px;font-size:10px;font-weight:800;
+}
+
+/* ============ WIZARD FORM ============ */
+.wizard-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.wf{
+  background:rgba(2,10,27,.5);border:1px solid var(--stroke);border-radius:10px;padding:8px 11px;
+}
+.wf label{display:block;font-size:9.5px;color:#7da3d8;font-weight:800;margin-bottom:4px;letter-spacing:.4px;}
+.wf input{
+  width:100%;height:31px;border:1px solid rgba(126,167,255,.22);border-radius:8px;
+  padding:2px 10px;font-size:11px;background:rgba(2,10,27,.6);color:var(--txt-0);outline:none;
+}
+.wf input:focus{border-color:rgba(34,211,238,.6);box-shadow:0 0 0 3px rgba(34,211,238,.12);}
+.section-pick{display:flex;gap:11px;justify-content:center;padding:10px 0;}
+.section-pick button{
+  border-radius:11px;padding:12px 26px;font-size:12.5px;font-weight:800;color:#fff;
+  transition:.17s;box-shadow:0 10px 22px -10px rgba(2,8,23,.8);
+}
+.section-pick button:hover{transform:translateY(-2.5px);filter:brightness(1.12);}
+.section-pick .br{background:var(--grad-green);}
+.section-pick .atm{background:var(--grad-btn);}
+.section-pick .cn{background:var(--grad-red);}
+
+/* ============ MODAL ============ */
+#modal-overlay{
+  position:fixed;inset:0;background:rgba(3,7,18,.72);backdrop-filter:blur(7px);
+  z-index:2000;display:none;align-items:center;justify-content:center;padding:18px;
+}
+#modal-overlay.show{display:flex;}
+.mbox{
+  background:linear-gradient(165deg,#121d3a,#0c1428);
+  border:1px solid rgba(126,167,255,.2);border-radius:17px;
+  min-width:330px;max-width:660px;width:94%;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.75);overflow:hidden;
+  animation:pop .22s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes pop{from{transform:scale(.92) translateY(12px);opacity:0}to{transform:scale(1);opacity:1}}
+.mbox .t{
+  display:flex;align-items:center;gap:10px;padding:13px 18px;font-weight:800;font-size:13px;
+  background:rgba(30,58,130,.4);border-bottom:1px solid var(--stroke);
+}
+.mbox .t::before{
+  content:"";width:10px;height:10px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 12px var(--cyan);flex:0 0 10px;
+}
+.mbox.err .t::before{background:var(--red);box-shadow:0 0 12px var(--red);}
+.mbox.warn .t::before{background:var(--amber);box-shadow:0 0 12px var(--amber);}
+.mbox.q .t::before{background:var(--violet);box-shadow:0 0 12px var(--violet);}
+.mbox .t .x{margin-right:auto;cursor:pointer;opacity:.65;font-size:15px;}
+.mbox .t .x:hover{opacity:1;}
+.mbox .c{padding:17px 20px;font-size:12.5px;line-height:2.15;white-space:pre-wrap;max-height:58vh;overflow:auto;color:#d7e3fa;}
+.mbox .f{padding:12px 18px;display:flex;gap:9px;}
+.mbox .f button{border-radius:10px;padding:9px 24px;font-size:12px;font-weight:800;color:#fff;transition:.15s;}
+.mbox .f button:hover{transform:translateY(-1.5px);filter:brightness(1.12);}
+.mbox .f .yes{background:var(--grad-green);}
+.mbox .f .no{background:var(--grad-btn);}
+.mbox .f .cancel{background:var(--grad-red);}
+.mbox .f .ok{background:var(--grad-btn);}
+.mbox input.m-in{
+  width:100%;height:42px;border:1px solid rgba(126,167,255,.3);border-radius:11px;
+  padding:4px 14px;font-size:13px;direction:rtl;margin-top:11px;
+  background:rgba(2,10,27,.6);color:var(--txt-0);outline:none;
+}
+.mbox input.m-in:focus{border-color:rgba(34,211,238,.6);box-shadow:0 0 0 3.5px rgba(34,211,238,.13);}
+
+/* ============ TOASTS ============ */
+#toasts{position:fixed;bottom:22px;left:22px;z-index:3000;display:flex;flex-direction:column;gap:9px;}
+.toast{
+  background:linear-gradient(165deg,#132043,#0d1830);color:#e6eeff;
+  border:1px solid rgba(126,167,255,.25);border-radius:12px;padding:11px 17px;font-size:11.5px;
+  box-shadow:0 16px 40px -12px rgba(0,0,0,.7);animation:slidein .28s ease;max-width:390px;
+  display:flex;align-items:center;gap:10px;
+}
+.toast::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);flex:0 0 8px;}
+.toast.ok::before{background:var(--green);box-shadow:0 0 10px var(--green);}
+.toast.err::before{background:var(--red);box-shadow:0 0 10px var(--red);}
+.toast.warn::before{background:var(--amber);box-shadow:0 0 10px var(--amber);}
+@keyframes slidein{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+
+/* ============ MISC ============ */
+.empty-state{
+  text-align:center;padding:52px 12px;color:var(--txt-2);font-size:12.5px;line-height:2.3;
+}
+.empty-state svg{width:46px;height:46px;opacity:.35;margin-bottom:10px;}
+.hint{font-size:10px;color:var(--txt-2);line-height:2;}
+.rtl-num{direction:ltr;unicode-bidi:embed;}
+.mono{font-family:var(--mono);}
+.badge-soft{
+  display:inline-flex;align-items:center;gap:5px;background:rgba(34,211,238,.12);
+  border:1px solid rgba(34,211,238,.28);color:#7dd3fc;border-radius:99px;
+  padding:2px 10px;font-size:9.5px;font-weight:800;
+}
+.legend-strip{
+  display:flex;gap:14px;flex-wrap:wrap;font-size:9.5px;color:var(--txt-2);
+  padding:9px 14px;background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-sm);
+}
+.legend-strip i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-left:5px;}
+.filter-bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
+.filter-bar .inp{height:36px;width:220px;}
+
+/* network svg animation */
+.n-pulse{animation:pulseGlow 2.6s ease-in-out infinite;}
+@keyframes pulseGlow{0%,100%{opacity:.35}50%{opacity:.95}}
+.dash-offset{stroke-dasharray:4 7;animation:dashMove 1.6s linear infinite;}
+@keyframes dashMove{to{stroke-dashoffset:-22;}}
+.fade-in{animation:fadeUp .35s ease;}
+
+/* responsive */
+@media (max-width:980px){
+  #sidebar{position:fixed;right:-100%;transition:.28s;height:100vh;}
+  #sidebar.open{right:0;}
+  #sidebar .brand{padding-top:14px;}
+  .burger{display:flex !important;}
+}
+.burger{display:none;}
+@media (max-width:640px){
+  .search-rows{grid-template-columns:1fr;}
+  .hero{flex-direction:column;align-items:flex-start;}
+  .hero-net{display:none;}
+}
 </style>
 </head>
 <body>
-<div id="topbar">
-  <div class="brand">DATA MANAGER <span class="fa">v28</span></div>
-  <div class="tabs">
-    <button class="tab-btn active" data-view="panel">کنترل پنل</button>
-    <button class="tab-btn" data-view="results">نتایج جستجو</button>
-    <button class="tab-btn" data-view="sheet">شیت‌ها</button>
-    <button class="tab-btn" data-view="log">تاریخچه تغییرات</button>
-    <button class="tab-btn" data-view="macros">ماکروها</button>
-  </div>
-  <div class="sp"></div>
-  <div class="stat" id="stat-line">در حال بارگذاری…</div>
-</div>
+<div id="layout">
 
-<div id="main">
-  <!-- ================= CONTROL PANEL ================= -->
-  <div class="view active" id="view-panel">
-    <div class="cp" id="cp-card">
-      <div class="cp-title">DATA MANAGER&nbsp;&nbsp;&nbsp;v28</div>
-      <div class="cp-accent"></div>
-      <div class="cp-sub">مدیریت سیستم داده</div>
-
-      <!-- SEARCH -->
-      <div class="cp-band" style="background:#1f4e79">جستجو&nbsp;&nbsp;|&nbsp;&nbsp;SEARCH</div>
-      <div class="cp-gap"></div>
-      <div class="cp-row" style="background:#d6e5f7">
-        <div class="cp-label" style="color:#143764">فیلتر شیت</div>
-        <div class="cp-input-wrap"><select id="cp-c7"></select><span class="cp-cellref">C7</span></div>
+  <!-- ================= SIDEBAR ================= -->
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#04101f" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="width:21px;height:21px">
+          <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14.5 14.5 0 0 1 0 18 14.5 14.5 0 0 1 0-18z"/>
+        </svg>
       </div>
-      <div class="cp-gap"></div>
-      <div class="cp-row" style="background:#d6e5f7">
-        <div class="cp-label" style="color:#143764">ستون جستجو</div>
-        <div class="cp-input-wrap"><select id="cp-c9"></select><span class="cp-cellref">C9</span></div>
+      <div>
+        <div class="brand-name">Net<span>Scope</span> Console</div>
+        <div class="brand-sub">Network Data Manager</div>
       </div>
-      <div class="cp-gap"></div>
-      <div class="cp-row" style="background:#d6e5f7">
-        <div class="cp-label" style="color:#143764">مقدار جستجو</div>
-        <div class="cp-input-wrap"><input type="text" id="cp-c11" placeholder="عبارت مورد نظر را وارد کنید…"><span class="cp-cellref">C11</span></div>
-      </div>
-      <div class="toggle-wrap">
-        <div class="toggle-label">تطابق دقیق (Exact)</div>
-        <div class="switch off" id="exact-toggle" title="ToggleExactMatch">
-          <div class="txt">OFF</div><div class="thumb"></div>
-        </div>
-        <span class="cp-cellref" style="margin:0">B12</span>
-      </div>
-      <div class="cp-btnrow"><button class="cp-btn blue" onclick="RunMacro('modSearchEngine.SearchRecords')">🔍&nbsp;&nbsp;SEARCH</button></div>
-      <div class="cp-sep"></div>
-
-      <!-- ADD -->
-      <div class="cp-band" style="background:#00704d">➕&nbsp;&nbsp;افزودن&nbsp;&nbsp;|&nbsp;&nbsp;ADD</div>
-      <div class="cp-gap"></div>
-      <div class="cp-row" style="background:#c6efce">
-        <div class="cp-label" style="color:#004628">شیت مقصد</div>
-        <div class="cp-input-wrap"><select id="cp-c16"></select><span class="cp-cellref">C16</span></div>
-      </div>
-      <div class="cp-row" style="background:#c6efce">
-        <div class="cp-label"></div>
-        <div class="cp-note" style="color:#00643c">ویزارد افزودن رکورد — برای شیت‌های استانی: شعبه / خودپرداز</div>
-      </div>
-      <div class="cp-btnrow"><button class="cp-btn green" onclick="RunMacro('modAddRecord.StartAddWizard')">&nbsp;&nbsp;ADD RECORD</button></div>
-      <div class="cp-sep"></div>
-
-      <!-- REMOVE -->
-      <div class="cp-band" style="background:#9b1e1e">حذف&nbsp;&nbsp;|&nbsp;&nbsp;REMOVE</div>
-      <div class="cp-gap"></div>
-      <div class="cp-row" style="background:#fddede">
-        <div class="cp-label" style="color:#641414">فیلتر شیت</div>
-        <div class="cp-input-wrap"><select id="cp-c23"></select><span class="cp-cellref">C23</span></div>
-      </div>
-      <div class="cp-gap"></div>
-      <div class="cp-row" style="background:#fddede">
-        <div class="cp-label" style="color:#641414">ستون جستجو</div>
-        <div class="cp-input-wrap"><select id="cp-c25"></select><span class="cp-cellref">C25</span></div>
-      </div>
-      <div class="cp-gap"></div>
-      <div class="cp-row" style="background:#fddede">
-        <div class="cp-label" style="color:#641414">مقدار جستجو</div>
-        <div class="cp-input-wrap"><input type="text" id="cp-c27" placeholder="مقدار جستجو (C27)"><span class="cp-cellref">C27</span></div>
-      </div>
-      <div class="cp-duo">
-        <button class="cp-btn orange" style="flex:0 0 90px" onclick="RunMacro('modUndo.UndoLastRemove')">↶ UNDO</button>
-        <button class="cp-btn red" onclick="RunMacro('modRemoveRecord.StartRemoveWizard')">&nbsp;&nbsp;REMOVE RECORD</button>
-      </div>
-
-      <!-- TOOLS -->
-      <div class="cp-band" style="background:#2f3846">⚙&nbsp;&nbsp;ابزارها&nbsp;&nbsp;|&nbsp;&nbsp;TOOLS</div>
-      <div class="cp-tools-note">جستجو روی همه شیتها</div>
-      <div class="cp-btnrow"><button class="cp-btn green-b" style="background:#00a049" onclick="RunMacro('modSearchEngine.SaveChanges')">SAVE CHANGES</button></div>
-      <div class="cp-btnrow"><button class="cp-btn blue2" onclick="RunMacro('modSearchEngine.OpenSearchResults')">OPEN RESULTS</button></div>
-      <div class="cp-btnrow"><button class="cp-btn red" style="background:#b44141" onclick="RunMacro('modSearchEngine.ClearSearchResults')">CLEAR RESULTS</button></div>
-      <div class="cp-btnrow"><button class="cp-btn purple" onclick="RunMacro('modUI.RefreshPanel')">REFRESH PANEL</button></div>
-      <div class="cp-btnrow"><button class="cp-btn gray" onclick="RunMacro('modSearchEngine.RefreshSearchIndexCore')">REFRESH INDEX</button></div>
-      <div class="cp-btnrow"><button class="cp-btn teal" onclick="RunMacro('modNavigator.ShowSheetNavigator')">🗂&nbsp;&nbsp;SHEET NAVIGATOR</button></div>
-
-      <!-- NAVIGATE -->
-      <div class="cp-sep" style="height:6px;background:#e1f2f2"></div>
-      <div class="cp-band" style="background:#006969">▶&nbsp;&nbsp;شیتها&nbsp;&nbsp;|&nbsp;&nbsp;NAVIGATE</div>
-      <div class="cp-row" style="background:#c6ebeb">
-        <div class="cp-label" style="color:#004646">شیت</div>
-        <div class="cp-input-wrap"><select id="cp-c41"></select><span class="cp-cellref">C41</span></div>
-      </div>
-      <div class="cp-btnrow"><button class="cp-btn teal" onclick="RunMacro('modUI.NavigateToSheet')">▶&nbsp;&nbsp;باز کردن مستقیم شیت</button></div>
-      <div class="cp-footer"></div>
     </div>
 
-    <div class="side-cards">
-      <div class="side-card">
-        <h3>⚡ دسترسی سریع</h3>
-        <div class="body">
-          <div class="quick-grid">
-            <button class="quick-btn" onclick="RunMacro('modExport.ExportSearchResults')">⬇ خروجی نتایج جستجو</button>
-            <button class="quick-btn" onclick="RunMacro('modExport.ExportCurrentData')">⬇ خروجی داده جاری</button>
-            <button class="quick-btn" onclick="RunMacro('modExport.ExportChangeLog')">⬇ خروجی تاریخچه</button>
-            <button class="quick-btn" onclick="RunMacro('modExportAllModules.ExportAllModules')">⬇ خروجی ماژول‌های VBA</button>
-            <button class="quick-btn" onclick="RunMacro('modFixUnlock.UnlockDataSheets')">🔓 رفع قفل شیت‌ها</button>
-            <button class="quick-btn" onclick="RunMacro('modUI.ProtectControlPanel')">🔒 قفل کنترل پنل</button>
-            <button class="quick-btn" onclick="RunMacro('modUI.UnprotectControlPanel')">🔓 باز کردن قفل پنل</button>
-            <button class="quick-btn" onclick="RunMacro('modConstants.HideSystemSheets')">🙈 مخفی‌سازی شیت‌های سیستم</button>
-            <button class="quick-btn" onclick="RunMacro('modConstants.UnhideSystemSheets')">👁 نمایش شیت‌های سیستم</button>
-            <button class="quick-btn" onclick="backupAll()">💾 پشتیبان‌گیری (JSON)</button>
-            <button class="quick-btn" onclick="restoreAll()">📂 بازیابی از پشتیبان</button>
-            <button class="quick-btn" onclick="resetAll()">♻ بازنشانی داده‌ها</button>
+    <div class="side-sect">منوی اصلی</div>
+    <nav class="side-nav">
+      <div class="nav-item active tab-btn" data-view="panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        داشبورد / کنترل پنل
+      </div>
+      <div class="nav-item tab-btn" data-view="results">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        نتایج جستجو
+        <span class="nav-badge" id="nav-results-count">0</span>
+      </div>
+      <div class="nav-item tab-btn" data-view="sheet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+        مرور شیت‌های شبکه
+      </div>
+      <div class="nav-item tab-btn" data-view="log">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        تاریخچه تغییرات
+        <span class="nav-badge" id="nav-log-count">0</span>
+      </div>
+      <div class="nav-item tab-btn" data-view="macros">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
+        ماکروهای سیستم
+      </div>
+    </nav>
+
+    <div class="side-sect">دسترسی سریع</div>
+    <nav class="side-nav">
+      <div class="nav-item" onclick="RunMacro('modAddRecord.StartAddWizard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        افزودن رکورد
+      </div>
+      <div class="nav-item" onclick="RunMacro('modRemoveRecord.StartRemoveWizard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>
+        حذف رکورد
+      </div>
+      <div class="nav-item" onclick="RunMacro('modUndo.UndoLastRemove')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+        Undo حذف
+      </div>
+      <div class="nav-item" onclick="RunMacro('modNavigator.ShowSheetNavigator')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+        انتخاب‌گر شیت‌ها
+      </div>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-status">
+        <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
+        <div><span class="dot c"></span> وضعیت Undo: <b id="st-undo">—</b></div>
+        <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div id="main-wrap">
+
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <button class="icon-btn burger" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="page-title">
+        <span id="top-title">داشبورد عملیات شبکه</span>
+        <small id="top-sub">Network Operations Dashboard</small>
+      </div>
+      <div class="top-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="global-search" placeholder="جستجوی سریع در همه شیت‌ها… (Enter)">
+      </div>
+      <div class="spacer"></div>
+      <div class="stat-pill" id="stat-line">در حال بارگذاری…</div>
+      <button class="icon-btn" title="بازسازی ایندکس" onclick="RunMacro('modSearchEngine.RefreshSearchIndexCore')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+      </button>
+      <button class="icon-btn" title="خروجی‌ها" onclick="RunMacro('modExport.ExportSearchResults')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+      </button>
+      <div class="user-chip">
+        <div class="avatar">ND</div>
+        <div>
+          <div class="un" id="st-user">Web User</div>
+          <span class="ur">Network Admin</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= VIEW: DASHBOARD / CONTROL PANEL ================= -->
+    <section class="view active" id="view-panel">
+      <div class="content">
+
+        <!-- HERO -->
+        <div class="hero">
+          <svg class="hero-net" viewBox="0 0 420 220" fill="none" aria-hidden="true">
+            <g stroke="rgba(34,211,238,.35)" stroke-width="1.2">
+              <path class="dash-offset" d="M40 170 L120 90 L210 130 L300 60 L380 110"/>
+              <path d="M120 90 L180 40 L300 60" stroke="rgba(99,102,241,.3)"/>
+              <path d="M210 130 L260 190 L380 110" stroke="rgba(139,92,246,.3)"/>
+              <path d="M40 170 L140 200 L260 190" stroke="rgba(34,211,238,.2)"/>
+            </g>
+            <g fill="#22d3ee">
+              <circle cx="40" cy="170" r="5" class="n-pulse"/>
+              <circle cx="120" cy="90" r="6.5" class="n-pulse" style="animation-delay:.5s"/>
+              <circle cx="210" cy="130" r="5.5" class="n-pulse" style="animation-delay:1s"/>
+              <circle cx="300" cy="60" r="7" class="n-pulse" style="animation-delay:.3s"/>
+              <circle cx="380" cy="110" r="5" class="n-pulse" style="animation-delay:.8s"/>
+            </g>
+            <g fill="rgba(139,92,246,.85)">
+              <circle cx="180" cy="40" r="4" class="n-pulse" style="animation-delay:1.4s"/>
+              <circle cx="260" cy="190" r="4.5" class="n-pulse" style="animation-delay:.9s"/>
+              <circle cx="140" cy="200" r="3.5" class="n-pulse" style="animation-delay:1.8s"/>
+            </g>
+            <g fill="rgba(34,211,238,.2)">
+              <circle cx="120" cy="90" r="14"/><circle cx="300" cy="60" r="17"/>
+            </g>
+          </svg>
+          <div class="hero-txt">
+            <span class="hero-tag">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:11px;height:11px"><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8 3 3m0-14-3 3M8 16l-3 3"/></svg>
+              NOC • DATA MANAGER v28
+            </span>
+            <h1>سامانه مدیریت اطلاعات <em>شبکه شعب و مراکز داده</em></h1>
+            <p>مدیریت کامل تجهیزات روتر و سوییچ، آدرس‌دهی IP، VLAN ها، بسترهای ارتباطی و سرویس‌های مخابراتی — جستجو، افزودن، حذف با آرشیو و Undo، خروجی‌گیری و ثبت تغییرات.</p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" onclick="RunMacro('modSearchEngine.SearchRecords')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                اجرای جستجو
+              </button>
+              <button class="btn btn-green" onclick="RunMacro('modAddRecord.StartAddWizard')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+                افزودن رکورد
+              </button>
+              <button class="btn btn-violet" onclick="RunMacro('modNavigator.ShowSheetNavigator')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                Sheet Navigator
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-row" id="dash-kpis"></div>
+
+        <!-- SEARCH + ADD + REMOVE -->
+        <div class="grid-add">
+          <!-- SEARCH -->
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-cyan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Search Engine</div>
+                <h3>جستجوی هوشمند</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="search-rows">
+                <div class="field">
+                  <label>فیلتر شیت <span class="ref">C7</span></label>
+                  <select class="inp" id="cp-c7"></select>
+                </div>
+                <div class="field">
+                  <label>ستون جستجو <span class="ref">C9</span></label>
+                  <select class="inp" id="cp-c9"></select>
+                </div>
+              </div>
+              <div class="search-value-row" style="margin-top:13px">
+                <div class="field">
+                  <label>مقدار جستجو <span class="ref">C11</span></label>
+                  <input class="inp" type="text" id="cp-c11" placeholder="مثال: IP، نام شعبه، شاخص، شماره پرونده…">
+                </div>
+              </div>
+              <div class="exact-wrap" style="margin-top:12px">
+                <div class="switch on" id="exact-toggle" title="ToggleExactMatch — تطابق دقیق">
+                  <div class="txt">ON</div><div class="thumb"></div>
+                </div>
+                <div>
+                  <div class="exact-label">تطابق دقیق (Exact Match)</div>
+                  <div class="hint">حالت ON = دقیقاً برابر / OFF = شامل عبارت · <span class="mono">B12</span></div>
+                </div>
+                <div class="spacer"></div>
+                <button class="btn btn-primary" onclick="RunMacro('modSearchEngine.SearchRecords')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  SEARCH
+                </button>
+              </div>
+              <div class="dash-note">
+                نتایج به‌صورت بلوک‌های <b>Match</b> نمایش داده می‌شوند؛ ردیف‌های قابل‌ویرایش را تغییر دهید و با
+                <b>SAVE CHANGES</b> در شیت مبدأ ذخیره کنید.
+              </div>
+            </div>
+          </div>
+
+          <!-- ADD -->
+          <div class="card action-card">
+            <div class="card-head">
+              <div class="ico g-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Add Record</div>
+                <h3>افزودن رکورد</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label>شیت مقصد <span class="ref">C16</span></label>
+                <select class="inp" id="cp-c16"></select>
+              </div>
+              <div class="hint">برای شیت‌های استانی، نوع بخش (شعبه / خودپرداز) پرسیده می‌شود و فیلدها با مقادیر پیش‌فرض ردیف قبل نمایش داده می‌شوند.</div>
+              <button class="btn btn-green btn-block" onclick="RunMacro('modAddRecord.StartAddWizard')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+                ADD RECORD
+              </button>
+            </div>
+          </div>
+
+          <!-- REMOVE -->
+          <div class="card action-card">
+            <div class="card-head">
+              <div class="ico g-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Remove &amp; Undo</div>
+                <h3>حذف رکورد</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label>فیلتر شیت <span class="ref">C23</span></label>
+                <select class="inp" id="cp-c23"></select>
+              </div>
+              <div class="field">
+                <label>ستون جستجو <span class="ref">C25</span></label>
+                <select class="inp" id="cp-c25"></select>
+              </div>
+              <div class="field">
+                <label>مقدار جستجو <span class="ref">C27</span></label>
+                <input class="inp" type="text" id="cp-c27" placeholder="مقدار مورد حذف…">
+              </div>
+              <div style="display:flex;gap:9px">
+                <button class="btn btn-red" style="flex:1" onclick="RunMacro('modRemoveRecord.StartRemoveWizard')">REMOVE RECORD</button>
+                <button class="btn btn-amber" onclick="RunMacro('modUndo.UndoLastRemove')" title="بازگردانی آخرین حذف">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+                  UNDO
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOOLS + CHARTS -->
+        <div class="grid-2">
+          <!-- TOOLS -->
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-violet">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.7-1.6L13.4 2h-2.8l-.4 2.9a7 7 0 0 0-2.7 1.6l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .5.1 1.1.2 1.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.7 1.6l.4 2.9h2.8l.4-2.9a7 7 0 0 0 2.7-1.6l2.3 1 2-3.4-2-1.5c.1-.5.2-1 .2-1.6z"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Tools &amp; Automation</div>
+                <h3>ابزارها و عملیات‌ها</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="tools-grid">
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.SaveChanges')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                  <span>SAVE CHANGES</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.OpenSearchResults')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>OPEN RESULTS</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.ClearSearchResults')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/><path d="M10 11v6M14 11v6"/></svg>
+                  <span>CLEAR RESULTS</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modUI.RefreshPanel')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+                  <span>REFRESH PANEL</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.RefreshSearchIndexCore')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+                  <span>REFRESH INDEX</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExport.ExportSearchResults')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                  <span>خروجی نتایج</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExport.ExportCurrentData')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8M8 16h5M8 8h8"/></svg>
+                  <span>خروجی داده جاری</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExport.ExportChangeLog')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+                  <span>خروجی تاریخچه</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExportAllModules.ExportAllModules')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
+                  <span>خروجی VBA</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modFixUnlock.UnlockDataSheets')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+                  <span>رفع قفل شیت‌ها</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modUI.ProtectControlPanel')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                  <span>قفل پنل</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modUI.UnprotectControlPanel')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+                  <span>باز کردن قفل</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modConstants.HideSystemSheets')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M2 12s3.5-7 10-7c2 0 3.8.7 5.3 1.7M22 12s-3.5 7-10 7c-2 0-3.8-.7-5.3-1.7"/><path d="M3 3l18 18"/></svg>
+                  <span>مخفی سازی سیستم</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modConstants.UnhideSystemSheets')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>نمایش سیستم</span>
+                </div>
+                <div class="tool-tile" onclick="backupAll()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                  <span>پشتیبان‌گیری</span>
+                </div>
+                <div class="tool-tile" onclick="restoreAll()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 20V9m0 0-4 4m4-4 4 4"/><path d="M5 5h14"/></svg>
+                  <span>بازیابی</span>
+                </div>
+                <div class="tool-tile" onclick="resetAll()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+                  <span>بازنشانی</span>
+                </div>
+              </div>
+
+              <!-- NAVIGATE -->
+              <div class="field" style="margin-top:15px">
+                <label>باز کردن مستقیم شیت <span class="ref">C41</span></label>
+                <div style="display:flex;gap:9px">
+                  <select class="inp" id="cp-c41"></select>
+                  <button class="btn btn-cyan" style="flex:0 0 auto" onclick="RunMacro('modUI.NavigateToSheet')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
+                    باز کردن شیت
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHARTS -->
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Network Analytics</div>
+                <h3>آمار و تحلیل شبکه</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="donut-wrap">
+                <div id="dash-donut"></div>
+                <div class="donut-legend" id="dash-legend"></div>
+              </div>
+              <div class="mini-label" style="margin:16px 0 10px">پرترافیک‌ترین شیت‌ها (تعداد رکورد)</div>
+              <div class="bars" id="dash-bars"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FEED + STATUS -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Activity</div>
+                <h3>آخرین رویدادهای سیستم</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="feed" id="dash-feed"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">System</div>
+                <h3>وضعیت و امنیت</h3>
+              </div>
+            </div>
+            <div class="card-body" style="line-height:2.3;font-size:11.5px;color:var(--txt-1)">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                <span class="badge-soft">🛡 رمز کنترل پنل: <b class="mono" style="margin-right:5px">1234</b></span>
+                <span class="badge-soft">🔐 رمز شیت‌ها: <b class="mono" style="margin-right:5px">12346</b></span>
+                <span class="badge-soft">👤 کاربر: <b id="st-user2" style="margin-right:5px">Web User</b></span>
+              </div>
+              تغییرات به‌صورت خودکار در حافظه مرورگر ذخیره می‌شوند. برای انتقال به سیستم دیگر از
+              <b>پشتیبان‌گیری JSON</b> استفاده کنید. عملیات حذف همیشه در آرشیو نگهداری می‌شوند و با
+              <b>UNDO</b> قابل بازگشت‌اند.
+              <div class="legend-strip" style="margin-top:12px">
+                <span><i style="background:var(--green)"></i>سیستم فعال</span>
+                <span><i style="background:var(--cyan)"></i>ایندکس به‌روز</span>
+                <span><i style="background:var(--amber)"></i>نیاز به مراقبت</span>
+                <span><i style="background:var(--red)"></i>خطا</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW: RESULTS ================= -->
+    <section class="view" id="view-results">
+      <div class="view-head">
+        <div class="title-ico g-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </div>
+        <div>
+          <h2>نتایج جستجو</h2>
+          <div class="sub">SEARCH RESULTS — ویرایش سلول‌ها سپس SAVE CHANGES</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-green btn-sm" onclick="RunMacro('modSearchEngine.SaveChanges')">SAVE CHANGES</button>
+          <button class="btn btn-red btn-sm" onclick="RunMacro('modSearchEngine.ClearSearchResults')">CLEAR</button>
+          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExport.ExportSearchResults')">EXPORT CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="legend-strip">
+          <span><i style="background:#3b82f6"></i>آبی = اطلاعات Match (فقط‌خواندنی)</span>
+          <span><i style="background:rgba(30,58,130,.8)"></i>سرستون‌ها</span>
+          <span><i style="background:#e5e7eb"></i>ردیف‌های قابل ویرایش</span>
+          <span><i style="background:#fbbf24"></i>زرد = تغییرات ذخیره‌شده</span>
+        </div>
+        <div id="results-body">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <div>هنوز نتیجه‌ای ثبت نشده است — از داشبورد جستجو انجام دهید.</div>
           </div>
         </div>
       </div>
-      <div class="side-card">
-        <h3>ℹ️ وضعیت سیستم</h3>
-        <div class="body" id="status-card">
-          <b>تعداد شیت‌های داده:</b> <span class="badge" id="st-sheets">-</span>
-          <b>رکوردهای ایندکس:</b> <span class="badge" id="st-index">-</span>
-          <b>آخرین حذف (Undo):</b> <span class="badge" id="st-undo">ندارد</span><br>
-          <b>قفل پنل:</b> <span class="badge" id="st-lock">-</span>
-          <b>نام کاربر:</b> <span class="badge" id="st-user">-</span><br>
-          <span class="hint">رمز کنترل پنل: 1234 &nbsp;|&nbsp; رمز شیت‌ها: 12346 (همانند فایل اصلی)</span>
+    </section>
+
+    <!-- ================= VIEW: SHEETS ================= -->
+    <section class="view" id="view-sheet">
+      <div class="view-head">
+        <div class="title-ico g-cyan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+        </div>
+        <div>
+          <h2 id="sheet-title">شیت‌های شبکه</h2>
+          <div class="sub" id="sheet-sub">NETWORK SHEETS — مشاهده و ویرایش مستقیم داده‌ها</div>
+        </div>
+        <div class="head-actions filter-bar">
+          <input class="inp" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
+          <button class="btn btn-primary btn-sm" onclick="filterSheetRows()">فیلتر</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCurrentSheetCSV()">⬇ CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleSheetLock()">قفل/باز شیت</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
         </div>
       </div>
-      <div class="side-card">
-        <h3>📖 راهنمای فشرده</h3>
-        <div class="body" style="line-height:1.9">
-          <b>جستجو:</b> فیلتر شیت (ALL=همه)، ستون (FULLTEXT=متن کامل) و مقدار را وارد کنید و SEARCH بزنید.
-          نتایج به صورت بلوک‌های Match نمایش داده می‌شوند؛ ردیف‌های سفید قابل ویرایش‌اند و با SAVE CHANGES در شیت مبدأ ذخیره می‌شوند.<br>
-          <b>افزودن:</b> برای شیت‌های استانی، ابتدا شعبه یا خودپرداز را انتخاب کنید؛ سپس فیلدها را پر کنید (خالی = رد شدن از فیلد).<br>
-          <b>حذف:</b> شماره Match ها (یا ALL) و نوع سرویس (مخابرات / مبین نت / آسیاتک) را انتخاب کنید؛ رکوردها آرشیو و سپس حذف می‌شوند و با UNDO قابل بازگشت‌اند.
+      <div class="content">
+        <div class="chip-bar" id="sheet-chips"></div>
+        <div id="sheet-body">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+            <div>از نوار بالا یا Sheet Navigator یک شیت را انتخاب کنید.</div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <!-- ================= RESULTS ================= -->
-  <div class="view" id="view-results">
-    <div class="view-head">
-      <h2>نتایج جستجو</h2>
-      <span class="sub">SEARCH RESULTS — ویرایش ردیف‌های سفید سپس SAVE CHANGES</span>
-      <div class="spacer"></div>
-      <button class="mini-btn green" onclick="RunMacro('modSearchEngine.SaveChanges')">SAVE CHANGES</button>
-      <button class="mini-btn red" onclick="RunMacro('modSearchEngine.ClearSearchResults')">CLEAR RESULTS</button>
-      <button class="mini-btn gray" onclick="RunMacro('modExport.ExportSearchResults')">EXPORT</button>
-      <button class="mini-btn teal" onclick="GoToControlPanel()">← کنترل پنل</button>
-    </div>
-    <div class="view-body" id="results-body">
-      <div class="empty-state">هنوز نتیجه‌ای ثبت نشده است — از کنترل پنل جستجو انجام دهید.</div>
-    </div>
-  </div>
+    <!-- ================= VIEW: LOG ================= -->
+    <section class="view" id="view-log">
+      <div class="view-head">
+        <div class="title-ico g-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+        </div>
+        <div>
+          <h2>تاریخچه تغییرات</h2>
+          <div class="sub">CHANGE_LOG — ثبت کامل همه عملیات‌ها</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExport.ExportChangeLog')">⬇ EXPORT</button>
+          <button class="btn btn-red btn-sm" onclick="clearLog()">پاک‌سازی لاگ</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="log-body"></div>
+      </div>
+    </section>
 
-  <!-- ================= SHEETS ================= -->
-  <div class="view" id="view-sheet">
-    <div class="view-head">
-      <h2 id="sheet-title">شیت‌ها</h2>
-      <span class="sub" id="sheet-sub"></span>
-      <div class="spacer"></div>
-      <input class="searchbox" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
-      <button class="mini-btn blue" onclick="filterSheetRows()">فیلتر</button>
-      <button class="mini-btn gray" onclick="exportCurrentSheetCSV()">⬇ CSV</button>
-      <button class="mini-btn orange" onclick="toggleSheetLock()">قفل/باز شیت</button>
-      <button class="mini-btn teal" onclick="GoToControlPanel()">← کنترل پنل</button>
-    </div>
-    <div class="flexchips" id="sheet-chips"></div>
-    <div class="view-body" id="sheet-body">
-      <div class="empty-state">از نوار بالا یا SHEET NAVIGATOR یک شیت را انتخاب کنید.</div>
-    </div>
-  </div>
+    <!-- ================= VIEW: MACROS ================= -->
+    <section class="view" id="view-macros">
+      <div class="view-head">
+        <div class="title-ico g-violet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
+        </div>
+        <div>
+          <h2>ماکروهای سیستم</h2>
+          <div class="sub">تمام ماکروهای VBA فایل اصلی — پیاده‌سازی‌شده و قابل اجرا</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExportAllModules.ExportAllModules')">⬇ Export All Modules</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="macros-body"></div>
+      </div>
+    </section>
 
-  <!-- ================= CHANGE LOG ================= -->
-  <div class="view" id="view-log">
-    <div class="view-head">
-      <h2>تاریخچه تغییرات</h2>
-      <span class="sub">CHANGE_LOG — ثبت همه عملیات‌ها</span>
-      <div class="spacer"></div>
-      <button class="mini-btn gray" onclick="RunMacro('modExport.ExportChangeLog')">⬇ EXPORT</button>
-      <button class="mini-btn red" onclick="clearLog()">پاک‌سازی لاگ</button>
-      <button class="mini-btn teal" onclick="GoToControlPanel()">← کنترل پنل</button>
-    </div>
-    <div class="view-body" id="log-body"></div>
-  </div>
-
-  <!-- ================= MACROS ================= -->
-  <div class="view" id="view-macros">
-    <div class="view-head">
-      <h2>ماکروهای سیستم</h2>
-      <span class="sub">هر ماکروی VBA فایل اصلی — پیاده‌سازی‌شده در جاوااسکریپت</span>
-      <div class="spacer"></div>
-      <button class="mini-btn gray" onclick="RunMacro('modExportAllModules.ExportAllModules')">⬇ Export All Modules</button>
-      <button class="mini-btn teal" onclick="GoToControlPanel()">← کنترل پنل</button>
-    </div>
-    <div class="view-body" id="macros-body"></div>
   </div>
 </div>
 
-<!-- modal + toasts -->
 <div id="modal-overlay"></div>
 <div id="toasts"></div>
 <script>
@@ -809,31 +1587,48 @@ function HandleError(sModule, sProc, nErrNum, sErrDesc, bSilent) {
 /* ================================================================
    Rendering: views
    ================================================================ */
+const VIEW_TITLES = {
+  panel: ["داشبورد عملیات شبکه", "Network Operations Dashboard"],
+  results: ["نتایج جستجو", "Search Results"],
+  sheet: ["مرور شیت‌های شبکه", "Network Sheets Browser"],
+  log: ["تاریخچه تغییرات", "Change Log"],
+  macros: ["ماکروهای سیستم", "System Macros"]
+};
 function switchView(name) {
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   const el = document.getElementById("view-" + name);
   if (el) el.classList.add("active");
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  const t = VIEW_TITLES[name] || VIEW_TITLES.panel;
+  const tt = document.getElementById("top-title"), ts = document.getElementById("top-sub");
+  if (tt) tt.textContent = t[0];
+  if (ts) ts.textContent = t[1];
   if (name === "log") renderLogView();
   if (name === "sheet" && state.currentSheet) renderSheetView(state.currentSheet);
   if (name === "macros") renderMacrosView();
+  if (name === "panel" && typeof renderDashboard === "function") renderDashboard();
   updateStatLine();
+  const sb = document.getElementById("sidebar");
+  if (sb) sb.classList.remove("open");
 }
 function GoToControlPanel() { switchView("panel"); }
 
 function updateStatLine() {
   const dataSheets = WB.order.filter(n => IsDataSheet(n)).length;
-  const idxCount = (WB.sheets[IDX_SHEET] ? WB.sheets[IDX_SHEET].rows.length : 0);
-  document.getElementById("stat-line").textContent =
-    dataSheets + " شیت داده • " + idxCount.toLocaleString("fa-IR") + " رکورد ایندکس • کاربر: " + state.user;
+  const idxCount = (WB.sheets[IDX_SHEET] ? Math.max(0, WB.sheets[IDX_SHEET].rows.length - 1) : 0);
+  const el = document.getElementById("stat-line");
+  if (el) el.textContent = dataSheets + " شیت • " + idxCount.toLocaleString("fa-IR") + " رکورد ایندکس • " + state.user;
   const st = id => document.getElementById(id);
-  if (st("st-sheets")) {
-    st("st-sheets").textContent = dataSheets;
+  if (st("st-index")) {
     st("st-index").textContent = idxCount.toLocaleString("fa-IR");
     st("st-undo").textContent = (state.undo && state.undo.valid) ? ("آماده (" + state.undo.blockCount + " بلوک)") : "ندارد";
     st("st-lock").textContent = state.panelProtected ? "فعال (قفل)" : "غیرفعال";
-    st("st-user").textContent = state.user;
   }
+  if (st("st-user")) st("st-user").textContent = state.user;
+  if (st("st-user2")) st("st-user2").textContent = state.user;
+  if (st("nav-results-count")) st("nav-results-count").textContent = String(state.results.length);
+  if (st("nav-log-count")) st("nav-log-count").textContent = String(GetLogRowCount());
+  if (typeof renderDashboard === "function") renderDashboard();
 }
 
 /* ---------- sheet grid ---------- */
@@ -849,7 +1644,7 @@ function renderSheetChips() {
   WB.order.forEach(name => {
     if (IsSystemSheet(name) && !state.showSystem) return;
     const chip = document.createElement("span");
-    chip.className = "sheet-chip" + (IsSystemSheet(name) ? " sys" : "");
+    chip.className = "sheet-chip" + (IsSystemSheet(name) ? " sys" : "") + (state.currentSheet === name ? " active" : "");
     chip.textContent = name;
     chip.onclick = () => renderSheetView(name);
     box.appendChild(chip);
@@ -958,7 +1753,17 @@ function renderLogView() {
     const row = sh.rows[r] || [];
     const isErr = (row[1] === "ERROR" || row[5] === "ARCHIVE_FAIL");
     html += `<tr class="${isErr ? "err" : ""}">`;
-    for (let c = 0; c < 7; c++) html += `<td>${escapeHtml(row[c] === undefined ? "" : row[c])}</td>`;
+    for (let c = 0; c < 7; c++) {
+      const v = row[c] === undefined ? "" : row[c];
+      if (c === 1) {
+        const cls = ["ADD", "REMOVE", "UNDO", "EDIT", "ERROR", "ARCHIVE_FAIL"].includes(String(v)) ? "act-" + v : "act-default";
+        html += `<td><span class="act-badge ${cls}">${escapeHtml(v)}</span></td>`;
+      } else if (c === 0) {
+        html += `<td class="mono" style="font-size:9.5px">${escapeHtml(v)}</td>`;
+      } else {
+        html += `<td>${escapeHtml(v)}</td>`;
+      }
+    }
     html += "</tr>";
   }
   html += "</tbody></table>";
@@ -2545,32 +3350,152 @@ function renderMacrosView() {
   });
   let html = "";
   Object.keys(byMod).forEach(mod => {
-    html += `<div class="macro-mod"><h4><span style="direction:ltr">${escapeHtml(mod)}</span>
-      <span class="cnt">${byMod[mod].length} macro</span></h4>`;
+    html += `<div class="macro-mod fade-in"><div class="mh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="2" style="width:15px;height:15px"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
+      <span class="nm">${escapeHtml(mod)}</span>
+      <span class="cnt">${byMod[mod].length} macro</span></div>`;
     byMod[mod].forEach(m => {
       html += `<div class="macro-item">
-        <div class="nm">${escapeHtml(m.name)}</div>
-        <div class="ds">${escapeHtml(m.desc)}</div>
-        <button onclick="RunMacroIndex('${escapeHtmlAttr(mod)}','${escapeHtmlAttr(m.name)}')">▶ اجرا</button>
+        <div class="mnm">${escapeHtml(m.name)}</div>
+        <div class="mds">${escapeHtml(m.desc)}</div>
+        <button class="macro-run" onclick="RunMacroIndex('${escapeHtmlAttr(mod)}','${escapeHtmlAttr(m.name)}')">▶ اجرا</button>
       </div>`;
     });
     html += "</div>";
   });
-  // VBA sources viewer
-  html += `<div class="macro-mod"><h4><span>منابع VBA استخراج‌شده از فایل اصلی</span>
-    <span class="cnt">${Object.keys(VBA_MODULES || {}).length} module</span></h4>`;
+  html += `<div class="macro-mod fade-in"><div class="mh">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="2" style="width:15px;height:15px"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+    <span class="nm">VBA Sources — فایل اصلی</span>
+    <span class="cnt">${Object.keys(VBA_MODULES || {}).length} module</span></div>`;
   Object.keys(VBA_MODULES || {}).sort().forEach(name => {
     const meta = VBA_MODULE_META[name] || "";
     html += `<div class="macro-item">
-      <div class="nm">${escapeHtml(name)}</div>
-      <div class="ds">${escapeHtml(meta)}</div>
-      <button onclick="showVbaSource('${escapeHtmlAttr(name)}')">👁 مشاهده</button>
-      <button onclick="modExportAllModules.DownloadModule('${escapeHtmlAttr(name)}')">⬇</button>
+      <div class="mnm">${escapeHtml(name)}</div>
+      <div class="mds">${escapeHtml(meta)}</div>
+      <button class="macro-run" onclick="showVbaSource('${escapeHtmlAttr(name)}')">👁 مشاهده</button>
+      <button class="macro-dl" onclick="modExportAllModules.DownloadModule('${escapeHtmlAttr(name)}')">⬇</button>
     </div>`;
   });
   html += "</div>";
   body.innerHTML = html;
 }
+
+/* ================================================================
+   DASHBOARD — KPIs, charts, activity feed
+   ================================================================ */
+function countRows(sheetName) {
+  const sh = WB.sheets[sheetName];
+  if (!sh) return 0;
+  let n = 0;
+  for (const r of sh.rows) if (r.some(c => c !== null && c !== undefined && String(c).trim() !== "")) n++;
+  return n;
+}
+function renderDashboard() {
+  const kpis = document.getElementById("dash-kpis");
+  if (!kpis) return;
+  const dataSheets = WB.order.filter(n => IsDataSheet(n)).length;
+  const totalRecords = WB.order.filter(n => IsDataSheet(n)).reduce((s, n) => s + Math.max(0, countRows(n) - 1), 0);
+  const idxCount = WB.sheets[IDX_SHEET] ? Math.max(0, WB.sheets[IDX_SHEET].rows.length - 1) : 0;
+  const logCount = GetLogRowCount();
+  const undoReady = !!(state.undo && state.undo.valid);
+
+  const kpiDefs = [
+    { cls: "g-cyan", val: dataSheets, lbl: "شیت‌های داده شبکه", trend: ["info", "شعب • مراکز داده • تجهیزات"],
+      ico: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/>' },
+    { cls: "g-blue", val: totalRecords.toLocaleString("fa-IR"), lbl: "کل رکوردهای ثبت‌شده", trend: ["up", "IP • VLAN • روتر • سوییچ"],
+      ico: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>' },
+    { cls: "g-violet", val: idxCount.toLocaleString("fa-IR"), lbl: "رکوردهای ایندکس جستجو", trend: ["info", "FULLTEXT آماده"],
+      ico: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>' },
+    { cls: "g-amber", val: logCount.toLocaleString("fa-IR"), lbl: "رویداد ثبت‌شده در لاگ", trend: ["warn", "ADD • REMOVE • EDIT"],
+      ico: '<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>' },
+    { cls: undoReady ? "g-green" : "g-red",
+      val: undoReady ? "آماده" : "—", lbl: "وضعیت Undo حذف",
+      trend: [undoReady ? "up" : "idle", undoReady ? state.undo.blockCount + " بلوک قابل بازگشت" : "بدون عملیات حذف"],
+      ico: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>' },
+  ];
+  kpis.innerHTML = kpiDefs.map(k => `
+    <div class="kpi">
+      <div class="k-ico ${k.cls}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${k.ico}</svg></div>
+      <div class="k-val">${k.val}</div>
+      <div class="k-lbl">${k.lbl}</div>
+      <div class="k-trend ${k.trend[0]}">${k.trend[1]}</div>
+    </div>`).join("");
+
+  renderDonut(totalRecords);
+  renderBars();
+  renderFeed();
+}
+
+function topSheetStats(limit) {
+  const arr = WB.order.filter(n => IsDataSheet(n)).map(n => ({ name: n, rows: Math.max(0, countRows(n) - 1) }));
+  arr.sort((a, b) => b.rows - a.rows);
+  return arr.slice(0, limit);
+}
+function renderDonut(totalRecords) {
+  const host = document.getElementById("dash-donut");
+  const legend = document.getElementById("dash-legend");
+  if (!host) return;
+  const cats = [
+    { name: "شعب و استان‌ها", color: "#22d3ee", test: n => /استان|خراسان|خوزستان|فارس|کردستان|لرستان|همدان|مرکزی|کرمانشاه|قزوین|ایلام|اصفهان|بوشهر|بختیاری|سمنان|زنجان|کهکلویه|یزد|گیلان|مازندران|هرمزگان|کرمان|قم|تهران|البرز|اردبیل|آذر|سیستان|گلستان/.test(n) },
+    { name: "مراکز داده و دفاتر", color: "#6366f1", test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
+    { name: "سرویس‌های شبکه", color: "#8b5cf6", test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری/.test(n) },
+    { name: "تجهیزات و EOL/EOS", color: "#f59e0b", test: n => /تجهیزات|EOL|PIN PAD/.test(n) },
+    { name: "هزینه و گزارش‌ها", color: "#10b981", test: n => /هزینه|گزارش|جمع|لیست|PSP|شعب$/.test(n) },
+  ];
+  const vals = cats.map(c => WB.order.filter(n => IsDataSheet(n) && c.test(n)).reduce((s, n) => s + Math.max(0, countRows(n) - 1), 0));
+  const total = vals.reduce((a, b) => a + b, 0) || 1;
+  const R = 52, C = 2 * Math.PI * R;
+  let acc = 0;
+  const segs = vals.map((v, i) => {
+    const frac = v / total;
+    const seg = `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${cats[i].color}" stroke-width="17"
+      stroke-dasharray="${(frac * C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-acc * C).toFixed(2)}"
+      transform="rotate(-90 70 70)" stroke-linecap="butt" opacity=".92"/>`;
+    acc += frac;
+    return seg;
+  }).join("");
+  host.innerHTML = `
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="${R}" fill="none" stroke="rgba(120,160,255,.1)" stroke-width="17"/>
+      ${segs}
+      <text x="70" y="66" text-anchor="middle" fill="#eaf1ff" font-size="19" font-weight="800" font-family="inherit">${totalRecords.toLocaleString("fa-IR")}</text>
+      <text x="70" y="86" text-anchor="middle" fill="#64748f" font-size="9.5">کل رکوردها</text>
+    </svg>`;
+  legend.innerHTML = cats.map((c, i) => `
+    <div class="li"><span class="sw" style="background:${c.color}"></span>${c.name}
+      <span class="vv">${vals[i].toLocaleString("fa-IR")}</span></div>`).join("");
+}
+function renderBars() {
+  const host = document.getElementById("dash-bars");
+  if (!host) return;
+  const top = topSheetStats(7);
+  const max = Math.max(...top.map(t => t.rows), 1);
+  host.innerHTML = top.map(t => `
+    <div class="bar-row" title="${escapeHtmlAttr(t.name)}">
+      <div class="nm">${escapeHtml(t.name)}</div>
+      <div class="tr"><div class="fl" style="width:${Math.max(4, Math.round(t.rows / max * 100))}%"></div></div>
+      <div class="vv">${t.rows.toLocaleString("fa-IR")}</div>
+    </div>`).join("");
+}
+function renderFeed() {
+  const host = document.getElementById("dash-feed");
+  if (!host) return;
+  const log = WB.sheets[LOG_SHEET];
+  const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ""));
+  const colors = { ADD: "#22c55e", REMOVE: "#ef4444", UNDO: "#f59e0b", EDIT: "#3b82f6", ERROR: "#ef4444", ARCHIVE_FAIL: "#ef4444" };
+  if (!rows.length) {
+    host.innerHTML = '<div class="empty-state" style="padding:22px">هنوز رویدادی ثبت نشده است.</div>';
+    return;
+  }
+  host.innerHTML = rows.slice(-9).reverse().map(r => `
+    <div class="feed-item">
+      <div class="feed-dot" style="background:${colors[r[1]] || "#64748f"};box-shadow:0 0 8px ${colors[r[1]] || "#64748f"}"></div>
+      <div class="ft"><b>${escapeHtml(r[1] || "")}</b> — ${escapeHtml(r[2] || "")}
+        ${r[5] ? ' <span class="badge-soft" style="font-size:8.5px">' + escapeHtml(r[5]) + "</span>" : ""}</div>
+      <div class="fd">${escapeHtml(r[0] || "")}</div>
+    </div>`).join("");
+}
+
 function showVbaSource(name) {
   const src = (VBA_MODULES || {})[name] || "(missing)";
   ModalBox({ title: name, cls: "info", text: src, buttons: [{ id: IDOK, label: "بستن", cls: "ok" }] });
@@ -2613,6 +3538,7 @@ function initUIFromState() {
   applyPanelProtection();
   renderSheetChips();
   updateStatLine();
+  renderDashboard();
 }
 
 function bindPanelEvents() {
@@ -2634,6 +3560,18 @@ function bindPanelEvents() {
   });
   document.getElementById("sheet-filter").addEventListener("keydown", e => {
     if (e.key === "Enter") filterSheetRows();
+  });
+  const gs = document.getElementById("global-search");
+  if (gs) gs.addEventListener("keydown", e => {
+    if (e.key === "Enter" && gs.value.trim()) {
+      state.cp.C7 = "ALL";
+      state.cp.C9 = "FULLTEXT";
+      state.cp.C11 = gs.value.trim();
+      const c7 = document.getElementById("cp-c7"); if (c7) c7.value = "ALL";
+      const c9 = document.getElementById("cp-c9"); if (c9) c9.value = "FULLTEXT";
+      const c11 = document.getElementById("cp-c11"); if (c11) c11.value = state.cp.C11;
+      RunMacro("modSearchEngine.SearchRecords");
+    }
   });
 }
 
