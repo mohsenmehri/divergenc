@@ -2141,37 +2141,55 @@ function clearLog() {
 /* ---------- results rendering (WriteMatchBlock look) ---------- */
 function renderResultsView() {
   const body = document.getElementById("results-body");
+  clear(body);
   if (!state.results.length) {
-    body.innerHTML = '<div class="empty-state">هنوز نتیجه‌ای ثبت نشده است — از کنترل پنل جستجو انجام دهید.</div>';
+    body.appendChild(el("div", { class: "empty-state", text: "\u0647\u0646\u0648\u0632 \u0646\u062a\u06cc\u062c\u0647\u200c\u0627\u06cc \u062b\u0628\u062a \u0646\u0634\u062f\u0647 \u0627\u0633\u062a \u2014 \u0627\u0632 \u06a9\u0646\u062a\u0631\u0644 \u067e\u0646\u0644 \u062c\u0633\u062a\u062c\u0648 \u0627\u0646\u062c\u0627\u0645 \u062f\u0647\u06cc\u062f." }));
     return;
   }
-  let html = "";
+  const fragRoot = document.createDocumentFragment();
   if (state.resultsMode === "remove") {
-    html += '<div class="match-block"><div class="match-title" style="background:#c00000">REMOVE  -  جستجو: ' +
-      escapeHtml(state.removeSearchValue || "") + '</div>' +
-      '<div style="background:#eaeaea;font-style:italic;padding:6px 10px;font-size:11px">قرمز = Match  |  سفید = داده</div></div>';
+    fragRoot.appendChild(el("div", { class: "match-block" },
+      el("div", {
+        class: "match-title", style: { background: "#c00000" },
+        text: "REMOVE  -  \u062c\u0633\u062a\u062c\u0648: " + (state.removeSearchValue || "")
+      }),
+      el("div", {
+        style: { background: "#eaeaea", fontStyle: "italic", padding: "6px 10px", fontSize: "11px" },
+        text: "\u0642\u0631\u0645\u0632 = Match  |  \u0633\u0641\u06cc\u062f = \u062f\u0627\u062f\u0647"
+      })));
   }
   state.results.forEach(blk => {
-    html += `<div class="match-block ${state.resultsMode === "remove" ? "remove" : ""}" data-match="${blk.matchIdx}">`;
-    html += `<div class="match-title">Match ${blk.matchIdx}  |  Sheet: ${escapeHtml(blk.sheet)}  |  Row: ${blk.srcRow}` +
-      (blk.srcRowTo > blk.srcRow ? `  |  Rows: ${blk.srcRow}-${blk.srcRowTo}` : "") + `</div>`;
-    html += '<table class="block-table"><thead><tr>';
-    blk.headers.forEach(h => html += `<th>${escapeHtml(h === null ? "" : h)}</th>`);
-    html += "</tr></thead><tbody>";
-    blk.dataRows.forEach((dr, ri) => {
-      html += `<tr data-srcrow="${dr.srcRow}">`;
-      dr.cells.forEach((v, ci) => {
-        const editable = state.resultsMode === "search" ? "" : ' readonly';
-        const inpTag = state.resultsMode === "search"
-          ? `<input class="cell-in" data-ri="${ri}" data-ci="${ci}" value="${escapeHtmlAttr(v)}">`
-          : `<div class="cell-in" style="background:#fff">${escapeHtml(v === null ? "" : v)}</div>`;
-        html += `<td>${inpTag}</td>`;
-      });
-      html += "</tr>";
+    const block = el("div", {
+      class: "match-block " + (state.resultsMode === "remove" ? "remove" : ""),
+      "data-match": blk.matchIdx
     });
-    html += '</tbody></table><div class="block-sep"></div></div>';
+    block.appendChild(el("div", {
+      class: "match-title",
+      text: "Match " + blk.matchIdx + "  |  Sheet: " + blk.sheet + "  |  Row: " + blk.srcRow +
+        (blk.srcRowTo > blk.srcRow ? "  |  Rows: " + blk.srcRow + "-" + blk.srcRowTo : "")
+    }));
+    const table = el("table", { class: "block-table" });
+    const htr = el("tr");
+    blk.headers.forEach(h => htr.appendChild(el("th", { text: (h === null ? "" : h) })));
+    table.appendChild(el("thead", {}, htr));
+    const tbody = el("tbody");
+    blk.dataRows.forEach((dr, ri) => {
+      const tr = el("tr", { "data-srcrow": dr.srcRow });
+      dr.cells.forEach((v, ci) => {
+        const cellValTxt = (v === null || v === undefined ? "" : v);
+        const inner = state.resultsMode === "search"
+          ? el("input", { class: "cell-in", "data-ri": ri, "data-ci": ci, value: cellValTxt })
+          : el("div", { class: "cell-in", style: { background: "#fff" }, text: v === null ? "" : v });
+        tr.appendChild(el("td", {}, inner));
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    block.appendChild(table);
+    block.appendChild(el("div", { class: "block-sep" }));
+    fragRoot.appendChild(block);
   });
-  body.innerHTML = html;
+  body.appendChild(fragRoot);
 }
 function escapeHtmlAttr(s) {
   return String(s === null || s === undefined ? "" : s)
