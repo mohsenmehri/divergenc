@@ -654,11 +654,6 @@ enum ENUM_LIVE_P3_PROFILE
    LIVE_P3_PROFILE_AGGRESSIVE = 2,
    LIVE_P3_PROFILE_ULTRA = 3
 };
-enum ENUM_LIVE_P3_EXECUTION_MODE
-{
-   LIVE_P3_EXECUTION_ARM_ONLY = 0,
-   LIVE_P3_EXECUTION_IMMEDIATE_ENTRY = 1
-};
 enum ENUM_TEST_PROFILE
 {
    PROFILE_A_STRUCTURE = 0,
@@ -905,7 +900,6 @@ input int      inp_div3_rsi_alignment_tolerance = 0;
 input bool     inp_div3_require_rsi_turn = false;
 input group "=============== Smart LIVE P3 Patch ==============="
 input ENUM_LIVE_P3_PROFILE inp_live_p3_profile   = LIVE_P3_PROFILE_AGGRESSIVE;
-input ENUM_LIVE_P3_EXECUTION_MODE inp_live_p3_execution_mode = LIVE_P3_EXECUTION_ARM_ONLY;
 input bool     inp_use_smart_live_p3            = true;
 input bool     inp_live_p3_relaxed_bridge       = true;
 input bool     inp_live_p3_require_rejection    = false;
@@ -17573,10 +17567,6 @@ bool DIV3_ModeClassic()    { return (inp_live_p3_profile == LIVE_P3_PROFILE_CLAS
 bool DIV3_ModeSmart()      { return (inp_live_p3_profile == LIVE_P3_PROFILE_SMART); }
 bool DIV3_ModeAggressive() { return (inp_live_p3_profile == LIVE_P3_PROFILE_AGGRESSIVE); }
 bool DIV3_ModeUltra()      { return (inp_live_p3_profile == LIVE_P3_PROFILE_ULTRA); }
-bool DIV3_ShouldEnterImmediatelyOnLiveP3()
-{
-   return (inp_live_p3_execution_mode == LIVE_P3_EXECUTION_IMMEDIATE_ENTRY);
-}
 bool DIV3_ShouldUseSmartLiveP3()
 {
    return (inp_use_smart_live_p3 && !DIV3_ModeClassic());
@@ -17931,21 +17921,6 @@ void CheckLiveThreePivotDivergence()
            0, kind, TimeCurrent(), 0, 0.0);
 
    string live_source = DIV3_ShouldUseSmartLiveP3() ? DIV3_RuntimeLiveSource() : "LIVE_P3_DISPLAY_ONLY";
-   if(DIV3_ShouldEnterImmediatelyOnLiveP3())
-   {
-      int expected_setup_id = g_next_setup_id;
-      bool opened_live = FireSignal(bull, 0, live_source + "_IMMEDIATE");
-      if(opened_live)
-      {
-         RP_MarkLatestExecuted(expected_setup_id, bull, g_live_div_time[2]);
-         ME_MarkExecuted(expected_setup_id, bull, g_live_div_time[2]);
-         g_profile_stats[(int)TestProfile].entries++;
-         if(bull) last_live_bull_bar = bar_time;
-         else     last_live_bear_bar = bar_time;
-         g_live_div_geometry_ready = false;
-         return;
-      }
-   }
    ArmThreePivotDivergence(bull, lp1, lp2, lp3, false, live_source);
 
    if(inp_show_divergence_lines && (!g_testing || g_visual))
@@ -45748,19 +45723,9 @@ int OnInit()
 {
    // FIX-D1 (audit 2026-09-04): make DIV3 signal-mode semantics explicit at startup.
    if(inp_div3_signal_mode == DIV3_LIVE_P3_ONLY)
-   {
-      if(DIV3_ShouldEnterImmediatelyOnLiveP3())
-         Print("NOTE|DIV3_LIVE_P3_ONLY with LIVE_P3_EXECUTION_IMMEDIATE_ENTRY attempts immediate entries from LIVE_P3 detections.");
-      else
-         Print("WARNING|DIV3_LIVE_P3_ONLY is DISPLAY-ONLY: the confirmed stream is disabled inside CheckDivergence() and live arms are never consumable - this mode opens NO trades.");
-   }
+      Print("WARNING|DIV3_LIVE_P3_ONLY is DISPLAY-ONLY: the confirmed stream is disabled inside CheckDivergence() and live arms are never consumable - this mode opens NO trades.");
    else if(inp_div3_signal_mode == DIV3_DUAL_MODE)
-   {
-      if(DIV3_ShouldEnterImmediatelyOnLiveP3())
-         Print("NOTE|DIV3_DUAL_MODE keeps the confirmed stream and also allows immediate LIVE_P3 entry attempts.");
-      else
-         Print("NOTE|DIV3_DUAL_MODE trades ONLY the confirmed stream; live display arms never open positions.");
-   }
+      Print("NOTE|DIV3_DUAL_MODE trades ONLY the confirmed stream; live display arms never open positions.");
    g_symbol_name = _Symbol;
    g_lang = GetLanguageStrings();
    g_testing = MQLInfoInteger(MQL_TESTER);
