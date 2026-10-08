@@ -1,0 +1,592 @@
+
+<div id="layout">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#04101f" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="width:21px;height:21px">
+          <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14.5 14.5 0 0 1 0 18 14.5 14.5 0 0 1 0-18z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Net<span>Scope</span> Console</div>
+        <div class="brand-sub">Network Data Manager</div>
+      </div>
+    </div>
+
+    <div class="side-sect">منوی اصلی</div>
+    <nav class="side-nav">
+      <div class="nav-item active tab-btn" data-view="panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        داشبورد / کنترل پنل
+      </div>
+      <div class="nav-item tab-btn" data-view="results">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        نتایج جستجو
+        <span class="nav-badge" id="nav-results-count">0</span>
+      </div>
+      <div class="nav-item tab-btn" data-view="sheet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+        مرور شیت‌های شبکه
+      </div>
+      <div class="nav-item tab-btn" data-view="log">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        تاریخچه تغییرات
+        <span class="nav-badge" id="nav-log-count">0</span>
+      </div>
+      <div class="nav-item tab-btn" data-view="macros">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
+        ماکروهای سیستم
+      </div>
+    </nav>
+
+    <div class="side-sect">دسترسی سریع</div>
+    <nav class="side-nav">
+      <div class="nav-item" onclick="RunMacro('modAddRecord.StartAddWizard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        افزودن رکورد
+      </div>
+      <div class="nav-item" onclick="RunMacro('modRemoveRecord.StartRemoveWizard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>
+        حذف رکورد
+      </div>
+      <div class="nav-item" onclick="RunMacro('modUndo.UndoLastRemove')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+        Undo حذف
+      </div>
+      <div class="nav-item" onclick="RunMacro('modNavigator.ShowSheetNavigator')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+        انتخاب‌گر شیت‌ها
+      </div>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-status">
+        <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
+        <div><span class="dot c"></span> وضعیت Undo: <b id="st-undo">—</b></div>
+        <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div id="main-wrap">
+
+    <!-- TOPBAR -->
+    <header id="topbar">
+      <button class="icon-btn burger" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="page-title">
+        <span id="top-title">داشبورد عملیات شبکه</span>
+        <small id="top-sub">Network Operations Dashboard</small>
+      </div>
+      <div class="top-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="global-search" placeholder="جستجوی سریع در همه شیت‌ها… (Enter)">
+      </div>
+      <div class="spacer"></div>
+      <div class="stat-pill" id="stat-line">در حال بارگذاری…</div>
+      <button class="icon-btn accent" title="ورود فایل داده (اکسل / CSV / JSON)" onclick="modImport.OpenFile()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </button>
+      <button class="icon-btn" title="بازسازی ایندکس" onclick="RunMacro('modSearchEngine.RefreshSearchIndexCore')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+      </button>
+      <button class="icon-btn" title="خروجی‌ها" onclick="RunMacro('modExport.ExportSearchResults')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+      </button>
+      <div class="user-chip">
+        <div class="avatar">ND</div>
+        <div>
+          <div class="un" id="st-user">Web User</div>
+          <span class="ur">Network Admin</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================= VIEW: DASHBOARD / CONTROL PANEL ================= -->
+    <section class="view active" id="view-panel">
+      <div class="content">
+
+        <!-- HERO -->
+        <div class="hero">
+          <svg class="hero-net" viewBox="0 0 420 220" fill="none" aria-hidden="true">
+            <g stroke="rgba(34,211,238,.35)" stroke-width="1.2">
+              <path class="dash-offset" d="M40 170 L120 90 L210 130 L300 60 L380 110"/>
+              <path d="M120 90 L180 40 L300 60" stroke="rgba(99,102,241,.3)"/>
+              <path d="M210 130 L260 190 L380 110" stroke="rgba(139,92,246,.3)"/>
+              <path d="M40 170 L140 200 L260 190" stroke="rgba(34,211,238,.2)"/>
+            </g>
+            <g fill="#22d3ee">
+              <circle cx="40" cy="170" r="5" class="n-pulse"/>
+              <circle cx="120" cy="90" r="6.5" class="n-pulse" style="animation-delay:.5s"/>
+              <circle cx="210" cy="130" r="5.5" class="n-pulse" style="animation-delay:1s"/>
+              <circle cx="300" cy="60" r="7" class="n-pulse" style="animation-delay:.3s"/>
+              <circle cx="380" cy="110" r="5" class="n-pulse" style="animation-delay:.8s"/>
+            </g>
+            <g fill="rgba(139,92,246,.85)">
+              <circle cx="180" cy="40" r="4" class="n-pulse" style="animation-delay:1.4s"/>
+              <circle cx="260" cy="190" r="4.5" class="n-pulse" style="animation-delay:.9s"/>
+              <circle cx="140" cy="200" r="3.5" class="n-pulse" style="animation-delay:1.8s"/>
+            </g>
+            <g fill="rgba(34,211,238,.2)">
+              <circle cx="120" cy="90" r="14"/><circle cx="300" cy="60" r="17"/>
+            </g>
+          </svg>
+          <div class="hero-txt">
+            <span class="hero-tag">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:11px;height:11px"><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8 3 3m0-14-3 3M8 16l-3 3"/></svg>
+              NOC • DATA MANAGER v28
+            </span>
+            <h1>سامانه مدیریت اطلاعات <em>شبکه شعب و مراکز داده</em></h1>
+            <p>مدیریت کامل تجهیزات روتر و سوییچ، آدرس‌دهی IP، VLAN ها، بسترهای ارتباطی و سرویس‌های مخابراتی — جستجو، افزودن، حذف با آرشیو و Undo، خروجی‌گیری و ثبت تغییرات.</p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" onclick="RunMacro('modSearchEngine.SearchRecords')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                اجرای جستجو
+              </button>
+              <button class="btn btn-green" onclick="RunMacro('modAddRecord.StartAddWizard')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+                افزودن رکورد
+              </button>
+              <button class="btn btn-violet" onclick="RunMacro('modNavigator.ShowSheetNavigator')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                Sheet Navigator
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-row" id="dash-kpis"></div>
+
+        <!-- SHEET CATEGORIES -->
+        <div class="card">
+          <div class="card-head">
+            <div class="ico g-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+            </div>
+            <div>
+              <div class="eyebrow">Categories</div>
+              <h3>دسته‌بندی شیت‌های شبکه</h3>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn btn-ghost btn-sm" onclick="switchView('sheet')">مشاهده همه شیت‌ها ←</button>
+          </div>
+          <div class="card-body">
+            <div class="cat-tiles" id="dash-cats"></div>
+          </div>
+        </div>
+
+        <!-- SEARCH + ADD + REMOVE -->
+        <div class="grid-add">
+          <!-- SEARCH -->
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-cyan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Search Engine</div>
+                <h3>جستجوی هوشمند</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="search-rows">
+                <div class="field">
+                  <label>فیلتر شیت <span class="ref">C7</span></label>
+                  <select class="inp" id="cp-c7"></select>
+                </div>
+                <div class="field">
+                  <label>ستون جستجو <span class="ref">C9</span></label>
+                  <select class="inp" id="cp-c9"></select>
+                </div>
+              </div>
+              <div class="search-value-row" style="margin-top:13px">
+                <div class="field">
+                  <label>مقدار جستجو <span class="ref">C11</span></label>
+                  <input class="inp" type="text" id="cp-c11" placeholder="مثال: IP، نام شعبه، شاخص، شماره پرونده…">
+                </div>
+              </div>
+              <div class="exact-wrap" style="margin-top:12px">
+                <div class="switch on" id="exact-toggle" title="ToggleExactMatch — تطابق دقیق">
+                  <div class="txt">ON</div><div class="thumb"></div>
+                </div>
+                <div>
+                  <div class="exact-label">تطابق دقیق (Exact Match)</div>
+                  <div class="hint">حالت ON = دقیقاً برابر / OFF = شامل عبارت · <span class="mono">B12</span></div>
+                </div>
+                <div class="spacer"></div>
+                <button class="btn btn-primary" onclick="RunMacro('modSearchEngine.SearchRecords')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  SEARCH
+                </button>
+              </div>
+              <div class="dash-note">
+                نتایج به‌صورت بلوک‌های <b>Match</b> نمایش داده می‌شوند؛ ردیف‌های قابل‌ویرایش را تغییر دهید و با
+                <b>SAVE CHANGES</b> در شیت مبدأ ذخیره کنید.
+              </div>
+            </div>
+          </div>
+
+          <!-- ADD -->
+          <div class="card action-card">
+            <div class="card-head">
+              <div class="ico g-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Add Record</div>
+                <h3>افزودن رکورد</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label>شیت مقصد <span class="ref">C16</span></label>
+                <select class="inp" id="cp-c16"></select>
+              </div>
+              <div class="hint">برای شیت‌های استانی، نوع بخش (شعبه / خودپرداز) پرسیده می‌شود و فیلدها با مقادیر پیش‌فرض ردیف قبل نمایش داده می‌شوند.</div>
+              <button class="btn btn-green btn-block" onclick="RunMacro('modAddRecord.StartAddWizard')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+                ADD RECORD
+              </button>
+            </div>
+          </div>
+
+          <!-- REMOVE -->
+          <div class="card action-card">
+            <div class="card-head">
+              <div class="ico g-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Remove &amp; Undo</div>
+                <h3>حذف رکورد</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="field">
+                <label>فیلتر شیت <span class="ref">C23</span></label>
+                <select class="inp" id="cp-c23"></select>
+              </div>
+              <div class="field">
+                <label>ستون جستجو <span class="ref">C25</span></label>
+                <select class="inp" id="cp-c25"></select>
+              </div>
+              <div class="field">
+                <label>مقدار جستجو <span class="ref">C27</span></label>
+                <input class="inp" type="text" id="cp-c27" placeholder="مقدار مورد حذف…">
+              </div>
+              <div style="display:flex;gap:9px">
+                <button class="btn btn-red" style="flex:1" onclick="RunMacro('modRemoveRecord.StartRemoveWizard')">REMOVE RECORD</button>
+                <button class="btn btn-amber" onclick="RunMacro('modUndo.UndoLastRemove')" title="بازگردانی آخرین حذف">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+                  UNDO
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOOLS + CHARTS -->
+        <div class="grid-2">
+          <!-- TOOLS -->
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-violet">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.7-1.6L13.4 2h-2.8l-.4 2.9a7 7 0 0 0-2.7 1.6l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .5.1 1.1.2 1.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.7 1.6l.4 2.9h2.8l.4-2.9a7 7 0 0 0 2.7-1.6l2.3 1 2-3.4-2-1.5c.1-.5.2-1 .2-1.6z"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Tools &amp; Automation</div>
+                <h3>ابزارها و عملیات‌ها</h3>
+                <div class="sec-note" title="Security note">🛡 رمزها و قفل‌های این برنامه فقط رفتار فایل Excel را شبیه‌سازی می‌کنند و امنیت واقعی نیستند</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="tools-grid">
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.SaveChanges')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                  <span>SAVE CHANGES</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.OpenSearchResults')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>OPEN RESULTS</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.ClearSearchResults')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/><path d="M10 11v6M14 11v6"/></svg>
+                  <span>CLEAR RESULTS</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modUI.RefreshPanel')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+                  <span>REFRESH PANEL</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modSearchEngine.RefreshSearchIndexCore')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+                  <span>REFRESH INDEX</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExport.ExportSearchResults')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                  <span>خروجی نتایج</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExport.ExportCurrentData')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8M8 16h5M8 8h8"/></svg>
+                  <span>خروجی داده جاری</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExport.ExportChangeLog')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+                  <span>خروجی تاریخچه</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modExportAllModules.ExportAllModules')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
+                  <span>خروجی VBA</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modFixUnlock.UnlockDataSheets')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+                  <span>رفع قفل شیت‌ها</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modUI.ProtectControlPanel')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                  <span>قفل پنل</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modUI.UnprotectControlPanel')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+                  <span>باز کردن قفل</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modConstants.HideSystemSheets')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M2 12s3.5-7 10-7c2 0 3.8.7 5.3 1.7M22 12s-3.5 7-10 7c-2 0-3.8-.7-5.3-1.7"/><path d="M3 3l18 18"/></svg>
+                  <span>مخفی سازی سیستم</span>
+                </div>
+                <div class="tool-tile" onclick="RunMacro('modConstants.UnhideSystemSheets')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <span>نمایش سیستم</span>
+                </div>
+                <div class="tool-tile wide" onclick="modImport.OpenFile()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  <span>IMPORT FILE</span>
+                </div>
+                <div class="tool-tile" onclick="ExportWorkbookXlsx()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  <span>EXPORT XLSX</span>
+                </div>
+                <div class="tool-tile" onclick="resetToEmptyData()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>
+                  <span>EMPTY DATA</span>
+                </div>
+                <div class="tool-tile" onclick="backupAll()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                  <span>پشتیبان‌گیری</span>
+                </div>
+                <div class="tool-tile" onclick="restoreAll()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 20V9m0 0-4 4m4-4 4 4"/><path d="M5 5h14"/></svg>
+                  <span>بازیابی</span>
+                </div>
+                <div class="tool-tile" onclick="resetAll()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+                  <span>بازنشانی</span>
+                </div>
+              </div>
+
+              <!-- NAVIGATE -->
+              <div class="field" style="margin-top:15px">
+                <label>باز کردن مستقیم شیت <span class="ref">C41</span></label>
+                <div style="display:flex;gap:9px">
+                  <select class="inp" id="cp-c41"></select>
+                  <button class="btn btn-cyan" style="flex:0 0 auto" onclick="RunMacro('modUI.NavigateToSheet')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
+                    باز کردن شیت
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHARTS -->
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Network Analytics</div>
+                <h3>آمار و تحلیل شبکه</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="donut-wrap">
+                <div id="dash-donut"></div>
+                <div class="donut-legend" id="dash-legend"></div>
+              </div>
+              <div class="mini-label" style="margin:16px 0 10px">پرترافیک‌ترین شیت‌ها (تعداد رکورد)</div>
+              <div class="bars" id="dash-bars"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FEED + STATUS -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">Activity</div>
+                <h3>آخرین رویدادهای سیستم</h3>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="feed" id="dash-feed"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="ico g-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <div>
+                <div class="eyebrow">System</div>
+                <h3>وضعیت و امنیت</h3>
+              </div>
+            </div>
+            <div class="card-body" style="line-height:2.3;font-size:11.5px;color:var(--txt-1)">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                <span class="badge-soft">🛡 رمز کنترل پنل: <b class="mono" style="margin-right:5px">1234</b></span>
+                <span class="badge-soft">🔐 رمز شیت‌ها: <b class="mono" style="margin-right:5px">12346</b></span>
+                <span class="badge-soft">👤 کاربر: <b id="st-user2" style="margin-right:5px">Web User</b></span>
+              </div>
+              تغییرات به‌صورت خودکار در حافظه مرورگر ذخیره می‌شوند. برای انتقال به سیستم دیگر از
+              <b>پشتیبان‌گیری JSON</b> استفاده کنید. عملیات حذف همیشه در آرشیو نگهداری می‌شوند و با
+              <b>UNDO</b> قابل بازگشت‌اند.
+              <div class="legend-strip" style="margin-top:12px">
+                <span><i style="background:var(--green)"></i>سیستم فعال</span>
+                <span><i style="background:var(--cyan)"></i>ایندکس به‌روز</span>
+                <span><i style="background:var(--amber)"></i>نیاز به مراقبت</span>
+                <span><i style="background:var(--red)"></i>خطا</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= VIEW: RESULTS ================= -->
+    <section class="view" id="view-results">
+      <div class="view-head">
+        <div class="title-ico g-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </div>
+        <div>
+          <h2>نتایج جستجو</h2>
+          <div class="sub">SEARCH RESULTS — ویرایش سلول‌ها سپس SAVE CHANGES</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-green btn-sm" onclick="RunMacro('modSearchEngine.SaveChanges')">SAVE CHANGES</button>
+          <button class="btn btn-red btn-sm" onclick="RunMacro('modSearchEngine.ClearSearchResults')">CLEAR</button>
+          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExport.ExportSearchResults')">EXPORT CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="legend-strip">
+          <span><i style="background:#3b82f6"></i>آبی = اطلاعات Match (فقط‌خواندنی)</span>
+          <span><i style="background:rgba(30,58,130,.8)"></i>سرستون‌ها</span>
+          <span><i style="background:#e5e7eb"></i>ردیف‌های قابل ویرایش</span>
+          <span><i style="background:#fbbf24"></i>زرد = تغییرات ذخیره‌شده</span>
+        </div>
+        <div id="results-body">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <div>هنوز نتیجه‌ای ثبت نشده است — از داشبورد جستجو انجام دهید.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW: SHEETS ================= -->
+    <section class="view" id="view-sheet">
+      <div class="view-head">
+        <div class="title-ico g-cyan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+        </div>
+        <div>
+          <h2 id="sheet-title">شیت‌های شبکه</h2>
+          <div class="sub" id="sheet-sub">NETWORK SHEETS — مشاهده و ویرایش مستقیم داده‌ها</div>
+        </div>
+        <div class="head-actions filter-bar">
+          <input class="inp" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
+          <button class="btn btn-primary btn-sm" onclick="filterSheetRows()">فیلتر</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCurrentSheetCSV()">⬇ CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleSheetLock()">قفل/باز شیت</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="cat-bar" id="cat-bar"></div>
+        <div id="sheet-catalog"></div>
+        <div class="chip-bar" id="sheet-chips" style="display:none"></div>
+        <div id="sheet-body">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+            <div>از نوار بالا یا Sheet Navigator یک شیت را انتخاب کنید.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW: LOG ================= -->
+    <section class="view" id="view-log">
+      <div class="view-head">
+        <div class="title-ico g-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+        </div>
+        <div>
+          <h2>تاریخچه تغییرات</h2>
+          <div class="sub">CHANGE_LOG — ثبت کامل همه عملیات‌ها</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExport.ExportChangeLog')">⬇ EXPORT</button>
+          <button class="btn btn-red btn-sm" onclick="clearLog()">پاک‌سازی لاگ</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="log-body"></div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW: MACROS ================= -->
+    <section class="view" id="view-macros">
+      <div class="view-head">
+        <div class="title-ico g-violet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
+        </div>
+        <div>
+          <h2>ماکروهای سیستم</h2>
+          <div class="sub">تمام ماکروهای VBA فایل اصلی — پیاده‌سازی‌شده و قابل اجرا</div>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExportAllModules.ExportAllModules')">⬇ Export All Modules</button>
+          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="macros-body"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="modal-overlay"></div>
+<div id="toasts"></div>
+<input type="file" id="import-file-input" accept=".xlsx,.xlsm,.xls,.csv,.txt,.json" style="display:none" onchange="modImport.HandleFile(this.files[0])">
+
+
+
+
+</body>
+</html>

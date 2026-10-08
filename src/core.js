@@ -1,0 +1,711 @@
+/* ================================================================
+   LAYER: CORE — workbook model, invariants, helpers, modals,
+   transactions, validation, search-index verify/recover.
+   ================================================================ */
+/* ================================================================
+   DATA MANAGER v28 — Web port of Mohsen_FINAL_v5.xlsm
+   Core: state, storage, helpers, dialogs, renderers
+   ================================================================ */
+"use strict";
+
+/* ---------- modConstants ---------- */
+const SHEET_PASSWORD = "12346";
+const CONTROL_PANEL_PASSWORD = "1234";
+const CP_SHEET = "CONTROL_PANEL";
+const IDX_SHEET = "SYSTEM_SEARCH_INDEX";
+const CFG_SHEET = "SYSTEM_SHEET_CONFIG";
+const DD_SHEET = "SYSTEM_DATA_DICTIONARY";
+const LOG_SHEET = "CHANGE_LOG";
+const RESULTS_SHEET = "SEARCH_RESULTS";
+const SYSTEM_KEYS_SHEET = "SYSTEM_KEYS";
+const UNDO_BUFFER_SHEET = "SYSTEM_UNDO_BUFFER";
+const NAV_SHEET_NAME = "SYSTEM_NAVIGATOR";
+const MAX_DATA_COLS = 100;
+const SEARCH_OUTPUT_FIRST_ROW = 4;
+const OUTPUT_CLEAR_LAST_ROW = 2000;
+const CELL_SEARCH_SHEET = "C7", CELL_SEARCH_KEY = "C9", CELL_SEARCH_VALUE = "C11";
+const CELL_ADD_SHEET = "C16", CELL_REMOVE_SHEET = "C23", CELL_REMOVE_KEY = "C25";
+const CELL_REMOVE_VALUE = "C27", CELL_NAV_SHEET = "C41", CELL_EXACT_TOGGLE = "B12";
+
+const ARCHIVE_MAIN = "لیست جمع آوری سرویس";
+const ARCHIVE_MABIN = "جمع آوری مبین نت";
+const ARCHIVE_ASIATAK = "جمع آوری آسیاتک";
+
+function SystemSheetNames() {
+  return [CP_SHEET, RESULTS_SHEET, LOG_SHEET, SYSTEM_KEYS_SHEET, CFG_SHEET,
+          DD_SHEET, IDX_SHEET, UNDO_BUFFER_SHEET, NAV_SHEET_NAME];
+}
+function IsSystemSheet(name) { return SystemSheetNames().indexOf(name) >= 0; }
+function IsDataSheet(name) { return !IsSystemSheet(name); }
+function SheetExists(name) { return !!(WB.sheets[name]); }
+
+/* Provincial sheet list (modAddRecord.IsProvincialSheet) */
+const PROVINCIAL_SHEETS = ["خراسان رضوی","خراسان شمالی","خراسان جنوبی","سیستان وبلوچستان","گلستان",
+  "استان تهران","استان البرز","استان اردبیل","استان آذرغربی","استان آذرشرقی","خوزستان","فارس","قم",
+  "کردستان","لرستان","همدان","مرکزی","کرمانشاه","قزوین","استان ایلام","استان اصفهان","استان بوشهر",
+  "چهارمحال وبختیاری","سمنان","زنجان","کهکلویه","یزد","گیلان","مازندران","هرمزگان","کرمان"];
+
+/* ================================================================
+   Workbook state
+   ================================================================ */
+const WB = {
+  order: [],            // sheet names in workbook order
+  sheets: {},           // name -> { rows: [[v,...],...]  (0-based => Excel row r = rows[r-1]), merges: [{r1,c1,r2,c2}] }
+};
+/* ================================================================
+   SOURCE OF TRUTH / INVARIANTS (state management contract)
+   ---------------------------------------------------------------
+   - WB (order + sheets) is the SINGLE source of truth for business
+     data. UI views only RENDER from WB; imports replace it atomically;
+     saveState serializes it; export and undo read/copy it.
+   - state holds ONLY UI/session flags (selection, cp widgets, undo
+     pointer, locks). It never caches business values that could
+     diverge from WB.
+   - Every mutation of WB must go through withTransaction(...) which
+     snapshots, rolls back on error, and commits saveState once.
+   - SYSTEM_SEARCH_INDEX is DERIVED data: always rebuilt from WB +
+     SYSTEM_SHEET_CONFIG (deterministic), never trusted from storage.
+   ================================================================ */
+const state = {
+  errors: [],           // session error ring (observable error handling)
+  cp: {
+    C7: "", C9: "FULLTEXT", C11: "", B12: "OFF",
+    C16: "", C23: "", C25: "FULLTEXT", C27: "", C41: ""
+  },
+  results: [],          // result blocks: {matchIdx, sheet, srcRow, srcRowTo, dataRows:[{srcRow, cells:[]}], title, mode:'search'|'remove'}
+  resultsMode: "search",
+  undo: null,           // {valid, blockCount, svcStr, ts, blocks:[{sheet,from,to,lastCol,arc1Name,arc1From,arc1Count,arc2Name,arc2From,arc2Count,data:[[...]]}]}
+  currentSheet: null,
+  panelProtected: true,
+  lockedSheets: {},     // sheetName -> true (protected)
+  user: "Web User",
+  showSystem: false,
+  pageLimit: 300,
+  catFilter: "all",
+};
+
+function ensureSheet(name, createIfMissing) {
+  if (!WB.sheets[name] && createIfMissing) {
+    WB.sheets[name] = { rows: [], merges: [] };
+    if (WB.order.indexOf(name) < 0) WB.order.push(name);
+  }
+  return WB.sheets[name] || null;
+}
+
+/* ================================================================
+   Helpers (modHelpers / modUnicode)
+   ================================================================ */
+function TrimText(s) { return (s === null || s === undefined) ? "" : String(s).trim(); }
+function NormalizeText(s) { return TrimText(s).toLowerCase(); }
+function LastUsedRow(sheetName, col) {
+  const sh = WB.sheets[sheetName]; if (!sh) return 0;
+  const c = (col || 1) - 1;
+  for (let r = sh.rows.length - 1; r >= 0; r--) {
+    const row = sh.rows[r] || [];
+    if (row[c] !== undefined && row[c] !== null && String(row[c]).trim() !== "") return r + 1;
+  }
+  return sh.rows.length ? 1 : 0;
+}
+function LastUsedCol(sheetName, rowNum) {
+  const sh = WB.sheets[sheetName]; if (!sh) return 0;
+  const row = sh.rows[(rowNum || 1) - 1] || [];
+  for (let c = row.length - 1; c >= 0; c--) {
+    if (row[c] !== undefined && row[c] !== null && String(row[c]).trim() !== "") return c + 1;
+  }
+  return 1;
+}
+function FindHeaderRow(sheetName) { return 1; }  // FIX v2: always row 1
+
+function cellVal(sheetName, r, c, mergeAware) {
+  const sh = WB.sheets[sheetName]; if (!sh) return null;
+  let row = sh.rows[r - 1];
+  let v = row ? row[c - 1] : null;
+  if ((v === undefined || v === null || v === "") && mergeAware && sh.merges && sh.merges.length) {
+    const m = findMerge(sh, r, c);
+    if (m && (m.r1 !== r || m.c1 !== c)) {
+      const arow = sh.rows[m.r1 - 1];
+      v = arow ? arow[m.c1 - 1] : null;
+    }
+  }
+  return v === undefined ? null : v;
+}
+function setCellVal(sheetName, r, c, v, mergeAware) {
+  const sh = ensureSheet(sheetName); if (!sh) return;
+  while (sh.rows.length < r) sh.rows.push([]);
+  let row = sh.rows[r - 1];
+  let tc = c, tr = r;
+  if (mergeAware && sh.merges && sh.merges.length) {
+    const m = findMerge(sh, r, c);
+    if (m) { tr = m.r1; tc = m.c1; while (sh.rows.length < tr) sh.rows.push([]); row = sh.rows[tr - 1]; }
+  }
+  while (row.length < tc) row.push(null);
+  row[tc - 1] = v;
+}
+function findMerge(sh, r, c) {
+  for (const m of sh.merges) {
+    if (r >= m.r1 && r <= m.r2 && c >= m.c1 && c <= m.c2) return m;
+  }
+  return null;
+}
+function shiftMerges(sh, atRow, count) {
+  // count>0 insert (rows shift down), count<0 delete
+  const out = [];
+  for (const m of sh.merges) {
+    let { r1, r2, c1, c2 } = m;
+    if (count > 0) {
+      if (r1 >= atRow) r1 += count;
+      if (r2 >= atRow) r2 += count;
+    } else if (count < 0) {
+      const delFrom = atRow, delTo = atRow - count - 1;
+      if (r1 > delTo) r1 += count;
+      else if (r1 >= delFrom) r1 = delFrom;
+      if (r2 > delTo) r2 += count;
+      else if (r2 >= delFrom) r2 = delFrom;
+    }
+    if (r2 >= r1) out.push({ r1, r2, c1, c2 });
+  }
+  sh.merges = out;
+}
+function insertRowAt(sheetName, excelRow) {
+  const sh = ensureSheet(sheetName);
+  sh.rows.splice(excelRow - 1, 0, []);
+  shiftMerges(sh, excelRow, 1);
+}
+function deleteRows(sheetName, fromRow, toRow) {
+  const sh = ensureSheet(sheetName);
+  const n = toRow - fromRow + 1;
+  sh.rows.splice(fromRow - 1, n);
+  shiftMerges(sh, fromRow, -n);
+}
+function rowIsEmpty(sh, excelRow) {
+  const row = sh.rows[excelRow - 1] || [];
+  for (const v of row) if (v !== null && v !== undefined && String(v).trim() !== "") return false;
+  return true;
+}
+
+/* ---------- modal dialogs (modUnicode.ShowMsg / ShowInput) ---------- */
+const vbOKOnly = 0, vbYesNoCancel = 3, vbYesNo = 4, vbCritical = 16, vbExclamation = 48, vbInformation = 64, vbQuestion = 32;
+const IDOK = 1, IDCANCEL = 2, IDYES = 6, IDNO = 7;
+
+function ModalBox(opts) {
+  return new Promise(resolve => {
+    const ov = document.getElementById("modal-overlay");
+    const cls = opts.cls || "info";
+    const box = document.createElement("div");
+    box.className = "mbox " + cls;
+    let buttons = "";
+    (opts.buttons || [{ id: IDOK, label: "تأیید", cls: "ok" }]).forEach(b => {
+      buttons += `<button data-id="${b.id}" class="${b.cls}">${b.label}</button>`;
+    });
+    box.innerHTML = `
+      <div class="t"><span>${escapeHtml(opts.title || "Data Manager")}</span><span class="x" data-id="0">✕</span></div>
+      <div class="c">${escapeHtml(opts.text || "")}${opts.html || ""}</div>
+      <div class="f">${buttons}</div>`;
+    ov.innerHTML = "";
+    ov.appendChild(box);
+    ov.classList.add("show");
+    let inpEl = null;
+    const done = id => {
+      ModalBox.lastValue = inpEl ? inpEl.value : undefined;
+      ov.classList.remove("show"); ov.innerHTML = ""; resolve(id);
+    };
+    box.querySelectorAll("button[data-id], .x").forEach(el => {
+      el.addEventListener("click", () => {
+        const id = parseInt(el.getAttribute("data-id"), 10);
+        if (id === 0 && opts.buttons && opts.buttons.length > 1) return done(IDCANCEL);
+        done(id);
+      });
+    });
+    if (opts.input !== undefined && opts.input !== null) {
+      const inp = document.createElement("input");
+      inp.className = "m-in"; inp.value = opts.input;
+      inp.id = "modal-input";
+      box.querySelector(".c").appendChild(inp);
+      inpEl = inp;
+      setTimeout(() => { inp.focus(); inp.select(); }, 60);
+      inp.addEventListener("keydown", e => {
+        if (e.key === "Enter") { box.querySelector(".f button[data-id='1'], .f button[data-id='6']").click(); }
+      });
+    }
+  });
+}
+function ShowMsg(text, nType = 0, title = "Data Manager") {
+  let cls = "info", buttons = [{ id: IDOK, label: "تأیید", cls: "ok" }];
+  if (nType & vbYesNo || nType & vbYesNoCancel) {
+    cls = "q";
+    buttons = [{ id: IDYES, label: "بله", cls: "yes" }, { id: IDNO, label: "خیر", cls: "no" }];
+    if (nType & vbYesNoCancel) buttons.push({ id: IDCANCEL, label: "لغو", cls: "cancel" });
+  }
+  if (nType & vbCritical) cls = "err";
+  else if (nType & vbExclamation) cls = "warn";
+  else if (nType & vbQuestion) cls = "q";
+  return ModalBox({ text, title, cls, buttons });
+}
+function ConfirmBox(title, text, onYes, onNo) {
+  ShowMsg(text, vbYesNo | vbQuestion, title).then(r => {
+    if (r === IDYES) onYes && onYes(); else onNo && onNo();
+  });
+}
+async function ShowInput(prompt, title = "Data Manager", def = "") {
+  ModalBox.lastValue = undefined;
+  const r = await ModalBox({ text: prompt, title, cls: "q", input: def,
+    buttons: [{ id: IDOK, label: "تأیید", cls: "ok" }, { id: IDCANCEL, label: "انصراف", cls: "cancel" }] });
+  if (r !== IDOK) return null;
+  return ModalBox.lastValue !== undefined ? ModalBox.lastValue : null;
+}
+
+function escapeHtml(s) {
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/\n/g, "<br>");
+}
+function Toast(msg, kind = "") {
+  const box = document.getElementById("toasts");
+  const t = document.createElement("div");
+  t.className = "toast " + kind;
+  t.innerHTML = escapeHtml(msg).replace(/\n/g, "<br>");
+  box.appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; t.style.transition = ".4s"; setTimeout(() => t.remove(), 450); }, 4200);
+}
+function tsStamp() {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+function nowLogStamp() {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+}
+function DownloadFile(name, content, mime) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: (mime || "text/plain") + ";charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+
+/* ================================================================
+   modChangeLog / modErrorLog
+   ================================================================ */
+function WriteChangeLog(actionName, sheetName, recordId, statusText, notes) {
+  try {
+    const sh = ensureSheet(LOG_SHEET, true);
+    // header row if empty
+    if (sh.rows.length === 0) sh.rows.push(["Date/Time", "Action", "Sheet", "Record ID", "User", "Status", "Notes"]);
+    sh.rows.push([nowLogStamp(), actionName, sheetName, recordId, state.user, statusText, notes || ""]);
+    return true;
+  } catch (e) {
+    console.warn("WriteChangeLog failed:", e);
+    return false;
+  }
+}
+function LogAction(actionName, sheetName, recordId) { WriteChangeLog(actionName, sheetName, recordId, "SUCCESS", ""); }
+function GetLogRowCount() {
+  const sh = WB.sheets[LOG_SHEET];
+  return sh ? Math.max(0, sh.rows.length - 1) : 0;
+}
+function LogError(sModule, sProc, nErrNum, sErrDesc, sContext) {
+  // observable error handling: ring buffer + change log + console
+  try {
+    state.errors.push({ t: nowLogStamp(), module: sModule, proc: sProc,
+      num: nErrNum, desc: String(sErrDesc), ctx: sContext || "" });
+    if (state.errors.length > 50) state.errors.shift();
+  } catch (e) { /* keep logging best-effort */ }
+  console.error("[" + sModule + "." + sProc + "]", nErrNum, sErrDesc, sContext || "");
+  WriteChangeLog("ERROR", sModule + "." + sProc, sContext || "-", nErrNum + ": " + sErrDesc, "");
+}
+function HandleError(sModule, sProc, nErrNum, sErrDesc, bSilent) {
+  LogError(sModule, sProc, nErrNum, sErrDesc);
+  if (!bSilent) {
+    ShowMsg("خطا در " + sModule + "." + sProc + ":\nشماره: " + nErrNum + "\nشرح: " + sErrDesc, vbCritical, "خطا");
+  }
+}
+
+/* ================================================================
+   TRANSACTION LAYER — every WB mutation is atomic: snapshot -> run ->
+   single saveState on success, full rollback + observable error on
+   failure. Undo / change log / save can never diverge from WB.
+   ================================================================ */
+function snapshotWorkbook() {
+  return {
+    order: WB.order.slice(),
+    sheets: JSON.parse(JSON.stringify(WB.sheets)),
+    undo: state.undo ? JSON.parse(JSON.stringify(state.undo)) : state.undo
+  };
+}
+function restoreWorkbook(snap) {
+  WB.order = snap.order.slice();
+  WB.sheets = snap.sheets;
+  state.undo = snap.undo;
+}
+function withTransactionSync(meta, fn) {
+  if (typeof meta === "function") { fn = meta; meta = null; }
+  const snap = snapshotWorkbook();
+  try {
+    const result = fn();
+    saveState();
+    if (typeof updateStatLine === "function") updateStatLine();
+    return result;
+  } catch (e) {
+    try { restoreWorkbook(snap); } catch (e2) { LogError("Transaction", "restoreWorkbook", 500, e2 && e2.message ? e2.message : String(e2)); }
+    LogError("Transaction", (meta && meta.action) || "withTransactionSync", e && e.number ? e.number : 500,
+      e && e.message ? e.message : String(e), (meta && meta.sheet) || "");
+    Toast("عملیات ناموفق بود و تغییرات به حالت قبل برگردانده شد.\n" + (e && e.message ? e.message : e), "err");
+    return undefined;
+  }
+}
+async function withTransaction(meta, fn) {
+  if (typeof meta === "function") { fn = meta; meta = null; }
+  const snap = snapshotWorkbook();
+  try {
+    const result = await fn();
+    saveState();
+    if (typeof updateStatLine === "function") updateStatLine();
+    return result;
+  } catch (e) {
+    try { restoreWorkbook(snap); } catch (e2) { LogError("Transaction", "restoreWorkbook", 500, e2 && e2.message ? e2.message : String(e2)); }
+    LogError("Transaction", (meta && meta.action) || "withTransaction", e && e.number ? e.number : 500,
+      e && e.message ? e.message : String(e), (meta && meta.sheet) || "");
+    Toast("عملیات ناموفق بود و تغییرات به حالت قبل برگردانده شد.\n" + (e && e.message ? e.message : e), "err");
+    return undefined;
+  }
+}
+
+/* ================================================================
+   IMPORT / SCHEMA VALIDATION — corrupt or partial files must never
+   break application state. Also blocks prototype-pollution keys.
+   ================================================================ */
+const FORBIDDEN_KEYS = ["__proto__", "constructor", "prototype"];
+function sanitizeSheetName(name) {
+  let n = TrimText(String(name === null || name === undefined ? "" : name))
+    .replace(/[\u0000-\u001f]/g, "");
+  if (!n) return "";
+  if (FORBIDDEN_KEYS.indexOf(n.toLowerCase()) >= 0) n = "_" + n;
+  if (n.length > 31) n = n.slice(0, 31);
+  return n;
+}
+function normalizeCellValue(v) {
+  if (v === null || v === undefined) return null;
+  const t = typeof v;
+  if (t === "string") return v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
+  if (t === "number") return isFinite(v) ? v : String(v);
+  if (t === "boolean") return v;
+  return String(v); // objects/functions/dates -> plain string, never raw
+}
+function normalizeSheetData(sh) {
+  const rowsIn = (sh && Array.isArray(sh.rows)) ? sh.rows : [];
+  const rows = [];
+  for (const r of rowsIn) {
+    if (!Array.isArray(r)) { rows.push([]); continue; }
+    const row = r.map(normalizeCellValue);
+    if (row.length > MAX_DATA_COLS * 2) row.length = MAX_DATA_COLS * 2;
+    rows.push(row);
+  }
+  const merges = [];
+  for (const m of ((sh && sh.merges) || [])) {
+    if (!m || typeof m !== "object") continue;
+    const r1 = Math.max(0, Math.floor(m.r1) || 0), c1 = Math.max(0, Math.floor(m.c1) || 0);
+    const r2 = Math.max(r1, Math.floor(m.r2) || 0), c2 = Math.max(c1, Math.floor(m.c2) || 0);
+    if (r2 >= rows.length) continue; // out-of-range merge -> dropped
+    merges.push({ r1, c1, r2, c2 });
+  }
+  return { rows, merges };
+}
+function validateWorkbookData(order, sheets) {
+  const errors = [], warnings = [];
+  if (!Array.isArray(order) || !sheets || typeof sheets !== "object") {
+    return { ok: false, errors: ["ساختار فایل نامعتبر است (order/sheets)"], warnings };
+  }
+  if (!order.length) errors.push("هیچ شیتی در فایل یافت نشد");
+  if (order.length > 500) errors.push("تعداد شیت‌ها بیش از حد مجاز است (حداکثر ۵۰۰)");
+  const seen = Object.create(null);
+  let totalRows = 0, counted = 0;
+  for (const rawName of order) {
+    const name = sanitizeSheetName(rawName);
+    if (!name) { warnings.push("نام شیت خالی نادیده گرفته شد"); continue; }
+    const key = NormalizeText(name);
+    if (seen[key]) { warnings.push("شیت تکراری نادیده گرفته شد: " + name); continue; }
+    seen[key] = true;
+    counted++;
+    const sh = sheets[rawName];
+    if (!sh || !Array.isArray(sh.rows)) { errors.push("داده شیت خراب است: " + name); continue; }
+    totalRows += sh.rows.length;
+    if (sh.rows.length > 100000) errors.push("شیت بسیار بزرگ است (بیش از ۱۰۰هزار ردیف): " + name);
+  }
+  if (totalRows > 400000) errors.push("حجم کل داده بیش از حد مجاز است (بیش از ۴۰۰هزار ردیف)");
+  return { ok: errors.length === 0, errors, warnings, sheetCount: counted, totalRows };
+}
+
+/* ================================================================
+   SEARCH INDEX — deterministic derived data: verify + recover
+   ================================================================ */
+function verifySearchIndex() {
+  const idx = WB.sheets[IDX_SHEET];
+  const problems = [];
+  if (!idx) return { ok: false, problems: ["ایندکس جستجو وجود ندارد"] };
+  if (!idx.rows || idx.rows.length <= 1) return { ok: false, problems: ["ایندکس جستجو خالی است"] };
+  let bad = 0;
+  const lim = Math.min(idx.rows.length, 5000);
+  for (let r = 1; r < lim; r++) {
+    const row = idx.rows[r] || [];
+    const sheetName = TrimText(String(row[0] === undefined ? "" : row[0]));
+    const srcRow = Number(row[1]);
+    const src = WB.sheets[sheetName];
+    if (!sheetName || !src) { bad++; continue; }
+    if (!(srcRow >= 1 && srcRow <= src.rows.length)) bad++;
+    if (bad > 25) break;
+  }
+  if (bad) problems.push(bad + "+ ردیف ایندکس به داده نامعتبر اشاره می‌کند");
+  return { ok: problems.length === 0, problems };
+}
+function recoverSearchIndex(showMsg) {
+  const before = verifySearchIndex();
+  let count = 0;
+  try { count = modMapping.RefreshSearchIndex(false); }
+  catch (e) {
+    LogError("Index", "recoverSearchIndex", 500, e && e.message ? e.message : String(e));
+    if (showMsg) ShowMsg("بازیابی ایندکس ناموفق بود:\n" + (e && e.message ? e.message : e), vbCritical, "Search Index");
+    return false;
+  }
+  const after = verifySearchIndex();
+  if (!after.ok) {
+    LogError("Index", "recoverSearchIndex", 501, "ایندکس پس از بازسازی هنوز نامعتبر است", after.problems.join(" | "));
+    if (showMsg) ShowMsg("ایندکس پس از بازسازی هنوز نامعتبر است:\n" + after.problems.join("\n"), vbCritical, "Search Index");
+    return false;
+  }
+  if (showMsg) ShowMsg("ایندکس جستجو با موفقیت بازسازی شد (" + count + " رکورد).\n" +
+    (before.ok ? "" : "مشکلات قبلی: " + before.problems.join("، ")), vbInformation, "Search Index");
+  return true;
+}
+
+/* ================================================================
+   Rendering: views
+   ================================================================ */
+const VIEW_TITLES = {
+  panel: ["داشبورد عملیات شبکه", "Network Operations Dashboard"],
+  results: ["نتایج جستجو", "Search Results"],
+  sheet: ["مرور شیت‌های شبکه", "Network Sheets Browser"],
+  log: ["تاریخچه تغییرات", "Change Log"],
+  macros: ["ماکروهای سیستم", "System Macros"]
+};
+function switchView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  const el = document.getElementById("view-" + name);
+  if (el) el.classList.add("active");
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  const t = VIEW_TITLES[name] || VIEW_TITLES.panel;
+  const tt = document.getElementById("top-title"), ts = document.getElementById("top-sub");
+  if (tt) tt.textContent = t[0];
+  if (ts) ts.textContent = t[1];
+  if (name === "log") renderLogView();
+  if (name === "sheet" && state.currentSheet) renderSheetView(state.currentSheet);
+  if (name === "macros") renderMacrosView();
+  if (name === "panel" && typeof renderDashboard === "function") renderDashboard();
+  updateStatLine();
+  const sb = document.getElementById("sidebar");
+  if (sb) sb.classList.remove("open");
+}
+function GoToControlPanel() { switchView("panel"); }
+
+function updateStatLine() {
+  const dataSheets = WB.order.filter(n => IsDataSheet(n)).length;
+  const idxCount = (WB.sheets[IDX_SHEET] ? Math.max(0, WB.sheets[IDX_SHEET].rows.length - 1) : 0);
+  const el = document.getElementById("stat-line");
+  if (el) el.textContent = dataSheets + " شیت • " + idxCount.toLocaleString("fa-IR") + " رکورد ایندکس • " + state.user;
+  const st = id => document.getElementById(id);
+  if (st("st-index")) {
+    st("st-index").textContent = idxCount.toLocaleString("fa-IR");
+    st("st-undo").textContent = (state.undo && state.undo.valid) ? ("آماده (" + state.undo.blockCount + " بلوک)") : "ندارد";
+    st("st-lock").textContent = state.panelProtected ? "فعال (قفل)" : "غیرفعال";
+  }
+  if (st("st-user")) st("st-user").textContent = state.user;
+  if (st("st-user2")) st("st-user2").textContent = state.user;
+  if (st("nav-results-count")) st("nav-results-count").textContent = String(state.results.length);
+  if (st("nav-log-count")) st("nav-log-count").textContent = String(GetLogRowCount());
+  if (typeof renderDashboard === "function") renderDashboard();
+}
+
+/* ---------- sheet grid ---------- */
+function colLetter(c) {
+  let s = "";
+  while (c > 0) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); }
+  return s;
+}
+function renderSheetChips() {
+  if (typeof renderSheetCatalog === "function") renderSheetCatalog();
+}
+function renderSheetView(name) {
+  state.currentSheet = name;
+  const sh = WB.sheets[name];
+  const body = document.getElementById("sheet-body");
+  document.getElementById("sheet-title").textContent = name;
+  if (!sh) { body.innerHTML = '<div class="empty-state">شیت یافت نشد.</div>'; return; }
+  const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
+  const locked = !!state.lockedSheets[name];
+  let lastRow = sh.rows.length;
+  while (lastRow > 0 && rowIsEmpty(sh, lastRow)) lastRow--;
+
+  const limit = Math.min(lastRow + 5, state.pageLimit);
+  let html = '<div class="grid-wrap"><table class="xl"><thead><tr><th class="rn">#</th>';
+  for (let c = 1; c <= Math.min(lastCol, MAX_DATA_COLS); c++) html += `<th>${colLetter(c)}</th>`;
+  html += "</tr></thead><tbody>";
+  for (let r = 1; r <= limit; r++) {
+    html += `<tr data-r="${r}"><td class="rn">${r}</td>`;
+    const row = sh.rows[r - 1] || [];
+    for (let c = 1; c <= Math.min(lastCol, MAX_DATA_COLS); c++) {
+      const v = cellVal(name, r, c, true);
+      const editable = !locked && !IsSystemSheet(name) ? ' contenteditable="true"' : "";
+      html += `<td data-c="${c}"${editable}>${escapeHtml(v === null || v === undefined ? "" : v)}</td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table></div>";
+  if (lastRow + 5 > limit) {
+    html += `<div style="text-align:center;padding:10px"><button class="mini-btn gray" onclick="state.pageLimit+=500;renderSheetView(decodeURIComponent('${encJs(name)}'))">نمایش ردیف‌های بیشتر (تا ${Math.min(lastRow + 5, state.pageLimit + 500)})</button></div>`;
+  }
+  body.innerHTML = html;
+
+  // cell editing → write back
+  if (!locked && !IsSystemSheet(name)) {
+    body.querySelectorAll("td[contenteditable]").forEach(td => {
+      td.addEventListener("blur", () => {
+        const r = parseInt(td.parentElement.dataset.r, 10);
+        const c = parseInt(td.dataset.c, 10);
+        const newVal = td.textContent.trim();
+        setCellVal(name, r, c, newVal, true);
+        saveState();
+        if (name === IDX_SHEET) updateStatLine();
+      });
+    });
+  }
+  renderSheetChips();
+  updateStatLine();
+}
+function filterSheetRows() {
+  const q = NormalizeText((document.getElementById("sheet-filter").value || ""));
+  const rows = document.querySelectorAll("#sheet-body tbody tr");
+  rows.forEach(tr => {
+    if (!q) { tr.style.display = ""; return; }
+    const txt = NormalizeText(tr.textContent);
+    tr.style.display = txt.indexOf(q) >= 0 ? "" : "none";
+  });
+}
+function toggleSheetLock() {
+  const name = state.currentSheet;
+  if (!name) return;
+  if (state.lockedSheets[name]) {
+    delete state.lockedSheets[name];
+    Toast("قفل شیت «" + name + "» برداشته شد.", "ok");
+  } else {
+    state.lockedSheets[name] = true;
+    Toast("شیت «" + name + "» قفل شد (رمز: " + SHEET_PASSWORD + " — توجه: قفل‌ها فقط شبیه‌سازی رفتار Excel هستند و امنیت واقعی نیستند).", "warn");
+  }
+  saveState();
+  renderSheetView(name);
+}
+function exportCurrentSheetCSV() {
+  const name = state.currentSheet;
+  if (!name) return;
+  const csv = sheetToCSV(name);
+  DownloadFile(name.replace(/[\\/:*?"<>|]/g, "_") + "_" + tsStamp() + ".csv", "\uFEFF" + csv, "text/csv");
+  Toast("خروجی CSV شیت «" + name + "» ذخیره شد.", "ok");
+}
+function sheetToCSV(name) {
+  const sh = WB.sheets[name];
+  if (!sh) return "";
+  const lines = [];
+  sh.rows.forEach(row => {
+    const cells = row.map(v => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    });
+    lines.push(cells.join(","));
+  });
+  return lines.join("\r\n");
+}
+
+/* ---------- change log view ---------- */
+function renderLogView() {
+  const sh = WB.sheets[LOG_SHEET];
+  const body = document.getElementById("log-body");
+  if (!sh || sh.rows.length <= 1) { body.innerHTML = '<div class="empty-state">لاگی ثبت نشده است.</div>'; return; }
+  let html = '<table class="logtable"><thead><tr>';
+  const header = sh.rows[0] || [];
+  header.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+  html += "</tr></thead><tbody>";
+  for (let r = sh.rows.length - 1; r >= 1; r--) {
+    const row = sh.rows[r] || [];
+    const isErr = (row[1] === "ERROR" || row[5] === "ARCHIVE_FAIL");
+    html += `<tr class="${isErr ? "err" : ""}">`;
+    for (let c = 0; c < 7; c++) {
+      const v = row[c] === undefined ? "" : row[c];
+      if (c === 1) {
+        const cls = ["ADD", "REMOVE", "UNDO", "EDIT", "ERROR", "ARCHIVE_FAIL"].includes(String(v)) ? "act-" + v : "act-default";
+        html += `<td><span class="act-badge ${cls}">${escapeHtml(v)}</span></td>`;
+      } else if (c === 0) {
+        html += `<td class="mono" style="font-size:9.5px">${escapeHtml(v)}</td>`;
+      } else {
+        html += `<td>${escapeHtml(v)}</td>`;
+      }
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  body.innerHTML = html;
+}
+function clearLog() {
+  ConfirmBox("پاک‌سازی لاگ", "همه ردیف‌های CHANGE_LOG پاک شوند؟", () => {
+    const sh = ensureSheet(LOG_SHEET, true);
+    const header = sh.rows[0] || ["Date/Time", "Action", "Sheet", "Record ID", "User", "Status", "Notes"];
+    sh.rows = [header];
+    saveState(); renderLogView();
+    Toast("لاگ پاک شد.", "ok");
+  });
+}
+
+/* ---------- results rendering (WriteMatchBlock look) ---------- */
+function renderResultsView() {
+  const body = document.getElementById("results-body");
+  if (!state.results.length) {
+    body.innerHTML = '<div class="empty-state">هنوز نتیجه‌ای ثبت نشده است — از کنترل پنل جستجو انجام دهید.</div>';
+    return;
+  }
+  let html = "";
+  if (state.resultsMode === "remove") {
+    html += '<div class="match-block"><div class="match-title" style="background:#c00000">REMOVE  -  جستجو: ' +
+      escapeHtml(state.removeSearchValue || "") + '</div>' +
+      '<div style="background:#eaeaea;font-style:italic;padding:6px 10px;font-size:11px">قرمز = Match  |  سفید = داده</div></div>';
+  }
+  state.results.forEach(blk => {
+    html += `<div class="match-block ${state.resultsMode === "remove" ? "remove" : ""}" data-match="${blk.matchIdx}">`;
+    html += `<div class="match-title">Match ${blk.matchIdx}  |  Sheet: ${escapeHtml(blk.sheet)}  |  Row: ${blk.srcRow}` +
+      (blk.srcRowTo > blk.srcRow ? `  |  Rows: ${blk.srcRow}-${blk.srcRowTo}` : "") + `</div>`;
+    html += '<table class="block-table"><thead><tr>';
+    blk.headers.forEach(h => html += `<th>${escapeHtml(h === null ? "" : h)}</th>`);
+    html += "</tr></thead><tbody>";
+    blk.dataRows.forEach((dr, ri) => {
+      html += `<tr data-srcrow="${dr.srcRow}">`;
+      dr.cells.forEach((v, ci) => {
+        const editable = state.resultsMode === "search" ? "" : ' readonly';
+        const inpTag = state.resultsMode === "search"
+          ? `<input class="cell-in" data-ri="${ri}" data-ci="${ci}" value="${escapeHtmlAttr(v)}">`
+          : `<div class="cell-in" style="background:#fff">${escapeHtml(v === null ? "" : v)}</div>`;
+        html += `<td>${inpTag}</td>`;
+      });
+      html += "</tr>";
+    });
+    html += '</tbody></table><div class="block-sep"></div></div>';
+  });
+  body.innerHTML = html;
+}
+function escapeHtmlAttr(s) {
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+/* Encode a data string for safe embedding inside a single-quoted JS
+   string in an inline handler: use  openFn(decodeURIComponent('...')) */
+function encJs(s) {
+  return encodeURIComponent(String(s === null || s === undefined ? "" : s)).replace(/'/g, "%27");
+}
