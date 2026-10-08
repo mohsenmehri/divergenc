@@ -1090,11 +1090,11 @@ function renderDonut(totalRecords) {
   const legend = document.getElementById("dash-legend");
   if (!host) return;
   const cats = [
-    { name: "شعب و استان‌ها", color: "#22d3ee", test: n => /استان|خراسان|خوزستان|فارس|کردستان|لرستان|همدان|مرکزی|کرمانشاه|قزوین|ایلام|اصفهان|بوشهر|بختیاری|سمنان|زنجان|کهکلویه|یزد|گیلان|مازندران|هرمزگان|کرمان|قم|تهران|البرز|اردبیل|آذر|سیستان|گلستان/.test(n) },
-    { name: "مراکز داده و دفاتر", color: "#6366f1", test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-    { name: "سرویس‌های شبکه", color: "#8b5cf6", test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری/.test(n) },
-    { name: "تجهیزات و EOL/EOS", color: "#f59e0b", test: n => /تجهیزات|EOL|PIN PAD/.test(n) },
-    { name: "هزینه و گزارش‌ها", color: "#10b981", test: n => /هزینه|گزارش|جمع|لیست|PSP|شعب$/.test(n) },
+    { name: "شعب و استان‌ها", color: "#2fd4c4", test: n => /استان|خراسان|خوزستان|فارس|کردستان|لرستان|همدان|مرکزی|کرمانشاه|قزوین|ایلام|اصفهان|بوشهر|بختیاری|سمنان|زنجان|کهکلویه|یزد|گیلان|مازندران|هرمزگان|کرمان|قم|تهران|البرز|اردبیل|آذر|سیستان|گلستان/.test(n) },
+    { name: "مراکز داده و دفاتر", color: "#5b93ff", test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
+    { name: "سرویس‌های شبکه", color: "#a78bfa", test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری/.test(n) },
+    { name: "تجهیزات و EOL/EOS", color: "#e8b04b", test: n => /تجهیزات|EOL|PIN PAD/.test(n) },
+    { name: "هزینه و گزارش‌ها", color: "#3ecf8e", test: n => /هزینه|گزارش|جمع|لیست|PSP|شعب$/.test(n) },
   ];
   const vals = cats.map(c => WB.order.filter(n => IsDataSheet(n) && c.test(n)).reduce((s, n) => s + Math.max(0, countRows(n) - 1), 0));
   const total = vals.reduce((a, b) => a + b, 0) || 1;
@@ -1382,22 +1382,22 @@ const CAT_ICON_SHAPES = {
   layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
 const SHEET_CATEGORIES = [
-  { id: "provinces", name: "استان‌ها و شعب", sub: "Provinces & Branches", color: "#22d3ee", icon: "pin",
+  { id: "provinces", name: "استان‌ها و شعب", sub: "Provinces & Branches", color: "#2fd4c4", icon: "pin",
     test: n => PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
-  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "Data Centers & Offices", color: "#6366f1", icon: "server",
+  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "Data Centers & Offices", color: "#5b93ff", icon: "server",
     test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-  { id: "services", name: "سرویس‌های شبکه", sub: "Network Services", color: "#8b5cf6", icon: "globe",
+  { id: "services", name: "سرویس‌های شبکه", sub: "Network Services", color: "#a78bfa", icon: "globe",
     test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری/.test(n) },
-  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "Carriers & Collect", color: "#f59e0b", icon: "signal",
+  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "Carriers & Collect", color: "#e8b04b", icon: "signal",
     test: n => /جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک/.test(n) },
-  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Equipment & Lifecycle", color: "#22c55e", icon: "chip",
+  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Equipment & Lifecycle", color: "#3ecf8e", icon: "chip",
     test: n => /تجهیزات|EOL|EOS/.test(n) },
-  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Costs & Contracts", color: "#ec4899", icon: "coins",
+  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Costs & Contracts", color: "#ef7ab8", icon: "coins",
     test: n => /هزینه/.test(n) },
-  { id: "system", name: "سیستم", sub: "System Sheets", color: "#64748f", icon: "gear",
+  { id: "system", name: "سیستم", sub: "System Sheets", color: "#8b96a8", icon: "gear",
     test: n => IsSystemSheet(n) },
 ];
-const CAT_OTHER = { id: "other", name: "سایر", sub: "Other", color: "#94a3b8", icon: "layers", test: () => true };
+const CAT_OTHER = { id: "other", name: "سایر", sub: "Other", color: "#a39d8b", icon: "layers", test: () => true };
 
 // match priority: specific categories before broad keyword ones
 const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacenters", "services", "system"];
@@ -1482,7 +1482,7 @@ function openCategory(catId) {
 function renderCatBar() {
   const host = document.getElementById("cat-bar");
   if (!host) return;
-  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0634\u06cc\u062a\u200c\u0647\u0627", color: "#3b82f6", icon: "layers" }].concat(
+  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0634\u06cc\u062a\u200c\u0647\u0627", color: "#d9b26b", icon: "layers" }].concat(
     allCatsWithOther().filter(c => c.id !== "system" || state.showSystem));
   clear(host);
   cats.forEach(c => {
@@ -1579,8 +1579,8 @@ function openSheetCard(name) {
 /* ---- grouped navigator ---- */
 function renderGroupedNavigator() {
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
-  const colors = { provinces: "#22d3ee", datacenters: "#6366f1", services: "#8b5cf6", carriers: "#f59e0b",
-                   equipment: "#22c55e", costs: "#ec4899", system: "#64748f", other: "#94a3b8", all: "#3b82f6" };
+  const colors = { provinces: "#2fd4c4", datacenters: "#5b93ff", services: "#a78bfa", carriers: "#e8b04b",
+                   equipment: "#3ecf8e", costs: "#ef7ab8", system: "#8b96a8", other: "#a39d8b", all: "#d9b26b" };
   const root = document.createDocumentFragment();
   let idx = 0;
   cats.forEach(c => {
