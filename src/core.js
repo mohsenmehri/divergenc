@@ -311,12 +311,6 @@ async function ShowInput(prompt, title = "Data Manager", def = "") {
   if (r !== IDOK) return null;
   return ModalBox.lastValue !== undefined ? ModalBox.lastValue : null;
 }
-
-function escapeHtml(s) {
-  return String(s === null || s === undefined ? "" : s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/\n/g, "<br>");
-}
 function Toast(msg, kind = "") {
   const box = document.getElementById("toasts");
   const t = el("div", { class: "toast " + kind });
@@ -810,13 +804,6 @@ function renderResultsView() {
   });
   body.appendChild(fragRoot);
 }
-function escapeHtmlAttr(s) {
-  return String(s === null || s === undefined ? "" : s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-/* Encode a data string for safe embedding inside a single-quoted JS
-   string in an inline handler: use  openFn(decodeURIComponent('...')) */
 function encJs(s) {
   return encodeURIComponent(String(s === null || s === undefined ? "" : s)).replace(/'/g, "%27");
 }

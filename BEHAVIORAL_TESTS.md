@@ -14,7 +14,16 @@
 > اجرای `node src/test/test_app.js` در همین repository و خروجی checks در PR است.
 > این سند «فهرست پوشش» است نه گزارش تست زنده.
 
-مجموعه تست خودکار: `src/test/test_app.js` — در حال حاضر **88 assertion**، همه سبز.
+مجموعه تست خودکار: `src/test/test_app.js` — در حال حاضر **101 assertion**، همه سبز
+(۹۹ ادعای رفتاری + ۲ نگهبان DoD بازسازی DOM API).
+
+> **بازسازی DOM API (فاز ۹):** همه‌ی renderer ها به `el()`/`sEl()`/`textContent` تبدیل شدند؛
+> صفر `innerHTML` در سورس‌های برنامه. دو نگهبان DoD (`dom-api: zero innerHTML-family calls…`
+> و `dom-api: no HTML-string modal path…`) روی هر اجرا تضمین می‌کنند هیچ sink رشته‌-HTML
+> به سورس‌ها برنگردد. طبقه‌بندی نهایی: [INNERHTML_AUDIT.md](INNERHTML_AUDIT.md).
+> قراردادهای رفتاری حین refactor حفظ شدند (`data-act` delegation، dataset های
+> `data-match`/`data-srcrow`/`data-ci`/`data-r`/`data-c`، merge با rowspan/colspan مثل اکسل،
+> همگامی undo) — هر commit با سبز بودن هر دو لایه تست ثبت شده است.
 
 ## ۱. جریان‌های رفتاری اصلی (پوشش تست خودکار)
 

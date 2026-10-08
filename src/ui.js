@@ -1612,7 +1612,7 @@ Object.assign(window, {
   APP_SHELL, withTransaction, withTransactionSync, snapshotWorkbook, restoreWorkbook,
   ACTIONS, bindDelegatedEvents,
   validateWorkbookData, normalizeSheetData, sanitizeSheetName,
-  verifySearchIndex, recoverSearchIndex, encJs, escapeHtmlAttr,
+  verifySearchIndex, recoverSearchIndex, encJs,
   SHEET_CATEGORIES, categoryOf, sheetsOfCategory, renderSheetCatalog,
   renderDashCats, renderCatBar, openCategory, openSheetCard, setCatFilter
 });

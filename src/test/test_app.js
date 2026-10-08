@@ -402,6 +402,22 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   check("reset: system shell intact", !!W.WB.sheets["CONTROL_PANEL"] && !!W.WB.sheets["SYSTEM_SHEET_CONFIG"]);
   check("reset: index cleared", W.modMapping.GetMatchRows("شاخص", "X999", "ALL").length === 0);
 
+  // ===== DOM-API DoD guards: app sources must stay free of HTML-string sinks =====
+  {
+    const path = require("path");
+    const srcFiles = ["core.js", "ui.js", "macros.js", "data.js", "storage.js"];
+    const offenders = [];
+    const htmlStringPaths = [];
+    srcFiles.forEach(f => {
+      const s = fs.readFileSync(path.join(__dirname, "..", f), "utf-8");
+      const m = s.match(/innerHTML|insertAdjacentHTML|outerHTML|document\.write/g);
+      if (m) offenders.push(f + ":" + m.join(","));
+      if (/trustedHtml|opts\.html\b/.test(s)) htmlStringPaths.push(f);
+    });
+    check("dom-api: zero innerHTML-family calls in app sources", offenders.length === 0, offenders.join(" | "));
+    check("dom-api: no HTML-string modal path (opts.html/trustedHtml gone)", htmlStringPaths.length === 0, htmlStringPaths.join(","));
+  }
+
   const fails = results.filter(r => !r[1]);
   console.log("\n==== SUMMARY: " + (results.length - fails.length) + "/" + results.length + " passed ====");
   if (fails.length) { console.log("FAILED:", fails.map(f => f[0]).join(" | ")); process.exit(1); }

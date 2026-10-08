@@ -39,8 +39,11 @@ python3 src/build.py          # -> Mohsen_FINAL_v5.html
 همه‌چیز را بخواند. امنیت واقعی نیازمند معماری سمت سرور (authentication/authorization
 در backend) است که خارج از scope این ابزار مبتنی بر فایل است.
 
-- همه ورودی‌های `innerHTML` که از داده (import / ورودی کاربر / localStorage) می‌آیند
-  escape می‌شوند (`escapeHtml` / `escapeHtmlAttr` / `encJs`).
+- همه‌ی rendering ها با DOM API خالص انجام می‌شوند (`el`/`txt`/`sEl`/`button`/`frag`/`clear`
+  در `src/core.js`)؛ هیچ `innerHTML`/`insertAdjacentHTML` در سورس‌های برنامه وجود ندارد
+  (داده فقط به `textContent`/`setAttribute`/`.value` می‌رود). modal ها `opts.contentNode`
+  می‌گیرند؛ کانال `opts.html` حذف شده. نگهبان تست روی هر اجرا این را قفل نگه می‌دارد —
+  جزئیات طبقه‌بندی نهایی: [INNERHTML_AUDIT.md](../INNERHTML_AUDIT.md).
 - نام شیت‌های واردشده sanitize می‌شوند (کلیدهای `__proto__`/`constructor`/`prototype`
   مسدود؛ طول ≤۳۱).
 - فایل ورودی قبل از دست زدن به state اعتبارسنجی می‌شود (`validateWorkbookData`)؛
@@ -53,14 +56,15 @@ python3 src/build.py          # -> Mohsen_FINAL_v5.html
 
 ```bash
 cd src/test && npm install jsdom && node test_app.js
-# => SUMMARY: 99/99 passed
+# => SUMMARY: 101/101 passed
 ```
 
 - ✅ حذف کامل inline event handler ها (0 عدد در خروجی) — event delegation با `data-act` + CSP `script-src-attr 'none'`
-- ✅ مسیرهای پرخطر `innerHTML` escape شده‌اند ([INNERHTML_AUDIT.md](../INNERHTML_AUDIT.md))
-- 🔶 **بازسازی کامل template ها به DOM API خالص هنوز انجام نشده** — مرحله بعدی refactor است؛
-  ایمنی فعلی بر پایه escape در همان template ها است.
-- 🔶 enterprise-grade نیست: فاقد backend/auth و تست‌های مرورگری واقعی (Cypress/Playwright) و CI.
+- ✅ **DOM-API refactor کامل شد** — صفر `innerHTML` در سورس‌های برنامه؛ تنها استثنای مستند:
+  vendor `xlsx.full.min.js` ([INNERHTML_AUDIT.md](../INNERHTML_AUDIT.md)). نگهبان DoD در تست‌ها.
+- ✅ تست مرورگری واقعی: Playwright smoke روی Chromium واقعی (۲۲/۲۲) — CSP و file dialog
+  در مرورگر واقعی اثبات می‌شوند، نه شبیه‌سازی.
+- 🔶 enterprise-grade نیست: فاقد backend/auth و CI.
 
 ## تست‌ها — دو لایه اثبات
 
@@ -68,7 +72,7 @@ cd src/test && npm install jsdom && node test_app.js
 ```bash
 cd src/test
 npm install jsdom          # فقط برای تست
-node test_app.js           # => SUMMARY: 99/99 passed
+node test_app.js           # => SUMMARY: 101/101 passed  (۹۹ رفتاری + ۲ نگهبان DoD)
 ```
 
 **۲) Playwright smoke (مرورگر واقعی Chromium — نه شبیه‌سازی):**
