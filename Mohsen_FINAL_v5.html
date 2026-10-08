@@ -858,6 +858,129 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
 }
 
+/* ============ NOC MAP — sections a network engineer actually wants ============ */
+.sec-lead{margin-top:4px;font-size:11px;font-weight:600;color:var(--txt-1);line-height:1.7;max-width:520px;}
+.cat-tiles{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+.cat-tile{
+  background:
+    linear-gradient(160deg, color-mix(in srgb, currentColor 14%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(16,28,44,.72), rgba(8,14,24,.4));
+  border-color: color-mix(in srgb, currentColor 42%, transparent);
+  min-height:118px;
+}
+.cat-tile .ct-kicker{
+  font-family:var(--mono);font-size:9px;letter-spacing:.4px;color:currentColor;opacity:.9;margin-top:4px;
+}
+.cat-tile .ct-meta{margin-top:6px;font-family:var(--mono);letter-spacing:.2px;}
+.cat-tile .ct-val{color:currentColor;}
+
+.sheet-stage{
+  display:grid;grid-template-columns:minmax(292px,380px) minmax(0,1fr);
+  gap:16px;align-items:start;
+}
+.sheet-rail{
+  position:sticky;top:74px;max-height:calc(100vh - 92px);overflow:auto;
+  padding:14px 12px 16px;border-radius:18px;
+  border:1px solid rgba(217,178,107,.22);
+  background:
+    radial-gradient(280px 120px at 100% 0%, rgba(217,178,107,.12), transparent 60%),
+    linear-gradient(180deg, rgba(16,28,44,.78), rgba(8,14,24,.62));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 18px 40px -28px rgba(0,0,0,.8);
+}
+.sheet-rail::-webkit-scrollbar{width:8px;}
+.sheet-rail::-webkit-scrollbar-thumb{background:rgba(217,178,107,.28);border-radius:99px;}
+.rail-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.rail-head svg{width:92px;height:28px;flex:0 0 92px;}
+.rail-kicker{font-family:var(--mono);font-size:8px;letter-spacing:1.6px;color:#e8c47a;}
+.rail-title{font-size:14px;font-weight:900;color:var(--txt-0);line-height:1.4;}
+.rail-find{position:relative;margin-bottom:8px;}
+.rail-find svg{position:absolute;right:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:#e8c47a;pointer-events:none;}
+.rail-find .inp{padding-right:34px;background:rgba(6,12,21,.55);border-color:rgba(217,178,107,.28);}
+.rail-meta{font-size:10.5px;color:var(--txt-2);line-height:1.7;margin:0 2px 10px;}
+.sheet-rail .cat-bar{margin-bottom:12px;}
+.sheet-rail .cat-pill{
+  padding:6px 10px;font-size:10.5px;
+  background:rgba(18,32,50,.9);border-color:rgba(232,196,122,.4);color:#f7f1e4;
+}
+#view-sheet .view-head{align-items:flex-start;}
+#view-sheet .view-head > div:nth-child(2){flex:1;min-width:180px;}
+#view-sheet .head-actions{align-items:center;}
+.sheet-rail .cat-section{
+  margin-bottom:14px;padding:8px 8px 10px;border-radius:14px;
+  background:rgba(6,12,21,.35);border:1px solid rgba(217,178,107,.1);
+}
+.sheet-rail .cat-head{padding:4px 4px 8px;align-items:flex-start;}
+.sheet-rail .cat-head h3{font-size:12.5px;}
+.ch-blurb{
+  font-size:10.5px;color:#d7ccb4;line-height:1.6;margin-top:2px;max-width:260px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.sheet-rail .sheet-grid{grid-template-columns:1fr;gap:7px;}
+.sheet-rail .sheet-card{
+  border-right:3px solid var(--sc, #e8c47a);
+  background:linear-gradient(180deg, rgba(32,48,70,.96), rgba(18,30,48,.96));
+  border-color:rgba(232,196,122,.42);
+  padding:10px 11px;
+}
+.sheet-rail .sheet-card .sc-name{color:#f7f1e4;font-size:12px;}
+.sheet-card .sc-brief{
+  margin-top:3px;font-size:10.5px;line-height:1.55;color:#cbbfa6;
+  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
+}
+.sheet-card .sc-open{
+  margin-right:auto;font-size:8.5px;font-weight:800;letter-spacing:.2px;color:#241703;
+  background:linear-gradient(135deg,#eccb8a,#d9a441);border-radius:99px;padding:2px 8px;
+}
+.sheet-rail .sheet-card.active{
+  background:color-mix(in srgb, var(--sc,#d9b26b) 18%, rgba(10,20,34,.92));
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--sc,#d9b26b) 55%, transparent);
+}
+
+.sheet-stage-main{min-width:0;}
+.sheet-now{
+  display:flex;align-items:stretch;gap:14px;margin-bottom:12px;padding:14px 16px;
+  border-radius:16px;border:1px solid color-mix(in srgb, var(--sc,#d9b26b) 45%, transparent);
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--sc,#d9b26b) 16%, transparent), rgba(16,28,44,.55) 42%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+}
+.sheet-now[hidden]{display:none !important;}
+.sheet-now .sn-rail{width:4px;border-radius:4px;background:var(--sc,#d9b26b);flex:0 0 4px;}
+.sheet-now .sn-body{flex:1;min-width:0;}
+.sheet-now .sn-kicker{font-family:var(--mono);font-size:9px;letter-spacing:1px;color:#e8c47a;}
+.sheet-now .sn-name{font-size:15px;font-weight:900;line-height:1.5;margin-top:1px;color:#f7f1e4;}
+.sheet-now .sn-brief{font-size:11.5px;color:#d7ccb4;line-height:1.65;margin-top:1px;}
+.sheet-now .sn-stat{
+  flex:0 0 auto;align-self:center;text-align:center;min-width:78px;
+  background:rgba(6,12,21,.72);border:1px solid rgba(217,178,107,.35);border-radius:12px;padding:8px 10px;
+}
+.sheet-now .sn-stat b{display:block;font-size:22px;font-family:var(--font);color:#f2d89b;line-height:1.1;}
+.sheet-card .sc-rows{font-family:var(--font);color:#e8dcc4;font-size:10px;}
+.sheet-now .sn-stat span{font-size:9px;color:var(--txt-2);}
+#view-sheet .sheet-stage-main .grid-wrap{
+  border-radius:16px;border:1px solid rgba(217,178,107,.16);
+  background:rgba(6,12,21,.35);
+}
+body{
+  background:
+    radial-gradient(900px 420px at 92% -8%, rgba(232,196,122,.16), transparent 58%),
+    radial-gradient(720px 420px at 0% 100%, rgba(47,212,196,.12), transparent 52%),
+    linear-gradient(180deg, #08111c 0%, #060c15 40%, #071018 100%);
+}
+.card{
+  border-color:rgba(217,178,107,.18);
+  box-shadow:0 18px 40px -28px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.card-head{position:relative;}
+.card-head::after{
+  content:"";position:absolute;right:16px;left:16px;bottom:0;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(217,178,107,.35), transparent);
+}
+@media (max-width:1080px){
+  .sheet-stage{grid-template-columns:1fr;}
+  .sheet-rail{position:static;max-height:none;}
+  .sheet-rail .sheet-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}
+}
 </style>
 </head>
 <body>
@@ -1063,6 +1186,7 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
             <div>
               <div class="eyebrow">بخش ها</div>
               <h3>دسته‌بندی بخش ها شبکه</h3>
+              <div class="sec-lead">نقشه موجودی: شعب و خودپرداز، مدار WAN، پلن IP، روتر و سوییچ، قرارداد مخابرات.</div>
             </div>
             <div class="spacer"></div>
             <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
@@ -1099,7 +1223,7 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
               <div class="search-value-row" style="margin-top:13px">
                 <div class="field">
                   <label>مقدار جستجو <span class="ref">C11</span></label>
-                  <input class="inp" type="text" id="cp-c11" placeholder="مثال: IP، نام شعبه، شاخص، شماره پرونده…">
+                  <input class="inp" type="text" id="cp-c11" placeholder="IP، hostname شعبه، VLAN، سریال روتر، شماره مدار…">
                 </div>
               </div>
               <div class="exact-wrap" style="margin-top:12px">
@@ -1117,8 +1241,8 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
                 </button>
               </div>
               <div class="dash-note">
-                نتایج به‌صورت بلوک‌های <b>Match</b> نمایش داده می‌شوند؛ ردیف‌های قابل‌ویرایش را تغییر دهید و با
-                <b>SAVE CHANGES</b> در بخش مبدأ ذخیره کنید.
+                مثل lookup روی جدول مسیریابی: بلوک‌های <b>Match</b> را ببینید، فیلد را اصلاح کنید و با
+                <b>SAVE CHANGES</b> در همان بخش مبدأ بنویسید.
               </div>
             </div>
           </div>
@@ -1139,7 +1263,7 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
                 <label>بخش مقصد <span class="ref">C16</span></label>
                 <select class="inp" id="cp-c16"></select>
               </div>
-              <div class="hint">برای بخش‌های استانی، نوع بخش (شعبه / خودپرداز) پرسیده می‌شود و فیلدها با مقادیر پیش‌فرض ردیف قبل نمایش داده می‌شوند.</div>
+              <div class="hint">روی شعب، نوع سایت (شعبه یا خودپرداز) پرسیده می‌شود و فیلدها از آخرین رکورد همان مدار پر می‌شوند — مثل clone یک CPE.</div>
               <button class="btn btn-green btn-block" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
                 ADD RECORD
@@ -1376,7 +1500,7 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
         </div>
         <div>
           <h2 id="sheet-title">بخش‌های شبکه</h2>
-          <div class="sub" id="sheet-sub">NETWORK SHEETS — مشاهده و ویرایش مستقیم داده‌ها</div>
+          <div class="sub" id="sheet-sub">از نقشه، بخش را باز کنید — جدول همان‌جا می‌ماند</div>
         </div>
         <div class="head-actions filter-bar">
           <input class="inp" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
@@ -1386,14 +1510,36 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
           <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
       </div>
-      <div class="content">
-        <div class="cat-bar" id="cat-bar"></div>
-        <div id="sheet-catalog"></div>
-        <div class="chip-bar" id="sheet-chips" style="display:none"></div>
-        <div id="sheet-body">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
-            <div>از نوار بالا یا انتخاب بخش‌ها یک بخش را انتخاب کنید.</div>
+      <div class="content sheet-stage">
+        <aside class="sheet-rail" id="sheet-rail">
+          <div class="rail-head">
+            <svg viewBox="0 0 120 36" fill="none" aria-hidden="true">
+              <path d="M8 28 C28 28 32 8 52 8 S78 28 112 10" stroke="rgba(217,178,107,.55)" stroke-width="1.2" stroke-dasharray="3 3"/>
+              <circle cx="8" cy="28" r="3.2" fill="#2fd4c4"/>
+              <circle cx="52" cy="8" r="4" fill="#e8c47a"/>
+              <circle cx="112" cy="10" r="3" fill="#2fd4c4"/>
+            </svg>
+            <div>
+              <div class="rail-kicker">NOC MAP</div>
+              <div class="rail-title">نقشه بخش‌ها</div>
+            </div>
+          </div>
+          <div class="rail-find">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input class="inp" id="section-finder" placeholder="استان، IP، VLAN، مرکز داده، روتر…" autocomplete="off">
+          </div>
+          <div class="rail-meta" id="section-find-meta">یک دامنه را انتخاب کنید، بعد بخش را باز کنید.</div>
+          <div class="cat-bar" id="cat-bar"></div>
+          <div id="sheet-catalog"></div>
+        </aside>
+        <div class="sheet-stage-main">
+          <div class="sheet-now" id="sheet-now" hidden></div>
+          <div class="chip-bar" id="sheet-chips" style="display:none"></div>
+          <div id="sheet-body">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+              <div>جدول بخش اینجاست. از نقشه، یک بخش را باز کنید تا ردیف‌ها، آدرس‌ها و ادغام‌ها مثل اکسل بیایند.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2084,6 +2230,7 @@ function renderSheetView(name) {
   const sh = WB.sheets[name];
   const body = document.getElementById("sheet-body");
   document.getElementById("sheet-title").textContent = name;
+  if (typeof paintSheetNow === "function") paintSheetNow(sh ? name : null);
   clear(body);
   if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0628\u062e\u0634 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
   const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
@@ -4841,6 +4988,8 @@ function bindPanelEvents() {
   document.getElementById("sheet-filter").addEventListener("keydown", e => {
     if (e.key === "Enter") filterSheetRows();
   });
+  const finder = document.getElementById("section-finder");
+  if (finder) finder.addEventListener("input", () => filterSectionCatalog());
   const gs = document.getElementById("global-search");
   if (gs) gs.addEventListener("keydown", e => {
     if (e.key === "Enter" && gs.value.trim()) {
@@ -4943,22 +5092,22 @@ const CAT_ICON_SHAPES = {
   layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
 const SHEET_CATEGORIES = [
-  { id: "provinces", name: "استان‌ها و شعب", sub: "Provinces & Branches", color: "#2fd4c4", icon: "pin",
+  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#2fd4c4", icon: "pin",
     test: n => PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
-  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "Data Centers & Offices", color: "#5b93ff", icon: "server",
+  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#5b93ff", icon: "server",
     test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-  { id: "services", name: "سرویس‌های شبکه", sub: "Network Services", color: "#a78bfa", icon: "globe",
+  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#a78bfa", icon: "globe",
     test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری/.test(n) },
-  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "Carriers & Collect", color: "#e8b04b", icon: "signal",
+  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#e8b04b", icon: "signal",
     test: n => /جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک/.test(n) },
-  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Equipment & Lifecycle", color: "#3ecf8e", icon: "chip",
+  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#3ecf8e", icon: "chip",
     test: n => /تجهیزات|EOL|EOS/.test(n) },
-  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Costs & Contracts", color: "#ef7ab8", icon: "coins",
+  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#ef7ab8", icon: "coins",
     test: n => /هزینه/.test(n) },
-  { id: "system", name: "سیستم", sub: "System Sheets", color: "#8b96a8", icon: "gear",
+  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#8b96a8", icon: "gear",
     test: n => IsSystemSheet(n) },
 ];
-const CAT_OTHER = { id: "other", name: "سایر", sub: "Other", color: "#a39d8b", icon: "layers", test: () => true };
+const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#a39d8b", icon: "layers", test: () => true };
 
 // match priority: specific categories before broad keyword ones
 const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacenters", "services", "system"];
@@ -5043,7 +5192,8 @@ function renderDashCats() {
       el("div", { class: "ct-val", text: String(st.count) }),
       el("div", { class: "ct-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
       el("div", { class: "ct-name", style: { color: "var(--txt-0)" }, text: c.name }),
-      el("div", { class: "ct-meta", text: st.rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f \u00b7 " + c.sub }),
+      el("div", { class: "ct-kicker", text: c.sub || "" }),
+      el("div", { class: "ct-meta", text: st.rows.toLocaleString("fa-IR") + " رکورد" }),
       el("div", { class: "ct-ring" })));
   });
 }
@@ -5084,14 +5234,82 @@ function setCatFilter(catId) {
 function sheetTags(name) {
   const tags = [];
   const n = name;
-  if (/IP|ip/.test(n)) tags.push("IP");
-  if (/تجهیزات/.test(n)) tags.push("Router/Switch");
-  if (/هزینه/.test(n)) tags.push("مالی");
-  if (/گزارش/.test(n)) tags.push("گزارش");
-  if (/VPN|MPLS|VSAT|SIP/.test(n)) tags.push("WAN");
-  if (/جمع/.test(n)) tags.push("آرشیو");
-  if (PROVINCIAL_SHEETS.indexOf(n) >= 0) tags.push("استان");
+  if (/IP|ip|آی.?پی/.test(n)) tags.push("IP");
+  if (/VLAN|vlan/.test(n)) tags.push("VLAN");
+  if (/VPN|MPLS|VSAT|SDH/.test(n)) tags.push("WAN");
+  if (/SIP|تلفن/.test(n)) tags.push("SIP");
+  if (/خودپرداز|ATM|PIN/.test(n)) tags.push("ATM");
+  if (/تجهیزات|EOL|EOS|روتر|سوییچ/.test(n)) tags.push("CPE");
+  if (/مرکز داده/.test(n)) tags.push("DC");
+  if (/هزینه|قرارداد/.test(n)) tags.push("Cost");
+  if (/جمع|PSP|مبین|آسیا/.test(n)) tags.push("Carrier");
+  if (PROVINCIAL_SHEETS.indexOf(n) >= 0) tags.push("Branch");
   return tags.slice(0, 3);
+}
+function circuitBrief(name, cat) {
+  const n = name || "";
+  if (/IP|ip|آی.?پی/.test(n)) return "پلن آدرس — IP، subnet، gateway";
+  if (/VLAN|vlan/.test(n)) return "سگمنت VLAN و دامنه broadcast";
+  if (/VPN|MPLS|VSAT|SDH/.test(n)) return "مدار WAN — لینک بین‌شهری";
+  if (/SIP|تلفن/.test(n)) return "صوت و ترانک SIP";
+  if (/اینترنت/.test(n)) return "دسترسی اینترنت شعب";
+  if (/خودپرداز|ATM|PIN/.test(n)) return "شبکه خودپرداز — لینک و CPE";
+  if (/EOL|EOS|تجهیزات|روتر|سوییچ/.test(n)) return "موجودی روتر و سوییچ";
+  if (/هزینه|قرارداد/.test(n)) return "هزینه مدار و قرارداد";
+  if (/مرکز داده|ساختمان/.test(n)) return "سایت هسته — DC و دفتر";
+  if (/جمع|PSP|مبین|آسیا/.test(n)) return "last-mile اپراتور";
+  if (cat && cat.id === "provinces") return "شعب استان — LAN شعبه و uplink";
+  const sh = WB.sheets[name];
+  if (sh && sh.rows && sh.rows[0]) {
+    const heads = [];
+    for (let i = 0; i < sh.rows[0].length && heads.length < 4; i++) {
+      const t = TrimText(sh.rows[0][i]);
+      if (t && t.length <= 22) heads.push(t);
+    }
+    if (heads.length) return heads.join(" · ");
+  }
+  if (cat && cat.blurb) return cat.blurb;
+  return "موجودی شبکه";
+}
+function filterSectionCatalog() {
+  const box = document.getElementById("section-finder");
+  const meta = document.getElementById("section-find-meta");
+  if (!box) return;
+  const q = NormalizeText(box.value || "");
+  let shown = 0;
+  document.querySelectorAll("#sheet-catalog .cat-section").forEach(sec => {
+    let any = false;
+    sec.querySelectorAll(".sheet-card").forEach(card => {
+      const blob = NormalizeText((card.dataset.name || "") + " " + (card.textContent || ""));
+      const hit = !q || blob.indexOf(q) >= 0;
+      card.style.display = hit ? "" : "none";
+      if (hit) { any = true; shown++; }
+    });
+    sec.style.display = any ? "" : "none";
+  });
+  if (meta) {
+    meta.textContent = q
+      ? (shown.toLocaleString("fa-IR") + " بخش مطابق جستجو")
+      : "دامنه را محدود کنید، یا نام استان / IP / مدار را بنویسید.";
+  }
+}
+function paintSheetNow(name) {
+  const bar = document.getElementById("sheet-now");
+  if (!bar) return;
+  clear(bar);
+  if (!name || !WB.sheets[name]) { bar.hidden = true; return; }
+  const c = categoryOf(name);
+  const rows = Math.max(0, countRows(name) - 1);
+  bar.hidden = false;
+  bar.style.setProperty("--sc", c.color || "#d9b26b");
+  bar.appendChild(el("div", { class: "sn-rail" }));
+  bar.appendChild(el("div", { class: "sn-body" },
+    el("div", { class: "sn-kicker", text: (c.sub || "SECTION") + "  ·  در حال کار" }),
+    el("div", { class: "sn-name", text: name }),
+    el("div", { class: "sn-brief", text: circuitBrief(name, c) })));
+  bar.appendChild(el("div", { class: "sn-stat" },
+    el("b", { text: rows.toLocaleString("fa-IR") }),
+    el("span", { text: "رکورد" })));
 }
 function renderSheetCatalog() {
   renderCatBar();
@@ -5127,9 +5345,12 @@ function renderSheetCatalog() {
         el("div", { class: "sc-top" },
           el("span", { class: "sc-dot", style: { background: c.color } }),
           el("div", { class: "sc-name", text: n })),
+        el("div", { class: "sc-brief", text: circuitBrief(n, c) }),
         el("div", { class: "sc-tags" },
-          el("span", { class: "sc-rows", text: rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f" }),
-          ...tags.map(t => el("span", { class: "sc-tag", text: t }))));
+          el("span", { class: "sc-rows", text: rows.toLocaleString("fa-IR") + " رکورد" }),
+          ...tags.map(t => el("span", { class: "sc-tag", text: t })),
+          el("span", { class: "sc-open", text: "باز کردن" })));
+      card.style.setProperty("--sc", c.color);
       grid.appendChild(card);
     });
     host.appendChild(el("div", { class: "cat-section fade-in" },
@@ -5137,12 +5358,14 @@ function renderSheetCatalog() {
         el("div", { class: "ch-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
         el("div", {},
           el("h3", { style: { color: "var(--txt-0)" }, text: c.name }),
-          el("div", { class: "ch-sub", text: c.sub })),
+          el("div", { class: "ch-sub", text: c.sub || "" }),
+          el("div", { class: "ch-blurb", text: c.blurb || "" })),
         el("div", { class: "ch-line" }),
-        el("div", { class: "ch-n", text: names.length + " SHEET" })),
+        el("div", { class: "ch-n", text: names.length + " بخش" })),
       grid));
   });
-  if (!rendered) host.appendChild(el("div", { class: "empty-state", text: "\u0634\u06cc\u062a\u06cc \u062f\u0631 \u0627\u06cc\u0646 \u062f\u0633\u062a\u0647 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." }));
+  if (!rendered) host.appendChild(el("div", { class: "empty-state", text: "بخشی در این دامنه نیست." }));
+  filterSectionCatalog();
 }
 function openSheetCard(name) {
   renderSheetView(name);
@@ -5168,7 +5391,7 @@ function renderGroupedNavigator() {
     root.appendChild(el("div", { class: "nav-group-head" },
       el("div", { class: "ng-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
       el("div", { class: "ng-t", text: c.name }),
-      el("div", { class: "ng-n", text: names.length + " sheet" }),
+      el("div", { class: "ng-n", text: names.length + " بخش" }),
       el("div", { class: "ng-line" })));
     names.forEach(n => {
       idx++;

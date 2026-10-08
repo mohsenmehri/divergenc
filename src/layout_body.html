@@ -201,6 +201,7 @@
             <div>
               <div class="eyebrow">بخش ها</div>
               <h3>دسته‌بندی بخش ها شبکه</h3>
+              <div class="sec-lead">نقشه موجودی: شعب و خودپرداز، مدار WAN، پلن IP، روتر و سوییچ، قرارداد مخابرات.</div>
             </div>
             <div class="spacer"></div>
             <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
@@ -237,7 +238,7 @@
               <div class="search-value-row" style="margin-top:13px">
                 <div class="field">
                   <label>مقدار جستجو <span class="ref">C11</span></label>
-                  <input class="inp" type="text" id="cp-c11" placeholder="مثال: IP، نام شعبه، شاخص، شماره پرونده…">
+                  <input class="inp" type="text" id="cp-c11" placeholder="IP، hostname شعبه، VLAN، سریال روتر، شماره مدار…">
                 </div>
               </div>
               <div class="exact-wrap" style="margin-top:12px">
@@ -255,8 +256,8 @@
                 </button>
               </div>
               <div class="dash-note">
-                نتایج به‌صورت بلوک‌های <b>Match</b> نمایش داده می‌شوند؛ ردیف‌های قابل‌ویرایش را تغییر دهید و با
-                <b>SAVE CHANGES</b> در بخش مبدأ ذخیره کنید.
+                مثل lookup روی جدول مسیریابی: بلوک‌های <b>Match</b> را ببینید، فیلد را اصلاح کنید و با
+                <b>SAVE CHANGES</b> در همان بخش مبدأ بنویسید.
               </div>
             </div>
           </div>
@@ -277,7 +278,7 @@
                 <label>بخش مقصد <span class="ref">C16</span></label>
                 <select class="inp" id="cp-c16"></select>
               </div>
-              <div class="hint">برای بخش‌های استانی، نوع بخش (شعبه / خودپرداز) پرسیده می‌شود و فیلدها با مقادیر پیش‌فرض ردیف قبل نمایش داده می‌شوند.</div>
+              <div class="hint">روی شعب، نوع سایت (شعبه یا خودپرداز) پرسیده می‌شود و فیلدها از آخرین رکورد همان مدار پر می‌شوند — مثل clone یک CPE.</div>
               <button class="btn btn-green btn-block" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
                 ADD RECORD
@@ -514,7 +515,7 @@
         </div>
         <div>
           <h2 id="sheet-title">بخش‌های شبکه</h2>
-          <div class="sub" id="sheet-sub">NETWORK SHEETS — مشاهده و ویرایش مستقیم داده‌ها</div>
+          <div class="sub" id="sheet-sub">از نقشه، بخش را باز کنید — جدول همان‌جا می‌ماند</div>
         </div>
         <div class="head-actions filter-bar">
           <input class="inp" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
@@ -524,14 +525,36 @@
           <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
       </div>
-      <div class="content">
-        <div class="cat-bar" id="cat-bar"></div>
-        <div id="sheet-catalog"></div>
-        <div class="chip-bar" id="sheet-chips" style="display:none"></div>
-        <div id="sheet-body">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
-            <div>از نوار بالا یا انتخاب بخش‌ها یک بخش را انتخاب کنید.</div>
+      <div class="content sheet-stage">
+        <aside class="sheet-rail" id="sheet-rail">
+          <div class="rail-head">
+            <svg viewBox="0 0 120 36" fill="none" aria-hidden="true">
+              <path d="M8 28 C28 28 32 8 52 8 S78 28 112 10" stroke="rgba(217,178,107,.55)" stroke-width="1.2" stroke-dasharray="3 3"/>
+              <circle cx="8" cy="28" r="3.2" fill="#2fd4c4"/>
+              <circle cx="52" cy="8" r="4" fill="#e8c47a"/>
+              <circle cx="112" cy="10" r="3" fill="#2fd4c4"/>
+            </svg>
+            <div>
+              <div class="rail-kicker">NOC MAP</div>
+              <div class="rail-title">نقشه بخش‌ها</div>
+            </div>
+          </div>
+          <div class="rail-find">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input class="inp" id="section-finder" placeholder="استان، IP، VLAN، مرکز داده، روتر…" autocomplete="off">
+          </div>
+          <div class="rail-meta" id="section-find-meta">یک دامنه را انتخاب کنید، بعد بخش را باز کنید.</div>
+          <div class="cat-bar" id="cat-bar"></div>
+          <div id="sheet-catalog"></div>
+        </aside>
+        <div class="sheet-stage-main">
+          <div class="sheet-now" id="sheet-now" hidden></div>
+          <div class="chip-bar" id="sheet-chips" style="display:none"></div>
+          <div id="sheet-body">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
+              <div>جدول بخش اینجاست. از نقشه، یک بخش را باز کنید تا ردیف‌ها، آدرس‌ها و ادغام‌ها مثل اکسل بیایند.</div>
+            </div>
           </div>
         </div>
       </div>

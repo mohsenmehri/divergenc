@@ -1280,6 +1280,8 @@ function bindPanelEvents() {
   document.getElementById("sheet-filter").addEventListener("keydown", e => {
     if (e.key === "Enter") filterSheetRows();
   });
+  const finder = document.getElementById("section-finder");
+  if (finder) finder.addEventListener("input", () => filterSectionCatalog());
   const gs = document.getElementById("global-search");
   if (gs) gs.addEventListener("keydown", e => {
     if (e.key === "Enter" && gs.value.trim()) {
@@ -1382,22 +1384,22 @@ const CAT_ICON_SHAPES = {
   layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
 const SHEET_CATEGORIES = [
-  { id: "provinces", name: "استان‌ها و شعب", sub: "Provinces & Branches", color: "#2fd4c4", icon: "pin",
+  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#2fd4c4", icon: "pin",
     test: n => PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
-  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "Data Centers & Offices", color: "#5b93ff", icon: "server",
+  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#5b93ff", icon: "server",
     test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-  { id: "services", name: "سرویس‌های شبکه", sub: "Network Services", color: "#a78bfa", icon: "globe",
+  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#a78bfa", icon: "globe",
     test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری/.test(n) },
-  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "Carriers & Collect", color: "#e8b04b", icon: "signal",
+  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#e8b04b", icon: "signal",
     test: n => /جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک/.test(n) },
-  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Equipment & Lifecycle", color: "#3ecf8e", icon: "chip",
+  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#3ecf8e", icon: "chip",
     test: n => /تجهیزات|EOL|EOS/.test(n) },
-  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Costs & Contracts", color: "#ef7ab8", icon: "coins",
+  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#ef7ab8", icon: "coins",
     test: n => /هزینه/.test(n) },
-  { id: "system", name: "سیستم", sub: "System Sheets", color: "#8b96a8", icon: "gear",
+  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#8b96a8", icon: "gear",
     test: n => IsSystemSheet(n) },
 ];
-const CAT_OTHER = { id: "other", name: "سایر", sub: "Other", color: "#a39d8b", icon: "layers", test: () => true };
+const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#a39d8b", icon: "layers", test: () => true };
 
 // match priority: specific categories before broad keyword ones
 const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacenters", "services", "system"];
@@ -1482,7 +1484,8 @@ function renderDashCats() {
       el("div", { class: "ct-val", text: String(st.count) }),
       el("div", { class: "ct-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
       el("div", { class: "ct-name", style: { color: "var(--txt-0)" }, text: c.name }),
-      el("div", { class: "ct-meta", text: st.rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f \u00b7 " + c.sub }),
+      el("div", { class: "ct-kicker", text: c.sub || "" }),
+      el("div", { class: "ct-meta", text: st.rows.toLocaleString("fa-IR") + " رکورد" }),
       el("div", { class: "ct-ring" })));
   });
 }
@@ -1523,14 +1526,82 @@ function setCatFilter(catId) {
 function sheetTags(name) {
   const tags = [];
   const n = name;
-  if (/IP|ip/.test(n)) tags.push("IP");
-  if (/تجهیزات/.test(n)) tags.push("Router/Switch");
-  if (/هزینه/.test(n)) tags.push("مالی");
-  if (/گزارش/.test(n)) tags.push("گزارش");
-  if (/VPN|MPLS|VSAT|SIP/.test(n)) tags.push("WAN");
-  if (/جمع/.test(n)) tags.push("آرشیو");
-  if (PROVINCIAL_SHEETS.indexOf(n) >= 0) tags.push("استان");
+  if (/IP|ip|آی.?پی/.test(n)) tags.push("IP");
+  if (/VLAN|vlan/.test(n)) tags.push("VLAN");
+  if (/VPN|MPLS|VSAT|SDH/.test(n)) tags.push("WAN");
+  if (/SIP|تلفن/.test(n)) tags.push("SIP");
+  if (/خودپرداز|ATM|PIN/.test(n)) tags.push("ATM");
+  if (/تجهیزات|EOL|EOS|روتر|سوییچ/.test(n)) tags.push("CPE");
+  if (/مرکز داده/.test(n)) tags.push("DC");
+  if (/هزینه|قرارداد/.test(n)) tags.push("Cost");
+  if (/جمع|PSP|مبین|آسیا/.test(n)) tags.push("Carrier");
+  if (PROVINCIAL_SHEETS.indexOf(n) >= 0) tags.push("Branch");
   return tags.slice(0, 3);
+}
+function circuitBrief(name, cat) {
+  const n = name || "";
+  if (/IP|ip|آی.?پی/.test(n)) return "پلن آدرس — IP، subnet، gateway";
+  if (/VLAN|vlan/.test(n)) return "سگمنت VLAN و دامنه broadcast";
+  if (/VPN|MPLS|VSAT|SDH/.test(n)) return "مدار WAN — لینک بین‌شهری";
+  if (/SIP|تلفن/.test(n)) return "صوت و ترانک SIP";
+  if (/اینترنت/.test(n)) return "دسترسی اینترنت شعب";
+  if (/خودپرداز|ATM|PIN/.test(n)) return "شبکه خودپرداز — لینک و CPE";
+  if (/EOL|EOS|تجهیزات|روتر|سوییچ/.test(n)) return "موجودی روتر و سوییچ";
+  if (/هزینه|قرارداد/.test(n)) return "هزینه مدار و قرارداد";
+  if (/مرکز داده|ساختمان/.test(n)) return "سایت هسته — DC و دفتر";
+  if (/جمع|PSP|مبین|آسیا/.test(n)) return "last-mile اپراتور";
+  if (cat && cat.id === "provinces") return "شعب استان — LAN شعبه و uplink";
+  const sh = WB.sheets[name];
+  if (sh && sh.rows && sh.rows[0]) {
+    const heads = [];
+    for (let i = 0; i < sh.rows[0].length && heads.length < 4; i++) {
+      const t = TrimText(sh.rows[0][i]);
+      if (t && t.length <= 22) heads.push(t);
+    }
+    if (heads.length) return heads.join(" · ");
+  }
+  if (cat && cat.blurb) return cat.blurb;
+  return "موجودی شبکه";
+}
+function filterSectionCatalog() {
+  const box = document.getElementById("section-finder");
+  const meta = document.getElementById("section-find-meta");
+  if (!box) return;
+  const q = NormalizeText(box.value || "");
+  let shown = 0;
+  document.querySelectorAll("#sheet-catalog .cat-section").forEach(sec => {
+    let any = false;
+    sec.querySelectorAll(".sheet-card").forEach(card => {
+      const blob = NormalizeText((card.dataset.name || "") + " " + (card.textContent || ""));
+      const hit = !q || blob.indexOf(q) >= 0;
+      card.style.display = hit ? "" : "none";
+      if (hit) { any = true; shown++; }
+    });
+    sec.style.display = any ? "" : "none";
+  });
+  if (meta) {
+    meta.textContent = q
+      ? (shown.toLocaleString("fa-IR") + " بخش مطابق جستجو")
+      : "دامنه را محدود کنید، یا نام استان / IP / مدار را بنویسید.";
+  }
+}
+function paintSheetNow(name) {
+  const bar = document.getElementById("sheet-now");
+  if (!bar) return;
+  clear(bar);
+  if (!name || !WB.sheets[name]) { bar.hidden = true; return; }
+  const c = categoryOf(name);
+  const rows = Math.max(0, countRows(name) - 1);
+  bar.hidden = false;
+  bar.style.setProperty("--sc", c.color || "#d9b26b");
+  bar.appendChild(el("div", { class: "sn-rail" }));
+  bar.appendChild(el("div", { class: "sn-body" },
+    el("div", { class: "sn-kicker", text: (c.sub || "SECTION") + "  ·  در حال کار" }),
+    el("div", { class: "sn-name", text: name }),
+    el("div", { class: "sn-brief", text: circuitBrief(name, c) })));
+  bar.appendChild(el("div", { class: "sn-stat" },
+    el("b", { text: rows.toLocaleString("fa-IR") }),
+    el("span", { text: "رکورد" })));
 }
 function renderSheetCatalog() {
   renderCatBar();
@@ -1566,9 +1637,12 @@ function renderSheetCatalog() {
         el("div", { class: "sc-top" },
           el("span", { class: "sc-dot", style: { background: c.color } }),
           el("div", { class: "sc-name", text: n })),
+        el("div", { class: "sc-brief", text: circuitBrief(n, c) }),
         el("div", { class: "sc-tags" },
-          el("span", { class: "sc-rows", text: rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f" }),
-          ...tags.map(t => el("span", { class: "sc-tag", text: t }))));
+          el("span", { class: "sc-rows", text: rows.toLocaleString("fa-IR") + " رکورد" }),
+          ...tags.map(t => el("span", { class: "sc-tag", text: t })),
+          el("span", { class: "sc-open", text: "باز کردن" })));
+      card.style.setProperty("--sc", c.color);
       grid.appendChild(card);
     });
     host.appendChild(el("div", { class: "cat-section fade-in" },
@@ -1576,12 +1650,14 @@ function renderSheetCatalog() {
         el("div", { class: "ch-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
         el("div", {},
           el("h3", { style: { color: "var(--txt-0)" }, text: c.name }),
-          el("div", { class: "ch-sub", text: c.sub })),
+          el("div", { class: "ch-sub", text: c.sub || "" }),
+          el("div", { class: "ch-blurb", text: c.blurb || "" })),
         el("div", { class: "ch-line" }),
-        el("div", { class: "ch-n", text: names.length + " SHEET" })),
+        el("div", { class: "ch-n", text: names.length + " بخش" })),
       grid));
   });
-  if (!rendered) host.appendChild(el("div", { class: "empty-state", text: "\u0634\u06cc\u062a\u06cc \u062f\u0631 \u0627\u06cc\u0646 \u062f\u0633\u062a\u0647 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." }));
+  if (!rendered) host.appendChild(el("div", { class: "empty-state", text: "بخشی در این دامنه نیست." }));
+  filterSectionCatalog();
 }
 function openSheetCard(name) {
   renderSheetView(name);
@@ -1607,7 +1683,7 @@ function renderGroupedNavigator() {
     root.appendChild(el("div", { class: "nav-group-head" },
       el("div", { class: "ng-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
       el("div", { class: "ng-t", text: c.name }),
-      el("div", { class: "ng-n", text: names.length + " sheet" }),
+      el("div", { class: "ng-n", text: names.length + " بخش" }),
       el("div", { class: "ng-line" })));
     names.forEach(n => {
       idx++;

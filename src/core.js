@@ -592,6 +592,7 @@ function renderSheetView(name) {
   const sh = WB.sheets[name];
   const body = document.getElementById("sheet-body");
   document.getElementById("sheet-title").textContent = name;
+  if (typeof paintSheetNow === "function") paintSheetNow(sh ? name : null);
   clear(body);
   if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0628\u062e\u0634 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
   const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
