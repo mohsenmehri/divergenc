@@ -125,7 +125,7 @@ const modUI = {
 function fillSelect(id, options, selected, keepOptionalBlank, grouped) {
   const sel = document.getElementById(id);
   if (!sel) return;
-  sel.innerHTML = "";
+  clear(sel);
   const addOpt = (parent, o) => {
     const opt = document.createElement("option");
     opt.value = o; opt.textContent = o;
@@ -179,13 +179,16 @@ const modNavigator = {
     const cards = renderGroupedNavigator();
     const dataSheets = WB.order.filter(n => IsDataSheet(n));
     ModalBox({
-      title: "انتخاب شیت — SHEET NAVIGATOR",
+      title: "\u0627\u0646\u062a\u062e\u0627\u0628 \u0634\u06cc\u062a \u2014 SHEET NAVIGATOR",
       cls: "info",
       text: "",
-      // TRANSITIONAL: becomes opts.contentNode in the navigator commit.
-      trustedHtml: `<div class="nav-grid">${cards}</div>
-             <div class="hint" style="margin-top:10px">${dataSheets.length} شیت — گروه‌بندی‌شده بر اساس دسته‌ها</div>`,
-      buttons: [{ id: IDCANCEL, label: "✕ بستن", cls: "cancel" }]
+      contentNode: el("div", {},
+        el("div", { class: "nav-grid" }, cards),
+        el("div", {
+          class: "hint", style: { marginTop: "10px" },
+          text: dataSheets.length + " \u0634\u06cc\u062a \u2014 \u06af\u0631\u0648\u0647\u200c\u0628\u0646\u062f\u06cc\u200c\u0634\u062f\u0647 \u0628\u0631 \u0627\u0633\u0627\u0633 \u062f\u0633\u062a\u0647\u200c\u0647\u0627"
+        })),
+      buttons: [{ id: IDCANCEL, label: "\u2715 \u0628\u0633\u062a\u0646", cls: "cancel" }]
     });
   },
   NavToSelectedSheet(name) {
@@ -1331,15 +1334,19 @@ window.addEventListener("DOMContentLoaded", async () => {
 /* ================================================================
    SHEET CATEGORIES — beautiful grouping of network sheets
    ================================================================ */
-const CAT_ICONS = {
-  pin: '<path d="M12 21s-7-5.2-7-11a7 7 0 0 1 14 0c0 5.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/>',
-  server: '<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>',
-  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14.5 14.5 0 0 1 0 18 14.5 14.5 0 0 1 0-18z"/>',
-  signal: '<path d="M5 12.5a9 9 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="18.5" r="1.3"/><path d="M2 9a14 14 0 0 1 20 0"/>',
-  chip: '<rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
-  coins: '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/>',
-  gear: '<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.7-1.6L13.4 2h-2.8l-.4 2.9a7 7 0 0 0-2.7 1.6l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .5.1 1.1.2 1.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.7 1.6l.4 2.9h2.8l.4-2.9a7 7 0 0 0 2.7-1.6l2.3 1 2-3.4-2-1.5c.1-.5.2-1 .2-1.6z"/>',
-  layers: '<path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>'
+/* Icon geometry as pure DATA (tag + attributes) — the single source for
+   catSvgNode (DOM) and the transitional catSvg string renderer used by
+   panel templates not yet converted; the string renderer is deleted in
+   the panels commit. */
+const CAT_ICON_SHAPES = {
+  pin: [["path", { d: "M12 21s-7-5.2-7-11a7 7 0 0 1 14 0c0 5.8-7 11-7 11z" }], ["circle", { cx: "12", cy: "10", r: "2.6" }]],
+  server: [["rect", { x: "3", y: "4", width: "18", height: "7", rx: "2" }], ["rect", { x: "3", y: "13", width: "18", height: "7", rx: "2" }], ["path", { d: "M7 7.5h.01M7 16.5h.01" }]],
+  globe: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "M3 12h18" }], ["path", { d: "M12 3a14.5 14.5 0 0 1 0 18 14.5 14.5 0 0 1 0-18z" }]],
+  signal: [["path", { d: "M5 12.5a9 9 0 0 1 14 0" }], ["path", { d: "M8.5 15.5a5 5 0 0 1 7 0" }], ["circle", { cx: "12", cy: "18.5", r: "1.3" }], ["path", { d: "M2 9a14 14 0 0 1 20 0" }]],
+  chip: [["rect", { x: "7", y: "7", width: "10", height: "10", rx: "2" }], ["path", { d: "M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" }]],
+  coins: [["ellipse", { cx: "12", cy: "6", rx: "7", ry: "3" }], ["path", { d: "M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" }], ["path", { d: "M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" }]],
+  gear: [["circle", { cx: "12", cy: "12", r: "3" }], ["path", { d: "M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.7-1.6L13.4 2h-2.8l-.4 2.9a7 7 0 0 0-2.7 1.6l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .5.1 1.1.2 1.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.7-1.6l.4 2.9h2.8l.4-2.9a7 7 0 0 0 2.7-1.6l2.3 1 2-3.4-2-1.5c.1-.5.2-1 .2-1.6z" }]],
+  layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
 const SHEET_CATEGORIES = [
   { id: "provinces", name: "استان‌ها و شعب", sub: "Provinces & Branches", color: "#22d3ee", icon: "pin",
@@ -1385,8 +1392,21 @@ function catStats(catId) {
     rows: names.reduce((s, n) => s + Math.max(0, countRows(n) - 1), 0)
   };
 }
+function catSvgNode(cat, cls) {
+  const shapes = CAT_ICON_SHAPES[cat.icon] || CAT_ICON_SHAPES.layers;
+  return sEl("svg", {
+    class: cls || "", viewBox: "0 0 24 24", fill: "none",
+    stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round"
+  }, ...shapes.map(([tag, attrs]) => sEl(tag, attrs)));
+}
 function catSvg(cat, cls) {
-  return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${CAT_ICONS[cat.icon] || CAT_ICONS.layers}</svg>`;
+  // TRANSITIONAL string renderer for panel templates not yet converted;
+  // builds only from the static CAT_ICON_SHAPES constants. Deleted in the
+  // panels commit once every caller uses catSvgNode.
+  const shapes = CAT_ICON_SHAPES[cat.icon] || CAT_ICON_SHAPES.layers;
+  const body = shapes.map(([tag, attrs]) =>
+    "<" + tag + Object.keys(attrs).map(k => ` ${k}="${attrs[k]}"`).join("") + "/>").join("");
+  return `<svg class="${cls || ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${body}</svg>`;
 }
 function allCatsWithOther() {
   const list = SHEET_CATEGORIES.slice();
@@ -1532,7 +1552,7 @@ function renderGroupedNavigator() {
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
   const colors = { provinces: "#22d3ee", datacenters: "#6366f1", services: "#8b5cf6", carriers: "#f59e0b",
                    equipment: "#22c55e", costs: "#ec4899", system: "#64748f", other: "#94a3b8", all: "#3b82f6" };
-  let cards = "";
+  const root = document.createDocumentFragment();
   let idx = 0;
   cats.forEach(c => {
     const names = WB.order.filter(n => {
@@ -1541,22 +1561,24 @@ function renderGroupedNavigator() {
       return categoryOf(n).id === c.id && (!IsSystemSheet(n) || state.showSystem);
     });
     if (!names.length) return;
-    cards += `<div class="nav-group-head">
-      <div class="ng-ico" style="background:${c.color}22;color:${c.color}">${catSvg(c)}</div>
-      <div class="ng-t">${c.name}</div>
-      <div class="ng-n">${names.length} sheet</div>
-      <div class="ng-line"></div>
-    </div>`;
+    root.appendChild(el("div", { class: "nav-group-head" },
+      el("div", { class: "ng-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
+      el("div", { class: "ng-t", text: c.name }),
+      el("div", { class: "ng-n", text: names.length + " sheet" }),
+      el("div", { class: "ng-line" })));
     names.forEach(n => {
       idx++;
-      cards += `<div class="nav-card" style="background:linear-gradient(135deg,${c.color}dd,${c.color}88)"
-        data-act="nav-sheet" data-name="${escapeHtmlAttr(n)}">
-        <div class="num">${idx}</div><div>${escapeHtml(n)}</div>
-        <div class="rows">${Math.max(0, countRows(n) - 1).toLocaleString("fa-IR")}</div>
-      </div>`;
+      root.appendChild(el("div", {
+        class: "nav-card",
+        style: { background: "linear-gradient(135deg," + c.color + "dd," + c.color + "88)" },
+        "data-act": "nav-sheet", "data-name": n
+      },
+        el("div", { class: "num", text: String(idx) }),
+        el("div", { text: n }),
+        el("div", { class: "rows", text: Math.max(0, countRows(n) - 1).toLocaleString("fa-IR") })));
     });
   });
-  return cards;
+  return root;
 }
 
 /* ================================================================

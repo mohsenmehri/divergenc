@@ -256,13 +256,6 @@ function ModalBox(opts) {
     const content = el("div", { class: "c" });
     if (opts.text) content.appendChild(textBlock(opts.text));
     if (opts.contentNode) content.appendChild(opts.contentNode);
-    if (opts.trustedHtml) {
-      // TRANSITIONAL escape hatch — only for internal, already-escaped
-      // markup; removed once every caller passes opts.contentNode.
-      const wrap = el("div");
-      wrap.innerHTML = opts.trustedHtml;
-      content.appendChild(wrap);
-    }
     const fbar = el("div", { class: "f" });
     (opts.buttons || [{ id: IDOK, label: "تأیید", cls: "ok" }]).forEach(b => {
       fbar.appendChild(el("button", { "data-id": b.id, class: b.cls, text: b.label }));
@@ -723,30 +716,36 @@ function sheetToCSV(name) {
 function renderLogView() {
   const sh = WB.sheets[LOG_SHEET];
   const body = document.getElementById("log-body");
-  if (!sh || sh.rows.length <= 1) { body.innerHTML = '<div class="empty-state">لاگی ثبت نشده است.</div>'; return; }
-  let html = '<table class="logtable"><thead><tr>';
+  clear(body);
+  if (!sh || sh.rows.length <= 1) {
+    body.appendChild(el("div", { class: "empty-state", text: "\u0644\u0627\u06af\u06cc \u062b\u0628\u062a \u0646\u0634\u062f\u0647 \u0627\u0633\u062a." }));
+    return;
+  }
+  const table = el("table", { class: "logtable" });
+  const htr = el("tr");
   const header = sh.rows[0] || [];
-  header.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
-  html += "</tr></thead><tbody>";
+  header.forEach(h => htr.appendChild(el("th", { text: (h === null || h === undefined ? "" : h) })));
+  table.appendChild(el("thead", {}, htr));
+  const tbody = el("tbody");
   for (let r = sh.rows.length - 1; r >= 1; r--) {
     const row = sh.rows[r] || [];
     const isErr = (row[1] === "ERROR" || row[5] === "ARCHIVE_FAIL");
-    html += `<tr class="${isErr ? "err" : ""}">`;
+    const tr = el("tr", { class: isErr ? "err" : "" });
     for (let c = 0; c < 7; c++) {
       const v = row[c] === undefined ? "" : row[c];
       if (c === 1) {
         const cls = ["ADD", "REMOVE", "UNDO", "EDIT", "ERROR", "ARCHIVE_FAIL"].includes(String(v)) ? "act-" + v : "act-default";
-        html += `<td><span class="act-badge ${cls}">${escapeHtml(v)}</span></td>`;
+        tr.appendChild(el("td", {}, el("span", { class: "act-badge " + cls, text: v })));
       } else if (c === 0) {
-        html += `<td class="mono" style="font-size:9.5px">${escapeHtml(v)}</td>`;
+        tr.appendChild(el("td", { class: "mono", style: { fontSize: "9.5px" }, text: v }));
       } else {
-        html += `<td>${escapeHtml(v)}</td>`;
+        tr.appendChild(el("td", { text: v }));
       }
     }
-    html += "</tr>";
+    tbody.appendChild(tr);
   }
-  html += "</tbody></table>";
-  body.innerHTML = html;
+  table.appendChild(tbody);
+  body.appendChild(table);
 }
 function clearLog() {
   ConfirmBox("پاک‌سازی لاگ", "همه ردیف‌های CHANGE_LOG پاک شوند؟", () => {
