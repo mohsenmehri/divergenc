@@ -522,13 +522,24 @@ function ExportWorkbookXlsx() {
 
 const modImport = {
   OpenFile() {
-    const inp = document.getElementById("import-file-input");
-    if (inp) { inp.value = ""; inp.click(); return true; }
-    const t = document.createElement("input");
-    t.type = "file"; t.accept = ".xlsx,.xlsm,.csv,.txt,.json";
-    t.onchange = () => modImport.HandleFile(t.files[0]);
-    t.click();
-    return true;
+    let inp = document.getElementById("import-file-input");
+    if (!inp) {
+      inp = document.createElement("input");
+      inp.type = "file"; inp.id = "import-file-input";
+      inp.accept = ".xlsx,.xlsm,.xls,.csv,.txt,.json";
+      inp.style.display = "none";
+      document.body.appendChild(inp);
+      inp.addEventListener("change", () => modImport.HandleFile(inp.files ? inp.files[0] : null));
+    }
+    try {
+      inp.value = "";
+      inp.click();
+      return true;
+    } catch (e) {
+      LogError("Import", "OpenFile", 104, e && e.message ? e.message : String(e));
+      Toast("پنجره انتخاب فایل باز نشد — دوباره تلاش کنید.", "err");
+      return false;
+    }
   },
   HandleFile(file) {
     if (!file) return false;
@@ -1161,7 +1172,6 @@ const ACTIONS = {
   "run-macro": el => RunMacro(el.dataset.arg),
   "run-macro-index": el => RunMacroIndex(el.dataset.mod, el.dataset.name),
   "open-file": () => modImport.OpenFile(),
-  "handle-file": el => modImport.HandleFile(el.files ? el.files[0] : null),
   "export-xlsx": () => ExportWorkbookXlsx(),
   "reset-empty": () => resetToEmptyData(),
   "backup": () => backupAll(),
@@ -1187,14 +1197,20 @@ function bindDelegatedEvents() {
     const el = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
     if (!el) return;
     const fn = ACTIONS[el.dataset.act];
-    if (fn) { e.preventDefault(); fn(el); }
+    if (!fn) return;
+    // never cancel the native default action of form controls / links
+    // (cancelling input.click() would block the browser file dialog!)
+    const tag = el.tagName;
+    if (tag !== "INPUT" && tag !== "SELECT" && tag !== "TEXTAREA" && tag !== "A") e.preventDefault();
+    fn(el);
   });
-  document.addEventListener("change", e => {
-    const el = e.target && e.target.closest ? e.target.closest("[data-act][data-on='change']") : null;
-    if (!el) return;
-    const fn = ACTIONS[el.dataset.act];
-    if (fn) fn(el);
-  });
+  // file input: bound directly (not via data-act) so its native click
+  // default action — the OS file dialog — always opens
+  const fi = document.getElementById("import-file-input");
+  if (fi && !fi._bound) {
+    fi._bound = true;
+    fi.addEventListener("change", () => modImport.HandleFile(fi.files ? fi.files[0] : null));
+  }
 }
 
 /* ================================================================

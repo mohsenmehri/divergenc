@@ -55,6 +55,24 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
     String(W.state.catFilter));
   W.setCatFilter("all");
 
+  // ===== REGRESSION: browser file dialog must open on IMPORT click =====
+  // (bug fixed: delegated dispatcher used to preventDefault the programmatic
+  //  input.click() itself, which cancelled the OS file dialog default action)
+  const fi = doc.getElementById("import-file-input");
+  let inputClicked = 0;
+  const origClick = fi.click.bind(fi);
+  fi.click = () => { inputClicked++; };
+  const importBtn = doc.querySelector("[data-act='open-file']");
+  check("filepicker: import button present", !!importBtn);
+  if (importBtn) importBtn.click();
+  await sleep(20);
+  check("filepicker: file input click invoked", inputClicked === 1, String(inputClicked));
+  fi.click = origClick;
+  const ev = new window.MouseEvent("click", { bubbles: true, cancelable: true });
+  const propagated = fi.dispatchEvent(ev);
+  check("filepicker: input click NOT preventDefault-ed", propagated && !ev.defaultPrevented);
+  check("filepicker: input has no data-act (native default safe)", !fi.hasAttribute("data-act"));
+
   // ===== EMPTY START (no data at all until the user imports a file) =====
   check("empty: no data sheets at boot", W.WB.order.filter(n => W.IsDataSheet(n)).length === 0,
     W.WB.order.length + " system sheets");
