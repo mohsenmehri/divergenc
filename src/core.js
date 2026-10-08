@@ -402,12 +402,13 @@ function normalizeSheetData(sh) {
     if (row.length > MAX_DATA_COLS * 2) row.length = MAX_DATA_COLS * 2;
     rows.push(row);
   }
+  // merges are stored 1-based (same as findMerge/cellVal): r1..r2, c1..c2
   const merges = [];
   for (const m of ((sh && sh.merges) || [])) {
     if (!m || typeof m !== "object") continue;
-    const r1 = Math.max(0, Math.floor(m.r1) || 0), c1 = Math.max(0, Math.floor(m.c1) || 0);
-    const r2 = Math.max(r1, Math.floor(m.r2) || 0), c2 = Math.max(c1, Math.floor(m.c2) || 0);
-    if (r2 >= rows.length) continue; // out-of-range merge -> dropped
+    const r1 = Math.max(1, Math.floor(m.r1) || 1), c1 = Math.max(1, Math.floor(m.c1) || 1);
+    const r2 = Math.max(r1, Math.floor(m.r2) || r1), c2 = Math.max(c1, Math.floor(m.c2) || c1);
+    if (r1 > rows.length || r2 > rows.length) continue; // out-of-range merge -> dropped
     merges.push({ r1, c1, r2, c2 });
   }
   return { rows, merges };
@@ -547,16 +548,34 @@ function renderSheetView(name) {
   while (lastRow > 0 && rowIsEmpty(sh, lastRow)) lastRow--;
 
   const limit = Math.min(lastRow + 5, state.pageLimit);
+  // merge map (1-based coords, same convention as findMerge/cellVal):
+  // anchor (r1,c1) renders with rowspan/colspan; covered cells are omitted
+  const mergeMap = new Map();
+  (sh.merges || []).forEach(m => {
+    if (!m) return;
+    for (let rr = m.r1; rr <= m.r2; rr++)
+      for (let cc = m.c1; cc <= m.c2; cc++)
+        mergeMap.set(rr + "," + cc, m);
+  });
+  const maxC = Math.min(lastCol, MAX_DATA_COLS);
   let html = '<div class="grid-wrap"><table class="xl"><thead><tr><th class="rn">#</th>';
-  for (let c = 1; c <= Math.min(lastCol, MAX_DATA_COLS); c++) html += `<th>${colLetter(c)}</th>`;
+  for (let c = 1; c <= maxC; c++) html += `<th>${colLetter(c)}</th>`;
   html += "</tr></thead><tbody>";
   for (let r = 1; r <= limit; r++) {
     html += `<tr data-r="${r}"><td class="rn">${r}</td>`;
-    const row = sh.rows[r - 1] || [];
-    for (let c = 1; c <= Math.min(lastCol, MAX_DATA_COLS); c++) {
+    for (let c = 1; c <= maxC; c++) {
+      const m = mergeMap.get(r + "," + c);
+      if (m && (m.r1 !== r || m.c1 !== c)) continue; // covered by merge anchor
       const v = cellVal(name, r, c, true);
       const editable = !locked && !IsSystemSheet(name) ? ' contenteditable="true"' : "";
-      html += `<td data-c="${c}"${editable}>${escapeHtml(v === null || v === undefined ? "" : v)}</td>`;
+      let span = "";
+      if (m) {
+        const rs = Math.min(m.r2, limit) - m.r1 + 1;
+        const cs = Math.min(m.c2, maxC) - m.c1 + 1;
+        if (rs > 1) span += ` rowspan="${rs}"`;
+        if (cs > 1) span += ` colspan="${cs}"`;
+      }
+      html += `<td data-c="${c}" data-r="${r}"${span}${editable}>${escapeHtml(v === null || v === undefined ? "" : v)}</td>`;
     }
     html += "</tr>";
   }

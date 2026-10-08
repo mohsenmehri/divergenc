@@ -301,6 +301,41 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   const backRows = XLSX.utils.sheet_to_json(back.Sheets["TestNet1"], { header: 1 });
   check("export: round-trip data", back.SheetNames.includes("TestNet1") &&
     W.TrimText(String(backRows[1][0])) === "X999" && W.TrimText(String(backRows[3][0])) === "X997");
+  // ===== MERGED CELLS: must render exactly like Excel (rowspan/colspan) =====
+  const mwb = XLSX.utils.book_new();
+  const mws = XLSX.utils.aoa_to_sheet([
+    ["ناحیه", "مقدار", "توضیح"],
+    ["شمال", "10", "x"],
+    ["", "20", "y"],
+    ["جنوب", "30", "z"]
+  ]);
+  mws["!merges"] = [{ s: { r: 1, c: 0 }, e: { r: 2, c: 0 } }, { s: { r: 3, c: 1 }, e: { r: 3, c: 2 } }];
+  XLSX.utils.book_append_sheet(mwb, mws, "MergeTest");
+  check("merge: import accepted", W.importWorkbookFromBuffer("merge.xlsx",
+    XLSX.write(mwb, { type: "array", bookType: "xlsx" })) === true);
+  const msh = W.WB.sheets["MergeTest"];
+  check("merge: stored 1-based", msh.merges.length === 2 && msh.merges[0].r1 === 2 && msh.merges[0].r2 === 3 &&
+    msh.merges[1].r1 === 4 && msh.merges[1].c1 === 2, JSON.stringify(msh.merges));
+  W.renderSheetView("MergeTest");
+  await sleep(20);
+  const anchor1 = doc.querySelector('#sheet-body table.xl tbody td[data-r="2"][data-c="1"]');
+  check("merge: vertical anchor has rowspan", !!anchor1 && anchor1.getAttribute("rowspan") === "2" &&
+    anchor1.textContent.indexOf("شمال") >= 0);
+  const row3 = doc.querySelector('#sheet-body table.xl tbody tr[data-r="3"]');
+  check("merge: covered cell omitted like Excel", !!row3 && row3.querySelectorAll("td").length === 3,
+    row3 ? row3.querySelectorAll("td").length + " tds" : "no row");
+  const anchor2 = doc.querySelector('#sheet-body table.xl tbody td[data-r="4"][data-c="2"]');
+  check("merge: horizontal anchor has colspan", !!anchor2 && anchor2.getAttribute("colspan") === "2");
+  // edit through the merge anchor writes once (merge-aware)
+  W.setCellVal("MergeTest", 3, 1, "north-edit", true);
+  check("merge: edit resolves to anchor", W.WB.sheets["MergeTest"].rows[1][0] === "north-edit");
+  // export round-trip keeps merges (1-based <-> 0-based conversion)
+  const backM = (XLSX.read(XLSX.write(W.BuildExportWorkbook(), { type: "array", bookType: "xlsx" }),
+    { type: "array" }).Sheets["MergeTest"]["!merges"] || []);
+  check("merge: export round-trip", backM.length === 2 && backM[0].s.r === 1 && backM[0].e.r === 2,
+    JSON.stringify(backM));
+
+
   // JSON backup import (full replacement)
   check("import: json backup", W.applyJsonBackup("b.json", { order: ["S1"], sheets: { S1: { rows: [["h"], ["v"]], merges: [] } } }) === true &&
     W.WB.sheets["S1"].rows.length === 2 && !W.WB.order.includes("TestNet1"));

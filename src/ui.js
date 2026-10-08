@@ -272,7 +272,8 @@ function parseCsvText(text) {
 
 function sheetRowsFromXlsx(ws) {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null, blankrows: true });
-  const merges = (ws["!merges"] || []).map(m => ({ r1: m.s.r, c1: m.s.c, r2: m.e.r, c2: m.e.c }));
+  // xlsx !merges are 0-based; workbook model stores 1-based (findMerge/cellVal)
+  const merges = (ws["!merges"] || []).map(m => ({ r1: m.s.r + 1, c1: m.s.c + 1, r2: m.e.r + 1, c2: m.e.c + 1 }));
   return { rows, merges };
 }
 
@@ -497,7 +498,7 @@ function BuildExportWorkbook() {
     const sh = WB.sheets[name]; if (!sh) continue;
     const ws = XLSX.utils.aoa_to_sheet(sh.rows || []);
     if (sh.merges && sh.merges.length) {
-      ws["!merges"] = sh.merges.map(m => ({ s: { r: m.r1, c: m.c1 }, e: { r: m.r2, c: m.c2 } }));
+      ws["!merges"] = sh.merges.map(m => ({ s: { r: m.r1 - 1, c: m.c1 - 1 }, e: { r: m.r2 - 1, c: m.c2 - 1 } }));
     }
     let sn = name.replace(/[\\\/\?\*\[\]:]/g, " ").slice(0, 31) || "Sheet";
     let uniq = sn, k = 2;
