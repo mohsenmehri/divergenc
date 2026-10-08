@@ -81,11 +81,11 @@ const modUI = {
   NavigateToSheet() {
     const sheetName = TrimText(state.cp.C41);
     if (!sheetName) {
-      ShowMsg("لطفاً یک شیت انتخاب کنید.", vbExclamation, "Navigate");
+      ShowMsg("لطفاً یک بخش انتخاب کنید.", vbExclamation, "Navigate");
       return;
     }
     if (!WB.sheets[sheetName]) {
-      ShowMsg('شیت "' + sheetName + '" یافت نشد.', vbExclamation, "Navigate");
+      ShowMsg('بخش "' + sheetName + '" یافت نشد.', vbExclamation, "Navigate");
       return;
     }
     renderSheetView(sheetName);
@@ -97,7 +97,7 @@ const modUI = {
     state.panelProtected = true;
     saveState();
     applyPanelProtection();
-    Toast("کنترل پنل قفل شد (رمز: " + CONTROL_PANEL_PASSWORD + ").", "ok");
+    Toast("کنترل پنل قفل شد.", "ok");
   },
 
   async UnprotectControlPanel() {
@@ -128,7 +128,7 @@ function fillSelect(id, options, selected, keepOptionalBlank, grouped) {
   clear(sel);
   const addOpt = (parent, o) => {
     const opt = document.createElement("option");
-    opt.value = o; opt.textContent = o;
+    opt.value = o; opt.textContent = (o === "FULLTEXT") ? "تمامی ستون ها" : o;
     if (o === selected) opt.selected = true;
     parent.appendChild(opt);
     return opt;
@@ -138,7 +138,7 @@ function fillSelect(id, options, selected, keepOptionalBlank, grouped) {
     const groups = {};
     const order = [];
     options.forEach(o => {
-      const c = (o === "ALL") ? { id: "all", name: "همه شیت‌ها" } : categoryOf(o);
+      const c = (o === "ALL") ? { id: "all", name: "همه بخش‌ها" } : categoryOf(o);
       if (!groups[c.id]) { groups[c.id] = []; order.push(c); }
       groups[c.id].push(o);
     });
@@ -153,7 +153,7 @@ function fillSelect(id, options, selected, keepOptionalBlank, grouped) {
   }
   if (selected && options.indexOf(selected) < 0) {
     const opt = document.createElement("option");
-    opt.value = selected; opt.textContent = selected; opt.selected = true;
+    opt.value = selected; opt.textContent = (selected === "FULLTEXT") ? "تمامی ستون ها" : selected; opt.selected = true;
     sel.appendChild(opt);
   }
 }
@@ -179,14 +179,14 @@ const modNavigator = {
     const cards = renderGroupedNavigator();
     const dataSheets = WB.order.filter(n => IsDataSheet(n));
     ModalBox({
-      title: "\u0627\u0646\u062a\u062e\u0627\u0628 \u0634\u06cc\u062a \u2014 SHEET NAVIGATOR",
+      title: "\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u062e\u0634\u200c\u0647\u0627",
       cls: "info",
       text: "",
       contentNode: el("div", {},
         el("div", { class: "nav-grid" }, cards),
         el("div", {
           class: "hint", style: { marginTop: "10px" },
-          text: dataSheets.length + " \u0634\u06cc\u062a \u2014 \u06af\u0631\u0648\u0647\u200c\u0628\u0646\u062f\u06cc\u200c\u0634\u062f\u0647 \u0628\u0631 \u0627\u0633\u0627\u0633 \u062f\u0633\u062a\u0647\u200c\u0647\u0627"
+          text: dataSheets.length + " \u0628\u062e\u0634 \u2014 \u06af\u0631\u0648\u0647\u200c\u0628\u0646\u062f\u06cc\u200c\u0634\u062f\u0647 \u0628\u0631 \u0627\u0633\u0627\u0633 \u062f\u0633\u062a\u0647\u200c\u0647\u0627"
         })),
       buttons: [{ id: IDCANCEL, label: "\u2715 \u0628\u0633\u062a\u0646", cls: "cancel" }]
     });
@@ -212,7 +212,7 @@ const modNavigator = {
 const modExport = {
   ExportSearchResults() {
     const res = WB.sheets[RESULTS_SHEET];
-    if (!res) { ShowMsg("شیت SEARCH_RESULTS یافت نشد.", vbExclamation, "Export"); return; }
+    if (!res) { ShowMsg("بخش SEARCH_RESULTS یافت نشد.", vbExclamation, "Export"); return; }
     let csv = "";
     if (state.results.length) {
       // export the current rendered results (match blocks)
@@ -240,7 +240,7 @@ const modExport = {
   },
   ExportChangeLog() {
     const log = WB.sheets[LOG_SHEET];
-    if (!log) { ShowMsg("شیت CHANGE_LOG یافت نشد.", vbExclamation, "Export"); return; }
+    if (!log) { ShowMsg("بخش CHANGE_LOG یافت نشد.", vbExclamation, "Export"); return; }
     DownloadFile("ChangeLog_" + tsStamp() + ".csv", "\uFEFF" + sheetToCSV(LOG_SHEET), "text/csv");
     Toast("خروجی تاریخچه ذخیره شد.", "ok");
   }
@@ -382,7 +382,7 @@ function upsertImportedSheets(impOrder, impSheets, fileName) {
     if (WB.sheets[CFG_SHEET]) ensureCfgRow(WB.sheets[CFG_SHEET], display, WB.sheets[display]);
   }
   const ok = finishDataSwap(fileName);
-  Toast("شیت‌های فایل «" + fileName + "» در داده‌های فعلی اعمال شد.", "ok");
+  Toast("بخش‌های فایل «" + fileName + "» در داده‌های فعلی اعمال شد.", "ok");
   return ok;
 }
 
@@ -623,7 +623,7 @@ const modValidation = {
   },
   async ValidateSheetExists(sSheetName, bShowMsg = true) {
     if (!SheetExists(sSheetName)) {
-      if (bShowMsg) await ShowMsg("شیت یافت نشد: " + sSheetName, vbExclamation, "Validation");
+      if (bShowMsg) await ShowMsg("بخش یافت نشد: " + sSheetName, vbExclamation, "Validation");
       return false;
     }
     return true;
@@ -631,7 +631,7 @@ const modValidation = {
   async ValidateDataSheet(sSheetName, bShowMsg = true) {
     if (!(await this.ValidateSheetExists(sSheetName, bShowMsg))) return false;
     if (IsSystemSheet(sSheetName)) {
-      if (bShowMsg) await ShowMsg("شیت " + sSheetName + " سیستمی است — انتخاب مجاز نیست.", vbExclamation, "Validation");
+      if (bShowMsg) await ShowMsg("بخش " + sSheetName + " سیستمی است — انتخاب مجاز نیست.", vbExclamation, "Validation");
       return false;
     }
     return true;
@@ -650,7 +650,7 @@ const modValidation = {
   },
   async ValidateArchiveSheet(archiveName, bShowMsg = true) {
     if (!SheetExists(archiveName)) {
-      if (bShowMsg) await ShowMsg("شیت آرشیو یافت نشد: " + archiveName + "\nردیف حذف لغو شد.", vbExclamation, "Validation");
+      if (bShowMsg) await ShowMsg("بخش آرشیو یافت نشد: " + archiveName + "\nردیف حذف لغو شد.", vbExclamation, "Validation");
       return false;
     }
     return true;
@@ -666,8 +666,8 @@ const modConstantsTools = {
   IsSystemSheet(n) { return IsSystemSheet(n); },
   IsDataSheet(n) { return IsDataSheet(n); },
   SheetExists(n) { return SheetExists(n); },
-  HideSystemSheets() { state.showSystem = false; saveState(); renderSheetChips(); Toast("شیت‌های سیستم مخفی شدند.", "ok"); },
-  UnhideSystemSheets() { state.showSystem = true; saveState(); renderSheetChips(); Toast("شیت‌های سیستم نمایش داده شدند.", "ok"); }
+  HideSystemSheets() { state.showSystem = false; saveState(); renderSheetChips(); Toast("بخش‌های سیستم مخفی شدند.", "ok"); },
+  UnhideSystemSheets() { state.showSystem = true; saveState(); renderSheetChips(); Toast("بخش‌های سیستم نمایش داده شدند.", "ok"); }
 };
 
 /* ================================================================
@@ -675,7 +675,7 @@ const modConstantsTools = {
    ================================================================ */
 const modButtonTools = {
   AddGoToControlPanelButtons() {
-    Toast("دکمه «کنترل پنل» روی همه شیت‌ها فعال است (نوار بالای هر شیت).", "ok");
+    Toast("دکمه «کنترل پنل» روی همه بخش‌ها فعال است (نوار بالای هر بخش).", "ok");
   },
   GoToControlPanel() { GoToControlPanel(); },
   RepositionGoToButton() { /* web: button is fixed in the toolbar */ }
@@ -695,7 +695,7 @@ const modPatchFixes = {
 };
 const modFixUnlock = {
   async UnlockDataSheets() {
-    const pw = await ShowInput("رمز شیت‌ها را وارد کنید (" + SHEET_PASSWORD + "):", "Unlock Data Sheets", "");
+    const pw = await ShowInput("رمز بخش‌ها را وارد کنید:", "Unlock Data Sheets", "");
     if (pw === null) return;
     if (pw !== SHEET_PASSWORD) {
       HandleError("modFixUnlock", "UnlockDataSheets", 1002, "Incorrect sheet password");
@@ -710,7 +710,7 @@ const modFixUnlock = {
     });
     saveState();
     if (state.currentSheet) renderSheetView(state.currentSheet);
-    await ShowMsg(unlocked + " شیت آنلاک شد.\nCONTROL_PANEL همچنان محافظت‌شده باقی ماند.", vbInformation, "Unlock Done");
+    await ShowMsg(unlocked + " بخش آنلاک شد.\nCONTROL_PANEL همچنان محافظت‌شده باقی ماند.", vbInformation, "Unlock Done");
     WriteChangeLog("UNLOCK", "-", "-", "SUCCESS", unlocked + " sheets unlocked");
   }
 };
@@ -1042,7 +1042,7 @@ function countRows(sheetName) {
 }
 function renderDashboard() {
   const kpis = document.getElementById("dash-kpis");
-  if (!kpis) return;
+  if (!kpis) { renderFeed(); renderDashCats(); return; }
   const dataSheets = WB.order.filter(n => IsDataSheet(n)).length;
   const totalRecords = WB.order.filter(n => IsDataSheet(n)).reduce((s, n) => s + Math.max(0, countRows(n) - 1), 0);
   const idxCount = WB.sheets[IDX_SHEET] ? Math.max(0, WB.sheets[IDX_SHEET].rows.length - 1) : 0;
@@ -1496,7 +1496,7 @@ function openCategory(catId) {
 function renderCatBar() {
   const host = document.getElementById("cat-bar");
   if (!host) return;
-  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0634\u06cc\u062a\u200c\u0647\u0627", color: "#d9b26b", icon: "layers" }].concat(
+  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#d9b26b", icon: "layers" }].concat(
     allCatsWithOther().filter(c => c.id !== "system" || state.showSystem));
   clear(host);
   cats.forEach(c => {
@@ -1538,7 +1538,7 @@ function renderSheetCatalog() {
   if (!host) return;
   clear(host);
   if (!WB.order.some(n => IsDataSheet(n) || (state.showSystem && IsSystemSheet(n)))) {
-    host.appendChild(emptyStateNode("\u0647\u06cc\u0686 \u0634\u06cc\u062a \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u062f\u0631 \u06a9\u0627\u0631 \u0646\u06cc\u0633\u062a \u2014 \u0627\u0628\u062a\u062f\u0627 \u0641\u0627\u06cc\u0644 \u062f\u0627\u062f\u0647 \u062e\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f."));
+    host.appendChild(emptyStateNode("\u0647\u06cc\u0686 \u0628\u062e\u0634 \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u062f\u0631 \u06a9\u0627\u0631 \u0646\u06cc\u0633\u062a \u2014 \u0627\u0628\u062a\u062f\u0627 \u0641\u0627\u06cc\u0644 \u062f\u0627\u062f\u0647 \u062e\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f."));
     return;
   }
   const filter = state.catFilter || "all";

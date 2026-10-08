@@ -285,7 +285,7 @@ const modSearchEngine = {
       RefreshSearchIndexSilent();
       saveState();
       WriteChangeLog("EDIT", state.results.map(b => b.sheet).join(","), "-", "SUCCESS", changedCount + " cell(s) saved from SEARCH_RESULTS");
-      await ShowMsg(changedCount + " سلول در شیت‌های مبدأ ذخیره شد.\nسلول‌های تغییریافته زرد نشانه‌گذاری شدند.", vbInformation, "Save Changes");
+      await ShowMsg(changedCount + " سلول در بخش‌های مبدأ ذخیره شد.\nسلول‌های تغییریافته زرد نشانه‌گذاری شدند.", vbInformation, "Save Changes");
     }
     updateStatLine();
   },
@@ -342,16 +342,16 @@ const modAddRecord = {
   async StartAddWizard() {
     const sheetName = TrimText(state.cp.C16);
     if (!sheetName) {
-      await ShowMsg("لطفاً یک شیت هدف از فهرست کشویی (C16) انتخاب کنید.", vbExclamation, "Add Record");
+      await ShowMsg("لطفاً یک بخش هدف از فهرست کشویی انتخاب کنید.", vbExclamation, "Add Record");
       return;
     }
     const target = WB.sheets[sheetName];
     if (!target) {
-      await ShowMsg("شیت پیدا نشد: " + sheetName, vbExclamation, "Add Record");
+      await ShowMsg("بخش پیدا نشد: " + sheetName, vbExclamation, "Add Record");
       return;
     }
     if (IsSystemSheet(sheetName)) {
-      await ShowMsg("شیت " + sheetName + " سیستمی است — انتخاب مجاز نیست.", vbExclamation, "Add Record");
+      await ShowMsg("بخش " + sheetName + " سیستمی است — انتخاب مجاز نیست.", vbExclamation, "Add Record");
       return;
     }
 
@@ -360,7 +360,7 @@ const modAddRecord = {
     if (this.IsProvincialSheet(sheetName)) {
       atmSepRow = this.FindAtmRow(sheetName);
       if (atmSepRow === 0) {
-        await ShowMsg("خطا: ردیف جداسازی خودپرداز در شیت '" + sheetName + "' یافت نشد.", vbExclamation, "Add Record");
+        await ShowMsg("خطا: ردیف جداسازی خودپرداز در بخش '" + sheetName + "' یافت نشد.", vbExclamation, "Add Record");
         return;
       }
       sectionType = await this.SectionPicker(sheetName);
@@ -406,7 +406,7 @@ const modAddRecord = {
 
     let lastCol = Math.max(1, ...target.rows.map(r => r.length), 1);
     if (lastCol < 1 || lastCol > 100) {
-      await ShowMsg("ستون‌ها در شیت قابل شناسایی نیستند: " + sheetName, vbExclamation, "Add Record");
+      await ShowMsg("ستون‌ها در بخش قابل شناسایی نیستند: " + sheetName, vbExclamation, "Add Record");
       return;
     }
     const headers = [], headerCols = [];
@@ -415,7 +415,7 @@ const modAddRecord = {
       if (hv) { headers.push(hv); headerCols.push(c); }
     }
     if (!headers.length) {
-      await ShowMsg("ستونی در شیت یافت نشد: " + sheetName, vbExclamation, "Add Record");
+      await ShowMsg("ستونی در بخش یافت نشد: " + sheetName, vbExclamation, "Add Record");
       return;
     }
 
@@ -550,7 +550,7 @@ const modAddRecord = {
       "Added row " + newRow + " [" + (sectionType || "default") + "] to: " + sheetName);
     RefreshSearchIndexSilent();
     saveState();
-    await ShowMsg("رکورد با موفقیت ذخیره شد!\nشیت : " + sheetName + "\nردیف : " + newRow,
+    await ShowMsg("رکورد با موفقیت ذخیره شد!\nبخش : " + sheetName + "\nردیف : " + newRow,
       vbInformation, "Add Record - Done");
     renderSheetView(sheetName);
   }
@@ -566,7 +566,7 @@ function insertRowAtSafe(sheetName, excelRow) {
 const modRemoveRecord = {
   async StartRemoveWizard() {
     if (!WB.sheets[IDX_SHEET]) {
-      await ShowMsg("شیت ایندکس یافت نشد. ابتدا REFRESH INDEX را اجرا کنید.", vbExclamation, "Error");
+      await ShowMsg("بخش ایندکس یافت نشد. ابتدا REFRESH INDEX را اجرا کنید.", vbExclamation, "Error");
       return;
     }
     let sheetFilter = TrimText(state.cp.C23) || "ALL";
@@ -853,7 +853,7 @@ const modUndo = {
       const b = u.blocks[bi];
       const srcWS = WB.sheets[b.sheet];
       if (!srcWS) {
-        await ShowMsg("شیت یافت نشد: " + b.sheet, vbExclamation, "Undo Error");
+        await ShowMsg("بخش یافت نشد: " + b.sheet, vbExclamation, "Undo Error");
         return;
       }
       const rowCount = b.to - b.from + 1;

@@ -537,7 +537,7 @@ function recoverSearchIndex(showMsg) {
 const VIEW_TITLES = {
   panel: ["داشبورد عملیات شبکه", "Network Operations Dashboard"],
   results: ["نتایج جستجو", "Search Results"],
-  sheet: ["مرور شیت‌های شبکه", "Network Sheets Browser"],
+  sheet: ["مرور بخش‌های شبکه", "Network Sections"],
   log: ["تاریخچه تغییرات", "Change Log"],
   macros: ["ماکروهای سیستم", "System Macros"]
 };
@@ -566,13 +566,11 @@ function updateStatLine() {
   const dataSheets = WB.order.filter(n => IsDataSheet(n)).length;
   const idxCount = (WB.sheets[IDX_SHEET] ? Math.max(0, WB.sheets[IDX_SHEET].rows.length - 1) : 0);
   const el = document.getElementById("stat-line");
-  if (el) el.textContent = dataSheets + " شیت • " + idxCount.toLocaleString("fa-IR") + " رکورد ایندکس • " + state.user;
+  if (el) el.textContent = dataSheets + " بخش • " + idxCount.toLocaleString("fa-IR") + " رکورد ایندکس • " + state.user;
   const st = id => document.getElementById(id);
-  if (st("st-index")) {
-    st("st-index").textContent = idxCount.toLocaleString("fa-IR");
-    st("st-undo").textContent = (state.undo && state.undo.valid) ? ("آماده (" + state.undo.blockCount + " بلوک)") : "ندارد";
-    st("st-lock").textContent = state.panelProtected ? "فعال (قفل)" : "غیرفعال";
-  }
+  if (st("st-index")) st("st-index").textContent = idxCount.toLocaleString("fa-IR");
+  if (st("st-undo")) st("st-undo").textContent = (state.undo && state.undo.valid) ? ("آماده (" + state.undo.blockCount + " بلوک)") : "ندارد";
+  if (st("st-lock")) st("st-lock").textContent = state.panelProtected ? "فعال (قفل)" : "غیرفعال";
   if (st("st-user")) st("st-user").textContent = state.user;
   if (st("st-user2")) st("st-user2").textContent = state.user;
   if (st("nav-results-count")) st("nav-results-count").textContent = String(state.results.length);
@@ -595,7 +593,7 @@ function renderSheetView(name) {
   const body = document.getElementById("sheet-body");
   document.getElementById("sheet-title").textContent = name;
   clear(body);
-  if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0634\u06cc\u062a \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
+  if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0628\u062e\u0634 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
   const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
   const locked = !!state.lockedSheets[name];
   let lastRow = sh.rows.length;
@@ -679,10 +677,10 @@ function toggleSheetLock() {
   if (!name) return;
   if (state.lockedSheets[name]) {
     delete state.lockedSheets[name];
-    Toast("قفل شیت «" + name + "» برداشته شد.", "ok");
+    Toast("قفل بخش «" + name + "» برداشته شد.", "ok");
   } else {
     state.lockedSheets[name] = true;
-    Toast("شیت «" + name + "» قفل شد (رمز: " + SHEET_PASSWORD + " — توجه: قفل‌ها فقط شبیه‌سازی رفتار Excel هستند و امنیت واقعی نیستند).", "warn");
+    Toast("بخش «" + name + "» قفل شد.", "warn");
   }
   saveState();
   renderSheetView(name);
@@ -692,7 +690,7 @@ function exportCurrentSheetCSV() {
   if (!name) return;
   const csv = sheetToCSV(name);
   DownloadFile(name.replace(/[\\/:*?"<>|]/g, "_") + "_" + tsStamp() + ".csv", "\uFEFF" + csv, "text/csv");
-  Toast("خروجی CSV شیت «" + name + "» ذخیره شد.", "ok");
+  Toast("خروجی CSV بخش «" + name + "» ذخیره شد.", "ok");
 }
 function sheetToCSV(name) {
   const sh = WB.sheets[name];

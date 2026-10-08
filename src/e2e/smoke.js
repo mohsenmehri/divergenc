@@ -92,7 +92,7 @@ async function launchBrowser() {
     await page.waitForSelector("#dash-cats", { timeout: 15000 });
 
     // ---- 1. empty start + shell ----
-    check("load: page title", (await page.title()).indexOf("شبکه سراسری") >= 0, await page.title());
+    check("load: page title", (await page.title()).indexOf("ملل(فام)") >= 0, await page.title());
     check("load: empty-state import CTA", await page.isVisible("#dash-cats .empty-state"));
     check("load: no data sheets at boot", await page.evaluate(() => WB.order.filter(n => IsDataSheet(n)).length) === 0);
 
