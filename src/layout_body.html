@@ -91,6 +91,10 @@
       <button class="icon-btn accent" title="ورود فایل داده (اکسل / CSV / JSON)" data-act="open-file">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
       </button>
+      <button class="icon-btn accent" title="ذخیره‌ی داده‌ها در این مرورگر" data-act="save-now">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+      </button>
+      <div class="stat-pill" id="save-indicator" title="وضعیت ذخیره‌سازی در این مرورگر">ذخیره‌نشده</div>
       <button class="icon-btn" title="بازسازی ایندکس" data-act="run-macro" data-arg="modSearchEngine.RefreshSearchIndexCore">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
       </button>
@@ -373,6 +377,10 @@
                 <div class="tool-tile" data-act="reset-empty">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>
                   <span>EMPTY DATA</span>
+                </div>
+                <div class="tool-tile" data-act="save-now">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                  <span>ذخیره‌ی تغییرات</span>
                 </div>
                 <div class="tool-tile" data-act="backup">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>

@@ -1193,6 +1193,7 @@ const ACTIONS = {
   "run-macro": el => RunMacro(el.dataset.arg),
   "run-macro-index": el => RunMacroIndex(el.dataset.mod, el.dataset.name),
   "open-file": () => modImport.OpenFile(),
+  "save-now": () => saveNow(),
   "export-xlsx": () => ExportWorkbookXlsx(),
   "reset-empty": () => resetToEmptyData(),
   "backup": () => backupAll(),
@@ -1313,6 +1314,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   WB.sheets = JSON.parse(JSON.stringify(APP_SHELL.sheets));
   // restore saved session (previously imported data), if any
   const restored = loadState();
+  // stash the remembered view NOW — later boot calls (switchView/saveState)
+  // rewrite the ui key and would otherwise clobber it
+  const uiSavedBoot = (typeof loadUIState === "function") ? loadUIState() : null;
   // initial CP defaults (if no session)
   if (!restored) {
     state.cp.C7 = "";
@@ -1331,6 +1335,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   await Workbook_Open();
   initUIFromState();
   renderResultsView();
+  // restore the last open sheet/filter ("stay where you were")
+  const uiSaved = uiSavedBoot;
+  if (uiSaved && uiSaved.sheet && WB.sheets[uiSaved.sheet] && !IsSystemSheet(uiSaved.sheet)) {
+    state.catFilter = uiSaved.catFilter || "all";
+    switchView("sheet");
+    openSheetCard(uiSaved.sheet);
+    if (restored) Toast("\u062f\u0627\u062f\u0647\u200c\u0647\u0627\u06cc \u0630\u062e\u06cc\u0631\u0647\u200c\u0634\u062f\u0647 \u0628\u0627\u0632\u06cc\u0627\u0628\u06cc \u0634\u062f \u2014 \u0631\u0648\u06cc \u0647\u0645\u0627\u0646 \u0634\u06cc\u062a \u0647\u0633\u062a\u06cc\u062f.", "ok");
+  }
   // deterministic index: verify on load; auto-recover if missing/corrupt
   if (!verifySearchIndex().ok) {
     modMapping.RefreshSearchIndex(false);
@@ -1487,6 +1499,7 @@ function renderCatBar() {
 function setCatFilter(catId) {
   state.catFilter = catId;
   renderSheetCatalog();
+  saveUIState();
 }
 function sheetTags(name) {
   const tags = [];
@@ -1553,6 +1566,7 @@ function renderSheetCatalog() {
 }
 function openSheetCard(name) {
   renderSheetView(name);
+  saveUIState(); // remember the open sheet so a reload lands back here
   const el = document.getElementById("sheet-body");
   if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -1605,7 +1619,7 @@ Object.assign(window, {
   saveState, loadState, WriteChangeLog, RefreshSearchIndexSilent,
   renderExactToggle, renderResultsView, renderSheetView,
   resolveArchiveSheet, GoToControlPanel, RunMacro, Workbook_Open,
-  IsSystemSheet, IsDataSheet, SheetExists, initUIFromState,
+  IsSystemSheet, IsDataSheet, SheetExists, initUIFromState, saveNow, saveUIState, loadUIState,
   FindHeaderRow, TrimText, NormalizeText, LastUsedRow, LastUsedCol,
   modImport, importWorkbookFromBuffer, importCsvText, applyJsonBackup,
   resetToEmptyData, BuildExportWorkbook, ExportWorkbookXlsx, parseCsvText,

@@ -7,20 +7,25 @@
 - 🔶 **MANUAL** — معادل پیاده‌سازی شده؛ تأیید رفتاری دستی لازم است
 
 > **لایه دوم اثبات (مرورگر واقعی):** مجموعه Playwright در `src/e2e/smoke.js`
-> (۲۲ سناریو در Chromium واقعی) — از جمله اجرای واقعی CSP و باز شدن واقعی
+> (۲۴ سناریو در Chromium واقعی) — از جمله اجرای واقعی CSP و باز شدن واقعی
 > پنجره فایل. با `cd src/e2e && npm install && npm test` قابل تکرار است.
 >
 > **نحوه اثبات ادعاها:** نتیجه تست‌ها را نمی‌توان از فایل HTML اثبات کرد. مرجع،
 > اجرای `node src/test/test_app.js` در همین repository و خروجی checks در PR است.
 > این سند «فهرست پوشش» است نه گزارش تست زنده.
 
-مجموعه تست خودکار: `src/test/test_app.js` — در حال حاضر **101 assertion**، همه سبز
-(۹۹ ادعای رفتاری + ۲ نگهبان DoD بازسازی DOM API).
+مجموعه تست خودکار: `src/test/test_app.js` — در حال حاضر **105 assertion**، همه سبز
+(۱۰۳ ادعای رفتاری + ۲ نگهبان DoD بازسازی DOM API).
 
 > **بازسازی DOM API (فاز ۹):** همه‌ی renderer ها به `el()`/`sEl()`/`textContent` تبدیل شدند؛
 > صفر `innerHTML` در سورس‌های برنامه. دو نگهبان DoD (`dom-api: zero innerHTML-family calls…`
 > و `dom-api: no HTML-string modal path…`) روی هر اجرا تضمین می‌کنند هیچ sink رشته‌-HTML
 > به سورس‌ها برنگردد. طبقه‌بندی نهایی: [INNERHTML_AUDIT.md](INNERHTML_AUDIT.md).
+> **ماندگاری (جدید):** دکمه‌ی «ذخیره» + ماندگاری داده‌ها و آخرین شیت باز روی reload —
+> تست‌های `save: save-now button present`، `save: saveNow persists + read-back verified`،
+> `save: open sheet remembered`، `save: indicator shows saved time` (jsdom) و
+> `save: Save button persists data`، `save: reload restores data and lands on the same sheet`
+> (مرورگر واقعی — reload واقعی صفحه).
 > قراردادهای رفتاری حین refactor حفظ شدند (`data-act` delegation، dataset های
 > `data-match`/`data-srcrow`/`data-ci`/`data-r`/`data-c`، merge با rowspan/colspan مثل اکسل،
 > همگامی undo) — هر commit با سبز بودن هر دو لایه تست ثبت شده است.

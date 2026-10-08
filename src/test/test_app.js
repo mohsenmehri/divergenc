@@ -395,6 +395,26 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   check("index: recover rebuilds", W.recoverSearchIndex(false) === true && W.verifySearchIndex().ok === true);
   check("index: search works after recover", W.modMapping.GetMatchRows("شاخص", "X999", "ALL").length === 1);
 
+  // ===== persistence: explicit Save button + remembered workspace =====
+  check("save: save-now button present (topbar + panel)", doc.querySelectorAll("[data-act='save-now']").length >= 2,
+    doc.querySelectorAll("[data-act='save-now']").length + " buttons");
+  const savedFlag = W.saveNow();
+  let savedParsed = null;
+  try { savedParsed = JSON.parse(window.localStorage.getItem("Mohsen_FINAL_v5_state_v2") || "null"); } catch (e) {}
+  check("save: saveNow persists + read-back verified", savedFlag === true && !!savedParsed && savedParsed.v === 2 &&
+    savedParsed.order.length === W.WB.order.length && savedParsed.savedAt > 0,
+    savedFlag + "/" + (savedParsed ? savedParsed.order.length + " sheets" : "no payload"));
+  W.renderSheetView("SampleNet");
+  W.saveUIState();
+  let uiParsed = null;
+  try { uiParsed = JSON.parse(window.localStorage.getItem("Mohsen_FINAL_v5_state_v2_ui") || "null"); } catch (e) {}
+  check("save: open sheet remembered (ui state round-trip)",
+    !!uiParsed && uiParsed.sheet === "SampleNet" && W.loadUIState().sheet === "SampleNet",
+    uiParsed ? uiParsed.sheet : "no ui payload");
+  check("save: indicator shows saved time",
+    doc.getElementById("save-indicator").textContent.indexOf("ذخیره‌شده") === 0,
+    doc.getElementById("save-indicator").textContent);
+
   // clear back to the empty workspace
   W.resetToEmptyData(true);
   check("reset: workspace empty again", W.WB.order.filter(n => W.IsDataSheet(n)).length === 0,

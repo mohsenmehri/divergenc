@@ -190,6 +190,44 @@ async function launchBrowser() {
     check("xss: cell payload rendered escaped in grid", gridHasImg);
     check("xss: no JS dialog ever fired", dialogs.length === 0, dialogs.join(" | "));
 
+    // ---- 9.5 persistence: Save button + REAL reload keeps data and sheet ----
+    await page.evaluate(() => { switchView("sheet"); openSheetCard("SampleNet"); });
+    await page.waitForSelector("#sheet-body table.xl", { timeout: 5000 });
+    await page.click("[data-act='save-now']");
+    await page.waitForTimeout(300);
+    const saveInfo = await page.evaluate(() => {
+      let p = null, ui = null;
+      try { p = JSON.parse(localStorage.getItem("Mohsen_FINAL_v5_state_v2") || "null"); } catch (e) {}
+      try { ui = JSON.parse(localStorage.getItem("Mohsen_FINAL_v5_state_v2_ui") || "null"); } catch (e) {}
+      return {
+        saved: !!p && p.order.indexOf("SampleNet") >= 0,
+        indicator: ((document.getElementById("save-indicator") || {}).textContent || ""),
+        uiSheet: ui ? ui.sheet : ""
+      };
+    });
+    check("save: Save button persists data + indicator updated",
+      saveInfo.saved && saveInfo.indicator.indexOf("ذخیره‌شده") === 0 && saveInfo.uiSheet === "SampleNet",
+      JSON.stringify(saveInfo));
+
+    await page.reload({ waitUntil: "load" });
+    // boot is async (Workbook_Open + index verify) — wait for the view restore itself
+    let restoredView = true;
+    try {
+      await page.waitForFunction(
+        () => state.currentSheet === "SampleNet" &&
+              document.querySelectorAll("#sheet-body table.xl tbody tr").length > 0,
+        { timeout: 15000 });
+    } catch (e) { restoredView = false; }
+    const afterReload = await page.evaluate(() => ({
+      sheets: WB.order.filter(n => IsDataSheet(n)).length,
+      sheet: state.currentSheet,
+      view: document.getElementById("view-sheet").classList.contains("active"),
+      rows: document.querySelectorAll("#sheet-body table.xl tbody tr").length
+    }));
+    check("save: reload restores data and lands on the same sheet",
+      restoredView && afterReload.sheets === 2 && afterReload.sheet === "SampleNet" && afterReload.view === true && afterReload.rows > 0,
+      JSON.stringify(afterReload) + " restoredView=" + restoredView);
+
     // ---- 10. EMPTY DATA restores blank workspace ----
     await page.evaluate(() => resetToEmptyData());
     await page.waitForSelector("#modal-overlay .mbox", { timeout: 5000 });

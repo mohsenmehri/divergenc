@@ -542,6 +542,7 @@ const VIEW_TITLES = {
   macros: ["ماکروهای سیستم", "System Macros"]
 };
 function switchView(name) {
+  state.currentView = name;
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   const el = document.getElementById("view-" + name);
   if (el) el.classList.add("active");
@@ -557,6 +558,7 @@ function switchView(name) {
   updateStatLine();
   const sb = document.getElementById("sidebar");
   if (sb) sb.classList.remove("open");
+  if (typeof saveUIState === "function") saveUIState();
 }
 function GoToControlPanel() { switchView("panel"); }
 

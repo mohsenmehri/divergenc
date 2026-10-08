@@ -39,6 +39,11 @@ python3 src/build.py          # -> Mohsen_FINAL_v5.html
 همه‌چیز را بخواند. امنیت واقعی نیازمند معماری سمت سرور (authentication/authorization
 در backend) است که خارج از scope این ابزار مبتنی بر فایل است.
 
+- **ماندگاری داده‌ها** — همه‌ی تغییرات به‌صورت خودکار در `localStorage` ذخیره می‌شوند
+  (کلید `Mohsen_FINAL_v5_state_v2` با fallback های سلسله‌مراتبی برای سهمیه)؛
+  دکمه‌ی «ذخیره» (`data-act="save-now"`) ذخیره‌ی صریح + تأیید بازخوانی + گزارش نتیجه را
+  انجام می‌دهد. آخرین شیت/فیلتر باز هم به‌خاطر سپرده می‌شود (کلید `..._ui`) تا بعد از
+  reload روی همان شیت برگردید. رمزها/قفل‌ها همچنان فقط شبیه‌سازی رفتار Excel هستند.
 - همه‌ی rendering ها با DOM API خالص انجام می‌شوند (`el`/`txt`/`sEl`/`button`/`frag`/`clear`
   در `src/core.js`)؛ هیچ `innerHTML`/`insertAdjacentHTML` در سورس‌های برنامه وجود ندارد
   (داده فقط به `textContent`/`setAttribute`/`.value` می‌رود). modal ها `opts.contentNode`
@@ -56,13 +61,13 @@ python3 src/build.py          # -> Mohsen_FINAL_v5.html
 
 ```bash
 cd src/test && npm install jsdom && node test_app.js
-# => SUMMARY: 101/101 passed
+# => SUMMARY: 105/105 passed
 ```
 
 - ✅ حذف کامل inline event handler ها (0 عدد در خروجی) — event delegation با `data-act` + CSP `script-src-attr 'none'`
 - ✅ **DOM-API refactor کامل شد** — صفر `innerHTML` در سورس‌های برنامه؛ تنها استثنای مستند:
   vendor `xlsx.full.min.js` ([INNERHTML_AUDIT.md](../INNERHTML_AUDIT.md)). نگهبان DoD در تست‌ها.
-- ✅ تست مرورگری واقعی: Playwright smoke روی Chromium واقعی (۲۲/۲۲) — CSP و file dialog
+- ✅ تست مرورگری واقعی: Playwright smoke روی Chromium واقعی (۲۴/۲۴) — CSP و file dialog
   در مرورگر واقعی اثبات می‌شوند، نه شبیه‌سازی.
 - 🔶 enterprise-grade نیست: فاقد backend/auth و CI.
 
@@ -72,14 +77,14 @@ cd src/test && npm install jsdom && node test_app.js
 ```bash
 cd src/test
 npm install jsdom          # فقط برای تست
-node test_app.js           # => SUMMARY: 101/101 passed  (۹۹ رفتاری + ۲ نگهبان DoD)
+node test_app.js           # => SUMMARY: 105/105 passed  (۱۰۳ رفتاری + ۲ نگهبان DoD)
 ```
 
 **۲) Playwright smoke (مرورگر واقعی Chromium — نه شبیه‌سازی):**
 ```bash
 cd src/e2e
 npm install
-npm test                   # => SMOKE SUMMARY: 22/22 passed
+npm test                   # => SMOKE SUMMARY: 24/24 passed
 # با مرورگر خودتان:  CHROME_PATH=".../chrome.exe" npm test
 ```
 پوشش smoke: اجرای **واقعی** CSP (مسدود شدن handler درون‌خطی + رویداد violation)،
