@@ -185,42 +185,107 @@ function rowIsEmpty(sh, excelRow) {
 
 /* ---------- modal dialogs (modUnicode.ShowMsg / ShowInput) ---------- */
 const vbOKOnly = 0, vbYesNoCancel = 3, vbYesNo = 4, vbCritical = 16, vbExclamation = 48, vbInformation = 64, vbQuestion = 32;
+/* ================================================================
+   DOM BUILDER UTILITIES — el / txt / sEl / button / frag / clear.
+   All renderers build DOM nodes through these; data strings only ever
+   land in textContent / setAttribute / .value — never HTML parsing.
+   ================================================================ */
+function txt(s) { return document.createTextNode(s === null || s === undefined ? "" : String(s)); }
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  if (attrs) for (const k of Object.keys(attrs)) {
+    const v = attrs[k];
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "text") node.textContent = String(v);
+    else if (k === "class") node.className = v;
+    else if (k === "style" && typeof v === "object") Object.assign(node.style, v);
+    else if (k === "value" && "value" in node) node.value = String(v);
+    else if (k === "checked" && "checked" in node) node.checked = !!v;
+    else if (k.slice(0, 2) === "on" && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? "" : String(v));
+  }
+  for (const ch of children.flat(4)) {
+    if (ch === null || ch === undefined || ch === false) continue;
+    node.appendChild(ch instanceof Node ? ch : txt(ch));
+  }
+  return node;
+}
+function sEl(tag, attrs, ...children) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  if (attrs) for (const k of Object.keys(attrs)) {
+    const v = attrs[k];
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "text") node.textContent = String(v);
+    else if (k.slice(0, 2) === "on" && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? "" : String(v));
+  }
+  for (const ch of children.flat(4)) {
+    if (ch === null || ch === undefined || ch === false) continue;
+    node.appendChild(ch instanceof Node ? ch : txt(ch));
+  }
+  return node;
+}
+function button(label, attrs, ...children) { return el("button", attrs, txt(String(label)), ...children); }
+function frag(...children) {
+  const f = document.createDocumentFragment();
+  for (const ch of children.flat(4)) {
+    if (ch === null || ch === undefined || ch === false) continue;
+    f.appendChild(ch instanceof Node ? ch : txt(ch));
+  }
+  return f;
+}
+function clear(node) { while (node && node.firstChild) node.removeChild(node.firstChild); return node; }
+/* multi-line plain text -> nodes with <br> (same rendering as before) */
+function textBlock(s) {
+  const parts = String(s === null || s === undefined ? "" : s).split("\n");
+  const kids = [];
+  parts.forEach((part, i) => { if (i) kids.push(el("br")); kids.push(txt(part)); });
+  return frag(...kids);
+}
+
 const IDOK = 1, IDCANCEL = 2, IDYES = 6, IDNO = 7;
 
 function ModalBox(opts) {
   return new Promise(resolve => {
     const ov = document.getElementById("modal-overlay");
     const cls = opts.cls || "info";
-    const box = document.createElement("div");
-    box.className = "mbox " + cls;
-    let buttons = "";
+    const box = el("div", { class: "mbox " + cls });
+    const head = el("div", { class: "t" },
+      el("span", { text: opts.title || "Data Manager" }),
+      el("span", { class: "x", "data-id": "0", text: "✕" }));
+    const content = el("div", { class: "c" });
+    if (opts.text) content.appendChild(textBlock(opts.text));
+    if (opts.contentNode) content.appendChild(opts.contentNode);
+    if (opts.trustedHtml) {
+      // TRANSITIONAL escape hatch — only for internal, already-escaped
+      // markup; removed once every caller passes opts.contentNode.
+      const wrap = el("div");
+      wrap.innerHTML = opts.trustedHtml;
+      content.appendChild(wrap);
+    }
+    const fbar = el("div", { class: "f" });
     (opts.buttons || [{ id: IDOK, label: "تأیید", cls: "ok" }]).forEach(b => {
-      buttons += `<button data-id="${b.id}" class="${b.cls}">${b.label}</button>`;
+      fbar.appendChild(el("button", { "data-id": b.id, class: b.cls, text: b.label }));
     });
-    box.innerHTML = `
-      <div class="t"><span>${escapeHtml(opts.title || "Data Manager")}</span><span class="x" data-id="0">✕</span></div>
-      <div class="c">${escapeHtml(opts.text || "")}${opts.html || ""}</div>
-      <div class="f">${buttons}</div>`;
-    ov.innerHTML = "";
+    box.appendChild(head); box.appendChild(content); box.appendChild(fbar);
+    clear(ov);
     ov.appendChild(box);
     ov.classList.add("show");
     let inpEl = null;
     const done = id => {
       ModalBox.lastValue = inpEl ? inpEl.value : undefined;
-      ov.classList.remove("show"); ov.innerHTML = ""; resolve(id);
+      ov.classList.remove("show"); clear(ov); resolve(id);
     };
-    box.querySelectorAll("button[data-id], .x").forEach(el => {
-      el.addEventListener("click", () => {
-        const id = parseInt(el.getAttribute("data-id"), 10);
+    box.querySelectorAll("button[data-id], .x").forEach(elm => {
+      elm.addEventListener("click", () => {
+        const id = parseInt(elm.getAttribute("data-id"), 10);
         if (id === 0 && opts.buttons && opts.buttons.length > 1) return done(IDCANCEL);
         done(id);
       });
     });
     if (opts.input !== undefined && opts.input !== null) {
-      const inp = document.createElement("input");
-      inp.className = "m-in"; inp.value = opts.input;
-      inp.id = "modal-input";
-      box.querySelector(".c").appendChild(inp);
+      const inp = el("input", { class: "m-in", value: opts.input, id: "modal-input" });
+      content.appendChild(inp);
       inpEl = inp;
       setTimeout(() => { inp.focus(); inp.select(); }, 60);
       inp.addEventListener("keydown", e => {
@@ -261,9 +326,8 @@ function escapeHtml(s) {
 }
 function Toast(msg, kind = "") {
   const box = document.getElementById("toasts");
-  const t = document.createElement("div");
-  t.className = "toast " + kind;
-  t.innerHTML = escapeHtml(msg).replace(/\n/g, "<br>");
+  const t = el("div", { class: "toast " + kind });
+  t.appendChild(textBlock(msg));
   box.appendChild(t);
   setTimeout(() => { t.style.opacity = "0"; t.style.transition = ".4s"; setTimeout(() => t.remove(), 450); }, 4200);
 }

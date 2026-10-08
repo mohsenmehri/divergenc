@@ -375,20 +375,22 @@ const modAddRecord = {
       const ov = document.getElementById("modal-overlay");
       const box = document.createElement("div");
       box.className = "mbox q";
-      box.innerHTML = `
-        <div class="t"><span>انتخاب بخش</span><span class="x">✕</span></div>
-        <div class="c">شیت: ${escapeHtml(sheetName)}<br>--------------------------------<br>
-          <b>بله</b> &nbsp;=&nbsp; شعبه &nbsp;(Branch)<br>
-          <b>خیر</b> &nbsp;=&nbsp; ATM<br>
-          <b>لغو</b> &nbsp;=&nbsp; انصراف
-          <div class="section-pick">
-            <button class="br" data-p="branch">شعبه</button>
-            <button class="atm" data-p="atm">خودپرداز</button>
-            <button class="cn" data-p="cancel">انصراف</button>
-          </div>
-        </div>`;
-      ov.innerHTML = ""; ov.appendChild(box); ov.classList.add("show");
-      const done = v => { ov.classList.remove("show"); ov.innerHTML = ""; resolve(v); };
+      box.appendChild(el("div", { class: "t" },
+        el("span", { text: "\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u062e\u0634" }),
+        el("span", { class: "x", text: "\u2715" })));
+      box.appendChild(el("div", { class: "c" },
+        txt("\u0634\u06cc\u062a: " + TrimText(sheetName)), el("br"),
+        txt("--------------------------------"), el("br"),
+        el("b", { text: "\u0628\u0644\u0647" }), txt(" \u00a0=\u00a0 \u0634\u0639\u0628\u0647 \u00a0(Branch)"), el("br"),
+        el("b", { text: "\u062e\u06cc\u0631" }), txt(" \u00a0=\u00a0 ATM"), el("br"),
+        el("b", { text: "\u0644\u063a\u0648" }), txt(" \u00a0=\u00a0 \u0627\u0646\u0635\u0631\u0627\u0641"),
+        el("div", { class: "section-pick" },
+          el("button", { class: "br", "data-p": "branch", text: "\u0634\u0639\u0628\u0647" }),
+          el("button", { class: "atm", "data-p": "atm", text: "\u062e\u0648\u062f\u067e\u0631\u062f\u0627\u0632" }),
+          el("button", { class: "cn", "data-p": "cancel", text: "\u0627\u0646\u0635\u0631\u0627\u0641" }))));
+      clear(ov); ov.appendChild(box); ov.classList.add("show");
+      clear(ov); ov.appendChild(box); ov.classList.add("show");
+      const done = v => { ov.classList.remove("show"); clear(ov); resolve(v); };
       box.querySelectorAll("[data-p]").forEach(b => b.onclick = () => done(b.dataset.p));
       box.querySelector(".x").onclick = () => done("cancel");
     });
@@ -480,39 +482,36 @@ const modAddRecord = {
       return TrimText(String(cellVal(sheetName, prevRowIdx, headerCols[i], true) ?? ""));
     });
 
-    const formHtml = `
-      <div class="hint" style="margin-bottom:8px">شیت: <b>${escapeHtml(sheetName)}</b>
-        ${sectionType ? " — بخش: <b>" + (sectionType === "branch" ? "شعبه" : "خودپرداز") + "</b>" : ""}
-        — ردیف مقصد: <b class="rtl-num">${newRow}</b><br>
-        فیلدهای خالی نادیده گرفته می‌شوند (Skip — معادل NO در فرم VBA). برای لغو کل عملیات، انصراف بزنید.</div>
-      <div class="wizard-fields">
-        ${headers.map((h, i) => `
-          <div class="wf">
-            <label>${escapeHtml(h)}</label>
-            <input data-i="${i}" value="${escapeHtmlAttr(defaults[i] || "")}" placeholder="(خالی = Skip)">
-          </div>`).join("")}
-      </div>`;
+    const formNode = el("div", {},
+      el("div", { class: "hint", style: { marginBottom: "8px" } },
+        txt("\u0634\u06cc\u062a: "), el("b", { text: sheetName }),
+        sectionType ? frag(txt(" \u2014 \u0628\u062e\u0634: "), el("b", { text: sectionType === "branch" ? "\u0634\u0639\u0628\u0647" : "\u062e\u0648\u062f\u067e\u0631\u062f\u0627\u0632" })) : frag(),
+        txt(" \u2014 \u0631\u062f\u06cc\u0641 \u0645\u0642\u0635\u062f: "), el("b", { class: "rtl-num", text: String(newRow) }), el("br"),
+        txt("\u0641\u06cc\u0644\u062f\u0647\u0627\u06cc \u062e\u0627\u0644\u06cc \u0646\u0627\u062f\u06cc\u062f\u0647 \u06af\u0631\u0641\u062a\u0647 \u0645\u06cc\u200c\u0634\u0648\u0646\u062f (Skip \u2014 \u0645\u0639\u0627\u062f\u0644 NO \u062f\u0631 \u0641\u0631\u0645 VBA). \u0628\u0631\u0627\u06cc \u0644\u063a\u0648 \u06a9\u0644 \u0639\u0645\u0644\u06cc\u0627\u062a\u060c \u0627\u0646\u0635\u0631\u0627\u0641 \u0628\u0632\u0646\u06cc\u062f.")),
+      el("div", { class: "wizard-fields" },
+        headers.map((h, i) => el("div", { class: "wf" },
+          el("label", { text: h }),
+          el("input", { "data-i": i, value: defaults[i] || "", placeholder: "(\u062e\u0627\u0644\u06cc = Skip)" })))));
 
-    const values = await this.WizardAddForm(formHtml);
+    const values = await this.WizardAddForm(formNode);
     if (values === null) return; // cancelled
     await this._saveAdd(sheetName, sectionType, atmSepRow, headers, headerCols, newRow, values);
   },
 
   // promise modal for the add-wizard — captures input values on OK
-  WizardAddForm(html) {
+  WizardAddForm(contentNode) {
     return new Promise(resolve => {
       const ov = document.getElementById("modal-overlay");
-      const box = document.createElement("div");
-      box.className = "mbox info";
-      box.innerHTML = `
-        <div class="t"><span>Add Record — ویزارد ورود رکورد</span><span class="x">✕</span></div>
-        <div class="c">${html}</div>
-        <div class="f">
-          <button class="ok" data-a="ok">ادامه ← پیش‌نمایش</button>
-          <button class="cancel" data-a="cancel">انصراف</button>
-        </div>`;
-      ov.innerHTML = ""; ov.appendChild(box); ov.classList.add("show");
-      const done = v => { ov.classList.remove("show"); ov.innerHTML = ""; resolve(v); };
+      const box = el("div", { class: "mbox info" });
+      box.appendChild(el("div", { class: "t" },
+        el("span", { text: "Add Record \u2014 \u0648\u06cc\u0632\u0627\u0631\u062f \u0648\u0631\u0648\u062f \u0631\u06a9\u0648\u0631\u062f" }),
+        el("span", { class: "x", text: "\u2715" })));
+      box.appendChild(el("div", { class: "c" }, contentNode));
+      box.appendChild(el("div", { class: "f" },
+        el("button", { class: "ok", "data-a": "ok", text: "\u0627\u062f\u0627\u0645\u0647 \u2190 \u067e\u06cc\u0634\u200c\u0646\u0645\u0627\u06cc\u0634" }),
+        el("button", { class: "cancel", "data-a": "cancel", text: "\u0627\u0646\u0635\u0631\u0627\u0641" })));
+      clear(ov); ov.appendChild(box); ov.classList.add("show");
+      const done = v => { ov.classList.remove("show"); clear(ov); resolve(v); };
       box.querySelector("[data-a='cancel']").onclick = () => done(null);
       box.querySelector(".x").onclick = () => done(null);
       box.querySelector("[data-a='ok']").onclick = () => {

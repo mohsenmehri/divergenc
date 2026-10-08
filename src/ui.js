@@ -182,14 +182,15 @@ const modNavigator = {
       title: "انتخاب شیت — SHEET NAVIGATOR",
       cls: "info",
       text: "",
-      html: `<div class="nav-grid">${cards}</div>
+      // TRANSITIONAL: becomes opts.contentNode in the navigator commit.
+      trustedHtml: `<div class="nav-grid">${cards}</div>
              <div class="hint" style="margin-top:10px">${dataSheets.length} شیت — گروه‌بندی‌شده بر اساس دسته‌ها</div>`,
       buttons: [{ id: IDCANCEL, label: "✕ بستن", cls: "cancel" }]
     });
   },
   NavToSelectedSheet(name) {
     document.getElementById("modal-overlay").classList.remove("show");
-    document.getElementById("modal-overlay").innerHTML = "";
+    clear(document.getElementById("modal-overlay"));
     if (WB.sheets[name]) {
       renderSheetView(name);
       switchView("sheet");
@@ -197,7 +198,7 @@ const modNavigator = {
   },
   CloseNavigator() {
     document.getElementById("modal-overlay").classList.remove("show");
-    document.getElementById("modal-overlay").innerHTML = "";
+    clear(document.getElementById("modal-overlay"));
     GoToControlPanel();
   }
 };
