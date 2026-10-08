@@ -46,6 +46,22 @@ python3 src/build.py          # -> Mohsen_FINAL_v5.html
 - فایل ورودی قبل از دست زدن به state اعتبارسنجی می‌شود (`validateWorkbookData`)؛
   فایل خراب/ناقص رد می‌شود و وضعیت برنامه دست‌نخورده می‌ماند.
 
+
+## وضعیت صادقانه (Honest status)
+
+ادعاهای تست **فقط از مسیر repository قابل اثبات‌اند، نه از فایل HTML خروجی**:
+
+```bash
+cd src/test && npm install jsdom && node test_app.js
+# => SUMMARY: N/N passed   (در حال حاضر 90+ assertion)
+```
+
+- ✅ حذف کامل inline event handler ها (0 عدد در خروجی) — event delegation با `data-act` + CSP `script-src-attr 'none'`
+- ✅ مسیرهای پرخطر `innerHTML` escape شده‌اند ([INNERHTML_AUDIT.md](../INNERHTML_AUDIT.md))
+- 🔶 **بازسازی کامل template ها به DOM API خالص هنوز انجام نشده** — مرحله بعدی refactor است؛
+  ایمنی فعلی بر پایه escape در همان template ها است.
+- 🔶 enterprise-grade نیست: فاقد backend/auth و تست‌های مرورگری واقعی (Cypress/Playwright) و CI.
+
 ## تست‌ها
 
 ```bash

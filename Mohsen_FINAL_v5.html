@@ -2,6 +2,7 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NetScope Console — DATA MANAGER v28</title>
 <style>
@@ -792,19 +793,19 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 
     <div class="side-sect">دسترسی سریع</div>
     <nav class="side-nav">
-      <div class="nav-item" onclick="RunMacro('modAddRecord.StartAddWizard')">
+      <div class="nav-item" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         افزودن رکورد
       </div>
-      <div class="nav-item" onclick="RunMacro('modRemoveRecord.StartRemoveWizard')">
+      <div class="nav-item" data-act="run-macro" data-arg="modRemoveRecord.StartRemoveWizard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>
         حذف رکورد
       </div>
-      <div class="nav-item" onclick="RunMacro('modUndo.UndoLastRemove')">
+      <div class="nav-item" data-act="run-macro" data-arg="modUndo.UndoLastRemove">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
         Undo حذف
       </div>
-      <div class="nav-item" onclick="RunMacro('modNavigator.ShowSheetNavigator')">
+      <div class="nav-item" data-act="run-macro" data-arg="modNavigator.ShowSheetNavigator">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
         انتخاب‌گر شیت‌ها
       </div>
@@ -824,7 +825,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 
     <!-- TOPBAR -->
     <header id="topbar">
-      <button class="icon-btn burger" onclick="document.getElementById('sidebar').classList.toggle('open')">
+      <button class="icon-btn burger" data-act="toggle-sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="page-title">
@@ -837,13 +838,13 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
       </div>
       <div class="spacer"></div>
       <div class="stat-pill" id="stat-line">در حال بارگذاری…</div>
-      <button class="icon-btn accent" title="ورود فایل داده (اکسل / CSV / JSON)" onclick="modImport.OpenFile()">
+      <button class="icon-btn accent" title="ورود فایل داده (اکسل / CSV / JSON)" data-act="open-file">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
       </button>
-      <button class="icon-btn" title="بازسازی ایندکس" onclick="RunMacro('modSearchEngine.RefreshSearchIndexCore')">
+      <button class="icon-btn" title="بازسازی ایندکس" data-act="run-macro" data-arg="modSearchEngine.RefreshSearchIndexCore">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
       </button>
-      <button class="icon-btn" title="خروجی‌ها" onclick="RunMacro('modExport.ExportSearchResults')">
+      <button class="icon-btn" title="خروجی‌ها" data-act="run-macro" data-arg="modExport.ExportSearchResults">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
       </button>
       <div class="user-chip">
@@ -892,15 +893,15 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
             <h1>سامانه مدیریت اطلاعات <em>شبکه شعب و مراکز داده</em></h1>
             <p>مدیریت کامل تجهیزات روتر و سوییچ، آدرس‌دهی IP، VLAN ها، بسترهای ارتباطی و سرویس‌های مخابراتی — جستجو، افزودن، حذف با آرشیو و Undo، خروجی‌گیری و ثبت تغییرات.</p>
             <div class="hero-actions">
-              <button class="btn btn-primary" onclick="RunMacro('modSearchEngine.SearchRecords')">
+              <button class="btn btn-primary" data-act="run-macro" data-arg="modSearchEngine.SearchRecords">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                 اجرای جستجو
               </button>
-              <button class="btn btn-green" onclick="RunMacro('modAddRecord.StartAddWizard')">
+              <button class="btn btn-green" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
                 افزودن رکورد
               </button>
-              <button class="btn btn-violet" onclick="RunMacro('modNavigator.ShowSheetNavigator')">
+              <button class="btn btn-violet" data-act="run-macro" data-arg="modNavigator.ShowSheetNavigator">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
                 Sheet Navigator
               </button>
@@ -922,7 +923,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
               <h3>دسته‌بندی شیت‌های شبکه</h3>
             </div>
             <div class="spacer"></div>
-            <button class="btn btn-ghost btn-sm" onclick="switchView('sheet')">مشاهده همه شیت‌ها ←</button>
+            <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه شیت‌ها ←</button>
           </div>
           <div class="card-body">
             <div class="cat-tiles" id="dash-cats"></div>
@@ -968,7 +969,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
                   <div class="hint">حالت ON = دقیقاً برابر / OFF = شامل عبارت · <span class="mono">B12</span></div>
                 </div>
                 <div class="spacer"></div>
-                <button class="btn btn-primary" onclick="RunMacro('modSearchEngine.SearchRecords')">
+                <button class="btn btn-primary" data-act="run-macro" data-arg="modSearchEngine.SearchRecords">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                   SEARCH
                 </button>
@@ -997,7 +998,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
                 <select class="inp" id="cp-c16"></select>
               </div>
               <div class="hint">برای شیت‌های استانی، نوع بخش (شعبه / خودپرداز) پرسیده می‌شود و فیلدها با مقادیر پیش‌فرض ردیف قبل نمایش داده می‌شوند.</div>
-              <button class="btn btn-green btn-block" onclick="RunMacro('modAddRecord.StartAddWizard')">
+              <button class="btn btn-green btn-block" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
                 ADD RECORD
               </button>
@@ -1029,8 +1030,8 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
                 <input class="inp" type="text" id="cp-c27" placeholder="مقدار مورد حذف…">
               </div>
               <div style="display:flex;gap:9px">
-                <button class="btn btn-red" style="flex:1" onclick="RunMacro('modRemoveRecord.StartRemoveWizard')">REMOVE RECORD</button>
-                <button class="btn btn-amber" onclick="RunMacro('modUndo.UndoLastRemove')" title="بازگردانی آخرین حذف">
+                <button class="btn btn-red" style="flex:1" data-act="run-macro" data-arg="modRemoveRecord.StartRemoveWizard">REMOVE RECORD</button>
+                <button class="btn btn-amber" data-act="run-macro" data-arg="modUndo.UndoLastRemove" title="بازگردانی آخرین حذف">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
                   UNDO
                 </button>
@@ -1055,83 +1056,83 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
             </div>
             <div class="card-body">
               <div class="tools-grid">
-                <div class="tool-tile" onclick="RunMacro('modSearchEngine.SaveChanges')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.SaveChanges">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
                   <span>SAVE CHANGES</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modSearchEngine.OpenSearchResults')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.OpenSearchResults">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                   <span>OPEN RESULTS</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modSearchEngine.ClearSearchResults')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.ClearSearchResults">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/><path d="M10 11v6M14 11v6"/></svg>
                   <span>CLEAR RESULTS</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modUI.RefreshPanel')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modUI.RefreshPanel">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
                   <span>REFRESH PANEL</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modSearchEngine.RefreshSearchIndexCore')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.RefreshSearchIndexCore">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
                   <span>REFRESH INDEX</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modExport.ExportSearchResults')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportSearchResults">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
                   <span>خروجی نتایج</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modExport.ExportCurrentData')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportCurrentData">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8M8 16h5M8 8h8"/></svg>
                   <span>خروجی داده جاری</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modExport.ExportChangeLog')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportChangeLog">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
                   <span>خروجی تاریخچه</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modExportAllModules.ExportAllModules')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modExportAllModules.ExportAllModules">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="m8 6-6 6 6 6M16 6l6 6-6 6"/></svg>
                   <span>خروجی VBA</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modFixUnlock.UnlockDataSheets')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modFixUnlock.UnlockDataSheets">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
                   <span>رفع قفل شیت‌ها</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modUI.ProtectControlPanel')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modUI.ProtectControlPanel">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                   <span>قفل پنل</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modUI.UnprotectControlPanel')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modUI.UnprotectControlPanel">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
                   <span>باز کردن قفل</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modConstants.HideSystemSheets')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modConstants.HideSystemSheets">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M2 12s3.5-7 10-7c2 0 3.8.7 5.3 1.7M22 12s-3.5 7-10 7c-2 0-3.8-.7-5.3-1.7"/><path d="M3 3l18 18"/></svg>
                   <span>مخفی سازی سیستم</span>
                 </div>
-                <div class="tool-tile" onclick="RunMacro('modConstants.UnhideSystemSheets')">
+                <div class="tool-tile" data-act="run-macro" data-arg="modConstants.UnhideSystemSheets">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                   <span>نمایش سیستم</span>
                 </div>
-                <div class="tool-tile wide" onclick="modImport.OpenFile()">
+                <div class="tool-tile wide" data-act="open-file">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                   <span>IMPORT FILE</span>
                 </div>
-                <div class="tool-tile" onclick="ExportWorkbookXlsx()">
+                <div class="tool-tile" data-act="export-xlsx">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                   <span>EXPORT XLSX</span>
                 </div>
-                <div class="tool-tile" onclick="resetToEmptyData()">
+                <div class="tool-tile" data-act="reset-empty">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>
                   <span>EMPTY DATA</span>
                 </div>
-                <div class="tool-tile" onclick="backupAll()">
+                <div class="tool-tile" data-act="backup">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
                   <span>پشتیبان‌گیری</span>
                 </div>
-                <div class="tool-tile" onclick="restoreAll()">
+                <div class="tool-tile" data-act="restore">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 20V9m0 0-4 4m4-4 4 4"/><path d="M5 5h14"/></svg>
                   <span>بازیابی</span>
                 </div>
-                <div class="tool-tile" onclick="resetAll()">
+                <div class="tool-tile" data-act="reset-all">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
                   <span>بازنشانی</span>
                 </div>
@@ -1142,7 +1143,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
                 <label>باز کردن مستقیم شیت <span class="ref">C41</span></label>
                 <div style="display:flex;gap:9px">
                   <select class="inp" id="cp-c41"></select>
-                  <button class="btn btn-cyan" style="flex:0 0 auto" onclick="RunMacro('modUI.NavigateToSheet')">
+                  <button class="btn btn-cyan" style="flex:0 0 auto" data-act="run-macro" data-arg="modUI.NavigateToSheet">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
                     باز کردن شیت
                   </button>
@@ -1233,10 +1234,10 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
           <div class="sub">SEARCH RESULTS — ویرایش سلول‌ها سپس SAVE CHANGES</div>
         </div>
         <div class="head-actions">
-          <button class="btn btn-green btn-sm" onclick="RunMacro('modSearchEngine.SaveChanges')">SAVE CHANGES</button>
-          <button class="btn btn-red btn-sm" onclick="RunMacro('modSearchEngine.ClearSearchResults')">CLEAR</button>
-          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExport.ExportSearchResults')">EXPORT CSV</button>
-          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+          <button class="btn btn-green btn-sm" data-act="run-macro" data-arg="modSearchEngine.SaveChanges">SAVE CHANGES</button>
+          <button class="btn btn-red btn-sm" data-act="run-macro" data-arg="modSearchEngine.ClearSearchResults">CLEAR</button>
+          <button class="btn btn-ghost btn-sm" data-act="run-macro" data-arg="modExport.ExportSearchResults">EXPORT CSV</button>
+          <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
       </div>
       <div class="content">
@@ -1267,10 +1268,10 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
         </div>
         <div class="head-actions filter-bar">
           <input class="inp" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
-          <button class="btn btn-primary btn-sm" onclick="filterSheetRows()">فیلتر</button>
-          <button class="btn btn-ghost btn-sm" onclick="exportCurrentSheetCSV()">⬇ CSV</button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleSheetLock()">قفل/باز شیت</button>
-          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+          <button class="btn btn-primary btn-sm" data-act="filter-rows">فیلتر</button>
+          <button class="btn btn-ghost btn-sm" data-act="export-sheet-csv">⬇ CSV</button>
+          <button class="btn btn-ghost btn-sm" data-act="toggle-lock">قفل/باز شیت</button>
+          <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
       </div>
       <div class="content">
@@ -1297,9 +1298,9 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
           <div class="sub">CHANGE_LOG — ثبت کامل همه عملیات‌ها</div>
         </div>
         <div class="head-actions">
-          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExport.ExportChangeLog')">⬇ EXPORT</button>
-          <button class="btn btn-red btn-sm" onclick="clearLog()">پاک‌سازی لاگ</button>
-          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+          <button class="btn btn-ghost btn-sm" data-act="run-macro" data-arg="modExport.ExportChangeLog">⬇ EXPORT</button>
+          <button class="btn btn-red btn-sm" data-act="clear-log">پاک‌سازی لاگ</button>
+          <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
       </div>
       <div class="content">
@@ -1318,8 +1319,8 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
           <div class="sub">تمام ماکروهای VBA فایل اصلی — پیاده‌سازی‌شده و قابل اجرا</div>
         </div>
         <div class="head-actions">
-          <button class="btn btn-ghost btn-sm" onclick="RunMacro('modExportAllModules.ExportAllModules')">⬇ Export All Modules</button>
-          <button class="btn btn-ghost btn-sm" onclick="GoToControlPanel()">← داشبورد</button>
+          <button class="btn btn-ghost btn-sm" data-act="run-macro" data-arg="modExportAllModules.ExportAllModules">⬇ Export All Modules</button>
+          <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
       </div>
       <div class="content">
@@ -1332,7 +1333,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 
 <div id="modal-overlay"></div>
 <div id="toasts"></div>
-<input type="file" id="import-file-input" accept=".xlsx,.xlsm,.xls,.csv,.txt,.json" style="display:none" onchange="modImport.HandleFile(this.files[0])">
+<input type="file" id="import-file-input" accept=".xlsx,.xlsm,.xls,.csv,.txt,.json" style="display:none" data-act="handle-file" data-on="change">
 <script>
 /*__DATA__*/
 /* ================================================================
@@ -1941,7 +1942,7 @@ function renderSheetView(name) {
   }
   html += "</tbody></table></div>";
   if (lastRow + 5 > limit) {
-    html += `<div style="text-align:center;padding:10px"><button class="mini-btn gray" onclick="state.pageLimit+=500;renderSheetView(decodeURIComponent('${encJs(name)}'))">نمایش ردیف‌های بیشتر (تا ${Math.min(lastRow + 5, state.pageLimit + 500)})</button></div>`;
+    html += `<div style="text-align:center;padding:10px"><button class="mini-btn gray" data-act="show-more-rows" data-name="${escapeHtmlAttr(name)}">نمایش ردیف‌های بیشتر (تا ${Math.min(lastRow + 5, state.pageLimit + 500)})</button></div>`;
   }
   body.innerHTML = html;
 
@@ -4078,7 +4079,7 @@ function renderMacrosView() {
       html += `<div class="macro-item">
         <div class="mnm">${escapeHtml(m.name)}</div>
         <div class="mds">${escapeHtml(m.desc)}</div>
-        <button class="macro-run" onclick="RunMacroIndex('${escapeHtmlAttr(mod)}','${escapeHtmlAttr(m.name)}')">▶ اجرا</button>
+        <button class="macro-run" data-act="run-macro-index" data-mod="${escapeHtmlAttr(mod)}" data-name="${escapeHtmlAttr(m.name)}">▶ اجرا</button>
       </div>`;
     });
     html += "</div>";
@@ -4092,8 +4093,8 @@ function renderMacrosView() {
     html += `<div class="macro-item">
       <div class="mnm">${escapeHtml(name)}</div>
       <div class="mds">${escapeHtml(meta)}</div>
-      <button class="macro-run" onclick="showVbaSource('${escapeHtmlAttr(name)}')">👁 مشاهده</button>
-      <button class="macro-dl" onclick="modExportAllModules.DownloadModule('${escapeHtmlAttr(name)}')">⬇</button>
+      <button class="macro-run" data-act="show-vba" data-name="${escapeHtmlAttr(name)}">👁 مشاهده</button>
+      <button class="macro-dl" data-act="download-module" data-name="${escapeHtmlAttr(name)}">⬇</button>
     </div>`;
   });
   html += "</div>";
@@ -4240,6 +4241,52 @@ function RunMacro(path) {
 }
 
 /* ================================================================
+   EVENT DELEGATION — no inline onclick/onchange handlers anywhere
+   (CSP-friendly: script-src-attr 'none'; maintainable: one dispatch
+   table). Data strings only travel through DOM attributes (dataset),
+   never through executable JS strings.
+   ================================================================ */
+const ACTIONS = {
+  "run-macro": el => RunMacro(el.dataset.arg),
+  "run-macro-index": el => RunMacroIndex(el.dataset.mod, el.dataset.name),
+  "open-file": () => modImport.OpenFile(),
+  "handle-file": el => modImport.HandleFile(el.files ? el.files[0] : null),
+  "export-xlsx": () => ExportWorkbookXlsx(),
+  "reset-empty": () => resetToEmptyData(),
+  "backup": () => backupAll(),
+  "restore": () => restoreAll(),
+  "reset-all": () => resetAll(),
+  "go-cp": () => GoToControlPanel(),
+  "switch-view": el => switchView(el.dataset.view),
+  "toggle-sidebar": () => { const sb = document.getElementById("sidebar"); if (sb) sb.classList.toggle("open"); },
+  "toggle-lock": () => toggleSheetLock(),
+  "filter-rows": () => filterSheetRows(),
+  "export-sheet-csv": () => exportCurrentSheetCSV(),
+  "clear-log": () => clearLog(),
+  "open-sheet": el => openSheetCard(el.dataset.name),
+  "nav-sheet": el => modNavigator.NavToSelectedSheet(el.dataset.name),
+  "open-category": el => openCategory(el.dataset.cat),
+  "set-filter": el => setCatFilter(el.dataset.cat),
+  "show-vba": el => showVbaSource(el.dataset.name),
+  "download-module": el => modExportAllModules.DownloadModule(el.dataset.name),
+  "show-more-rows": el => { state.pageLimit += 500; renderSheetView(el.dataset.name); }
+};
+function bindDelegatedEvents() {
+  document.addEventListener("click", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el) return;
+    const fn = ACTIONS[el.dataset.act];
+    if (fn) { e.preventDefault(); fn(el); }
+  });
+  document.addEventListener("change", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-act][data-on='change']") : null;
+    if (!el) return;
+    const fn = ACTIONS[el.dataset.act];
+    if (fn) fn(el);
+  });
+}
+
+/* ================================================================
    INIT
    ================================================================ */
 function initUIFromState() {
@@ -4331,6 +4378,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     state.cp.C41 = "";
     state.user = "Web User";
   }
+  bindDelegatedEvents();
   bindPanelEvents();
   await Workbook_Open();
   initUIFromState();
@@ -4427,7 +4475,7 @@ function emptyStateHtml(msg) {
       </div>
       <h3>هنوز داده‌ای وجود ندارد</h3>
       <p>${msg || "سیستم خام و آماده است — فایل اکسل (.xlsx / .xlsm) یا CSV خود را وارد کنید تا همه ماکروها روی داده‌های شما اجرا شوند."}</p>
-      <button class="btn btn-primary" onclick="modImport.OpenFile()">📂 ورود فایل داده</button>
+      <button class="btn btn-primary" data-act="open-file">📂 ورود فایل داده</button>
     </div>`;
 }
 function renderDashCats() {
@@ -4441,7 +4489,7 @@ function renderDashCats() {
   host.innerHTML = cats.map(c => {
     const st = catStats(c.id);
     return `
-    <div class="cat-tile" style="color:${c.color}" onclick="openCategory('${c.id}')">
+    <div class="cat-tile" style="color:${c.color}" data-act="open-category" data-cat="${c.id}">
       <div class="ct-val">${st.count}</div>
       <div class="ct-ico" style="background:${c.color}22;color:${c.color}">${catSvg(c)}</div>
       <div class="ct-name" style="color:var(--txt-0)">${c.name}</div>
@@ -4468,7 +4516,7 @@ function renderCatBar() {
       : catStats(c.id);
     const active = (state.catFilter || "all") === c.id;
     const bg = active ? `background:linear-gradient(135deg,${c.color}cc,${c.color}88)` : "";
-    return `<div class="cat-pill ${active ? "active" : ""}" style="${bg};${active ? "" : ""}" onclick="setCatFilter('${c.id}')">
+    return `<div class="cat-pill ${active ? "active" : ""}" style="${bg};${active ? "" : ""}" data-act="set-filter" data-cat="${c.id}">
       <span class="cp-ico" style="color:${active ? "#fff" : c.color}">${catSvg(c)}</span>
       ${c.name}
       <span class="cp-n">${st.count}</span>
@@ -4527,7 +4575,7 @@ function renderSheetCatalog() {
             const rows = Math.max(0, countRows(n) - 1);
             const tags = sheetTags(n);
             return `
-            <div class="sheet-card ${state.currentSheet === n ? "active" : ""}" onclick="openSheetCard(decodeURIComponent('${encJs(n)}'))">
+            <div class="sheet-card ${state.currentSheet === n ? "active" : ""}" data-act="open-sheet" data-name="${escapeHtmlAttr(n)}">
               <div class="sc-glow" style="background:${c.color}"></div>
               <div class="sc-top">
                 <span class="sc-dot" style="background:${c.color}"></span>
@@ -4573,7 +4621,7 @@ function renderGroupedNavigator() {
     names.forEach(n => {
       idx++;
       cards += `<div class="nav-card" style="background:linear-gradient(135deg,${c.color}dd,${c.color}88)"
-        onclick="modNavigator.NavToSelectedSheet(decodeURIComponent('${encJs(n)}'))">
+        data-act="nav-sheet" data-name="${escapeHtmlAttr(n)}">
         <div class="num">${idx}</div><div>${escapeHtml(n)}</div>
         <div class="rows">${Math.max(0, countRows(n) - 1).toLocaleString("fa-IR")}</div>
       </div>`;
@@ -4601,6 +4649,7 @@ Object.assign(window, {
   modImport, importWorkbookFromBuffer, importCsvText, applyJsonBackup,
   resetToEmptyData, BuildExportWorkbook, ExportWorkbookXlsx, parseCsvText,
   APP_SHELL, withTransaction, withTransactionSync, snapshotWorkbook, restoreWorkbook,
+  ACTIONS, bindDelegatedEvents,
   validateWorkbookData, normalizeSheetData, sanitizeSheetName,
   verifySearchIndex, recoverSearchIndex, encJs, escapeHtmlAttr,
   SHEET_CATEGORIES, categoryOf, sheetsOfCategory, renderSheetCatalog,

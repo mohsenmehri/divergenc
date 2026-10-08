@@ -562,7 +562,7 @@ function renderSheetView(name) {
   }
   html += "</tbody></table></div>";
   if (lastRow + 5 > limit) {
-    html += `<div style="text-align:center;padding:10px"><button class="mini-btn gray" onclick="state.pageLimit+=500;renderSheetView(decodeURIComponent('${encJs(name)}'))">نمایش ردیف‌های بیشتر (تا ${Math.min(lastRow + 5, state.pageLimit + 500)})</button></div>`;
+    html += `<div style="text-align:center;padding:10px"><button class="mini-btn gray" data-act="show-more-rows" data-name="${escapeHtmlAttr(name)}">نمایش ردیف‌های بیشتر (تا ${Math.min(lastRow + 5, state.pageLimit + 500)})</button></div>`;
   }
   body.innerHTML = html;
 

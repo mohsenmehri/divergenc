@@ -990,7 +990,7 @@ function renderMacrosView() {
       html += `<div class="macro-item">
         <div class="mnm">${escapeHtml(m.name)}</div>
         <div class="mds">${escapeHtml(m.desc)}</div>
-        <button class="macro-run" onclick="RunMacroIndex('${escapeHtmlAttr(mod)}','${escapeHtmlAttr(m.name)}')">▶ اجرا</button>
+        <button class="macro-run" data-act="run-macro-index" data-mod="${escapeHtmlAttr(mod)}" data-name="${escapeHtmlAttr(m.name)}">▶ اجرا</button>
       </div>`;
     });
     html += "</div>";
@@ -1004,8 +1004,8 @@ function renderMacrosView() {
     html += `<div class="macro-item">
       <div class="mnm">${escapeHtml(name)}</div>
       <div class="mds">${escapeHtml(meta)}</div>
-      <button class="macro-run" onclick="showVbaSource('${escapeHtmlAttr(name)}')">👁 مشاهده</button>
-      <button class="macro-dl" onclick="modExportAllModules.DownloadModule('${escapeHtmlAttr(name)}')">⬇</button>
+      <button class="macro-run" data-act="show-vba" data-name="${escapeHtmlAttr(name)}">👁 مشاهده</button>
+      <button class="macro-dl" data-act="download-module" data-name="${escapeHtmlAttr(name)}">⬇</button>
     </div>`;
   });
   html += "</div>";
@@ -1152,6 +1152,52 @@ function RunMacro(path) {
 }
 
 /* ================================================================
+   EVENT DELEGATION — no inline onclick/onchange handlers anywhere
+   (CSP-friendly: script-src-attr 'none'; maintainable: one dispatch
+   table). Data strings only travel through DOM attributes (dataset),
+   never through executable JS strings.
+   ================================================================ */
+const ACTIONS = {
+  "run-macro": el => RunMacro(el.dataset.arg),
+  "run-macro-index": el => RunMacroIndex(el.dataset.mod, el.dataset.name),
+  "open-file": () => modImport.OpenFile(),
+  "handle-file": el => modImport.HandleFile(el.files ? el.files[0] : null),
+  "export-xlsx": () => ExportWorkbookXlsx(),
+  "reset-empty": () => resetToEmptyData(),
+  "backup": () => backupAll(),
+  "restore": () => restoreAll(),
+  "reset-all": () => resetAll(),
+  "go-cp": () => GoToControlPanel(),
+  "switch-view": el => switchView(el.dataset.view),
+  "toggle-sidebar": () => { const sb = document.getElementById("sidebar"); if (sb) sb.classList.toggle("open"); },
+  "toggle-lock": () => toggleSheetLock(),
+  "filter-rows": () => filterSheetRows(),
+  "export-sheet-csv": () => exportCurrentSheetCSV(),
+  "clear-log": () => clearLog(),
+  "open-sheet": el => openSheetCard(el.dataset.name),
+  "nav-sheet": el => modNavigator.NavToSelectedSheet(el.dataset.name),
+  "open-category": el => openCategory(el.dataset.cat),
+  "set-filter": el => setCatFilter(el.dataset.cat),
+  "show-vba": el => showVbaSource(el.dataset.name),
+  "download-module": el => modExportAllModules.DownloadModule(el.dataset.name),
+  "show-more-rows": el => { state.pageLimit += 500; renderSheetView(el.dataset.name); }
+};
+function bindDelegatedEvents() {
+  document.addEventListener("click", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
+    if (!el) return;
+    const fn = ACTIONS[el.dataset.act];
+    if (fn) { e.preventDefault(); fn(el); }
+  });
+  document.addEventListener("change", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-act][data-on='change']") : null;
+    if (!el) return;
+    const fn = ACTIONS[el.dataset.act];
+    if (fn) fn(el);
+  });
+}
+
+/* ================================================================
    INIT
    ================================================================ */
 function initUIFromState() {
@@ -1243,6 +1289,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     state.cp.C41 = "";
     state.user = "Web User";
   }
+  bindDelegatedEvents();
   bindPanelEvents();
   await Workbook_Open();
   initUIFromState();
@@ -1339,7 +1386,7 @@ function emptyStateHtml(msg) {
       </div>
       <h3>هنوز داده‌ای وجود ندارد</h3>
       <p>${msg || "سیستم خام و آماده است — فایل اکسل (.xlsx / .xlsm) یا CSV خود را وارد کنید تا همه ماکروها روی داده‌های شما اجرا شوند."}</p>
-      <button class="btn btn-primary" onclick="modImport.OpenFile()">📂 ورود فایل داده</button>
+      <button class="btn btn-primary" data-act="open-file">📂 ورود فایل داده</button>
     </div>`;
 }
 function renderDashCats() {
@@ -1353,7 +1400,7 @@ function renderDashCats() {
   host.innerHTML = cats.map(c => {
     const st = catStats(c.id);
     return `
-    <div class="cat-tile" style="color:${c.color}" onclick="openCategory('${c.id}')">
+    <div class="cat-tile" style="color:${c.color}" data-act="open-category" data-cat="${c.id}">
       <div class="ct-val">${st.count}</div>
       <div class="ct-ico" style="background:${c.color}22;color:${c.color}">${catSvg(c)}</div>
       <div class="ct-name" style="color:var(--txt-0)">${c.name}</div>
@@ -1380,7 +1427,7 @@ function renderCatBar() {
       : catStats(c.id);
     const active = (state.catFilter || "all") === c.id;
     const bg = active ? `background:linear-gradient(135deg,${c.color}cc,${c.color}88)` : "";
-    return `<div class="cat-pill ${active ? "active" : ""}" style="${bg};${active ? "" : ""}" onclick="setCatFilter('${c.id}')">
+    return `<div class="cat-pill ${active ? "active" : ""}" style="${bg};${active ? "" : ""}" data-act="set-filter" data-cat="${c.id}">
       <span class="cp-ico" style="color:${active ? "#fff" : c.color}">${catSvg(c)}</span>
       ${c.name}
       <span class="cp-n">${st.count}</span>
@@ -1439,7 +1486,7 @@ function renderSheetCatalog() {
             const rows = Math.max(0, countRows(n) - 1);
             const tags = sheetTags(n);
             return `
-            <div class="sheet-card ${state.currentSheet === n ? "active" : ""}" onclick="openSheetCard(decodeURIComponent('${encJs(n)}'))">
+            <div class="sheet-card ${state.currentSheet === n ? "active" : ""}" data-act="open-sheet" data-name="${escapeHtmlAttr(n)}">
               <div class="sc-glow" style="background:${c.color}"></div>
               <div class="sc-top">
                 <span class="sc-dot" style="background:${c.color}"></span>
@@ -1485,7 +1532,7 @@ function renderGroupedNavigator() {
     names.forEach(n => {
       idx++;
       cards += `<div class="nav-card" style="background:linear-gradient(135deg,${c.color}dd,${c.color}88)"
-        onclick="modNavigator.NavToSelectedSheet(decodeURIComponent('${encJs(n)}'))">
+        data-act="nav-sheet" data-name="${escapeHtmlAttr(n)}">
         <div class="num">${idx}</div><div>${escapeHtml(n)}</div>
         <div class="rows">${Math.max(0, countRows(n) - 1).toLocaleString("fa-IR")}</div>
       </div>`;
@@ -1513,6 +1560,7 @@ Object.assign(window, {
   modImport, importWorkbookFromBuffer, importCsvText, applyJsonBackup,
   resetToEmptyData, BuildExportWorkbook, ExportWorkbookXlsx, parseCsvText,
   APP_SHELL, withTransaction, withTransactionSync, snapshotWorkbook, restoreWorkbook,
+  ACTIONS, bindDelegatedEvents,
   validateWorkbookData, normalizeSheetData, sanitizeSheetName,
   verifySearchIndex, recoverSearchIndex, encJs, escapeHtmlAttr,
   SHEET_CATEGORIES, categoryOf, sheetsOfCategory, renderSheetCatalog,

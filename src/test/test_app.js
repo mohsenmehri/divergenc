@@ -44,6 +44,17 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   }
   const W = window;
 
+  // ===== HARDENING META: no inline handlers + CSP (verifiable from repo artifact) =====
+  const inlineHits = html.match(/<[a-zA-Z][^>]*\s+on[a-z]+\s*=\s*["']/g) || [];
+  check("meta: zero inline event handlers in HTML", inlineHits.length === 0, inlineHits.length + " found");
+  check("meta: CSP blocks attribute handlers", /Content-Security-Policy[^>]*script-src-attr\s*'none'/.test(html));
+  check("meta: delegation table present", typeof W.ACTIONS === "object" && typeof W.bindDelegatedEvents === "function");
+  // behavioral: delegation dispatch (filter pill)
+  const pill = Array.from(doc.querySelectorAll("#cat-bar [data-act='set-filter']")).find(p => p.dataset.cat !== "all");
+  check("meta: delegation dispatch works", !!pill && (() => { pill.click(); return W.state.catFilter === pill.dataset.cat; })(),
+    String(W.state.catFilter));
+  W.setCatFilter("all");
+
   // ===== EMPTY START (no data at all until the user imports a file) =====
   check("empty: no data sheets at boot", W.WB.order.filter(n => W.IsDataSheet(n)).length === 0,
     W.WB.order.length + " system sheets");
@@ -282,8 +293,10 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   check("xss: malicious sheet name accepted as data", W.importCsvText(xssName + ".csv", "a,b\n1,<img src=x onerror=window.__xss=1>") === true);
   check("xss: sheet exists with literal name", !!W.WB.sheets[xssName]);
   const catHtml = doc.getElementById("sheet-catalog").innerHTML;
-  check("xss: catalog handler is encoded", catHtml.indexOf("decodeURIComponent(") >= 0 &&
-    catHtml.indexOf("openSheetCard('');alert") < 0);
+  // note: the HTML serializer re-emits attribute quotes raw inside data-name="..."
+  // — safe because nothing executes it (no inline handler, CSP script-src-attr 'none')
+  check("xss: catalog uses delegation + inert attr", catHtml.indexOf('data-act="open-sheet"') >= 0 &&
+    catHtml.indexOf("onclick=") < 0 && catHtml.indexOf(`data-name="');alert(1);//"`) >= 0);
   window.__xss = undefined;
   const card = Array.from(doc.querySelectorAll("#sheet-catalog .sheet-card"))
     .find(el => el.textContent.indexOf("alert(1)") >= 0);
