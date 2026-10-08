@@ -391,8 +391,8 @@ const modAddRecord = {
       clear(ov); ov.appendChild(box); ov.classList.add("show");
       clear(ov); ov.appendChild(box); ov.classList.add("show");
       const done = v => { ov.classList.remove("show"); clear(ov); resolve(v); };
-      box.querySelectorAll("[data-p]").forEach(b => b.onclick = () => done(b.dataset.p));
-      box.querySelector(".x").onclick = () => done("cancel");
+      box.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => done(b.dataset.p)));
+      box.querySelector(".x").addEventListener("click", () => done("cancel"));
     });
   },
 
@@ -512,15 +512,15 @@ const modAddRecord = {
         el("button", { class: "cancel", "data-a": "cancel", text: "\u0627\u0646\u0635\u0631\u0627\u0641" })));
       clear(ov); ov.appendChild(box); ov.classList.add("show");
       const done = v => { ov.classList.remove("show"); clear(ov); resolve(v); };
-      box.querySelector("[data-a='cancel']").onclick = () => done(null);
-      box.querySelector(".x").onclick = () => done(null);
-      box.querySelector("[data-a='ok']").onclick = () => {
+      box.querySelector("[data-a='cancel']").addEventListener("click", () => done(null));
+      box.querySelector(".x").addEventListener("click", () => done(null));
+      box.querySelector("[data-a='ok']").addEventListener("click", () => {
         const vals = [];
         box.querySelectorAll("input[data-i]").forEach(inp => {
           vals[parseInt(inp.dataset.i, 10)] = TrimText(inp.value);
         });
         done(vals);
-      };
+      });
     });
   },
 

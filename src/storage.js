@@ -73,10 +73,10 @@ function backupAll() {
 function restoreAll() {
   const inp = document.createElement("input");
   inp.type = "file"; inp.accept = ".json";
-  inp.onchange = () => {
+  inp.addEventListener("change", () => {
     const f = inp.files[0]; if (!f) return;
     const rd = new FileReader();
-    rd.onload = () => {
+    rd.addEventListener("load", () => {
       try {
         const p = JSON.parse(rd.result);
         if (!p.sheets) throw new Error("bad file");
@@ -89,9 +89,9 @@ function restoreAll() {
         Toast("بازیابی با موفقیت انجام شد.", "ok");
         initUIFromState();
       } catch (e) { ShowMsg("فایل پشتیبان معتبر نیست.\n" + e.message, vbCritical, "Restore"); }
-    };
+    });
     rd.readAsText(f);
-  };
+  });
   inp.click();
 }
 

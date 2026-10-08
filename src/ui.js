@@ -552,21 +552,21 @@ const modImport = {
     const ext = (name.split(".").pop() || "").toLowerCase();
     if (ext === "json") {
       const rd = new FileReader();
-      rd.onload = () => {
+      rd.addEventListener("load", () => {
         try { applyJsonBackup(name, JSON.parse(rd.result)); Toast("فایل «" + name + "» وارد شد.", "ok"); }
         catch (e) { ShowMsg("فایل JSON معتبر نیست.\n" + e.message, vbCritical, "Import"); }
-      };
+      });
       rd.readAsText(file);
       return true;
     }
     if (ext === "csv" || ext === "txt") {
       const rd = new FileReader();
-      rd.onload = () => modImport.ImportCsv(name, rd.result);
+      rd.addEventListener("load", () => modImport.ImportCsv(name, rd.result));
       rd.readAsText(file, "utf-8");
       return true;
     }
     const rd = new FileReader();
-    rd.onload = () => modImport.ImportExcel(name, rd.result);
+    rd.addEventListener("load", () => modImport.ImportExcel(name, rd.result));
     rd.readAsArrayBuffer(file);
     return true;
   },
