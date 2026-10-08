@@ -208,8 +208,9 @@ input,select,textarea{font-family:var(--font);}
   border-radius:var(--r-lg);position:relative;overflow:hidden;
   background:linear-gradient(120deg,rgba(217,178,107,.13),rgba(47,212,196,.1) 45%,rgba(139,92,246,.12));
   border:1px solid rgba(217,178,107,.22);
-  display:flex;align-items:center;gap:22px;padding:26px 28px;
+  display:flex;align-items:center;gap:22px;padding:30px 30px;min-height:238px;
   box-shadow:var(--shadow-1);
+  animation:fadeUp .55s ease both;
 }
 .hero::before{
   content:"";position:absolute;inset:0;
@@ -237,6 +238,8 @@ input,select,textarea{font-family:var(--font);}
   font-size:12px;font-weight:800;color:#fff;position:relative;overflow:hidden;
   transition:.18s;letter-spacing:.2px;
 }
+.btn::before{content:"";position:absolute;top:0;left:0;right:0;height:45%;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.17),transparent);border-radius:inherit;}
 .btn svg{width:15px;height:15px;}
 .btn::after{
   content:"";position:absolute;top:0;left:-80%;width:55%;height:100%;
@@ -748,6 +751,112 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .nav-group-head .ng-t{font-size:11px;font-weight:800;}
 .nav-group-head .ng-n{font-family:var(--mono);font-size:8.5px;color:var(--txt-2);}
 .nav-group-head .ng-line{flex:1;height:1px;background:linear-gradient(90deg,var(--stroke),transparent);}
+
+
+/* ============ VISUAL DEPTH & UX POLISH (National Telecom redesign) ============ */
+/* hero chips — WAN tech strip */
+.hero-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+.hero-chips span{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:1.3px;color:#e8d3a2;
+  background:rgba(217,178,107,.1);border:1px solid rgba(217,178,107,.26);
+  padding:4px 11px;border-radius:99px;transition:all .22s ease;
+}
+.hero-chips span:hover{background:rgba(217,178,107,.2);color:#f6e7c6;transform:translateY(-1px);}
+
+/* hairline glass edges on cards */
+.card,.kpi,.sheet-card,.cat-tile,.tool-tile,.nav-card,.action-card{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),var(--shadow-1);
+}
+.kpi{position:relative;overflow:hidden;}
+.kpi::before{
+  content:"";position:absolute;top:0;right:0;width:86px;height:86px;pointer-events:none;
+  background:radial-gradient(circle at 100% 0%,rgba(217,178,107,.13),transparent 70%);
+}
+.kpi .k-val{font-variant-numeric:tabular-nums;}
+.kpi .k-ico{box-shadow:0 8px 20px -10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14);}
+
+/* elegant entrance */
+.cat-bar .cat-pill{animation:fadeUp .4s ease both;}
+.cat-bar .cat-pill:nth-child(2){animation-delay:.04s}.cat-bar .cat-pill:nth-child(3){animation-delay:.08s}
+.cat-bar .cat-pill:nth-child(4){animation-delay:.12s}.cat-bar .cat-pill:nth-child(5){animation-delay:.16s}
+
+/* table / grid polish */
+table.xl th,table.logtable th{
+  background:linear-gradient(180deg,rgba(217,178,107,.14),rgba(217,178,107,.06));
+  font-size:11px;letter-spacing:.4px;font-weight:800;
+}
+table.xl tbody tr,table.logtable tbody tr{transition:background .16s ease;}
+table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,178,107,.06);}
+
+/* focus visibility (user-friendly keyboard navigation) */
+.btn:focus-visible,.icon-btn:focus-visible,.nav-item:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.cat-pill:focus-visible,.sheet-card:focus-visible{
+  outline:2px solid rgba(232,196,122,.85);outline-offset:2px;border-radius:8px;
+}
+
+/* CSS tooltips for icon-only buttons */
+[data-tip]{position:relative;}
+[data-tip]::after{
+  content:attr(data-tip);position:absolute;top:calc(100% + 8px);right:50%;transform:translateX(50%) translateY(-3px);
+  background:#1d1507;color:#f4e9d2;font-size:10px;font-weight:600;letter-spacing:.2px;
+  padding:5px 10px;border-radius:7px;border:1px solid rgba(217,178,107,.35);
+  white-space:nowrap;opacity:0;pointer-events:none;transition:all .2s ease;z-index:70;
+  box-shadow:0 10px 24px -10px rgba(0,0,0,.6);
+}
+[data-tip]:hover::after{opacity:1;transform:translateX(50%) translateY(0);}
+.sidebar [data-tip]::after{top:50%;right:calc(100% + 10px);transform:translateY(-50%) translateX(3px);}
+.sidebar [data-tip]:hover::after{transform:translateY(-50%) translateX(0);}
+
+/* toast accents */
+.toast{border-right-width:3px;}
+.toast.ok{border-right-color:#34d399;}
+.toast.err{border-right-color:#fb7185;}
+.toast.warn{border-right-color:#fbbf24;}
+.toast.info{border-right-color:#e8c47a;}
+
+/* refined topbar + sidebar surfaces */
+.topbar{box-shadow:0 12px 34px -22px rgba(0,0,0,.75),inset 0 -1px 0 rgba(217,178,107,.12);}
+.sidebar{
+  background:linear-gradient(180deg,rgba(16,28,44,.92),rgba(10,19,34,.96));
+  box-shadow:-14px 0 40px -28px rgba(0,0,0,.8),inset 1px 0 0 rgba(217,178,107,.1);
+}
+.nav-item.active{
+  box-shadow:inset 0 0 0 1px rgba(217,178,107,.35),0 10px 24px -14px rgba(217,178,107,.35);
+}
+
+/* sheet-card + category tiles hover elegance */
+.sheet-card,.cat-tile{transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;}
+.sheet-card:hover,.cat-tile:hover{transform:translateY(-3px);box-shadow:0 18px 40px -18px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.07);}
+.cat-tile{position:relative;overflow:hidden;}
+.cat-tile::after{
+  content:"";position:absolute;inset:auto -30% -60% auto;width:130px;height:130px;border-radius:50%;
+  background:radial-gradient(circle,rgba(217,178,107,.1),transparent 70%);transition:transform .3s ease;
+}
+.cat-tile:hover::after{transform:scale(1.25);}
+
+/* dropzone affordance */
+.empty-state{transition:border-color .25s ease,background .25s ease;}
+.empty-state:hover{border-color:rgba(217,178,107,.5);background:rgba(210,186,138,.07);}
+.empty-state .es-ico{animation:floatSlow 4.5s ease-in-out infinite;}
+.empty-state .es-art{width:min(320px,80%);height:auto;opacity:.9;margin-bottom:2px;}
+@keyframes floatSlow{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* floating glow orbs behind hero */
+.hero::after{
+  content:"";position:absolute;width:320px;height:320px;border-radius:50%;left:-90px;top:-120px;pointer-events:none;
+  background:radial-gradient(circle,rgba(217,178,107,.14),transparent 65%);
+  animation:floatSlow 7s ease-in-out infinite;
+}
+
+/* nicer scrollbars inside panels + numbers */
+.mono,kbd{font-variant-numeric:tabular-nums;}
+.inp:focus,.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:rgba(232,196,122,.65);box-shadow:0 0 0 3px rgba(217,178,107,.16);
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
+}
 
 </style>
 </head>

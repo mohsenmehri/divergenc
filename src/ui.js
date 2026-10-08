@@ -1441,9 +1441,23 @@ function allCatsWithOther() {
 
 /* ---- dashboard category tiles ---- */
 function emptyStateNode(msg) {
+  const art = sEl("svg", { class: "es-art", viewBox: "0 0 320 120", fill: "none", "aria-hidden": "true" },
+    sEl("path", { d: "M18 78 q22 -13 42 0 q24 -3 32 16 q19 6 10 25 q3 19 -22 19 l-77 0 q-19 -2 -14 -19 q-10 -18 11 -24 q7 -14 18 -17 z", fill: "rgba(47,212,196,.10)", stroke: "rgba(47,212,196,.35)", "stroke-width": "1.2" }),
+    sEl("path", { d: "M204 12 q26 -15 48 0 q28 -4 37 19 q22 7 11 29 q4 22 -26 22 l-88 0 q-22 -2 -16 -22 q-11 -20 13 -28 q8 -16 21 -20 z", fill: "rgba(217,178,107,.12)", stroke: "rgba(217,178,107,.4)", "stroke-width": "1.2" }),
+    sEl("path", { d: "M76 96 Q150 40 228 44", stroke: "rgba(217,178,107,.45)", "stroke-width": "1.3", "stroke-dasharray": "4 6" }),
+    sEl("path", { d: "M76 96 Q150 70 228 44", stroke: "rgba(47,212,196,.3)", "stroke-width": "1" }),
+    sEl("circle", { cx: "76", cy: "96", r: "5", fill: "#2fd4c4", class: "n-pulse" }),
+    sEl("circle", { cx: "228", cy: "44", r: "7", fill: "#e8c47a", class: "n-pulse", style: { animationDelay: ".7s" } }),
+    sEl("circle", { cx: "228", cy: "44", r: "13", stroke: "rgba(217,178,107,.3)", fill: "none" }),
+    sEl("circle", { cx: "290", cy: "88", r: "4.5", fill: "#2fd4c4", class: "n-pulse", style: { animationDelay: "1.2s" } }),
+    sEl("path", { d: "M228 44 Q262 58 290 88", stroke: "rgba(47,212,196,.32)", "stroke-width": "1" }),
+    sEl("text", { x: "88", y: "116", "text-anchor": "middle", fill: "rgba(47,212,196,.8)", "font-size": "9", "font-family": "monospace", "letter-spacing": "1" }, "BRANCH"),
+    sEl("text", { x: "212", y: "26", fill: "rgba(232,196,122,.9)", "font-size": "9", "font-family": "monospace", "letter-spacing": "1" }, "WAN"),
+    sEl("text", { x: "266", y: "112", fill: "rgba(47,212,196,.8)", "font-size": "9", "font-family": "monospace", "letter-spacing": "1" }, "DC"));
   return el("div", { class: "empty-state fade-in" },
+    art,
     el("div", { class: "es-ico" },
-      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#22d3ee", "stroke-width": "1.6", "stroke-linecap": "round" },
+      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#e8c47a", "stroke-width": "1.6", "stroke-linecap": "round" },
         sEl("path", { d: "M12 16V4m0 0 4 4m-4-4-4 4" }),
         sEl("path", { d: "M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" }))),
     el("h3", { text: "\u0647\u0646\u0648\u0632 \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u0648\u062c\u0648\u062f \u0646\u062f\u0627\u0631\u062f" }),
