@@ -5767,97 +5767,94 @@ const SpectrumWaterfall = (function () {
 })();
 
 const PatchPanel = (function () {
-  const KEYS = ["gold", "cyan", "green", "blue", "violet", "rose"];
-  const CORDS = [
-    [1, 14, "gold"],
-    [4, 21, "cyan"],
-    [8, 27, "green"],
-    [11, 33, "blue"],
-    [16, 38, "violet"],
-    [19, 42, "rose"],
-    [6, 30, "gold"]
-  ];
-  let ports = [];
+  const KEYS = ["gold", "cyan", "violet", "rose", "blue", "green"];
+  const N = 24;
+  let cables = [];
   function init() {
-    ports = [];
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 12; c++) {
-        ports.push({ r: r, c: c, k: KEYS[(r * 3 + c) % KEYS.length], on: (r + c) % 5 !== 0 });
-      }
+    cables = [];
+    for (let i = 0; i < N; i++) {
+      cables.push({
+        a: i, b: (i * 11 + 5) % N, k: KEYS[i % KEYS.length],
+        bow: (((i * 37) % 11) - 5) / 5 * .06, sag: .06 + (i % 6) * .045,
+        sp: .1 + (i % 7) * .032, ph: i * 1.37, pulses: (i % 3 === 0) ? 2 : 1
+      });
     }
   }
-  function at(i) {
-    const p = ports[i];
-    const x0 = W * 0.16, y0 = H * 0.28, ww = W * 0.68, hh = H * 0.42;
-    return [x0 + (p.c + 0.5) * ww / 12, y0 + (p.r + 0.5) * hh / 4];
+  function railY(up) { return up ? H * .17 : H * .83; }
+  function portX(i) { return ((i + .5) / N) * (W * .86) + W * .07; }
+  function pt(c, u) {
+    const x0 = portX(c.a), y0 = railY(true), x1 = portX(c.b), y1 = railY(false);
+    const mx = (x0 + x1) / 2 + c.bow * W, my = (y0 + y1) / 2 + c.sag * H;
+    const iu = 1 - u;
+    return { x: iu * iu * x0 + 2 * iu * u * mx + u * u * x1, y: iu * iu * y0 + 2 * iu * u * my + u * u * y1 };
+  }
+  function cablePath(g, c) {
+    g.beginPath();
+    let p = pt(c, 0); g.moveTo(p.x, p.y);
+    for (let i = 1; i <= 22; i++) { p = pt(c, i / 22); g.lineTo(p.x, p.y); }
+  }
+  function panel(g, y, t, flip) {
+    const h = 42 * S, y0 = flip ? y - h : y;
+    solid(g, function () {
+      g.fillStyle = "rgba(8,11,19,.92)";
+      g.beginPath();
+      if (g.roundRect) g.roundRect(W * .03, y0, W * .94, h, 4 * S); else g.rect(W * .03, y0, W * .94, h);
+      g.fill();
+      /* rack ears + screws */
+      g.fillStyle = "rgba(14,18,28,.95)";
+      g.fillRect(W * .03 - 16 * S, y0 + 4 * S, 16 * S, h - 8 * S);
+      g.fillRect(W * .97, y0 + 4 * S, 16 * S, h - 8 * S);
+    });
+    g.strokeStyle = A("gold", .38); g.lineWidth = 1.1 * S;
+    g.beginPath();
+    if (g.roundRect) g.roundRect(W * .03, y0, W * .94, h, 4 * S); else g.rect(W * .03, y0, W * .94, h);
+    g.stroke();
+    for (const ex of [W * .03 - 8 * S, W * .97 + 8 * S]) {
+      dot(g, ex, y0 + 11 * S, 2 * S, "ink", .35);
+      dot(g, ex, y0 + h - 11 * S, 2 * S, "ink", .35);
+    }
+    /* the ports, with an LED that idles and flares when a patch is live */
+    for (let i = 0; i < N; i++) {
+      const x = portX(i), pw = 15 * S, ph2 = 17 * S, py = y0 + (h - ph2) / 2;
+      g.fillStyle = "rgba(3,5,11,.9)";
+      g.strokeStyle = A("ink", .28); g.lineWidth = .9 * S;
+      g.beginPath();
+      if (g.roundRect) g.roundRect(x - pw / 2, py, pw, ph2, 2 * S); else g.rect(x - pw / 2, py, pw, ph2);
+      g.fill(); g.stroke();
+      g.fillStyle = A("ink", .12);
+      g.fillRect(x - pw / 2 + 2.5 * S, py + ph2 * .55, pw - 5 * S, 2.5 * S);
+      const live = Math.sin(t * 1.9 + i * 1.7) > .55;
+      const k = KEYS[i % KEYS.length];
+      dot(g, x, y0 + (flip ? h + 6 * S : -6 * S), 2 * S, live ? k : "ink", live ? .95 : .22);
+      if (live) glow(g, x, y0 + (flip ? h + 6 * S : -6 * S), 11 * S, k, .3);
+    }
   }
   function draw(g, t) {
-    if (!ports.length) init();
-    const x0 = W * 0.08, y0 = H * 0.16, ww = W * 0.84, hh = H * 0.66;
-    solid(g, function () {
-      g.fillStyle = "rgba(7,11,18,.9)";
-      g.strokeStyle = "rgba(238,205,140,.45)";
-      g.lineWidth = 1.4 * S;
-      if (g.roundRect) {
-        g.beginPath();
-        g.roundRect(x0, y0, ww, hh, 14 * S);
-        g.fill();
-        g.stroke();
-      } else {
-        g.fillRect(x0, y0, ww, hh);
-        g.strokeRect(x0, y0, ww, hh);
+    stars(g, t, 60, 91);
+    /* jumpers hang between the two rails */
+    for (let i = 0; i < cables.length; i++) {
+      const c = cables[i];
+      cablePath(g, c);
+      g.strokeStyle = "rgba(4,6,12,.55)"; g.lineWidth = 4.2 * S; g.stroke();
+      g.strokeStyle = A(c.k, .17); g.lineWidth = 2.6 * S; g.stroke();
+      g.strokeStyle = A(c.k, .5); g.lineWidth = 1 * S; g.stroke();
+      for (let p = 0; p < c.pulses; p++) {
+        const u = ((t * c.sp + c.ph / 6 + p / c.pulses) % 1 + 1) % 1;
+        const q = pt(c, u), fade = Math.sin(u * Math.PI);
+        glow(g, q.x, q.y, 15 * S, c.k, .3 * fade);
+        dot(g, q.x, q.y, 1.9 * S, c.k, .95 * fade);
+        for (let b = 1; b <= 4; b++) {
+          const r = pt(c, Math.max(0, u - b * .014));
+          dot(g, r.x, r.y, (1.7 - b * .32) * S, c.k, .4 * fade * (1 - b / 5));
+        }
       }
-      g.fillStyle = "rgba(238,205,140,.07)";
-      g.fillRect(x0, y0, ww, 32 * S);
-      const screws = [[18, 18], [ww - 18, 18], [18, hh - 18], [ww - 18, hh - 18]];
-      for (let i = 0; i < screws.length; i++) {
-        g.fillStyle = "rgba(238,205,140,.55)";
-        g.beginPath();
-        g.arc(x0 + screws[i][0] * S, y0 + screws[i][1] * S, 3.2 * S, 0, TAU);
-        g.fill();
-      }
-    });
-    tag(g, "PATCH", W * 0.5, y0 + 16 * S, "gold", 0.95);
-    for (let i = 0; i < ports.length; i++) {
-      const p = ports[i];
-      const pos = at(i);
-      solid(g, function () {
-        g.fillStyle = "rgba(2,5,10,.96)";
-        g.beginPath();
-        g.arc(pos[0], pos[1], 7.5 * S, 0, TAU);
-        g.fill();
-        g.strokeStyle = A(p.k, p.on ? 0.75 : 0.22);
-        g.lineWidth = 1.25 * S;
-        g.stroke();
-      });
-      if (p.on) {
-        const pulse = 0.4 + 0.35 * Math.sin(t * 2.1 + i * 0.7);
-        glow(g, pos[0], pos[1], 13 * S, p.k, 0.22 * pulse);
-        dot(g, pos[0], pos[1], 2.2 * S, p.k, 0.92);
+      if (i % 4 === 0) {
+        const m = pt(c, .5);
+        tag(g, ["MPLS", "PTMP", "LTE", "INTERNET", "DATA CENTER", "SATELLITE"][(i / 4) % 6], m.x, m.y, c.k, .9);
       }
     }
-    for (let i = 0; i < CORDS.length; i++) {
-      const c = CORDS[i];
-      const a = at(c[0]), b = at(c[1]);
-      const mx = (a[0] + b[0]) / 2;
-      const my = Math.min(a[1], b[1]) - (26 + (i % 3) * 12) * S;
-      g.strokeStyle = A(c[2], 0.62);
-      g.lineWidth = 1.7 * S;
-      g.beginPath();
-      g.moveTo(a[0], a[1]);
-      g.quadraticCurveTo(mx, my, b[0], b[1]);
-      g.stroke();
-      const u = (t * 0.2 + i * 0.13) % 1;
-      const v = 1 - u;
-      const x = v * v * a[0] + 2 * v * u * mx + u * u * b[0];
-      const y = v * v * a[1] + 2 * v * u * my + u * u * b[1];
-      glow(g, x, y, 10 * S, c[2], 0.55);
-      dot(g, x, y, 2 * S, "ink", 0.95);
-    }
-    tag(g, "ROUTER", W * 0.2, y0 + hh - 18 * S, "gold", 0.88);
-    tag(g, "SWITCH", W * 0.38, y0 + hh - 18 * S, "cyan", 0.88);
-    tag(g, "MPLS", W * 0.54, y0 + hh - 18 * S, "green", 0.88);
-    tag(g, "INTRANET", W * 0.72, y0 + hh - 18 * S, "blue", 0.88);
+    panel(g, railY(true), t, false);
+    panel(g, railY(false), t, true);
   }
   return { init: init, draw: draw };
 })();
@@ -6018,38 +6015,28 @@ const SCENES = {
       sparks([[0.55, 0.16], [0.68, 0.22], [0.8, 0.12], [0.62, 0.3], [0.88, 0.26]], t, GOLD);
     }
 
-const FAM_BLUE = "43,156,216", FAM_GREEN = "0,166,81";
-function famMark(g, t) {
-  if (!box || !box.w) return;
-  const cx = box.x + box.w * 0.5;
-  const cy = box.y + box.h * 0.40;
-  const R = Math.min(box.w, box.h) * 0.27;
-  const a = 0.28 + 0.03 * Math.sin((t || 0) * 0.5);
+
+function famBrand(g, t, w, h) {
+  const cx = w * 0.5, cy = h * 0.40, R = Math.min(w, h) * 0.27;
+  const a = 0.13 + 0.025 * Math.sin((t || 0) * 0.5);
+  const BLUE = "43,156,216", GREEN = "0,166,81";
   g.save();
   g.globalCompositeOperation = "source-over";
-  const wash = g.createRadialGradient(cx, cy, R * 0.12, cx, cy + R * 0.15, R * 2.05);
-  wash.addColorStop(0, "rgba(4,8,16,0.58)");
-  wash.addColorStop(0.55, "rgba(4,8,16,0.30)");
-  wash.addColorStop(1, "rgba(4,8,16,0)");
-  g.fillStyle = wash;
-  g.beginPath();
-  g.ellipse(cx, cy + R * 0.18, R * 1.7, R * 1.5, 0, 0, TAU);
-  g.fill();
   for (let i = 0; i < 8; i++) {
     const ang = (-64 - i * 16.5) * Math.PI / 180;
     const rr = R * (1 - i * 0.012);
-    const rad = Math.max(1.6, R * 0.085 * (1 - i * 0.1));
-    g.fillStyle = "rgba(" + FAM_BLUE + "," + (a + 0.08) + ")";
+    const rad = Math.max(1.4, R * 0.085 * (1 - i * 0.1));
+    g.fillStyle = "rgba(" + BLUE + "," + (a + 0.05) + ")";
     g.beginPath();
-    g.arc(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr, rad, 0, TAU);
+    g.arc(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr, rad, 0, Math.PI * 2);
     g.fill();
   }
   const ha = -22 * Math.PI / 180;
   const hx = cx + Math.cos(ha) * R, hy = cy + Math.sin(ha) * R;
-  g.strokeStyle = "rgba(" + FAM_GREEN + "," + (a + 0.12) + ")";
+  g.strokeStyle = "rgba(" + GREEN + "," + (a + 0.08) + ")";
   g.lineWidth = R * 0.12;
   g.beginPath();
-  g.arc(hx, hy, R * 0.085, 0, TAU);
+  g.arc(hx, hy, R * 0.085, 0, Math.PI * 2);
   g.stroke();
   g.lineCap = "round";
   let px = null, py = null;
@@ -6059,8 +6046,8 @@ function famMark(g, t) {
     const x = cx + Math.cos(ang) * R * 0.96;
     const y = cy + Math.sin(ang) * R * 0.96;
     if (px !== null) {
-      g.strokeStyle = "rgba(" + FAM_GREEN + "," + (a + 0.1) + ")";
-      g.lineWidth = Math.max(1.6, R * 0.15 * (1 - u * 0.9));
+      g.strokeStyle = "rgba(" + GREEN + "," + (a + 0.06) + ")";
+      g.lineWidth = Math.max(1.5, R * 0.15 * (1 - u * 0.9));
       g.beginPath();
       g.moveTo(px, py);
       g.lineTo(x, y);
@@ -6069,28 +6056,29 @@ function famMark(g, t) {
     px = x; py = y;
   }
   g.lineCap = "butt";
-  g.fillStyle = "rgba(" + FAM_BLUE + "," + (a + 0.12) + ")";
+  g.fillStyle = "rgba(" + BLUE + "," + (a + 0.07) + ")";
   g.font = "italic 700 " + (R * 1.02) + "px Georgia, 'Times New Roman', serif";
   g.textAlign = "center";
   g.textBaseline = "middle";
   g.fillText("e", cx - R * 0.04, cy + R * 0.05);
-  g.font = "800 " + (R * 0.16) + "px Vazirmatn, Tahoma, sans-serif";
-  g.fillStyle = "rgba(" + FAM_GREEN + "," + (a + 0.16) + ")";
+  g.font = "800 " + (R * 0.20) + "px Vazirmatn, Tahoma, sans-serif";
+  g.fillStyle = "rgba(" + GREEN + "," + (a + 0.05) + ")";
   g.fillText("شرکت تجارت الکترونیک", cx, cy + R * 1.34);
-  g.fillText("و فناوری اطلاعات ملل", cx, cy + R * 1.58);
-  g.font = "600 " + (R * 0.075) + "px ui-monospace, Menlo, monospace";
-  g.fillStyle = "rgba(" + FAM_BLUE + "," + (a + 0.08) + ")";
-  g.fillText("Melal Electronic Commerce and Information Technology Company", cx, cy + R * 1.82);
+  g.fillText("و فناوری اطلاعات ملل", cx, cy + R * 1.60);
+  g.font = "600 " + (R * 0.095) + "px ui-monospace, Menlo, monospace";
+  g.fillStyle = "rgba(" + BLUE + "," + (a + 0.02) + ")";
+  g.fillText("Melal Electronic Commerce and Information Technology Company", cx, cy + R * 1.86);
   g.textAlign = "left";
   g.textBaseline = "alphabetic";
   g.restore();
 }
+window.famBrand = famBrand;
 
     return function (id, ctx, t, w, h) {
       fctx = ctx;
       const a = ASPECT[id] || [1376, 768];
       box = cover(a[0], a[1], w, h);
-      if (id !== "orbit" && SCENES[id]) famMark(fctx, t);
+      famBrand(fctx, t, w, h);
       if (id === "orbit") orbit(t);
       else if (SCENES[id]) SCENES[id](t);
     };
@@ -6244,6 +6232,7 @@ function startPhotonStage() {
         const now = reduce ? 2600 : Date.now();
         const t = now / 1000;
         ctx.clearRect(0, 0, w, h);
+        if (typeof window.famBrand === "function") window.famBrand(ctx, t, w, h);
 
         const sat = at(0.27, 0.1, w);
         const roof = at(0.28, 0.46, w);
