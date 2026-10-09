@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="05">
+<html lang="fa" dir="rtl" data-fam-ui="06">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1262,6 +1262,52 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 #stat-line #st-user{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
 #stat-line:hover{color:var(--cyan);}
 #stat-line:focus-visible{outline:2px solid var(--cyan);outline-offset:4px;}
+/* UI-06: aligned action groups and the province/region browser. */
+.dashboard-section > .card-head > .cat-header-actions{grid-column:3;grid-row:1;display:flex;gap:8px;align-items:center;min-width:0;}
+.cat-header-actions .btn{height:36px;white-space:nowrap;}
+#view-sheet > .view-head{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;}
+#view-sheet .sheet-toolbar{grid-column:1/-1;display:flex;width:100%;margin:4px 0 0;gap:10px;align-items:center;}
+.sheet-nav-filter{display:flex;flex:1;min-width:0;gap:8px;align-items:center;}
+#view-sheet .sheet-nav-filter .inp{flex:1;width:auto;min-width:140px;max-width:380px;}
+.sheet-data-actions{display:flex;gap:8px;align-items:center;}
+#view-sheet .sheet-toolbar .btn,#view-sheet .sheet-toolbar .inp{height:40px;margin:0;white-space:nowrap;}
+.province-browser{margin-bottom:24px;}
+.region-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0;}
+.region-choice{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:16px;background:var(--glass);border:1px solid var(--stroke);border-radius:14px;color:var(--txt-0);text-align:start;}
+.region-choice b{font-size:14px;}.region-choice small{color:var(--txt-2);font-size:11px;}
+.region-choice.active{border-color:var(--cyan);background:rgba(47,212,196,.09);}
+.province-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;}
+.province-card{padding:16px;border:1px solid var(--stroke);border-radius:14px;background:var(--glass);min-width:0;}
+.province-card.active{border-color:var(--cyan);}
+.province-card h4{margin:0 0 6px;font-size:13px;}.province-card .hint{min-height:20px;margin:0 0 12px;}
+.province-sections{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.province-sections button{display:flex;flex-direction:column;gap:4px;height:auto;min-height:54px;padding:8px;}
+.province-sections small{font-size:10px;color:var(--txt-2);font-weight:400;}
+.province-sections [aria-pressed="true"]{border-color:var(--cyan);color:var(--cyan);}
+.province-selection{padding:16px;margin-top:16px;border:1px solid var(--stroke);border-radius:14px;}
+.province-selection h4{margin:0 0 12px;}.province-selection .btn{margin:4px;}
+.province-empty{padding:28px;border:1px dashed var(--stroke);border-radius:14px;text-align:center;line-height:2;}
+.province-other{margin-top:20px;}.province-other .btn{margin:4px;}
+.region-choice:focus-visible,.province-sections button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+@container(max-width:740px){
+ .dashboard-section > .card-head:has(.cat-header-actions){grid-template-columns:34px minmax(0,1fr) 40px;}
+ .dashboard-section > .card-head > .cat-header-actions{grid-column:1/-1;grid-row:2;justify-content:flex-end;}
+ .dashboard-section > .card-head:has(.cat-header-actions) > .fold-btn{grid-column:3;}
+ .cat-header-actions .btn{font-size:10px;padding-inline:9px;}
+}
+@media(max-width:1000px){
+ #view-sheet .sheet-toolbar{flex-direction:column;align-items:stretch;}
+ .sheet-data-actions{justify-content:flex-end;}
+ #view-sheet .sheet-nav-filter .inp{max-width:none;}
+ .region-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:540px){
+ .sheet-nav-filter{display:grid;grid-template-columns:1fr auto;}
+ #view-sheet .sheet-nav-filter .inp{grid-column:1/-1;width:100%;}
+ .province-grid{grid-template-columns:1fr;}
+ .region-choice{padding:12px;}
+}
+
 </style>
 <script>
 (function () {
@@ -1394,7 +1440,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-05</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-06</b></div>
     </div>
   </aside>
 
@@ -1530,12 +1576,11 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
               <h3>دسته‌بندی بخش ها شبکه</h3>
             </div>
             <div class="spacer"></div>
-            <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
+            <nav class="cat-header-actions" aria-label="ابزار دسته‌بندی"><button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button><button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button></nav>
             <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-cats" aria-controls="fold-cats" aria-expanded="true" aria-label="جمع و باز کردن دسته‌بندی بخش‌های شبکه" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
           </div>
           <div class="card-body fold-panel" id="fold-cats">
             <div class="fold-inner">
-            <div class="category-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button></div>
             <div class="category-grid-viewport"><div class="cat-tiles" id="dash-cats"></div></div>
             </div>
           </div>
@@ -1901,16 +1946,20 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
           <h2 id="sheet-title">بخش‌های شبکه</h2>
           <div class="sub" id="sheet-sub">NETWORK SHEETS — مشاهده و ویرایش مستقیم داده‌ها</div>
         </div>
-        <div class="head-actions filter-bar">
-          <input class="inp" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
-          <button class="btn btn-primary btn-sm" data-act="filter-rows">فیلتر</button>
-          <button class="btn btn-ghost btn-sm" data-act="export-sheet-csv">⬇ CSV</button>
-          <button class="btn btn-ghost btn-sm" data-act="toggle-lock">قفل/باز بخش</button>
-          <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
+        <div class="head-actions filter-bar sheet-toolbar">
+          <div class="sheet-nav-filter">
+            <button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button>
+            <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
+            <input class="inp" id="sheet-filter" aria-label="فیلتر سریع ردیف‌ها" placeholder="فیلتر سریع ردیف‌ها…">
+          </div>
+          <div class="sheet-data-actions">
+            <button class="btn btn-primary btn-sm" data-act="filter-rows">فیلتر</button>
+            <button class="btn btn-ghost btn-sm" data-act="export-sheet-csv">⬇ CSV</button>
+            <button class="btn btn-ghost btn-sm" data-act="toggle-lock">قفل/باز بخش</button>
+          </div>
         </div>
       </div>
       <div class="content">
-        <div class="category-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button></div>
         <div class="cat-bar" id="cat-bar"></div>
         <div id="sheet-catalog"></div>
         <div class="chip-bar" id="sheet-chips" style="display:none"></div>
@@ -2135,6 +2184,8 @@ const state = {
   showSystem: false,
   pageLimit: 300,
   catFilter: "all",
+  provinceRegion: "1",
+  provinceView: null, // navigation only; every existing province row stays in Branch
   categoryConfig: null, // null = original automatic categories; otherwise versioned metadata
 };
 
@@ -2654,9 +2705,17 @@ function renderSheetChips() {
 }
 function renderSheetView(name) {
   state.currentSheet = name;
+  const province = provinceOf(name);
+  if (province && categoryOf(name).id === 'provinces') {
+    state.provinceRegion = province.region;
+    state.provinceView = {province: province.id, section: 'branch'};
+  } else state.provinceView = null;
   const sh = WB.sheets[name];
   const body = document.getElementById("sheet-body");
-  document.getElementById("sheet-title").textContent = name;
+  document.getElementById("sheet-title").textContent = province && state.provinceView ? province.name + ' — شعبه' : name;
+  document.getElementById("sheet-sub").textContent = province && state.provinceView
+    ? 'همه داده‌های فعلی استان در شعبه · شیت اصلی: ' + name
+    : 'NETWORK SHEETS — مشاهده و ویرایش مستقیم داده‌ها';
   clear(body);
   if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0628\u062e\u0634 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
   const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
@@ -3134,9 +3193,10 @@ function saveUIState() {
     // never clobber a remembered sheet with "" (boot/switchView runs with no
     // sheet open); keep the last remembered sheet unless a new one is set
     const prev = loadUIState();
-    const sheet = state.currentSheet || (prev && prev.sheet) || "";
+    const sheet = state.provinceView ? (state.currentSheet || "") : state.currentSheet || (prev && prev.sheet) || "";
     localStorage.setItem(LS_KEY_UI, JSON.stringify({
-      v: 1, sheet: sheet, catFilter: state.catFilter || "all", savedAt: state.savedAt || 0
+      v: 1, sheet: sheet, catFilter: state.catFilter || "all", savedAt: state.savedAt || 0,
+      provinceRegion: state.provinceRegion, provinceView: state.provinceView
     }));
   } catch (e) { /* ui extras are best-effort */ }
 }
@@ -5427,6 +5487,8 @@ function buildQuickForms() {
 }
 
 const ACTIONS = {
+  "province-region": node => selectProvinceRegion(node.dataset.region),
+  "province-section": node => openProvinceSection(node.dataset.province, node.dataset.section),
   "edit-user": () => editUserName(),
   "run-macro": el => RunMacro(el.dataset.arg),
   "run-macro-index": el => RunMacroIndex(el.dataset.mod, el.dataset.name),
@@ -6870,7 +6932,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderResultsView();
   // restore the last open sheet/filter ("stay where you were")
   const uiSaved = uiSavedBoot;
-  if (uiSaved && uiSaved.sheet && WB.sheets[uiSaved.sheet] && !IsSystemSheet(uiSaved.sheet)) {
+  if (uiSaved && PROVINCE_REGIONS.some(r => r.id === uiSaved.provinceRegion)) state.provinceRegion = uiSaved.provinceRegion;
+  const savedProvince = uiSaved?.provinceView;
+  if (savedProvince && PROVINCES.some(p => p.id === savedProvince.province) && ['branch','atm'].includes(savedProvince.section)
+      && managedCategories().some(c => c.id === 'provinces')) {
+    state.catFilter = 'provinces';
+    switchView('sheet');
+    openProvinceSection(savedProvince.province, savedProvince.section, false);
+    if (savedProvince.section === 'branch' && uiSaved.sheet && provinceSheets(savedProvince.province).includes(uiSaved.sheet)) openSheetCard(uiSaved.sheet);
+  } else if (uiSaved && uiSaved.sheet && WB.sheets[uiSaved.sheet] && !IsSystemSheet(uiSaved.sheet)) {
     state.catFilter = uiSaved.catFilter || "all";
     switchView("sheet");
     openSheetCard(uiSaved.sheet);
@@ -6909,9 +6979,107 @@ const CAT_ICON_SHAPES = {
   gear: [["circle", { cx: "12", cy: "12", r: "3" }], ["path", { d: "M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.7-1.6L13.4 2h-2.8l-.4 2.9a7 7 0 0 0-2.7 1.6l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .5.1 1.1.2 1.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.7-1.6l.4 2.9h2.8l.4-2.9a7 7 0 0 0 2.7-1.6l2.3 1 2-3.4-2-1.5c.1-.5.2-1 .2-1.6z" }]],
   layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
+// Navigation taxonomy only: no worksheet splitting, renaming or row movement.
+const PROVINCE_REGIONS = [
+  {id:'1', name:'منطقه یک', names:['خراسان رضوی','خراسان شمالی','خراسان جنوبی','سیستان و بلوچستان','گلستان']},
+  {id:'2', name:'منطقه دو', names:['تهران']},
+  {id:'3', name:'منطقه سه', names:['اردبیل','آذربایجان غربی','آذربایجان شرقی','خوزستان','قم','کردستان','لرستان','همدان','مرکزی','کرمانشاه','قزوین','زنجان','البرز','کهگیلویه و بویراحمد']},
+  {id:'4', name:'منطقه چهار', names:['فارس','ایلام','اصفهان','بوشهر','چهارمحال و بختیاری','سمنان','یزد','گیلان','مازندران','هرمزگان','کرمان']}
+];
+function provinceKey(name) {
+  return NormalizeText(String(name || '')).replace(/^استان\s*/, '').replace(/[\s\u200c\u200d\u0640]/g,'');
+}
+const PROVINCE_ALIASES = {
+  'آذربایجان غربی':['آذرغربی','آذربایجانغربی'],
+  'آذربایجان شرقی':['آذرشرقی','آذربایجانشرقی'],
+  'کهگیلویه و بویراحمد':['کهکلویه','کهکیلویه','کهگیلویه','کهکیلویه و بویر احمد']
+};
+const PROVINCES = PROVINCE_REGIONS.flatMap(region => region.names.map((name,i) => ({
+  id:region.id+'-'+(i+1), name, region:region.id,
+  aliases:[name,...(PROVINCE_ALIASES[name] || [])].map(provinceKey)
+})));
+function provinceOf(name) { return PROVINCES.find(p => p.aliases.includes(provinceKey(name))) || null; }
+function provinceSheets(id) {
+  return WB.order.filter(n => SheetExists(n) && categoryOf(n).id === 'provinces' && provinceOf(n)?.id === id);
+}
+function selectProvinceRegion(id) {
+  if (!PROVINCE_REGIONS.some(r => r.id === id)) return;
+  state.provinceRegion = id;
+  renderSheetCatalog(); saveUIState();
+}
+function showProvinceEmpty(province, section) {
+  state.currentSheet = null;
+  const label = section === 'atm' ? 'خودپرداز' : 'شعبه';
+  document.getElementById('sheet-title').textContent = province.name + ' — ' + label;
+  document.getElementById('sheet-sub').textContent = PROVINCE_REGIONS.find(r => r.id === province.region).name + ' / ' + province.name + ' / ' + label;
+  const host = document.getElementById('sheet-body'); clear(host);
+  host.appendChild(el('div',{class:'province-empty',text:section === 'atm'
+    ? 'بخش خودپرداز فعلاً خالی است. همه داده‌های فعلی این استان در «شعبه» نگهداری می‌شوند؛ هنوز هیچ رکوردی تفکیک نشده است.'
+    : 'برای این استان در این دسته، شیت داده‌ای موجود نیست. هیچ شیت یا رکوردی به‌صورت خودکار ساخته نمی‌شود.'}));
+}
+function openProvinceSection(id, section, scroll = true) {
+  const province = PROVINCES.find(p => p.id === id);
+  if (!province || !['branch','atm'].includes(section)) return;
+  state.provinceRegion = province.region;
+  state.provinceView = {province:id, section};
+  const names = provinceSheets(id);
+  if (section === 'branch' && names.length === 1) {
+    renderSheetView(names[0]);
+  } else {
+    showProvinceEmpty(province, section);
+    if (section === 'branch' && names.length > 1) {
+      document.getElementById('sheet-body').replaceChildren(el('div',{class:'province-empty',text:'برای مشاهده داده‌ها، یکی از شیت‌های شعبهٔ این استان را انتخاب کنید.'}));
+    }
+    renderSheetCatalog();
+  }
+  saveUIState();
+  if (scroll) document.getElementById('sheet-body').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderProvinceHierarchy(names, category) {
+  const root = el('section',{class:'province-browser','aria-label':category.name});
+  root.append(el('h3',{text:category.name}),el('p',{class:'hint',text:'۴ منطقه · ۳۱ استان · همه داده‌های فعلی در «شعبه» هستند؛ «خودپرداز» فعلاً خالی است.'}));
+  const regions = el('div',{class:'region-grid','aria-label':'انتخاب منطقه'});
+  const region = PROVINCE_REGIONS.find(r => r.id === state.provinceRegion) || PROVINCE_REGIONS[0];
+  PROVINCE_REGIONS.forEach(r => regions.appendChild(el('button',{
+    type:'button',class:'region-choice'+(r.id === region.id ? ' active' : ''),
+    'data-act':'province-region','data-region':r.id,'aria-pressed':String(r.id === region.id)
+  },el('b',{text:r.name}),el('small',{text:r.names.length.toLocaleString('fa-IR')+' استان'}))));
+  root.appendChild(regions);
+  const grid = el('div',{class:'province-grid','aria-label':region.name});
+  PROVINCES.filter(p => p.region === region.id).forEach(p => {
+    const sheets = names.filter(n => provinceOf(n)?.id === p.id);
+    const selected = state.provinceView?.province === p.id;
+    const buttons = el('div',{class:'province-sections'});
+    for (const section of ['branch','atm']) buttons.appendChild(el('button',{
+      type:'button',class:'btn btn-ghost btn-sm','data-act':'province-section','data-province':p.id,'data-section':section,
+      'aria-label':p.name+' — '+(section === 'branch' ? 'شعبه' : 'خودپرداز'),
+      'aria-pressed':String(selected && state.provinceView.section === section)
+    },txt(section === 'branch' ? 'شعبه' : 'خودپرداز'),el('small',{text:section === 'branch' ? sheets.length.toLocaleString('fa-IR')+' شیت' : 'فعلاً خالی'})));
+    grid.appendChild(el('article',{class:'province-card'+(selected ? ' active' : ''),'data-province-card':p.id},
+      el('h4',{text:p.name}),el('p',{class:'hint',text:sheets.length ? 'داده‌ها در شیت اصلی محفوظ‌اند' : 'هنوز داده‌ای در این دسته نیست'}),buttons));
+  });
+  root.appendChild(grid);
+  const selected = PROVINCES.find(p => p.id === state.provinceView?.province);
+  if (selected && selected.region === region.id && state.provinceView.section === 'branch') {
+    const source = el('div',{class:'province-selection'},el('h4',{text:selected.name+' — شعبه'}));
+    const sheets = names.filter(n => provinceOf(n)?.id === selected.id);
+    sheets.forEach(n => source.appendChild(el('button',{type:'button',class:'btn btn-ghost btn-sm','data-act':'open-sheet','data-name':n,text:n})));
+    if (!sheets.length) source.appendChild(el('p',{class:'hint',text:'شیتی برای این استان در این دسته موجود نیست.'}));
+    root.appendChild(source);
+  }
+  const other = names.filter(n => !provinceOf(n));
+  if (other.length) {
+    const extra = el('div',{class:'province-other'},el('h4',{text:'سایر شیت‌های این دسته'}),
+      el('p',{class:'hint',text:'شیت‌های عمومی یا تجمیعی بدون انتساب به یک استان، بدون تغییر باقی مانده‌اند.'}));
+    other.forEach(n => extra.appendChild(el('button',{type:'button',class:'btn btn-ghost btn-sm','data-act':'open-sheet','data-name':n,text:n})));
+    root.appendChild(extra);
+  }
+  return root;
+}
+
 const SHEET_CATEGORIES = [
   { id: "provinces", name: "استان‌ها و شعب", sub: "Provinces & Branches", color: "#2fd4c4", icon: "pin",
-    test: n => PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
+    test: n => !!provinceOf(n) || PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
   { id: "datacenters", name: "مراکز داده و دفاتر", sub: "Data Centers & Offices", color: "#5b93ff", icon: "server",
     test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
   { id: "services", name: "سرویس‌های شبکه", sub: "Network Services", color: "#a78bfa", icon: "globe",
@@ -7225,8 +7393,12 @@ function renderSheetCatalog() {
       if (c.id === "other") return categoryOf(n).id === "other";
       return categoryOf(n).id === c.id && (!IsSystemSheet(n) || state.showSystem);
     });
-    if (!names.length) return;
+    if (!names.length && c.id !== 'provinces') return;
     rendered++;
+    if (c.id === 'provinces') {
+      host.appendChild(renderProvinceHierarchy(names, c));
+      return;
+    }
     const grid = el("div", { class: "sheet-grid" });
     names.forEach(n => {
       const rows = Math.max(0, countRows(n) - 1);

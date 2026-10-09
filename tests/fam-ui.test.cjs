@@ -617,6 +617,111 @@ test('macro descriptions, source viewer and source exports do not reveal passwor
   await menu().click();
 });
 
+test('four regions contain the exact 31 provinces and recognize legacy worksheet names', async () => {
+  const expected = [
+    ['خراسان رضوی','خراسان شمالی','خراسان جنوبی','سیستان و بلوچستان','گلستان'],
+    ['تهران'],
+    ['اردبیل','آذربایجان غربی','آذربایجان شرقی','خوزستان','قم','کردستان','لرستان','همدان','مرکزی','کرمانشاه','قزوین','زنجان','البرز','کهگیلویه و بویراحمد'],
+    ['فارس','ایلام','اصفهان','بوشهر','چهارمحال و بختیاری','سمنان','یزد','گیلان','مازندران','هرمزگان','کرمان']
+  ];
+  assert.deepEqual(await page.evaluate(() => PROVINCE_REGIONS.map(r => r.names)),expected);
+  const mapped = await page.evaluate(() => PROVINCIAL_SHEETS.map(n => provinceOf(n)?.name));
+  assert.equal(mapped.length,31);
+  assert.equal(new Set(mapped).size,31);
+  assert.ok(mapped.every(n => expected.flat().includes(n)));
+  assert.deepEqual(await page.evaluate(() => ['مرکز داده تهران','تجهیزات شبکه خودپرداز','شعب','شعب ادغامی'].map(provinceOf)),[null,null,null,null]);
+  assert.equal(await page.evaluate(() => provinceOf('استان آذربایجان شرقی').region),'3');
+});
+
+test('province navigation keeps all rows in Branch and ATMs empty without editing the workbook', async () => {
+  await page.evaluate(() => {
+    state.categoryConfig = null;
+    for (const name of PROVINCIAL_SHEETS) {
+      const sheet = ensureSheet(name,true);
+      sheet.rows = [['شاخص','نام'],['101','داده شعبه'],['شبکه خودپرداز',''],['202','داده قدیمی خودپرداز']];
+      sheet.merges = [{r1:2,c1:1,r2:2,c2:1}];
+    }
+    ensureSheet('شعب',true).rows = [['نام'],['شیت تجمیعی']];
+    saveState(); initUIFromState();
+    openCategory('provinces');
+  });
+  const before = await businessSheets();
+  assert.equal(await page.locator('.region-choice').count(),4);
+  for (const [i,count] of [[1,5],[2,1],[3,14],[4,11]]) {
+    await page.locator(`[data-region="${i}"]`).click();
+    assert.equal(await page.locator('.province-card').count(),count);
+    assert.equal(await page.locator('.province-sections button').count(),count*2);
+  }
+  await page.locator('[data-region="3"]').click();
+  await page.locator('[data-province="3-14"][data-section="branch"]').click();
+  await page.waitForFunction(() => state.currentSheet === 'کهکلویه');
+  assert.equal(await page.locator('#sheet-title').innerText(),'کهگیلویه و بویراحمد — شعبه');
+  assert.match(await page.locator('#sheet-body').innerText(),/داده شعبه/);
+  assert.match(await page.locator('#sheet-body').innerText(),/داده قدیمی خودپرداز/);
+  await categoryReload();
+  assert.equal(await page.evaluate(() => state.provinceView.section),'branch');
+  assert.equal(await page.locator('#sheet-title').innerText(),'کهگیلویه و بویراحمد — شعبه');
+  await page.locator('[data-province="3-14"][data-section="atm"]').click();
+  assert.equal(await page.evaluate(() => state.currentSheet),null);
+  assert.equal(await page.locator('#sheet-body table').count(),0);
+  assert.match(await page.locator('#sheet-body').innerText(),/فعلاً خالی/);
+  assert.equal(await page.locator('#sheet-title').innerText(),'کهگیلویه و بویراحمد — خودپرداز');
+  await categoryReload();
+  assert.equal(await page.locator('#sheet-title').innerText(),'کهگیلویه و بویراحمد — خودپرداز');
+  assert.equal(await page.locator('#sheet-body table').count(),0);
+  assert.deepEqual(await businessSheets(),before);
+  // Aggregate sheets remain accessible, not misclassified as a province.
+  await page.locator('.province-other [data-name="شعب"]').click();
+  assert.equal(await page.evaluate(() => state.currentSheet),'شعب');
+  assert.equal(await page.locator('#sheet-title').innerText(),'شعب');
+  // Explicit category assignments continue to take precedence.
+  await page.evaluate(() => {
+    state.categoryConfig = defaultCategoryConfig();
+    state.categoryConfig.assignments.push(['استان تهران','other']);
+    openCategory('provinces');
+  });
+  await page.locator('[data-region="2"]').click();
+  await page.locator('[data-province="2-1"][data-section="branch"]').click();
+  assert.equal(await page.evaluate(() => state.currentSheet),null);
+  assert.match(await page.locator('#sheet-body').innerText(),/موجود نیست/);
+  assert.deepEqual(await businessSheets(),before);
+  await page.evaluate(() => { state.categoryConfig = null; state.provinceView = null; state.currentSheet = null; initUIFromState(); });
+});
+
+test('dashboard buttons and sheet toolbar align side by side and stay within mobile bounds', async () => {
+  for (const width of [1920,1440,1024,800,390,320]) {
+    await page.setViewportSize({width,height:1000});
+    await panel();
+    const header = page.locator('.cat-header-actions');
+    const dashboard = await header.locator('button').evaluateAll(es => es.map(e => {
+      const r = e.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+    }));
+    assert.ok(Math.abs(dashboard[0].top-dashboard[1].top)<1);
+    assert.ok(dashboard[0].left >= dashboard[1].right, 'Manager is to the right of View all');
+    await page.evaluate(() => openCategory('provinces'));
+    await page.locator('[data-region="3"]').click();
+    const dims = await page.locator('.sheet-toolbar').evaluate(root => {
+      const es=[...root.querySelectorAll('button,input')];
+      const rs=es.map(e=>({id:e.id||e.dataset.act,...Object.fromEntries(['left','right','top','bottom','height'].map(k=>[k,e.getBoundingClientRect()[k]]))}));
+      const pairs=[];
+      for(let i=0;i<rs.length;i++)for(let j=i+1;j<rs.length;j++)if(Math.min(rs[i].right,rs[j].right)>Math.max(rs[i].left,rs[j].left)+1 && Math.min(rs[i].bottom,rs[j].bottom)>Math.max(rs[i].top,rs[j].top)+1)pairs.push([rs[i].id,rs[j].id]);
+      return {rs,pairs,overflow:document.documentElement.scrollWidth>innerWidth};
+    });
+    assert.deepEqual(dims.pairs,[],`width=${width}`);
+    assert.equal(dims.overflow,false,`width=${width}`);
+    assert.ok(dims.rs.every(r=>r.left>=0&&r.right<=width&&r.height===40));
+    const [manager,dash,input] = dims.rs;
+    assert.equal(manager.top,dash.top);
+    assert.ok(manager.left>=dash.right);
+    if(width>540) { assert.equal(dash.top,input.top);assert.ok(dash.left>=input.right); }
+    if(width>=1024) assert.equal(new Set(dims.rs.map(r=>r.top)).size,1);
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await page.screenshot({path:path.join(root,'test-results','regions-ui06.png')});
+  await panel();
+  await page.screenshot({path:path.join(root,'test-results','buttons-ui06.png')});
+});
+
 test('no uncaught browser errors or duplicate IDs', async () => {
   assert.deepEqual(errors, []);
   const duplicates = await page.locator('[id]').evaluateAll(es => {
