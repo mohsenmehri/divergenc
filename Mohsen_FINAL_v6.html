@@ -147,15 +147,20 @@ input,select,textarea{font-family:var(--font);}
 /* ============ SIDEBAR ============ */
 #sidebar{
   position:fixed;z-index:60;
-  top:var(--sidebar-float);right:var(--sidebar-float);bottom:var(--sidebar-float);
+  top:calc(var(--topbar-h) + 12px);
+  right:calc(-1 * (var(--sidebar-w) + 28px));
+  bottom:var(--sidebar-float);
   width:var(--sidebar-w);height:auto;flex:none;
   display:flex;flex-direction:column;overflow:auto;
   border-radius:22px;
   border:1px solid rgba(217,178,107,.32);
-  background:linear-gradient(180deg,rgba(15,24,48,.78),rgba(9,14,30,.86));
+  background:linear-gradient(180deg,rgba(15,24,48,.82),rgba(9,14,30,.9));
   box-shadow:0 26px 64px -22px rgba(0,0,0,.75),0 0 0 1px rgba(217,178,107,.1),inset 0 1px 0 rgba(255,255,255,.07);
   backdrop-filter:blur(22px);
+  transition:right .34s cubic-bezier(.22,.8,.24,1);
+  pointer-events:none;
 }
+#sidebar.open{right:var(--sidebar-float);pointer-events:auto;}
 #sidebar::-webkit-scrollbar{width:8px;}
 #sidebar::-webkit-scrollbar-thumb{background:rgba(217,178,107,.35);border-radius:99px;}
 .brand{display:flex;align-items:flex-start;gap:11px;padding:18px 16px 14px;}
@@ -206,11 +211,11 @@ input,select,textarea{font-family:var(--font);}
 .dot.a{background:var(--amber);box-shadow:0 0 8px var(--amber);}
 
 /* ============ MAIN ============ */
-#main-wrap{flex:1;min-width:0;display:flex;flex-direction:column;margin-right:calc(var(--sidebar-w) + var(--sidebar-float) * 2);}
+#main-wrap{flex:1;min-width:0;display:flex;flex-direction:column;}
 
 /* ============ TOPBAR ============ */
 #topbar{
-  height:var(--topbar-h);position:sticky;top:0;z-index:50;
+  height:var(--topbar-h);position:sticky;top:0;z-index:70;
   display:flex;align-items:center;gap:13px;padding:0 22px;
   background:rgba(9,14,30,.72);backdrop-filter:blur(16px);
   border-bottom:1px solid var(--stroke);
@@ -729,18 +734,11 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .fade-in{animation:fadeUp .35s ease;}
 
 /* responsive */
-@media (max-width:980px){
-  #main-wrap{margin-right:0;}
-  #sidebar{
-    top:10px;bottom:10px;height:auto;
-    right:calc(-1 * (var(--sidebar-w) + 28px));
-    transition:right .28s ease;
-  }
-  #sidebar.open{right:10px;}
-  #sidebar .brand{padding-top:14px;}
-  .burger{display:flex !important;}
+.burger{display:flex;}
+#sidebar.open ~ #main-wrap .burger{
+  border-color:rgba(217,178,107,.55);
+  background:rgba(217,178,107,.16);
 }
-.burger{display:none;}
 @media (max-width:640px){
   .search-rows{grid-template-columns:1fr;}
   .hero{flex-direction:column;align-items:flex-start;}
@@ -1117,7 +1115,7 @@ body.fx-alt #fx-flare,body.fx-alt #fx-ghost,body.fx-alt #fx-leak{display:none;}
 
     <!-- TOPBAR -->
     <header id="topbar">
-      <button class="icon-btn burger" data-act="toggle-sidebar">
+      <button class="icon-btn burger" data-act="toggle-sidebar" aria-controls="sidebar" aria-expanded="false" title="باز و بسته کردن منو">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="page-title">
@@ -4946,7 +4944,7 @@ const ACTIONS = {
   "reset-all": () => resetAll(),
   "go-cp": () => GoToControlPanel(),
   "switch-view": el => switchView(el.dataset.view),
-  "toggle-sidebar": () => { const sb = document.getElementById("sidebar"); if (sb) sb.classList.toggle("open"); },
+  "toggle-sidebar": () => { const sb = document.getElementById("sidebar"); if (!sb) return; const open = sb.classList.toggle("open"); const btn = document.querySelector("[data-act=\"toggle-sidebar\"]"); if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false"); },
   "toggle-lock": () => toggleSheetLock(),
   "filter-rows": () => filterSheetRows(),
   "export-sheet-csv": () => exportCurrentSheetCSV(),
