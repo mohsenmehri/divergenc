@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پنج کانسپت بک‌گراند — انتخاب کنید</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+<style>
+:root{
+  --bg:#04060d; --ink:#eef1f7; --dim:#98a1b3; --line:rgba(255,255,255,.12);
+  --font:"Vazirmatn",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--font)}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block}
+.ui{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;z-index:2}
+.head{padding:18px 22px 0;pointer-events:none}
+.head h1{margin:0;font-size:15px;font-weight:800}
+.head p{margin:4px 0 0;font-size:12px;color:var(--dim);max-width:78ch;line-height:1.85}
+.head .now{font-family:var(--mono);font-size:10.5px;color:#e9d9a8;letter-spacing:.14em}
+.dock{
+  margin-top:auto;padding:28px 18px 18px;display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;
+  background:linear-gradient(180deg, rgba(4,6,13,0), rgba(4,6,13,.94) 26%, #04060d 70%);
+}
+.pick{
+  pointer-events:auto;text-align:start;font-family:var(--font);cursor:pointer;
+  background:rgba(10,14,24,.96);border:1px solid var(--line);border-radius:12px;
+  padding:10px 12px;color:var(--dim);flex:1 1 180px;max-width:250px;
+  transition:.22s cubic-bezier(.22,1,.36,1);
+}
+.pick:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.26);color:#dfe4ee}
+.pick.on{border-color:#e0c58d;background:rgba(38,30,14,.78);color:#fff}
+.pick b{display:block;font-size:13px;font-weight:800;color:#fff;margin-bottom:2px}
+.pick span{display:block;font-size:11px;line-height:1.7;color:var(--dim)}
+.pick.on span{color:#e6d9bd}
+.pick em{display:block;font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:#9d9079;margin-top:5px}
+.foot{pointer-events:none;font-family:var(--mono);font-size:10px;color:#5f6878;padding:0 22px 12px}
+@media(max-width:900px){.pick{max-width:none;flex:1 1 46%}}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-hidden="true"></canvas>
+<div class="ui">
+  <div class="head">
+    <div class="now" id="nowTag">CONCEPT A</div>
+    <h1>پنج طرح بک‌گراند — شعب و ساختمان‌ها تا دیتاسنتر</h1>
+    <p id="nowDesc"></p>
+  </div>
+  <div class="dock" id="dock"></div>
+  <div class="foot">کلیدهای ۱ تا ۵ · بالای وسط هر طرح تیره مانده تا عنوان طلایی خوانا بماند · بعد از انتخاب، همان طرح روی صفحهٔ اصلی می‌نشیند</div>
+</div>
+<script>
+"use strict";
+const cv = document.getElementById("stage");
+const ctx = cv.getContext("2d");
+const NO2D = !ctx;
+const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
+const gA = document.createElement("canvas"), gActx = gA.getContext("2d");
+const gB = document.createElement("canvas"), gBctx = gB.getContext("2d");
+const fr = document.createElement("canvas"), frctx = fr.getContext("2d");
+const grain = document.createElement("canvas"); grain.width = grain.height = 128;
+(function () {
+  const g = grain.getContext("2d"), id = g.createImageData(128, 128);
+  for (let i = 0; i < id.data.length; i += 4) {
+    const v = 120 + Math.random() * 135;
+    id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255;
+  }
+  g.putImageData(id, 0, 0);
+})();
+const canFilter = (function () {
+  try { gActx.filter = "blur(1px)"; const ok = gActx.filter === "blur(1px)"; gActx.filter = "none"; return ok; }
+  catch (e) { return false; }
+})();
+const PAL = {
+  gold: [236, 204, 138], cyan: [64, 214, 204], blue: [110, 168, 255],
+  violet: [176, 146, 255], green: [78, 214, 150], rose: [244, 140, 186],
+  ink: [246, 240, 228], amber: [255, 176, 84]
+};
+const A = (k, a) => "rgba(" + PAL[k][0] + "," + PAL[k][1] + "," + PAL[k][2] + "," + a + ")";
+const TAU = Math.PI * 2;
+let W = 0, H = 0, S = 1, DPR = 1, GA_W = 0, GA_H = 0, GB_W = 0, GB_H = 0, pat = null;
+
+function glow(g, x, y, r, k, a) {
+  if (a <= 0.01) return;
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, A(k, a)); gr.addColorStop(0.5, A(k, a * 0.28)); gr.addColorStop(1, A(k, 0));
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+}
+function dot(g, x, y, r, k, a) { g.fillStyle = A(k, a); g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
+function tag(g, txt, x, y, k, a) {
+  g.font = "600 " + (10 * S) + "px ui-monospace, Menlo, Consolas, monospace";
+  const w = g.measureText(txt).width + 12 * S, h = 16 * S;
+  g.fillStyle = "rgba(5,8,16," + (0.62 * a) + ")";
+  g.strokeStyle = A(k, 0.55 * a); g.lineWidth = 0.8 * S;
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x - w / 2, y - h / 2, w, h, 3 * S); else g.rect(x - w / 2, y - h / 2, w, h);
+  g.fill(); g.stroke();
+  g.fillStyle = A(k, 0.95 * a); g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(txt, x, y + 0.4 * S); g.textAlign = "left";
+}
+function stars(g, t, n, seed) {
+  for (let i = 0; i < n; i++) {
+    const x = ((i * 61.8 + seed) % 100) / 100 * W;
+    const y = ((i * 37.4 + seed * 1.7) % 62) / 100 * H;
+    const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9 + i));
+    dot(g, x, y, (i % 11 === 0 ? 1.5 : 0.8) * S, "ink", 0.35 * tw);
+  }
+}
+function night(g) {
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#070b16"); sky.addColorStop(0.55, "#0a1020"); sky.addColorStop(1, "#061018");
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+}
+function rr(g, x, y, w, h, r) {
+  g.beginPath();
+  if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h);
+}
+function windows(g, x, y, w, h, t, seed) {
+  const cols = Math.max(2, Math.floor(w / (8 * S)));
+  const rows = Math.max(2, Math.floor(h / (9 * S)));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const on = Math.sin(t * 1.2 + seed + r * 1.7 + c) > -0.15;
+      if (!on) continue;
+      dot(g, x + w * (c + 0.5) / cols, y + h * (r + 0.5) / rows, 1.05 * S, "gold", 0.75);
+    }
+  }
+}
+function building(g, x, y, w, h, t, seed) {
+  g.fillStyle = "rgba(10,14,26,.92)";
+  g.strokeStyle = A("gold", 0.28);
+  g.lineWidth = 1 * S;
+  rr(g, x, y - h, w, h, 2 * S); g.fill(); g.stroke();
+  windows(g, x + 2 * S, y - h + 3 * S, w - 4 * S, h - 6 * S, t, seed);
+}
+function dish(g, x, y) {
+  g.strokeStyle = A("ink", 0.7); g.lineWidth = 1 * S;
+  g.beginPath(); g.arc(x, y, 7 * S, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 8 * S); g.stroke();
+  dot(g, x, y - 1 * S, 1.3 * S, "gold", 0.9);
+}
+function mast(g, x, base, h, k) {
+  g.strokeStyle = A("ink", 0.55); g.lineWidth = 1.2 * S;
+  g.beginPath();
+  g.moveTo(x - 10 * S, base); g.lineTo(x, base - h); g.lineTo(x + 10 * S, base);
+  g.moveTo(x - 6 * S, base - h * 0.35); g.lineTo(x + 6 * S, base - h * 0.35);
+  g.moveTo(x - 3.5 * S, base - h * 0.65); g.lineTo(x + 3.5 * S, base - h * 0.65);
+  g.stroke();
+  dot(g, x, base - h, 2.2 * S, k, 1);
+  glow(g, x, base - h, 16 * S, k, 0.35);
+}
+function hex(g, x, y, r, k, a) {
+  g.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a0 = Math.PI / 6 + i * TAU / 6;
+    const px = x + Math.cos(a0) * r, py = y + Math.sin(a0) * r;
+    if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+  }
+  g.closePath();
+  g.strokeStyle = A(k, a); g.lineWidth = 1.1 * S; g.stroke();
+}
+function quad(g, x0, y0, cx, cy, x1, y1, k, w, a) {
+  g.strokeStyle = A(k, a); g.lineWidth = w * S;
+  g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(cx, cy, x1, y1); g.stroke();
+}
+function along(x0, y0, cx, cy, x1, y1, u) {
+  const v = 1 - u;
+  return [v * v * x0 + 2 * v * u * cx + u * u * x1, v * v * y0 + 2 * v * u * cy + u * u * y1];
+}
+function rider(g, x0, y0, cx, cy, x1, y1, t, sp, k) {
+  const u = (t * sp) % 1;
+  const p = along(x0, y0, cx, cy, x1, y1, u);
+  const q = along(x0, y0, cx, cy, x1, y1, Math.max(0, u - 0.04));
+  glow(g, p[0], p[1], 12 * S, k, 0.4);
+  dot(g, p[0], p[1], 2 * S, k, 0.95);
+  dot(g, q[0], q[1], 1.3 * S, k, 0.45);
+}
+function sat(g, x, y, t, sc) {
+  g.save(); g.translate(x, y); g.rotate(Math.sin(t * 0.25) * 0.12); g.scale(sc, sc);
+  glow(g, 0, 0, 28 * S, "gold", 0.28);
+  g.fillStyle = A("blue", 0.55); g.strokeStyle = A("ink", 0.7); g.lineWidth = 0.8 * S;
+  g.fillRect(-22 * S, -3.2 * S, 14 * S, 6.4 * S); g.strokeRect(-22 * S, -3.2 * S, 14 * S, 6.4 * S);
+  g.fillRect(8 * S, -3.2 * S, 14 * S, 6.4 * S); g.strokeRect(8 * S, -3.2 * S, 14 * S, 6.4 * S);
+  g.fillStyle = A("gold", 0.75);
+  g.fillRect(-5 * S, -5 * S, 10 * S, 10 * S); g.strokeRect(-5 * S, -5 * S, 10 * S, 10 * S);
+  g.restore();
+}
+function beam(g, x0, y0, x1, y1, k, w0, w1, a) {
+  const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len, ny = dx / len;
+  const grd = g.createLinearGradient(x0, y0, x1, y1);
+  grd.addColorStop(0, A(k, a)); grd.addColorStop(1, A(k, 0));
+  g.fillStyle = grd;
+  g.beginPath();
+  g.moveTo(x0 + nx * w0, y0 + ny * w0);
+  g.lineTo(x1 + nx * w1, y1 + ny * w1);
+  g.lineTo(x1 - nx * w1, y1 - ny * w1);
+  g.lineTo(x0 - nx * w0, y0 - ny * w0);
+  g.closePath(); g.fill();
+}
+function hall(g, x, y, w, h, t) {
+  glow(g, x + w / 2, y + h / 2, w * 0.7, "gold", 0.16);
+  g.fillStyle = "rgba(12,16,28,.9)";
+  g.strokeStyle = A("gold", 0.62); g.lineWidth = 1.2 * S;
+  rr(g, x, y, w, h, 4 * S); g.fill(); g.stroke();
+  const cols = 8, rows = 3;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const on = Math.sin(t * 2.1 + r + c * 0.7) > -0.2;
+      dot(g, x + w * (c + 0.5) / cols, y + h * (r + 0.5) / rows, 1.3 * S, on ? "gold" : "ink", on ? 0.9 : 0.2);
+    }
+  }
+}
+
+/* A — miniature night: branches, tower, LTE, MPLS into the data center */
+const LinkTheatre = {
+  init: function () {},
+  draw: function (g, t) {
+    night(g); stars(g, t, 80, 4);
+    const ground = H * 0.78;
+    const earth = g.createLinearGradient(0, ground, 0, H);
+    earth.addColorStop(0, "rgba(20,40,70,.35)"); earth.addColorStop(1, "rgba(8,16,32,.2)");
+    g.fillStyle = earth; g.fillRect(0, ground, W, H - ground);
+    g.strokeStyle = A("cyan", 0.28); g.lineWidth = 1 * S;
+    g.beginPath(); g.moveTo(0, ground); g.lineTo(W, ground); g.stroke();
+
+    const blds = [[0.06, 78], [0.13, 54], [0.2, 64]];
+    for (let i = 0; i < blds.length; i++) {
+      const x = blds[i][0] * W, h = blds[i][1] * S;
+      building(g, x, ground, 52 * S, h, t, i * 3);
+      dish(g, x + 16 * S, ground - h - 2 * S);
+      dish(g, x + 36 * S, ground - h - 2 * S);
+    }
+    const tx = 0.18 * W, ty = ground - 118 * S;
+    mast(g, tx, ground, 118 * S, "gold");
+    const dishes = [0.08, 0.145, 0.22, 0.27];
+    for (let i = 0; i < dishes.length; i++) {
+      const dx = dishes[i] * W, dy = ground - (i === 2 ? 70 : 58) * S;
+      beam(g, tx, ty, dx, dy, "gold", 1.2 * S, 10 * S, 0.22);
+      const u = (t * 0.18 + i * 0.2) % 1;
+      dot(g, tx + (dx - tx) * u, ty + (dy - ty) * u, 1.8 * S, "gold", 0.9);
+    }
+    tag(g, "PTMP", tx, ty - 16 * S, "gold", 0.95);
+
+    const lx = 0.36 * W, ly = ground - 92 * S;
+    mast(g, lx, ground, 92 * S, "cyan");
+    for (let i = 0; i < 3; i++) hex(g, lx + 28 * S + i * 16 * S, ly + 8 * S, 11 * S, "cyan", 0.28 + 0.12 * Math.sin(t + i));
+    tag(g, "LTE", lx + 8 * S, ly - 18 * S, "cyan", 0.95);
+
+    const dx = 0.56 * W, dy = ground - 78 * S;
+    hall(g, dx, dy, 168 * S, 70 * S, t);
+    tag(g, "DATA CENTER", dx + 84 * S, dy - 14 * S, "gold", 0.95);
+    quad(g, 0.16 * W, ground - 8 * S, 0.36 * W, ground + 18 * S, dx + 20 * S, dy + 50 * S, "gold", 2.4, 0.75);
+    rider(g, 0.16 * W, ground - 8 * S, 0.36 * W, ground + 18 * S, dx + 20 * S, dy + 50 * S, t, 0.16, "gold");
+    tag(g, "MPLS", 0.34 * W, ground - 28 * S, "gold", 0.95);
+
+    g.strokeStyle = A("cyan", 0.45); g.lineWidth = 1.4 * S;
+    g.beginPath(); g.ellipse(0.4 * W, ground - 6 * S, 0.22 * W, 28 * S, 0, 0, TAU); g.stroke();
+    tag(g, "INTRANET", 0.48 * W, ground - 34 * S, "cyan", 0.9);
+
+    const ix = 0.8 * W, iy = ground - 36 * S;
+    g.strokeStyle = A("blue", 0.8); g.lineWidth = 3 * S;
+    g.beginPath(); g.arc(ix, iy, 22 * S, Math.PI * 1.15, Math.PI * 1.85); g.stroke();
+    glow(g, ix, iy - 8 * S, 26 * S, "blue", 0.2);
+    quad(g, dx + 160 * S, dy + 36 * S, ix - 20 * S, dy + 20 * S, ix - 8 * S, iy, "blue", 1.3, 0.55);
+    tag(g, "INTERNET", ix, iy - 34 * S, "blue", 0.95);
+
+    sat(g, 0.1 * W, 0.14 * H, t, 1);
+    beam(g, 0.1 * W, 0.16 * H, 0.12 * W, ground - 70 * S, "gold", 1.4 * S, 8 * S, 0.2);
+    for (let i = 0; i < 3; i++) {
+      const p = (t * 0.1 + i * 0.33) % 1;
+      g.strokeStyle = A("gold", 0.28 * (1 - p)); g.lineWidth = 1 * S;
+      g.beginPath(); g.ellipse(0.1 * W, 0.14 * H, 18 * S + p * 40 * S, 8 * S + p * 14 * S, -0.2, 0, TAU); g.stroke();
+    }
+  }
+};
+
+/* B — night operations map, routes not a dashboard */
+const OpsMap = {
+  init: function () {},
+  draw: function (g, t) {
+    night(g); stars(g, t, 40, 9);
+    const wash = g.createRadialGradient(W * 0.48, H * 0.52, 20, W * 0.48, H * 0.52, W * 0.42);
+    wash.addColorStop(0, "rgba(16,28,48,.55)"); wash.addColorStop(1, "rgba(6,8,16,0)");
+    g.fillStyle = wash; g.fillRect(0, 0, W, H);
+    g.strokeStyle = "rgba(120,150,190,.08)"; g.lineWidth = 1;
+    for (let i = 1; i < 8; i++) {
+      g.beginPath(); g.moveTo(i * W / 8, H * 0.22); g.lineTo(i * W / 8, H * 0.78); g.stroke();
+      g.beginPath(); g.moveTo(W * 0.08, H * (0.22 + i * 0.07)); g.lineTo(W * 0.9, H * (0.22 + i * 0.07)); g.stroke();
+    }
+    const sites = [
+      { x: 0.16, y: 0.4, tag: "BRANCH", k: "gold" },
+      { x: 0.22, y: 0.58, tag: "BRANCH", k: "gold" },
+      { x: 0.3, y: 0.46, tag: "BUILDING", k: "amber" },
+      { x: 0.4, y: 0.64, tag: "BRANCH", k: "gold" }
+    ];
+    const dc = { x: 0.66, y: 0.48 };
+    for (let i = 0; i < sites.length; i++) {
+      const s = sites[i];
+      quad(g, s.x * W, s.y * H, (s.x + dc.x) / 2 * W, s.y * H - 30 * S, dc.x * W, dc.y * H, "gold", 1.8, 0.45);
+      rider(g, s.x * W, s.y * H, (s.x + dc.x) / 2 * W, s.y * H - 30 * S, dc.x * W, dc.y * H, t + i * 0.2, 0.12, "gold");
+    }
+    tag(g, "MPLS", 0.48 * W, 0.36 * H, "gold", 0.9);
+    const hub = { x: 0.28 * W, y: 0.32 * H };
+    mast(g, hub.x, hub.y + 20 * S, 28 * S, "gold");
+    for (let i = 0; i < sites.length; i++) {
+      beam(g, hub.x, hub.y, sites[i].x * W, sites[i].y * H, "amber", 0.8 * S, 7 * S, 0.16);
+    }
+    tag(g, "PTMP", hub.x, hub.y - 22 * S, "amber", 0.95);
+    hex(g, 0.4 * W, 0.42 * H, 26 * S, "cyan", 0.35);
+    hex(g, 0.4 * W + 22 * S, 0.42 * H + 14 * S, 18 * S, "cyan", 0.28);
+    tag(g, "LTE", 0.4 * W, 0.42 * H - 36 * S, "cyan", 0.95);
+    g.strokeStyle = A("cyan", 0.4); g.lineWidth = 1.3 * S;
+    g.beginPath(); g.ellipse(0.46 * W, 0.52 * H, 0.28 * W, 0.2 * H, -0.1, 0, TAU); g.stroke();
+    tag(g, "INTRANET", 0.46 * W, 0.74 * H, "cyan", 0.9);
+    glow(g, dc.x * W, dc.y * H, 40 * S, "gold", 0.22);
+    hall(g, dc.x * W - 46 * S, dc.y * H - 22 * S, 92 * S, 44 * S, t);
+    tag(g, "DATA CENTER", dc.x * W, dc.y * H - 38 * S, "gold", 0.95);
+    quad(g, dc.x * W + 40 * S, dc.y * H, 0.8 * W, 0.4 * H, 0.86 * W, 0.42 * H, "blue", 1.4, 0.6);
+    rider(g, dc.x * W + 40 * S, dc.y * H, 0.8 * W, 0.4 * H, 0.86 * W, 0.42 * H, t, 0.2, "blue");
+    tag(g, "INTERNET", 0.86 * W, 0.36 * H, "blue", 0.95);
+    sat(g, 0.72 * W, 0.2 * H, t, 0.8);
+    beam(g, 0.72 * W, 0.22 * H, dc.x * W, dc.y * H - 10 * S, "gold", 1 * S, 8 * S, 0.14);
+    for (let i = 0; i < sites.length; i++) {
+      glow(g, sites[i].x * W, sites[i].y * H, 16 * S, sites[i].k, 0.25);
+      dot(g, sites[i].x * W, sites[i].y * H, 3 * S, sites[i].k, 0.95);
+      tag(g, sites[i].tag, sites[i].x * W, sites[i].y * H + 16 * S, sites[i].k, 0.85);
+    }
+  }
+};
+
+/* C — one radio cathedral, not a field of towers */
+const RadioCathedral = {
+  init: function () {},
+  draw: function (g, t) {
+    night(g); stars(g, t, 90, 12);
+    const hz = H * 0.7;
+    const sky = g.createLinearGradient(0, H * 0.2, 0, hz);
+    sky.addColorStop(0, "rgba(40,24,8,0)"); sky.addColorStop(1, "rgba(90,50,16,.18)");
+    g.fillStyle = sky; g.fillRect(0, 0, W, hz);
+    for (let i = 0; i < 14; i++) {
+      const x = (0.04 + i * 0.055) * W;
+      const h = (18 + (i * 17) % 40) * S;
+      building(g, x, hz, 28 * S, h, t, i);
+    }
+    const tx = 0.3 * W, top = hz - 210 * S;
+    mast(g, tx, hz, 210 * S, "gold");
+    glow(g, tx, top, 50 * S, "gold", 0.2);
+    const fans = [0.08, 0.16, 0.42, 0.5, 0.58];
+    for (let i = 0; i < fans.length; i++) {
+      beam(g, tx, top + 8 * S, fans[i] * W, hz - 20 * S, "amber", 1.5 * S, 16 * S, 0.16);
+      const u = (t * 0.15 + i * 0.17) % 1;
+      dot(g, tx + (fans[i] * W - tx) * u, top + (hz - 20 * S - top) * u, 1.8 * S, "gold", 0.85);
+    }
+    tag(g, "PTMP", tx + 8 * S, top - 16 * S, "gold", 0.95);
+    for (let i = 0; i < 4; i++) {
+      hex(g, 0.46 * W + i * 22 * S, H * 0.34 + Math.sin(t * 0.4 + i) * 6 * S, 16 * S, "cyan", 0.22 + 0.1 * Math.sin(t + i));
+    }
+    tag(g, "LTE", 0.52 * W, H * 0.28, "cyan", 0.9);
+    hall(g, 0.64 * W, hz - 64 * S, 150 * S, 58 * S, t);
+    tag(g, "DATA CENTER", 0.64 * W + 75 * S, hz - 78 * S, "gold", 0.95);
+    quad(g, 0.22 * W, hz - 4 * S, 0.45 * W, hz + 10 * S, 0.66 * W, hz - 20 * S, "gold", 2.6, 0.7);
+    rider(g, 0.22 * W, hz - 4 * S, 0.45 * W, hz + 10 * S, 0.66 * W, hz - 20 * S, t, 0.14, "gold");
+    tag(g, "MPLS", 0.42 * W, hz - 36 * S, "gold", 0.9);
+    g.strokeStyle = A("cyan", 0.35); g.lineWidth = 1.2 * S;
+    g.beginPath(); g.ellipse(0.46 * W, hz - 8 * S, 0.24 * W, 22 * S, 0, Math.PI, TAU); g.stroke();
+    tag(g, "INTRANET", 0.46 * W, hz + 16 * S, "cyan", 0.85);
+    g.strokeStyle = A("blue", 0.75); g.lineWidth = 2.4 * S;
+    g.beginPath(); g.arc(0.84 * W, hz - 24 * S, 18 * S, Math.PI, TAU); g.stroke();
+    tag(g, "INTERNET", 0.84 * W, hz - 52 * S, "blue", 0.9);
+    sat(g, 0.14 * W, 0.16 * H, t, 0.9);
+    beam(g, 0.14 * W, 0.18 * H, tx, top, "gold", 1 * S, 6 * S, 0.12);
+    g.globalAlpha = 0.18;
+    g.save(); g.translate(0, hz * 2); g.scale(1, -1);
+    mast(g, tx, hz, 120 * S, "gold");
+    g.restore(); g.globalAlpha = 1;
+    const hl = g.createLinearGradient(0, hz - 30 * S, 0, hz + 8 * S);
+    hl.addColorStop(0, A("amber", 0)); hl.addColorStop(1, A("amber", 0.16));
+    g.fillStyle = hl; g.fillRect(0, hz - 30 * S, W, 38 * S);
+  }
+};
+
+/* D — orbital relay onto cities and the data center */
+const Orbital = {
+  init: function () {},
+  draw: function (g, t) {
+    night(g); stars(g, t, 110, 18);
+    g.save();
+    g.beginPath(); g.ellipse(W * 0.5, H * 1.08, W * 0.72, H * 0.46, 0, Math.PI, TAU); g.clip();
+    const limb = g.createLinearGradient(0, H * 0.62, 0, H);
+    limb.addColorStop(0, "rgba(70,140,190,.55)"); limb.addColorStop(0.25, "rgba(12,28,58,.95)"); limb.addColorStop(1, "#061018");
+    g.fillStyle = limb; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 70; i++) {
+      const u = i / 70;
+      const x = W * (0.08 + u * 0.84);
+      const y = H * 0.72 + Math.sin(u * 5.2) * 18 * S;
+      const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 1.4 + i));
+      dot(g, x, y, (i % 9 === 0 ? 1.8 : 1) * S, "gold", 0.55 * tw);
+    }
+    g.restore();
+    g.strokeStyle = A("cyan", 0.45); g.lineWidth = 1.4 * S;
+    g.beginPath(); g.ellipse(W * 0.5, H * 1.08, W * 0.72, H * 0.46, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+    const hits = [
+      { x: 0.22, y: 0.7, tag: "BRANCH", k: "gold" },
+      { x: 0.4, y: 0.74, tag: "BUILDING", k: "amber" },
+      { x: 0.62, y: 0.68, tag: "DATA CENTER", k: "gold" }
+    ];
+    sat(g, 0.24 * W, 0.2 * H, t, 1.35);
+    for (let i = 0; i < 3; i++) {
+      const p = (t * 0.08 + i * 0.28) % 1;
+      g.strokeStyle = A("gold", 0.3 * (1 - p)); g.lineWidth = 1 * S;
+      g.beginPath(); g.ellipse(0.24 * W, 0.2 * H, 24 * S + p * 70 * S, 10 * S + p * 22 * S, -0.3, 0, TAU); g.stroke();
+    }
+    for (let i = 0; i < hits.length; i++) {
+      const h = hits[i];
+      beam(g, 0.24 * W, 0.24 * H, h.x * W, h.y * H, "gold", 1.2 * S, 14 * S, 0.2);
+      const u = (t * 0.16 + i * 0.25) % 1;
+      dot(g, 0.24 * W + (h.x * W - 0.24 * W) * u, 0.24 * H + (h.y * H - 0.24 * H) * u, 2 * S, "gold", 0.95);
+      glow(g, h.x * W, h.y * H, 22 * S, h.k, 0.28);
+      for (let r = 0; r < 3; r++) {
+        const p = (t * 0.12 + r / 3 + i * 0.1) % 1;
+        g.strokeStyle = A(h.k, 0.35 * (1 - p)); g.lineWidth = 1 * S;
+        g.beginPath(); g.arc(h.x * W, h.y * H, 8 * S + p * 28 * S, 0, TAU); g.stroke();
+      }
+      tag(g, h.tag, h.x * W, h.y * H - 18 * S, h.k, 0.95);
+    }
+    hex(g, 0.4 * W, 0.66 * H, 18 * S, "cyan", 0.4);
+    tag(g, "LTE", 0.4 * W + 28 * S, 0.64 * H, "cyan", 0.9);
+    g.strokeStyle = A("cyan", 0.4); g.lineWidth = 1.5 * S;
+    g.beginPath(); g.ellipse(0.42 * W, 0.78 * H, 0.2 * W, 16 * S, 0, Math.PI, TAU); g.stroke();
+    tag(g, "INTRANET", 0.3 * W, 0.58 * H, "cyan", 0.85);
+    quad(g, 0.22 * W, 0.72 * H, 0.4 * W, 0.8 * H, 0.62 * W, 0.7 * H, "gold", 1.6, 0.4);
+    tag(g, "MPLS", 0.4 * W, 0.8 * H, "gold", 0.85);
+    beam(g, 0.62 * W, 0.68 * H, 0.86 * W, 0.5 * H, "blue", 2 * S, 10 * S, 0.18);
+    tag(g, "INTERNET", 0.84 * W, 0.46 * H, "blue", 0.9);
+    tag(g, "PTMP", 0.22 * W, 0.62 * H, "amber", 0.9);
+  }
+};
+
+/* E — the relationships, drawn as five different kinds of light */
+const Nexus = {
+  init: function () {},
+  draw: function (g, t) {
+    night(g); stars(g, t, 60, 21);
+    const nodes = [
+      { x: 0.16, y: 0.36, tag: "BRANCH" },
+      { x: 0.16, y: 0.52, tag: "BRANCH" },
+      { x: 0.16, y: 0.68, tag: "BUILDING" }
+    ];
+    const dcx = 0.68 * W, dcy = 0.52 * H;
+    g.strokeStyle = A("cyan", 0.32); g.lineWidth = 1.3 * S;
+    g.beginPath(); g.ellipse(0.44 * W, 0.52 * H, 0.34 * W, 0.24 * H, 0, 0, TAU); g.stroke();
+    tag(g, "INTRANET", 0.44 * W, 0.72 * H, "cyan", 0.9);
+    const hx = 0.32 * W, hy = 0.26 * H;
+    glow(g, hx, hy, 18 * S, "amber", 0.25);
+    dot(g, hx, hy, 3 * S, "amber", 1);
+    tag(g, "PTMP", hx, hy - 16 * S, "amber", 0.95);
+    for (let i = 0; i < nodes.length; i++) {
+      beam(g, hx, hy, nodes[i].x * W, nodes[i].y * H, "amber", 0.7 * S, 6 * S, 0.16);
+      const u = (t * 0.2 + i * 0.2) % 1;
+      dot(g, hx + (nodes[i].x * W - hx) * u, hy + (nodes[i].y * H - hy) * u, 1.6 * S, "amber", 0.9);
+    }
+    beam(g, hx, hy, dcx, dcy - 20 * S, "amber", 0.8 * S, 8 * S, 0.1);
+    quad(g, 0.2 * W, 0.44 * H, 0.4 * W, 0.34 * H, dcx - 50 * S, dcy, "gold", 2.8, 0.7);
+    rider(g, 0.2 * W, 0.44 * H, 0.4 * W, 0.34 * H, dcx - 50 * S, dcy, t, 0.15, "gold");
+    tag(g, "MPLS", 0.4 * W, 0.34 * H, "gold", 0.95);
+    for (let i = 0; i < 4; i++) {
+      const x = 0.3 * W + i * 28 * S, y = 0.66 * H;
+      hex(g, x, y, 12 * S, "cyan", 0.3 + 0.12 * Math.sin(t * 1.2 + i));
+      if (i < 3) {
+        g.strokeStyle = A("cyan", 0.35); g.lineWidth = 1 * S;
+        g.beginPath(); g.moveTo(x + 12 * S, y); g.lineTo(x + 16 * S, y); g.stroke();
+      }
+    }
+    tag(g, "LTE", 0.34 * W, 0.6 * H, "cyan", 0.9);
+    hall(g, dcx - 54 * S, dcy - 28 * S, 120 * S, 64 * S, t);
+    tag(g, "DATA CENTER", dcx + 8 * S, dcy - 46 * S, "gold", 0.95);
+    g.strokeStyle = A("blue", 0.75); g.lineWidth = 2.2 * S;
+    g.beginPath(); g.arc(0.86 * W, 0.5 * H, 20 * S, Math.PI * 0.7, Math.PI * 1.3, true); g.stroke();
+    quad(g, dcx + 60 * S, dcy, 0.8 * W, 0.42 * H, 0.84 * W, 0.5 * H, "blue", 1.3, 0.55);
+    tag(g, "INTERNET", 0.86 * W, 0.4 * H, "blue", 0.95);
+    sat(g, 0.5 * W, 0.14 * H, t, 1);
+    beam(g, 0.5 * W, 0.17 * H, dcx, dcy - 20 * S, "gold", 1 * S, 7 * S, 0.14);
+    const u = (t * 0.18) % 1;
+    dot(g, 0.5 * W + (dcx - 0.5 * W) * u, 0.17 * H + (dcy - 20 * S - 0.17 * H) * u, 1.8 * S, "gold", 0.9);
+    for (let i = 0; i < nodes.length; i++) {
+      building(g, nodes[i].x * W - 22 * S, nodes[i].y * H + 16 * S, 44 * S, 28 * S, t, i);
+      tag(g, nodes[i].tag, nodes[i].x * W, nodes[i].y * H + 28 * S, "gold", 0.85);
+    }
+  }
+};
+
+const CONCEPTS = [
+  { id: "A", name: "LINK THEATRE", fa: "لینک‌تئاتر", obj: LinkTheatre,
+    desc: "ماکت شب: ساختمان شعب، بادبزن PTMP، دکل LTE، کابل MPLS تا دیتاسنتر، حلقهٔ اینترانت و طاق اینترنت." },
+  { id: "B", name: "OPS MAP", fa: "نقشهٔ عملیات", obj: OpsMap,
+    desc: "نقشهٔ شب از بالا. مسیرهای طلایی شعب را به دیتاسنتر می‌رسانند؛ PTMP، LTE، اینترانت و اینترنت جدا دیده می‌شوند." },
+  { id: "C", name: "RADIO CATHEDRAL", fa: "کلیسای رادیو", obj: RadioCathedral,
+    desc: "یک دکل رادیویی بزرگ، مخروط‌های نور PTMP روی شهر، رود طلایی MPLS تا سالن دیتاسنتر، و بازتاب روی زمین خیس." },
+  { id: "D", name: "ORBITAL RELAY", fa: "رلهٔ مداری", obj: Orbital,
+    desc: "از مدار: ماهواره به شعبه، ساختمان و دیتاسنتر پرتو می‌فرستد. MPLS روی لبهٔ زمین، LTE و اینترنت کنار هم." },
+  { id: "E", name: "NEXUS", fa: "هستهٔ اتصال", obj: Nexus,
+    desc: "روشن‌ترین شرح رابطه: پنج نوع نور مختلف شعب و ساختمان را به دیتاسنتر وصل می‌کنند. برای خواندن لینک‌ها." }
+];
+let cur = 0;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 1.5);
+  const w = window.innerWidth || 1440, h = window.innerHeight || 900;
+  W = w; H = h; S = Math.min(w, h) / 900;
+  cv.width = Math.floor(w * DPR); cv.height = Math.floor(h * DPR);
+  cv.style.width = w + "px"; cv.style.height = h + "px";
+  scene.width = cv.width; scene.height = cv.height;
+  GA_W = Math.max(2, Math.floor(w / 4)); GA_H = Math.max(2, Math.floor(h / 4));
+  GB_W = Math.max(2, Math.floor(w / 9)); GB_H = Math.max(2, Math.floor(h / 9));
+  gA.width = GA_W; gA.height = GA_H; gB.width = GB_W; gB.height = GB_H;
+  fr.width = GB_W; fr.height = GB_H;
+  pat = null;
+  CONCEPTS.forEach(function (c) { c.obj.init(); });
+}
+function grade(t) {
+  gActx.setTransform(1, 0, 0, 1, 0, 0); gActx.clearRect(0, 0, GA_W, GA_H);
+  if (canFilter) gActx.filter = "blur(3px)";
+  gActx.drawImage(scene, 0, 0, GA_W, GA_H);
+  if (canFilter) gActx.filter = "none";
+  gBctx.setTransform(1, 0, 0, 1, 0, 0); gBctx.clearRect(0, 0, GB_W, GB_H);
+  if (canFilter) gBctx.filter = "blur(5px)";
+  gBctx.drawImage(gA, 0, 0, GB_W, GB_H);
+  if (canFilter) gBctx.filter = "none";
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  ctx.drawImage(scene, 0, 0, W, H);
+  ctx.globalCompositeOperation = "lighter";
+  ctx.globalAlpha = 0.45; ctx.drawImage(gA, 0, 0, W, H);
+  ctx.globalAlpha = 0.28; ctx.drawImage(gB, 0, 0, W, H);
+  const flare = ctx.createLinearGradient(0, H * 0.08, W, H * 0.08);
+  flare.addColorStop(0, "rgba(255,214,150,0)");
+  flare.addColorStop(0.45, "rgba(255,236,200,0.35)");
+  flare.addColorStop(1, "rgba(255,214,150,0)");
+  ctx.globalCompositeOperation = "screen"; ctx.globalAlpha = 0.45;
+  ctx.fillStyle = flare; ctx.fillRect(0, H * 0.075, W, 2);
+  ctx.globalAlpha = 1;
+  if (!pat) pat = ctx.createPattern(grain, "repeat");
+  ctx.globalCompositeOperation = "overlay"; ctx.globalAlpha = 0.05;
+  ctx.save();
+  ctx.setTransform(DPR, 0, 0, DPR, -((t * 37) % 128), -((t * 53) % 128));
+  ctx.fillStyle = pat; ctx.fillRect(0, 0, W + 140, H + 140);
+  ctx.restore();
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  const vig = ctx.createRadialGradient(W * 0.5, H * 0.45, W * 0.2, W * 0.5, H * 0.5, W * 0.72);
+  vig.addColorStop(0, "rgba(0,0,0,0)"); vig.addColorStop(1, "rgba(0,0,0,.45)");
+  ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+}
+function frame(t) {
+  sctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  sctx.globalCompositeOperation = "source-over";
+  sctx.globalAlpha = 1;
+  CONCEPTS[cur].obj.draw(sctx, t);
+  grade(t);
+}
+const dock = document.getElementById("dock");
+CONCEPTS.forEach(function (c, i) {
+  const b = document.createElement("button");
+  b.className = "pick" + (i === 0 ? " on" : "");
+  b.type = "button";
+  const title = document.createElement("b");
+  title.textContent = c.fa;
+  const desc = document.createElement("span");
+  desc.textContent = c.desc;
+  const meta = document.createElement("em");
+  meta.textContent = c.id + " · " + c.name;
+  b.appendChild(title); b.appendChild(desc); b.appendChild(meta);
+  b.addEventListener("click", function () { select(i); });
+  dock.appendChild(b);
+});
+function select(i) {
+  cur = i;
+  Array.prototype.forEach.call(dock.children, function (el, k) { el.classList.toggle("on", k === i); });
+  document.getElementById("nowTag").textContent = "CONCEPT " + CONCEPTS[i].id + " — " + CONCEPTS[i].name;
+  document.getElementById("nowDesc").textContent = CONCEPTS[i].desc;
+}
+addEventListener("keydown", function (e) {
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= CONCEPTS.length) select(n - 1);
+});
+select(0);
+resize();
+addEventListener("resize", resize);
+let raf = 0;
+const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+function loop() {
+  frame((window.performance && performance.now ? performance.now() : Date.now()) / 1000);
+  raf = requestAnimationFrame(loop);
+}
+if (NO2D) resize();
+else if (reduce) frame(1.2);
+else loop();
+document.addEventListener("visibilitychange", function () {
+  if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+  else if (!raf && !reduce) loop();
+});
+</script>
+</body>
+</html>
