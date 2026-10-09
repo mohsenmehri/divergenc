@@ -4,12 +4,7 @@
   <!-- ================= SIDEBAR ================= -->
   <aside id="sidebar">
     <div class="brand">
-      <div class="brand-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#241703" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px">
-          <path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/><circle cx="12" cy="12" r="2.3"/>
-          <path d="M12 2.5V9.7M20 7l-5.8 3.4M20 17l-5.8-3.4M12 21.5V14.3M4 17l5.8-3.4M4 7l5.8 3.4"/>
-        </svg>
-      </div>
+      <div class="brand-logo" aria-hidden="true">ف</div>
       <div>
         <div class="brand-name">اداره ارتباطات-فن آوری و اطلاعات ملل<span>(فام)</span></div>
         <div class="brand-sub">Mellal Communications, Technology &amp; Information Dept. (FAM)</div>
@@ -112,82 +107,26 @@
 
         <!-- HERO -->
         <div class="hero">
-          <svg class="hero-net" viewBox="0 0 560 240" fill="none" aria-hidden="true">
-            <defs>
-              <radialGradient id="wanHub" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#f2d89b"/><stop offset="100%" stop-color="#c9962f"/>
-              </radialGradient>
-              <linearGradient id="wanCloud" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="rgba(217,178,107,.16)"/><stop offset="100%" stop-color="rgba(47,212,196,.10)"/>
-              </linearGradient>
-            </defs>
-            <!-- WAN clouds -->
-            <path d="M330 28 q28 -16 52 0 q30 -4 40 20 q24 8 12 32 q4 24 -28 24 l-96 0 q-24 -2 -18 -24 q-12 -22 14 -30 q8 -18 24 -22 z" fill="url(#wanCloud)" stroke="rgba(217,178,107,.28)" stroke-width="1"/>
-            <text x="356" y="66" fill="rgba(236,203,138,.75)" font-size="11" font-family="Consolas,monospace" letter-spacing="1.5">IP-MPLS</text>
-            <path d="M44 176 q22 -13 42 0 q24 -3 32 16 q19 6 10 25 q3 19 -22 19 l-77 0 q-19 -2 -14 -19 q-10 -18 11 -24 q7 -14 18 -17 z" fill="url(#wanCloud)" stroke="rgba(47,212,196,.25)" stroke-width="1"/>
-            <text x="88" y="212" text-anchor="middle" fill="rgba(47,212,196,.7)" font-size="10" font-family="Consolas,monospace" letter-spacing="1.2">SDH / VPN</text>
-            <!-- trunks -->
-            <g stroke="rgba(217,178,107,.3)" stroke-width="1.2">
-              <path class="dash-offset" d="M70 62 Q200 18 355 52"/>
-              <path class="dash-offset" d="M56 146 Q210 118 355 52"/>
-              <path class="dash-offset" d="M132 202 Q250 180 355 52"/>
-              <path class="dash-offset" d="M355 52 Q420 100 452 122"/>
-            </g>
-            <g stroke="rgba(47,212,196,.26)" stroke-width="1">
-              <path d="M108 106 Q230 68 355 52"/>
-              <path d="M226 30 Q292 36 355 52"/>
-              <path d="M355 52 Q428 44 472 36"/>
-              <path d="M355 52 Q442 118 502 158"/>
-              <path d="M452 122 Q472 168 468 202"/>
-              <path d="M70 62 Q58 106 56 146"/>
-              <path d="M132 202 Q96 190 56 146"/>
-            </g>
-            <!-- regional cluster hubs -->
-            <g stroke="rgba(47,212,196,.5)" fill="rgba(47,212,196,.12)">
-              <circle cx="226" cy="30" r="7"/><circle cx="226" cy="30" r="13" stroke="rgba(47,212,196,.2)" fill="none"/>
-              <circle cx="108" cy="106" r="6.5"/><circle cx="108" cy="106" r="12" stroke="rgba(47,212,196,.18)" fill="none"/>
-              <circle cx="452" cy="122" r="6.5"/><circle cx="452" cy="122" r="12" stroke="rgba(217,178,107,.22)" fill="none"/>
-            </g>
-            <!-- HQ core -->
-            <g stroke="rgba(217,178,107,.4)" fill="none">
-              <circle cx="355" cy="52" r="17"/><circle cx="355" cy="52" r="30" stroke="rgba(217,178,107,.2)"/><circle cx="355" cy="52" r="43" stroke="rgba(217,178,107,.1)"/>
-              <path d="M355 52 m-53 0 a53 53 0 0 1 22 -42" stroke="rgba(217,178,107,.35)" stroke-width="1.4"/>
-              <path d="M355 52 m48 14 a50 50 0 0 1 -28 34" stroke="rgba(217,178,107,.28)" stroke-width="1.4"/>
-            </g>
-            <circle cx="355" cy="52" r="9" fill="url(#wanHub)" class="n-pulse"/>
-            <!-- branch nodes -->
-            <g fill="#2fd4c4">
-              <circle cx="70" cy="62" r="5" class="n-pulse" style="animation-delay:.4s"/>
-              <circle cx="56" cy="146" r="4.5" class="n-pulse" style="animation-delay:.9s"/>
-              <circle cx="132" cy="202" r="4" class="n-pulse" style="animation-delay:1.3s"/>
-              <circle cx="108" cy="106" r="4.5" class="n-pulse" style="animation-delay:.7s"/>
-              <circle cx="226" cy="30" r="4.5" class="n-pulse" style="animation-delay:1.1s"/>
-            </g>
-            <g fill="#e8c47a">
-              <circle cx="472" cy="36" r="4" class="n-pulse" style="animation-delay:1.6s"/>
-              <circle cx="502" cy="158" r="4" class="n-pulse" style="animation-delay:2s"/>
-              <circle cx="468" cy="202" r="3.6" class="n-pulse" style="animation-delay:2.4s"/>
-            </g>
-            <g fill="rgba(217,178,107,.1)">
-              <circle cx="70" cy="62" r="13"/><circle cx="56" cy="146" r="12"/><circle cx="132" cy="202" r="11"/><circle cx="226" cy="30" r="11"/>
-            </g>
-            <!-- animated packets -->
-            <g fill="#f2d89b">
-              <circle r="2.6"><animateMotion dur="2.6s" repeatCount="indefinite" path="M70 62 Q200 18 355 52"/></circle>
-              <circle r="2.4"><animateMotion dur="3.1s" repeatCount="indefinite" path="M56 146 Q210 118 355 52"/></circle>
-              <circle r="2.2"><animateMotion dur="3.6s" repeatCount="indefinite" path="M132 202 Q250 180 355 52"/></circle>
-              <circle r="2.4"><animateMotion dur="2.2s" repeatCount="indefinite" path="M355 52 Q420 100 452 122"/></circle>
-            </g>
-            <g fill="#2fd4c4" opacity=".9">
-              <circle r="2.2"><animateMotion dur="2.9s" repeatCount="indefinite" path="M355 52 Q442 118 502 158"/></circle>
-              <circle r="2"><animateMotion dur="3.4s" repeatCount="indefinite" path="M108 106 Q230 68 355 52"/></circle>
-            </g>
-          </svg>
+          <div class="hero-schematic" aria-hidden="true">
+            <svg viewBox="0 0 200 100" fill="none">
+              <rect x="8" y="10" width="184" height="80" stroke="currentColor" stroke-width="1"/>
+              <rect x="18" y="22" width="36" height="22" fill="#f6f1e7"/>
+              <text x="36" y="37" text-anchor="middle" fill="#1e4b8a" font-size="9" font-family="Vazirmatn, sans-serif" font-weight="700">HQ</text>
+              <path d="M54 33 H78" stroke="currentColor" stroke-width="1.4"/>
+              <rect x="78" y="24" width="18" height="18" stroke="currentColor" stroke-width="1.3"/>
+              <path d="M96 33 H118" stroke="currentColor" stroke-width="1.6"/>
+              <rect x="118" y="24" width="28" height="18" fill="#c2412a"/>
+              <text x="132" y="36" text-anchor="middle" fill="#fff" font-size="8" font-family="Vazirmatn, sans-serif">ATM</text>
+              <path d="M36 44 V62 H150" stroke="currentColor" stroke-width="1.2"/>
+              <rect x="150" y="54" width="30" height="16" stroke="currentColor"/>
+              <text x="165" y="65" text-anchor="middle" fill="#f6f1e7" font-size="8" font-family="Vazirmatn, sans-serif">BR</text>
+              <rect x="70" y="70" width="22" height="12" stroke="currentColor"/>
+              <text x="81" y="79" text-anchor="middle" fill="#f6f1e7" font-size="7" font-family="Vazirmatn, sans-serif">DC</text>
+            </svg>
+            <div class="hero-cap">HQ · شعبه · ATM · DC</div>
+          </div>
           <div class="hero-txt">
-            <span class="hero-tag">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:11px;height:11px"><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8 3 3m0-14-3 3M8 16l-3 3"/></svg>
-              NOC • اداره‌ی ارتباطات و شبکه
-            </span>
+            <span class="hero-tag">مدار · IP · VLAN · شعبه</span>
             <h1>سامانه مدیریت اطلاعات شبکه‌ی <em>LAN, WAN</em> سراسری شعب و خودپردازها مراکز داده</h1>
           </div>
         </div>
@@ -201,7 +140,7 @@
             <div>
               <div class="eyebrow">بخش ها</div>
               <h3>دسته‌بندی بخش ها شبکه</h3>
-              <div class="sec-lead">نقشه موجودی: شعب و خودپرداز، مدار WAN، پلن IP، روتر و سوییچ، قرارداد مخابرات.</div>
+              <div class="sec-lead">دفتر مدار: شعبه، خودپرداز، IP، VLAN، روتر، سوییچ و قرارداد مخابرات.</div>
             </div>
             <div class="spacer"></div>
             <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
@@ -335,83 +274,83 @@
             <div class="card-body">
               <div class="tools-grid">
                 <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.SaveChanges">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
                   <span>SAVE CHANGES</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.OpenSearchResults">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                   <span>OPEN RESULTS</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.ClearSearchResults">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/><path d="M10 11v6M14 11v6"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/><path d="M10 11v6M14 11v6"/></svg>
                   <span>CLEAR RESULTS</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modUI.RefreshPanel">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
                   <span>REFRESH PANEL</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.RefreshSearchIndexCore">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
                   <span>REFRESH INDEX</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportSearchResults">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
                   <span>خروجی نتایج</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportCurrentData">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8M8 16h5M8 8h8"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8M8 16h5M8 8h8"/></svg>
                   <span>خروجی داده جاری</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportChangeLog">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
                   <span>خروجی تاریخچه</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modFixUnlock.UnlockDataSheets">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
                   <span>رفع قفل بخش‌ها</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modUI.ProtectControlPanel">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
                   <span>قفل پنل</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modUI.UnprotectControlPanel">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
                   <span>باز کردن قفل</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modConstants.HideSystemSheets">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M2 12s3.5-7 10-7c2 0 3.8.7 5.3 1.7M22 12s-3.5 7-10 7c-2 0-3.8-.7-5.3-1.7"/><path d="M3 3l18 18"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7c2 0 3.8.7 5.3 1.7M22 12s-3.5 7-10 7c-2 0-3.8-.7-5.3-1.7"/><path d="M3 3l18 18"/></svg>
                   <span>مخفی سازی سیستم</span>
                 </div>
                 <div class="tool-tile" data-act="run-macro" data-arg="modConstants.UnhideSystemSheets">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                   <span>نمایش سیستم</span>
                 </div>
                 <div class="tool-tile wide" data-act="open-file">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                   <span>IMPORT FILE</span>
                 </div>
                 <div class="tool-tile" data-act="export-xlsx">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                   <span>EXPORT XLSX</span>
                 </div>
                 <div class="tool-tile" data-act="reset-empty">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>
                   <span>EMPTY DATA</span>
                 </div>
                 <div class="tool-tile" data-act="save-now">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
                   <span>ذخیره‌ی تغییرات</span>
                 </div>
                 <div class="tool-tile" data-act="backup">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
                   <span>پشتیبان‌گیری</span>
                 </div>
                 <div class="tool-tile" data-act="restore">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M12 20V9m0 0-4 4m4-4 4 4"/><path d="M5 5h14"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V9m0 0-4 4m4-4 4 4"/><path d="M5 5h14"/></svg>
                   <span>بازیابی</span>
                 </div>
                 <div class="tool-tile" data-act="reset-all">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
                   <span>بازنشانی</span>
                 </div>
               </div>
@@ -493,10 +432,10 @@
       </div>
       <div class="content">
         <div class="legend-strip">
-          <span><i style="background:#3b82f6"></i>آبی = اطلاعات Match (فقط‌خواندنی)</span>
-          <span><i style="background:rgba(30,58,130,.8)"></i>سرستون‌ها</span>
-          <span><i style="background:#e5e7eb"></i>ردیف‌های قابل ویرایش</span>
-          <span><i style="background:#fbbf24"></i>زرد = تغییرات ذخیره‌شده</span>
+          <span><i style="background:#1e4b8a"></i>سرمه = عنوان Match</span>
+          <span><i style="background:#1a1714"></i>مشکی = سرستون</span>
+          <span><i style="background:#fff"></i>سفید = ردیف قابل ویرایش</span>
+          <span><i style="background:#f6e7b8"></i>زرد = تغییرات ذخیره‌شده</span>
         </div>
         <div id="results-body">
           <div class="empty-state">
@@ -515,7 +454,7 @@
         </div>
         <div>
           <h2 id="sheet-title">بخش‌های شبکه</h2>
-          <div class="sub" id="sheet-sub">از نقشه، بخش را باز کنید — جدول همان‌جا می‌ماند</div>
+          <div class="sub" id="sheet-sub">از فهرست، بخش را باز کنید — جدول همین‌جا می‌ماند</div>
         </div>
         <div class="head-actions filter-bar">
           <input class="inp" id="sheet-filter" placeholder="فیلتر سریع ردیف‌ها…">
@@ -528,15 +467,10 @@
       <div class="content sheet-stage">
         <aside class="sheet-rail" id="sheet-rail">
           <div class="rail-head">
-            <svg viewBox="0 0 120 36" fill="none" aria-hidden="true">
-              <path d="M8 28 C28 28 32 8 52 8 S78 28 112 10" stroke="rgba(217,178,107,.55)" stroke-width="1.2" stroke-dasharray="3 3"/>
-              <circle cx="8" cy="28" r="3.2" fill="#2fd4c4"/>
-              <circle cx="52" cy="8" r="4" fill="#e8c47a"/>
-              <circle cx="112" cy="10" r="3" fill="#2fd4c4"/>
-            </svg>
+            <span class="rail-stamp" aria-hidden="true">ف</span>
             <div>
-              <div class="rail-kicker">NOC MAP</div>
-              <div class="rail-title">نقشه بخش‌ها</div>
+              <div class="rail-kicker">SECTION INDEX</div>
+              <div class="rail-title">فهرست بخش‌ها</div>
             </div>
           </div>
           <div class="rail-find">
@@ -553,7 +487,7 @@
           <div id="sheet-body">
             <div class="empty-state">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
-              <div>جدول بخش اینجاست. از نقشه، یک بخش را باز کنید تا ردیف‌ها، آدرس‌ها و ادغام‌ها مثل اکسل بیایند.</div>
+              <div>جدول بخش اینجاست. از فهرست، یک بخش را باز کنید تا ردیف‌ها، آدرس‌ها و ادغام‌ها مثل اکسل بیایند.</div>
             </div>
           </div>
         </div>

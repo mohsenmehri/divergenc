@@ -1000,7 +1000,7 @@ function renderMacrosView() {
   Object.keys(byMod).forEach(mod => {
     const modDiv = el("div", { class: "macro-mod fade-in" },
       el("div", { class: "mh" },
-        sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#7dd3fc", "stroke-width": "2", style: { width: "15px", height: "15px" } },
+        sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", style: { width: "15px", height: "15px" } },
           sEl("path", { d: "m8 6-6 6 6 6M16 6l6 6-6 6" })),
         el("span", { class: "nm", text: mod }),
         el("span", { class: "cnt", text: byMod[mod].length + " macro" })));
@@ -1014,7 +1014,7 @@ function renderMacrosView() {
   });
   const vbaDiv = el("div", { class: "macro-mod fade-in" },
     el("div", { class: "mh" },
-      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#c4b5fd", "stroke-width": "2", style: { width: "15px", height: "15px" } },
+      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", style: { width: "15px", height: "15px" } },
         sEl("rect", { x: "3", y: "4", width: "18", height: "16", rx: "2" }),
         sEl("path", { d: "M8 9h8M8 13h5" })),
       el("span", { class: "nm", text: "VBA Sources \u2014 \u0641\u0627\u06cc\u0644 \u0627\u0635\u0644\u06cc" }),
@@ -1090,11 +1090,11 @@ function renderDonut(totalRecords) {
   const legend = document.getElementById("dash-legend");
   if (!host) return;
   const cats = [
-    { name: "شعب و استان‌ها", color: "#2fd4c4", test: n => /استان|خراسان|خوزستان|فارس|کردستان|لرستان|همدان|مرکزی|کرمانشاه|قزوین|ایلام|اصفهان|بوشهر|بختیاری|سمنان|زنجان|کهکلویه|یزد|گیلان|مازندران|هرمزگان|کرمان|قم|تهران|البرز|اردبیل|آذر|سیستان|گلستان/.test(n) },
-    { name: "مراکز داده و دفاتر", color: "#5b93ff", test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-    { name: "سرویس‌های شبکه", color: "#a78bfa", test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری/.test(n) },
-    { name: "تجهیزات و EOL/EOS", color: "#e8b04b", test: n => /تجهیزات|EOL|PIN PAD/.test(n) },
-    { name: "هزینه و گزارش‌ها", color: "#3ecf8e", test: n => /هزینه|گزارش|جمع|لیست|PSP|شعب$/.test(n) },
+    { name: "شعب و استان‌ها", color: "#1e4b8a", test: n => /استان|خراسان|خوزستان|فارس|کردستان|لرستان|همدان|مرکزی|کرمانشاه|قزوین|ایلام|اصفهان|بوشهر|بختیاری|سمنان|زنجان|کهکلویه|یزد|گیلان|مازندران|هرمزگان|کرمان|قم|تهران|البرز|اردبیل|آذر|سیستان|گلستان/.test(n) },
+    { name: "مراکز داده و دفاتر", color: "#1f6b45", test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
+    { name: "سرویس‌های شبکه", color: "#c2412a", test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری/.test(n) },
+    { name: "تجهیزات و EOL/EOS", color: "#8a5a12", test: n => /تجهیزات|EOL|PIN PAD/.test(n) },
+    { name: "هزینه و گزارش‌ها", color: "#3c372f", test: n => /هزینه|گزارش|جمع|لیست|PSP|شعب$/.test(n) },
   ];
   const vals = cats.map(c => WB.order.filter(n => IsDataSheet(n) && c.test(n)).reduce((s, n) => s + Math.max(0, countRows(n) - 1), 0));
   const total = vals.reduce((a, b) => a + b, 0) || 1;
@@ -1143,7 +1143,7 @@ function renderFeed() {
   if (!host) return;
   const log = WB.sheets[LOG_SHEET];
   const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ""));
-  const colors = { ADD: "#22c55e", REMOVE: "#ef4444", UNDO: "#f59e0b", EDIT: "#3b82f6", ERROR: "#ef4444", ARCHIVE_FAIL: "#ef4444" };
+  const colors = { ADD: "#1f6b45", REMOVE: "#c2412a", UNDO: "#8a5a12", EDIT: "#1e4b8a", ERROR: "#c2412a", ARCHIVE_FAIL: "#c2412a" };
   clear(host);
   if (!rows.length) {
     host.appendChild(el("div", { class: "empty-state", style: { padding: "22px" }, text: "\u0647\u0646\u0648\u0632 \u0631\u0648\u06cc\u062f\u062f\u06cc \u062b\u0628\u062a \u0646\u0634\u062f\u0647 \u0627\u0633\u062a." }));
@@ -1151,8 +1151,7 @@ function renderFeed() {
   }
   rows.slice(-9).reverse().forEach(r => {
     const dot = el("div", { class: "feed-dot" });
-    dot.style.background = colors[r[1]] || "#64748f";
-    dot.style.boxShadow = "0 0 8px " + (colors[r[1]] || "#64748f");
+    dot.style.background = colors[r[1]] || "#5c564e";
     const ft = el("div", { class: "ft" },
       el("b", { text: (r[1] || "") }), txt(" \u2014 " + (r[2] || "")));
     if (r[5]) ft.appendChild(el("span", { class: "badge-soft", style: { fontSize: "8.5px" }, text: r[5] }));
@@ -1384,22 +1383,22 @@ const CAT_ICON_SHAPES = {
   layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
 const SHEET_CATEGORIES = [
-  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#2fd4c4", icon: "pin",
+  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#1e4b8a", icon: "pin",
     test: n => PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
-  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#5b93ff", icon: "server",
+  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#1f6b45", icon: "server",
     test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#a78bfa", icon: "globe",
+  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#c2412a", icon: "globe",
     test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری/.test(n) },
-  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#e8b04b", icon: "signal",
+  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#8a5a12", icon: "signal",
     test: n => /جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک/.test(n) },
-  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#3ecf8e", icon: "chip",
+  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#3c372f", icon: "chip",
     test: n => /تجهیزات|EOL|EOS/.test(n) },
-  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#ef7ab8", icon: "coins",
+  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#6b3a6e", icon: "coins",
     test: n => /هزینه/.test(n) },
-  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#8b96a8", icon: "gear",
+  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#5c564e", icon: "gear",
     test: n => IsSystemSheet(n) },
 ];
-const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#a39d8b", icon: "layers", test: () => true };
+const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#6f675e", icon: "layers", test: () => true };
 
 // match priority: specific categories before broad keyword ones
 const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacenters", "services", "system"];
@@ -1444,22 +1443,18 @@ function allCatsWithOther() {
 /* ---- dashboard category tiles ---- */
 function emptyStateNode(msg) {
   const art = sEl("svg", { class: "es-art", viewBox: "0 0 320 120", fill: "none", "aria-hidden": "true" },
-    sEl("path", { d: "M18 78 q22 -13 42 0 q24 -3 32 16 q19 6 10 25 q3 19 -22 19 l-77 0 q-19 -2 -14 -19 q-10 -18 11 -24 q7 -14 18 -17 z", fill: "rgba(47,212,196,.10)", stroke: "rgba(47,212,196,.35)", "stroke-width": "1.2" }),
-    sEl("path", { d: "M204 12 q26 -15 48 0 q28 -4 37 19 q22 7 11 29 q4 22 -26 22 l-88 0 q-22 -2 -16 -22 q-11 -20 13 -28 q8 -16 21 -20 z", fill: "rgba(217,178,107,.12)", stroke: "rgba(217,178,107,.4)", "stroke-width": "1.2" }),
-    sEl("path", { d: "M76 96 Q150 40 228 44", stroke: "rgba(217,178,107,.45)", "stroke-width": "1.3", "stroke-dasharray": "4 6" }),
-    sEl("path", { d: "M76 96 Q150 70 228 44", stroke: "rgba(47,212,196,.3)", "stroke-width": "1" }),
-    sEl("circle", { cx: "76", cy: "96", r: "5", fill: "#2fd4c4", class: "n-pulse" }),
-    sEl("circle", { cx: "228", cy: "44", r: "7", fill: "#e8c47a", class: "n-pulse", style: { animationDelay: ".7s" } }),
-    sEl("circle", { cx: "228", cy: "44", r: "13", stroke: "rgba(217,178,107,.3)", fill: "none" }),
-    sEl("circle", { cx: "290", cy: "88", r: "4.5", fill: "#2fd4c4", class: "n-pulse", style: { animationDelay: "1.2s" } }),
-    sEl("path", { d: "M228 44 Q262 58 290 88", stroke: "rgba(47,212,196,.32)", "stroke-width": "1" }),
-    sEl("text", { x: "88", y: "116", "text-anchor": "middle", fill: "rgba(47,212,196,.8)", "font-size": "9", "font-family": "monospace", "letter-spacing": "1" }, "BRANCH"),
-    sEl("text", { x: "212", y: "26", fill: "rgba(232,196,122,.9)", "font-size": "9", "font-family": "monospace", "letter-spacing": "1" }, "WAN"),
-    sEl("text", { x: "266", y: "112", fill: "rgba(47,212,196,.8)", "font-size": "9", "font-family": "monospace", "letter-spacing": "1" }, "DC"));
+    sEl("rect", { x: "18", y: "16", width: "284", height: "88", stroke: "#1a1714", "stroke-width": "1.4" }),
+    sEl("rect", { x: "18", y: "16", width: "284", height: "20", fill: "#1a1714" }),
+    sEl("text", { x: "30", y: "30", fill: "#f6f1e7", "font-size": "10", "font-family": "Vazirmatn, sans-serif", "font-weight": "700" }, "INDEX"),
+    sEl("rect", { x: "30", y: "48", width: "52", height: "16", fill: "#1e4b8a" }),
+    sEl("rect", { x: "90", y: "48", width: "128", height: "16", stroke: "#1a1714" }),
+    sEl("rect", { x: "226", y: "48", width: "60", height: "16", fill: "#c2412a" }),
+    sEl("path", { d: "M30 78 H290 M30 90 H190", stroke: "#d9d0c3", "stroke-width": "1" }),
+    sEl("text", { x: "30", y: "116", fill: "#5c564e", "font-size": "9", "font-family": "Vazirmatn, sans-serif" }, "HQ  ·  BRANCH  ·  ATM"));
   return el("div", { class: "empty-state fade-in" },
     art,
     el("div", { class: "es-ico" },
-      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#e8c47a", "stroke-width": "1.6", "stroke-linecap": "round" },
+      sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "1.6", "stroke-linecap": "round" },
         sEl("path", { d: "M12 16V4m0 0 4 4m-4-4-4 4" }),
         sEl("path", { d: "M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" }))),
     el("h3", { text: "\u0647\u0646\u0648\u0632 \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u0648\u062c\u0648\u062f \u0646\u062f\u0627\u0631\u062f" }),
@@ -1499,7 +1494,7 @@ function openCategory(catId) {
 function renderCatBar() {
   const host = document.getElementById("cat-bar");
   if (!host) return;
-  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#d9b26b", icon: "layers" }].concat(
+  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#1a1714", icon: "layers" }].concat(
     allCatsWithOther().filter(c => c.id !== "system" || state.showSystem));
   clear(host);
   cats.forEach(c => {
@@ -1514,7 +1509,7 @@ function renderCatBar() {
       el("span", { class: "cp-ico", style: { color: active ? "#fff" : c.color } }, catSvgNode(c)),
       txt(c.name),
       el("span", { class: "cp-n", text: String(st.count) }));
-    if (active) pill.style.background = "linear-gradient(135deg," + c.color + "cc," + c.color + "88)";
+    pill.style.setProperty("--sc", c.color);
     host.appendChild(pill);
   });
 }
@@ -1593,7 +1588,7 @@ function paintSheetNow(name) {
   const c = categoryOf(name);
   const rows = Math.max(0, countRows(name) - 1);
   bar.hidden = false;
-  bar.style.setProperty("--sc", c.color || "#d9b26b");
+  bar.style.setProperty("--sc", c.color || "#1a1714");
   bar.appendChild(el("div", { class: "sn-rail" }));
   bar.appendChild(el("div", { class: "sn-body" },
     el("div", { class: "sn-kicker", text: (c.sub || "SECTION") + "  ·  در حال کار" }),
@@ -1669,8 +1664,8 @@ function openSheetCard(name) {
 /* ---- grouped navigator ---- */
 function renderGroupedNavigator() {
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
-  const colors = { provinces: "#2fd4c4", datacenters: "#5b93ff", services: "#a78bfa", carriers: "#e8b04b",
-                   equipment: "#3ecf8e", costs: "#ef7ab8", system: "#8b96a8", other: "#a39d8b", all: "#d9b26b" };
+  const colors = { provinces: "#1e4b8a", datacenters: "#1f6b45", services: "#c2412a", carriers: "#8a5a12",
+                   equipment: "#3c372f", costs: "#6b3a6e", system: "#5c564e", other: "#6f675e", all: "#1a1714" };
   const root = document.createDocumentFragment();
   let idx = 0;
   cats.forEach(c => {
@@ -1687,14 +1682,15 @@ function renderGroupedNavigator() {
       el("div", { class: "ng-line" })));
     names.forEach(n => {
       idx++;
-      root.appendChild(el("div", {
+      const card = el("div", {
         class: "nav-card",
-        style: { background: "linear-gradient(135deg," + c.color + "dd," + c.color + "88)" },
         "data-act": "nav-sheet", "data-name": n
       },
         el("div", { class: "num", text: String(idx) }),
         el("div", { text: n }),
-        el("div", { class: "rows", text: Math.max(0, countRows(n) - 1).toLocaleString("fa-IR") })));
+        el("div", { class: "rows", text: Math.max(0, countRows(n) - 1).toLocaleString("fa-IR") }));
+      card.style.setProperty("--sc", c.color);
+      root.appendChild(card);
     });
   });
   return root;
