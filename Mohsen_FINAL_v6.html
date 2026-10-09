@@ -13,6 +13,7 @@
    ================================================================ */
 :root{
   --bg-0:#060c15;
+  --fx-strength:.3;
   --bg-1:#0a1322;
   --bg-2:#101c2c;
   --glass:rgba(212,175,106,.05);
@@ -62,9 +63,28 @@ body::before{
     radial-gradient(640px 500px at 70% 100%, rgba(139,124,255,.40), transparent 60%),
     radial-gradient(420px 320px at 28% 78%, rgba(214,255,63,.16), transparent 70%);
   filter:blur(6px);
+  opacity:var(--fx-strength);
   animation:fxDrift 14s ease-in-out infinite alternate;
 }
-#fx-stage{position:fixed;inset:0;z-index:0;width:100%;height:100%;pointer-events:none;}
+#fx-stage{position:fixed;inset:0;z-index:0;width:100%;height:100%;pointer-events:none;opacity:var(--fx-strength);}
+.fx-bar{
+  background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-md);
+  padding:10px 12px 11px;margin-bottom:8px;
+}
+.fx-bar-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;color:var(--txt-0);margin-bottom:8px;}
+.fx-bar-top b{color:#eccb8a;font-variant-numeric:tabular-nums;min-width:34px;text-align:left;}
+.fx-bar input[type=range]{
+  -webkit-appearance:none;appearance:none;direction:ltr;
+  width:100%;height:7px;border-radius:99px;margin:0;cursor:pointer;
+  background:rgba(212,175,106,.22);outline:none;
+}
+.fx-bar input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:#f7ecd6;border:2px solid #d9a441;box-shadow:0 0 0 4px rgba(217,178,107,.16);
+}
+.fx-bar input[type=range]::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;border:2px solid #d9a441;background:#f7ecd6;
+}
 @keyframes fxDrift{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(-3%,2%,0) scale(1.06);}}
 @media (prefers-reduced-motion:reduce){
   body::before{animation:none;}
@@ -865,6 +885,17 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
 }
 
 </style>
+<script>
+(function () {
+  try {
+    var raw = localStorage.getItem("fam.fx.strength");
+    var n = raw == null || raw === "" ? 30 : parseInt(raw, 10);
+    if (!isFinite(n)) n = 30;
+    n = Math.max(0, Math.min(100, n));
+    document.documentElement.style.setProperty("--fx-strength", String(n / 100));
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 <canvas id="fx-stage" aria-hidden="true"></canvas>
@@ -928,6 +959,13 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
     </nav>
 
     <div class="side-foot">
+      <div class="fx-bar">
+        <div class="fx-bar-top">
+          <span>شدت بک‌گراند</span>
+          <b id="fx-strength-val">۳۰٪</b>
+        </div>
+        <input id="fx-strength" type="range" min="0" max="100" value="30" step="1" aria-label="شدت بک‌گراند">
+      </div>
       <div class="side-status">
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
@@ -4863,6 +4901,32 @@ function bindPanelEvents() {
 }
 
 
+function bindFxStrength() {
+  const bar = document.getElementById("fx-strength");
+  const val = document.getElementById("fx-strength-val");
+  if (!bar) return;
+  const digits = "۰۱۲۳۴۵۶۷۸۹";
+  function show(n) {
+    document.documentElement.style.setProperty("--fx-strength", String(n / 100));
+    if (val) val.textContent = String(n).replace(/\d/g, function (d) { return digits[d]; }) + "٪";
+  }
+  let start = 30;
+  try {
+    const raw = localStorage.getItem("fam.fx.strength");
+    if (raw != null && raw !== "") {
+      const n = parseInt(raw, 10);
+      if (isFinite(n)) start = Math.max(0, Math.min(100, n));
+    }
+  } catch (e) {}
+  bar.value = String(start);
+  show(start);
+  bar.addEventListener("input", function () {
+    const n = Math.max(0, Math.min(100, parseInt(bar.value, 10) || 0));
+    show(n);
+    try { localStorage.setItem("fam.fx.strength", String(n)); } catch (e) {}
+  });
+}
+
 function startPhotonStage() {
   try {
     const c = document.getElementById("fx-stage");
@@ -4963,6 +5027,7 @@ function startPhotonStage() {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
+  bindFxStrength();
   startPhotonStage();
   // observable error handling: nothing gets swallowed silently
   window.addEventListener("error", e => {
