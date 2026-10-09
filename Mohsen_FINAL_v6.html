@@ -418,7 +418,7 @@ select.inp option{background:#0d1730;color:#f4eee1;}
 /* ============ GRID HELPERS ============ */
 .grid-2{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
-.grid-add{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:18px;}
+.grid-add{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:stretch;}
 @media (max-width:1180px){.grid-2,.grid-3,.grid-add{grid-template-columns:1fr;}}
 
 /* ============ SEARCH CARD ============ */
@@ -431,7 +431,7 @@ select.inp option{background:#0d1730;color:#f4eee1;}
 }
 
 /* ============ TOOLS GRID ============ */
-.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:9px;}
+.tools-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
 .tool-tile{
   background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-sm);
   padding:11px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;
@@ -442,7 +442,7 @@ select.inp option{background:#0d1730;color:#f4eee1;}
 .tool-tile span{font-size:9.5px;font-weight:700;color:var(--txt-1);line-height:1.6;}
 .icon-btn.accent{border-color:rgba(217,178,107,.45);color:#e8c47a;background:rgba(217,178,107,.10);}
 .icon-btn.accent:hover{background:rgba(217,178,107,.18);border-color:rgba(217,178,107,.7);}
-.tool-tile.wide{grid-column:span 2;}
+.tool-tile.wide{grid-column:auto;}
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   padding:56px 28px;text-align:center;border:1.5px dashed var(--stroke-2);border-radius:18px;
   background:rgba(210,186,138,.045);grid-column:1/-1;}
@@ -744,7 +744,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 }
 
 /* ============ SHEET CATEGORIES ============ */
-.cat-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:12px;}
+.cat-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;}
 .cat-tile{
   position:relative;overflow:hidden;cursor:pointer;border-radius:14px;padding:15px 15px 13px;
   border:1px solid var(--stroke);transition:.2s;background:var(--glass);
@@ -995,9 +995,9 @@ body.fx-alt #fx-flare,body.fx-alt #fx-ghost,body.fx-alt #fx-leak{display:none;}
   max-width:100%;overflow-x:auto;
 }
 table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
-.cat-tiles{grid-template-columns:repeat(auto-fill,minmax(min(178px,100%),1fr));}
+.cat-tiles{grid-template-columns:repeat(6,minmax(0,1fr));}
 .sheet-grid{grid-template-columns:repeat(auto-fill,minmax(min(218px,100%),1fr));}
-.tools-grid{grid-template-columns:repeat(auto-fill,minmax(min(126px,100%),1fr));}
+.tools-grid{grid-template-columns:repeat(5,minmax(0,1fr));}
 .page-title{min-width:0;}
 .icon-btn{flex:0 0 auto;}
 .stat-pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;}
@@ -1047,6 +1047,52 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
   #sidebar.open{right:8px;}
   html.menu-open #layout{padding-right:0;}
   .icon-btn{width:40px;height:40px;}
+}
+
+
+/* rack alignment for the three dashboard modules */
+.grid-add > .card{display:flex;flex-direction:column;min-width:0;}
+.grid-add > .card::before{
+  content:"";position:absolute;top:0;right:18px;left:18px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,rgba(217,178,107,.75),transparent);
+}
+.grid-add > .card:nth-child(1)::before{background:linear-gradient(90deg,transparent,#2fd4c4,transparent);}
+.grid-add > .card:nth-child(2)::before{background:linear-gradient(90deg,transparent,#22c55e,transparent);}
+.grid-add > .card:nth-child(3)::before{background:linear-gradient(90deg,transparent,#ef4444,transparent);}
+.grid-add .card-body{flex:1;display:flex;flex-direction:column;gap:12px;}
+.grid-add .card-body > :last-child{margin-top:auto;}
+.grid-add .search-rows{grid-template-columns:1fr 1fr;}
+.grid-add .exact-wrap{
+  margin-top:0;padding:8px 10px;border:1px solid var(--stroke);border-radius:12px;
+  background:rgba(2,10,27,.28);
+}
+.grid-add .dash-note{margin-top:0;}
+.action-card .hint{
+  margin:0;padding:8px 10px;border-radius:10px;line-height:1.85;
+  background:rgba(2,10,27,.28);border:1px solid var(--stroke);
+}
+.tool-tile{min-height:74px;justify-content:center;min-width:0;}
+.tool-tile span{display:block;max-width:100%;}
+.tools-grid + .field{
+  margin-top:14px;padding-top:14px;border-top:1px solid var(--stroke);
+}
+.tools-grid + .field > div{align-items:center;}
+.tools-grid + .field .inp{flex:1;min-width:0;}
+.cat-tile{min-height:112px;display:flex;flex-direction:column;justify-content:flex-end;}
+.cat-tile::before{
+  content:"";position:absolute;top:12px;bottom:12px;right:0;width:2px;
+  background:currentColor;opacity:.75;border-radius:2px;
+}
+@media (max-width:1280px){
+  .cat-tiles{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .tools-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+}
+@media (max-width:760px){
+  .cat-tiles{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .tools-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width:480px){
+  .cat-tiles,.tools-grid{grid-template-columns:1fr;}
 }
 
 </style>
@@ -1352,16 +1398,15 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                   <div class="exact-label">تطابق دقیق (Exact Match)</div>
                   <div class="hint">حالت ON = دقیقاً برابر / OFF = شامل عبارت · <span class="mono">B12</span></div>
                 </div>
-                <div class="spacer"></div>
-                <button class="btn btn-primary" data-act="run-macro" data-arg="modSearchEngine.SearchRecords">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                  SEARCH
-                </button>
               </div>
               <div class="dash-note">
                 نتایج به‌صورت بلوک‌های <b>Match</b> نمایش داده می‌شوند؛ ردیف‌های قابل‌ویرایش را تغییر دهید و با
                 <b>SAVE CHANGES</b> در بخش مبدأ ذخیره کنید.
               </div>
+              <button class="btn btn-primary btn-block" data-act="run-macro" data-arg="modSearchEngine.SearchRecords">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                SEARCH
+              </button>
             </div>
           </div>
 
