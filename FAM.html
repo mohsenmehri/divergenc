@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="09" class="auth-pending">
+<html lang="fa" dir="rtl" data-fam-ui="10" class="auth-pending">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1473,7 +1473,7 @@ html.auth-pending #access-viewer {display:none!important;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-09</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-10</b></div>
     </div>
     </div>
   </aside>
@@ -2734,13 +2734,13 @@ function renderSheetView(name) {
   const province = provinceOf(name);
   if (province && categoryOf(name).id === 'provinces') {
     state.provinceRegion = province.region;
-    state.provinceView = {province: province.id, section: 'branch'};
+    state.provinceView = {province: province.id, section: provinceSheetInfo(name).section};
   } else state.provinceView = null;
   const sh = WB.sheets[name];
   const body = document.getElementById("sheet-body");
-  document.getElementById("sheet-title").textContent = province && state.provinceView ? province.name + ' — شعبه' : name;
+  document.getElementById("sheet-title").textContent = province && state.provinceView ? province.name + ' — ' + (state.provinceView.section === 'atm' ? 'خودپرداز' : 'شعبه') : name;
   document.getElementById("sheet-sub").textContent = province && state.provinceView
-    ? 'همه داده‌های فعلی استان در شعبه · شیت اصلی: ' + name
+    ? 'شیت مستقل ' + (state.provinceView.section === 'atm' ? 'خودپرداز' : 'شعبه') + ' · ' + name
     : (Access.can('manual') ? 'NETWORK SHEETS — مشاهده و ویرایش مستقیم داده‌ها' : 'NETWORK SHEETS — فقط مشاهده؛ ویرایش مستقیم مجاز نیست.');
   clear(body);
   if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0628\u062e\u0634 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
@@ -3658,7 +3658,7 @@ const modSearchEngine = {
    modAddRecord — StartAddWizard
    ================================================================ */
 const modAddRecord = {
-  IsProvincialSheet(name) { return PROVINCIAL_SHEETS.indexOf(name) >= 0; },
+  IsProvincialSheet(name) { return !!provinceOf(name); },
 
   FindAtmRow(sheetName) {
     const sh = WB.sheets[sheetName]; if (!sh) return 0;
@@ -3704,18 +3704,8 @@ const modAddRecord = {
       return;
     }
 
-    // ---- Provincial sheet: Branch or ATM? (frmSectionPicker) ----
-    let sectionType = "", atmSepRow = 0;
-    if (this.IsProvincialSheet(sheetName)) {
-      atmSepRow = this.FindAtmRow(sheetName);
-      if (atmSepRow === 0) {
-        await ShowMsg("خطا: ردیف جداسازی خودپرداز در بخش '" + sheetName + "' یافت نشد.", vbExclamation, "Add Record");
-        return;
-      }
-      sectionType = await this.SectionPicker(sheetName);
-      if (sectionType === "cancel" || !sectionType) return;
-    }
-    await this._runAddForm(sheetName, sectionType, atmSepRow);
+    if (provinceOf(sheetName)) return startProvinceAdd(sheetName);
+    await this._runAddForm(sheetName, "", 0);
   },
 
   // section picker with working buttons
@@ -7026,7 +7016,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     state.catFilter = 'provinces';
     switchView('sheet');
     openProvinceSection(savedProvince.province, savedProvince.section, false);
-    if (savedProvince.section === 'branch' && uiSaved.sheet && provinceSheets(savedProvince.province).includes(uiSaved.sheet)) openSheetCard(uiSaved.sheet);
+    if (uiSaved.sheet && provinceSheets(savedProvince.province, savedProvince.section).includes(uiSaved.sheet)) openSheetCard(uiSaved.sheet);
   } else if (uiSaved && uiSaved.sheet && WB.sheets[uiSaved.sheet] && !IsSystemSheet(uiSaved.sheet)) {
     state.catFilter = uiSaved.catFilter || "all";
     switchView("sheet");
@@ -7130,7 +7120,7 @@ function refreshRegionUI() {
   const p=managedProvinces().find(p=>p.id===state.provinceView?.province);
   if (p) {
     state.provinceRegion=p.region;
-    if (state.provinceView.section==='atm') showProvinceEmpty(p,'atm');
+    if (state.provinceView.section==='atm') openProvinceSection(p.id,'atm',false);
   }
   renderSheetCatalog();
 }
@@ -7207,9 +7197,9 @@ function manageRegions() {
   (box.querySelector('#region-name') || box.querySelector('#region-new')).focus();
 }
 
-function provinceOf(name) { return managedProvinces().find(p => p.aliases.includes(provinceKey(name))) || null; }
-function provinceSheets(id) {
-  return WB.order.filter(n => SheetExists(n) && categoryOf(n).id === 'provinces' && provinceOf(n)?.id === id);
+function provinceOf(name) { return provinceSheetInfo(name)?.province || null; }
+function provinceSheets(id, section = 'branch') {
+  return provinceSectionSheets(id, section).filter(n => categoryOf(n).id === 'provinces');
 }
 function selectProvinceRegion(id) {
   if (!managedRegions().some(r => r.id === id)) return;
@@ -7230,13 +7220,13 @@ function openProvinceSection(id, section, scroll = true) {
   if (!province || !['branch','atm'].includes(section)) return;
   state.provinceRegion = province.region;
   state.provinceView = {province:id, section};
-  const names = provinceSheets(id);
-  if (section === 'branch' && names.length === 1) {
+  const names = provinceSheets(id, section);
+  if (names.length === 1) {
     renderSheetView(names[0]);
   } else {
     showProvinceEmpty(province, section);
-    if (section === 'branch' && names.length > 1) {
-      document.getElementById('sheet-body').replaceChildren(el('div',{class:'province-empty',text:'برای مشاهده داده‌ها، یکی از شیت‌های شعبهٔ این استان را انتخاب کنید.'}));
+    if (names.length > 1) {
+      document.getElementById('sheet-body').replaceChildren(el('div',{class:'province-empty',text:'برای مشاهده داده‌ها، یکی از شیت‌های این بخش استان را انتخاب کنید.'}));
     }
     renderSheetCatalog();
   }
@@ -7245,7 +7235,7 @@ function openProvinceSection(id, section, scroll = true) {
 }
 function renderProvinceHierarchy(names, category) {
   const root = el('section',{class:'province-browser','aria-label':category.name});
-  root.append(el('div',{class:'province-heading'},el('h3',{text:category.name}),el('button',{type:'button',class:'btn btn-ghost btn-sm','data-act':'manage-regions',text:'مدیریت مناطق'})),el('p',{class:'hint',text:managedRegions().filter(r=>r.id!=='unassigned').length.toLocaleString('fa-IR')+' منطقه · ۳۱ استان · همه داده‌های فعلی در «شعبه» هستند؛ «خودپرداز» فعلاً خالی است.'}));
+  root.append(el('div',{class:'province-heading'},el('h3',{text:category.name}),el('button',{type:'button',class:'btn btn-ghost btn-sm','data-act':'manage-regions',text:'مدیریت مناطق'})),el('p',{class:'hint',text:managedRegions().filter(r=>r.id!=='unassigned').length.toLocaleString('fa-IR')+' منطقه · ۳۱ استان · شیت‌های مستقل شعبه و خودپرداز؛ داده‌های قدیمی در شعبه محفوظ‌اند.'}));
   const regions = el('div',{class:'region-grid','aria-label':'انتخاب منطقه'});
   const regionList = managedRegions();
   const region = regionList.find(r => r.id === state.provinceRegion) || regionList[0];
@@ -7263,15 +7253,15 @@ function renderProvinceHierarchy(names, category) {
       type:'button',class:'btn btn-ghost btn-sm','data-act':'province-section','data-province':p.id,'data-section':section,
       'aria-label':p.name+' — '+(section === 'branch' ? 'شعبه' : 'خودپرداز'),
       'aria-pressed':String(selected && state.provinceView.section === section)
-    },txt(section === 'branch' ? 'شعبه' : 'خودپرداز'),el('small',{text:section === 'branch' ? sheets.length.toLocaleString('fa-IR')+' شیت' : 'فعلاً خالی'})));
+    },txt(section === 'branch' ? 'شعبه' : 'خودپرداز'),el('small',{text:sheets.filter(n=>provinceSheetInfo(n).section===section).length.toLocaleString('fa-IR')+' شیت'})));
     grid.appendChild(el('article',{class:'province-card'+(selected ? ' active' : ''),'data-province-card':p.id},
       el('h4',{text:p.name}),el('p',{class:'hint',text:sheets.length ? 'داده‌ها در شیت اصلی محفوظ‌اند' : 'هنوز داده‌ای در این دسته نیست'}),buttons));
   });
   root.appendChild(grid);
   const selected = managedProvinces().find(p => p.id === state.provinceView?.province);
-  if (selected && selected.region === region.id && state.provinceView.section === 'branch') {
-    const source = el('div',{class:'province-selection'},el('h4',{text:selected.name+' — شعبه'}));
-    const sheets = names.filter(n => provinceOf(n)?.id === selected.id);
+  if (selected && selected.region === region.id) {
+    const source = el('div',{class:'province-selection'},el('h4',{text:selected.name+' — '+(state.provinceView.section==='atm'?'خودپرداز':'شعبه')}));
+    const sheets = names.filter(n => provinceOf(n)?.id === selected.id && provinceSheetInfo(n).section===state.provinceView.section);
     sheets.forEach(n => source.appendChild(el('button',{type:'button',class:'btn btn-ghost btn-sm','data-act':'open-sheet','data-name':n,text:n})));
     if (!sheets.length) source.appendChild(el('p',{class:'hint',text:'شیتی برای این استان در این دسته موجود نیست.'}));
     root.appendChild(source);
@@ -7340,6 +7330,7 @@ function categoryOf(name, config = state.categoryConfig) {
   const cats = managedCategories(config);
   const override = config && config.assignments.find(pair => pair[0] === name);
   if (override) return cats.find(c => c.id === override[1]) || CAT_OTHER;
+  if (provinceOf(name)) return cats.find(c => c.id === 'provinces') || CAT_OTHER;
   // Keep the original priority. A deleted default category falls back to Other,
   // rather than unexpectedly reassigning its worksheets to a broader rule.
   for (const id of CAT_MATCH_ORDER) {
@@ -7739,6 +7730,7 @@ const Access = (() => {
     catch(e){storageError=true;db=null;}
   }
   function persist(next){
+    next={...next,adminPresetVersion:next.adminPresetVersion || db?.adminPresetVersion || 0};
     validate(next);
     localStorage.setItem(KEY,JSON.stringify(next)); // quota errors fail before updating live accounts
     db=next;
@@ -7817,8 +7809,20 @@ const Access = (() => {
     const input=el('input',{id,type,class:'inp',value,required:true,autocomplete:type==='password'?'new-password':'off'});
     return {input,node:el('label',{class:'access-field',for:id},el('span',{text:label}),input)};
   }
-  function start(){
+  async function start(){
     load();
+    // Explicit UI-10 migration requested by the owner. Applied once, never on
+    // ordinary reload or workbook import. Future administrator changes survive.
+    if(!storageError && (!db || db.adminPresetVersion!==1)) {
+      try {
+        const seed={salt:'2a6bba0bc6555f065ef9ad543f493c29',hash:'23e59c6e32b1fded0f1ae34b5be83b3e72f15efbef1ef8862f8fef03a1f290c8'};
+        const users=db?db.users.map(u=>({...u})):[];
+        const existing=users.find(u=>u.username==='admin') || users.find(u=>u.enabled&&u.role===1);
+        const admin={...(existing||{}),id:existing?.id||crypto.randomUUID(),username:'admin',name:'admin',role:1,enabled:true,
+          regions:[],sheets:[],revision:crypto.randomUUID(),...seed};
+        persist({version:1,adminPresetVersion:1,users:existing?users.map(u=>u.id===existing.id?admin:u):[...users,admin]});
+      } catch(e) { storageError=true; }
+    }
     try{
       const session=JSON.parse(sessionStorage.getItem(SESSION)||'null');
       const user=db?.users.find(u=>u.id===session?.id && u.revision===session.revision && u.enabled);
@@ -7826,37 +7830,25 @@ const Access = (() => {
     }catch(e){}
     return new Promise(resolve=>{
       const root=el('div',{id:'auth-screen'}),form=el('form',{class:'access-login','aria-labelledby':'auth-title'});
-      const setup=!db&&!storageError;
-      const u=field('نام کاربری (حروف انگلیسی)','auth-username','text',setup?'admin':'');u.input.autocomplete='username';
-      const n=field('نام نمایشی مدیر','auth-name','text','WEB USER');
-      const p=field('رمز عبور','auth-password','password');p.input.autocomplete=setup?'new-password':'current-password';
-      const repeat=field('تکرار رمز عبور','auth-confirm','password');
+      const u=field('نام کاربری (حروف انگلیسی)','auth-username','text','');u.input.autocomplete='username';
+      const p=field('رمز عبور','auth-password','password');p.input.autocomplete='current-password';
       const error=el('p',{id:'auth-error',role:'alert',class:'category-error'});
-      const submit=el('button',{type:'submit',class:'btn btn-primary',id:'auth-submit',text:setup?'ساخت مدیر اولیه (سطح ۱)':'ورود'});
-      form.append(el('h2',{id:'auth-title',text:setup?'راه‌اندازی حساب مدیر':'ورود به فام'}),
+      const submit=el('button',{type:'submit',class:'btn btn-primary',id:'auth-submit',text:'ورود'});
+      form.append(el('h2',{id:'auth-title',text:'ورود به فام'}),
         el('p',{class:'hint',text:'نسخه محلی HTML — حساب‌ها و داده‌ها در همین مرورگر نگهداری می‌شوند. این محدودیت‌ها جای امنیت سمت سرور را نمی‌گیرند.'}));
       if(storageError){form.append(el('p',{role:'alert',text:'حساب‌های ذخیره‌شده قابل خواندن نیستند یا ذخیره‌سازی مرورگر مسدود است. برای جلوگیری از از‌دست‌رفتن دسترسی، راه‌اندازی مجدد خودکار انجام نمی‌شود. نسخه پشتیبان مرورگر را بررسی کنید.'}));}
       else{
-        form.append(u.node);if(setup)form.append(n.node);form.append(p.node);if(setup)form.append(repeat.node);form.append(error,submit);
+        form.append(u.node,p.node,error,submit);
         form.addEventListener('submit',async e=>{
           e.preventDefault();submit.disabled=true;error.textContent='';
           try{
             let user;
-            if(setup){
-              if(localStorage.getItem(KEY)!==null)throw Error('حساب مدیر قبلاً ساخته شده است؛ صفحه را تازه کنید.');
-              if(!/^[a-z0-9_.-]{3,40}$/.test(username(u.input.value)))throw Error('نام کاربری باید ۳ تا ۴۰ نویسه و شامل حروف انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.');
-              if(p.input.value!==repeat.input.value)throw Error('تکرار رمز مطابقت ندارد.');
-              user={id:crypto.randomUUID(),username:username(u.input.value),name:n.input.value.trim(),role:1,enabled:true,regions:[],sheets:[],revision:crypto.randomUUID(),...await credential(p.input.value)};
-              if(localStorage.getItem(KEY)!==null)throw Error('حساب مدیر قبلاً ساخته شده است؛ صفحه را تازه کنید.');
-              persist({version:1,users:[user]});
-            }else{
-              load();
-              if(storageError || !db)throw Error('حساب‌ها قابل خواندن نیستند؛ صفحه را تازه کنید.');
-              user=db.users.find(x=>x.username===username(u.input.value)&&x.enabled);
-              if(!user || await hashPassword(p.input.value,user.salt)!==user.hash)throw Error('نام کاربری یا رمز عبور نادرست است.');
-            }
-            establish(user);p.input.value='';repeat.input.value='';root.remove();resolve();
-          }catch(err){error.textContent=err.message;p.input.value='';repeat.input.value='';}
+            load();
+            if(storageError || !db)throw Error('حساب‌ها قابل خواندن نیستند؛ صفحه را تازه کنید.');
+            user=db.users.find(x=>x.username===username(u.input.value)&&x.enabled);
+            if(!user || await hashPassword(p.input.value,user.salt)!==user.hash)throw Error('نام کاربری یا رمز عبور نادرست است.');
+            establish(user);p.input.value='';root.remove();resolve();
+          }catch(err){error.textContent=err.message;p.input.value='';}
           finally{submit.disabled=false;}
         });
       }
@@ -7984,6 +7976,109 @@ const Access = (() => {
   });
   return Object.freeze({start,current,can,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,manageUsers,logout,renderViewer});
 })();
+</script>
+<script id="fam-province-records-js">
+/* Separate provincial destinations. Existing province sheets remain Branch;
+   only confirmed new ATM records create/use an ATM sheet. No historic splitting.
+   Names encode the section so Excel/CSV/JSON round-trips retain the routing. */
+function provinceSheetInfo(name) {
+  let base=String(name||'').trim(),section='branch';
+  if(/^خودپرداز\s+/.test(base)){section='atm';base=base.replace(/^خودپرداز\s+/,'');}
+  else base=base.replace(/^(?:شعبه|شعب)\s+/,'');
+  const province=managedProvinces().find(p=>p.aliases.includes(provinceKey(base)));
+  return province ? {province,section} : null;
+}
+function provinceSectionSheets(id,section) {
+  return WB.order.filter(name=>{
+    const info=provinceSheetInfo(name);
+    return SheetExists(name) && info?.province.id===id && info.section===section;
+  });
+}
+function provincialHeaderTemplate(sourceName) {
+  const source=WB.sheets[sourceName];
+  if(!source?.rows?.length)throw Error('قالب ستون‌های استان موجود نیست؛ ابتدا شیت شعبهٔ همان استان را وارد کنید.');
+  // Only the existing header row, its column positions and header-only merges.
+  // Never copy source records, totals or historical ATM sections into the new sheet.
+  const template={rows:[JSON.parse(JSON.stringify(source.rows[0]||[]))],merges:[]};
+  template.merges=(source.merges||[]).filter(m=>m.r1===1&&m.r2===1).map(m=>({...m}));
+  if(!template.rows[0].some(v=>TrimText(v)))throw Error('سطر عنوان ستون‌های استان خالی است.');
+  if(template.rows[0].length>MAX_DATA_COLS)throw Error('تعداد ستون‌های قالب بیش از حد مجاز است.');
+  return template;
+}
+function nextProvincialRow(sheet) {
+  // All existing rows belong to Branch, even when the old workbook contains an
+  // ATM separator. Append after the last record (or before a trailing total).
+  let last=sheet.rows.length;
+  while(last>1 && !(sheet.rows[last-1]||[]).some(v=>v!==null&&v!==undefined&&String(v).trim()))last--;
+  const total=last>1&&(sheet.rows[last-1]||[]).some(v=>/^(?:جمع|مجموع)(?:\s|$)/.test(TrimText(v)));
+  let row=total?last:last+1;
+  for(const m of sheet.merges||[])if(m.r1<row&&m.r2>=row)row=m.r2+1;
+  return Math.max(2,row);
+}
+async function startProvinceAdd(selectedName) {
+  if(!Access.require('add'))return;
+  const origin=provinceSheetInfo(selectedName);
+  if(!origin||!SheetExists(selectedName))return;
+  const section=await modAddRecord.SectionPicker(origin.province.name);
+  if(!['branch','atm'].includes(section)||!Access.require('add'))return;
+  const candidates=provinceSectionSheets(origin.province.id,section);
+  let destination=origin.section===section?selectedName:candidates.length===1?candidates[0]:null;
+  if(!destination&&candidates.length>1){
+    await ShowMsg('برای این استان چند شیت در این بخش وجود دارد. ابتدا شیت مقصد را در فهرست «افزودن رکورد» انتخاب کنید.',vbExclamation,'انتخاب شیت مقصد');return;
+  }
+  let draft=null,sourceName=null;
+  if(!destination){
+    const branches=provinceSectionSheets(origin.province.id,'branch');
+    sourceName=origin.section==='branch'?selectedName:branches.length===1?branches[0]:null;
+    if(!sourceName){await ShowMsg('برای ساخت قالب، ابتدا شیت شعبهٔ همین استان را وارد و انتخاب کنید.',vbExclamation,'قالب استان');return;}
+    destination=(section==='atm'?'خودپرداز ':'شعبه ')+origin.province.name;
+    if(destination.length>31 || WB.order.some(n=>NormalizeText(n)===NormalizeText(destination))){
+      await ShowMsg('نام شیت مقصد تکراری یا نامعتبر است؛ هیچ داده‌ای تغییر نکرد.',vbExclamation,'شیت مقصد');return;
+    }
+    try{draft=provincialHeaderTemplate(sourceName);}catch(e){await ShowMsg(e.message,vbExclamation,'قالب استان');return;}
+  }
+  const target=draft||WB.sheets[destination];
+  const fingerprint=JSON.stringify(target);
+  const headers=[],columns=[];
+  (target.rows[0]||[]).forEach((value,i)=>{
+    // A merged header has one input at its anchor, not several duplicate fields.
+    if((target.merges||[]).some(m=>m.r1===1&&m.c1<i+1&&m.c2>=i+1))return;
+    if(TrimText(value)){headers.push(TrimText(value));columns.push(i+1);}
+  });
+  if(!headers.length){await ShowMsg('شیت مقصد عنوان ستون ندارد.',vbExclamation,'افزودن رکورد');return;}
+  const row=nextProvincialRow(target),label=section==='atm'?'خودپرداز':'شعبه';
+  const form=el('div',{},el('p',{class:'hint',text:origin.province.name+' / '+label+' — شیت مقصد: '+destination}),
+    draft?el('p',{class:'hint',text:'قالب ستون‌ها از «'+sourceName+'» گرفته شده است. شیت جدید فقط پس از تأیید نهایی ساخته می‌شود.'}):null,
+    el('div',{class:'wizard-fields'},headers.map((header,i)=>el('div',{class:'wf'},el('label',{text:header}),el('input',{'data-i':i,value:'',placeholder:'(خالی = Skip)'})))));
+  const values=await modAddRecord.WizardAddForm(form);
+  if(values===null || !Access.require('add'))return;
+  if(!values.some(v=>TrimText(v))){await ShowMsg('هیچ مقداری وارد نشد.',vbExclamation,'افزودن رکورد');return;}
+  const preview='استان: '+origin.province.name+'\nبخش: '+label+'\nشیت مقصد: '+destination+'\n\n'+headers.map((h,i)=>values[i]?h+': '+values[i]:'').filter(Boolean).join('\n')+'\n\nآیا ذخیره شود؟';
+  if(await ShowMsg(preview,vbYesNo|vbQuestion,'CONFIRM ADD')!==IDYES || !Access.require('add'))return;
+  // Recheck the live destination after every asynchronous user interaction.
+  let sourceUnchanged=true;
+  if(draft){try{sourceUnchanged=SheetExists(sourceName)&&JSON.stringify(provincialHeaderTemplate(sourceName))===fingerprint;}catch(e){sourceUnchanged=false;}}
+  if((draft&&WB.order.some(n=>NormalizeText(n)===NormalizeText(destination))) ||
+      (!draft&&JSON.stringify(WB.sheets[destination])!==fingerprint) ||
+      (draft&&!sourceUnchanged)){
+    await ShowMsg('شیت یا قالب در حین ورود اطلاعات تغییر کرده است؛ لطفاً دوباره فرم را باز کنید.',vbExclamation,'تغییر هم‌زمان');return;
+  }
+  const ok=withTransactionSync({action:'ADD_PROVINCE',sheet:destination},()=>{
+    if(draft){WB.sheets[destination]=JSON.parse(JSON.stringify(draft));WB.order.push(destination);}
+    insertRowAt(destination,row);
+    values.forEach((value,i)=>{if(value)setCellVal(destination,row,columns[i],value,false);});
+    WriteChangeLog('ADD',destination,String(row),'SUCCESS',label+' / '+origin.province.name);
+    const cfg=ensureSheet(CFG_SHEET,true);
+    if(!cfg.rows.length)cfg.rows.push(['Sheet','Rows','Columns','Header','DataStart','Confidence']);
+    ensureCfgRow(cfg,destination,WB.sheets[destination]);
+    RefreshSearchIndexSilent();return true;
+  });
+  if(!ok)return;
+  modUI.SetupSheetDropdown();modUI.SetupAddSheetDropdown();modUI.SetupNavSheetDropdown();
+  state.cp.C16=destination;document.getElementById('cp-c16').value=destination;syncQuickForms();saveState();
+  await ShowMsg('رکورد در «'+destination+'» ذخیره شد.',vbInformation,'Add Record - Done');
+  state.catFilter='provinces';switchView('sheet');renderSheetView(destination);saveUIState();
+}
 </script>
 </body>
 </html>

@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),zlib=require('node:zlib');
 const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright'),binary=require('@sparticuz/chromium');
-const root=path.resolve(__dirname,'..'),password='local-test-1109';
+const root=path.resolve(__dirname,'..'),password='1109';
 let browser,server,page,context,url,errors=[];
 before(async()=>{
   const dir=path.join(root,'.cache/chromium-libs');fs.mkdirSync(dir,{recursive:true});
@@ -29,8 +29,8 @@ beforeEach(async()=>{
 afterEach(async()=>{for(const tab of context.pages())if(tab!==page)await tab.close();assert.deepEqual(errors,[]);});
 after(async()=>{await browser?.close();if(server)await new Promise(r=>server.close(r));});
 async function setup(){
-  await page.locator('#auth-name').fill('مدیر اولیه');
-  await page.locator('#auth-password').fill(password);await page.locator('#auth-confirm').fill(password);
+  await page.locator('#auth-username').fill('admin');
+  await page.locator('#auth-password').fill(password);
   await page.locator('#auth-submit').click();await page.waitForFunction(()=>document.querySelector('#cp-c9 option')&&Access.current()?.role===1);
 }
 async function fixture(){
@@ -68,12 +68,11 @@ async function login(username,secret=password){
 }
 const modal=id=>page.locator(`#modal-overlay.show button[data-id="${id}"]`);
 
-test('first-run gate, password hashing, failed login, reload session and logout',async()=>{
+test('preset admin gate, password hashing, failed login, reload session and logout',async()=>{
   assert.equal(await page.locator('#layout').isVisible(),false);
   assert.equal(await page.locator('#auth-password').getAttribute('type'),'password');
-  await page.locator('#auth-password').fill(password);await page.locator('#auth-confirm').fill('different');await page.locator('#auth-submit').click();
-  await page.locator('#auth-error').filter({hasText:'مطابقت'}).waitFor();
-  assert.equal(await page.evaluate(()=>localStorage.getItem('fam.accounts.v1')),null);
+  assert.equal(await page.locator('#auth-confirm').count(),0);
+  assert.doesNotMatch(await page.locator('#auth-screen').innerText(),/1109/);
   await setup();
   const stored=await page.evaluate(()=>localStorage.getItem('fam.accounts.v1'));assert.ok(!stored.includes(password));
   const account=JSON.parse(stored).users[0];assert.equal(account.hash.length,64);assert.equal(account.salt.length,32);
@@ -225,9 +224,132 @@ test('administrator resets passwords, changes roles and deletes users without ch
 
 test('the deployed HTML embeds exactly one copy of each account source and remains standalone',async()=>{
   const html=fs.readFileSync(path.join(root,'FAM.html'),'utf8');
-  for(const [ext,tag] of [['css','style'],['js','script']]){
-    const matches=[...html.matchAll(new RegExp(`<${tag} id="fam-local-access-${ext}">\\n([\\s\\S]*?)</${tag}>`,'g'))];
-    assert.equal(matches.length,1);assert.equal(matches[0][1],fs.readFileSync(path.join(root,`src/local-access.${ext}`),'utf8'));
+  for(const [module,ext,tag] of [['local-access','css','style'],['local-access','js','script'],['province-records','js','script']]){
+    const matches=[...html.matchAll(new RegExp(`<${tag} id="fam-${module}-${ext}">\\n([\\s\\S]*?)</${tag}>`,'g'))];
+    assert.equal(matches.length,1);assert.equal(matches[0][1],fs.readFileSync(path.join(root,`src/${module}.${ext}`),'utf8'));
   }
   assert.equal(await page.locator('script[src]').count(),0);
+});
+
+async function provincialFixture(){
+  await page.evaluate(()=>importValidatedSheets(['استان تهران','فارس'],{
+    'استان تهران':{rows:[['شاخص',null,'نام','IP'],['T1',null,'OLD-BRANCH','10.0.0.1'],['شبکه خودپرداز'],['LEGACY-ATM',null,'PRESERVED'],['جمع']],merges:[]},
+    'فارس':{rows:[['کد','نام فارس'],['F1','FARS-UNCHANGED']],merges:[]}
+  },'provincial.xlsx',true));
+}
+async function beginProvincial(name,section){
+  await page.evaluate(()=>switchView('panel'));await page.locator('#cp-c16').selectOption(name);
+  await page.locator('#fold-ops [data-arg="modAddRecord.StartAddWizard"]').click();
+  await page.locator(`[data-p="${section}"]`).click();
+}
+async function finishProvincial(values){
+  for(let i=0;i<values.length;i++)await page.locator(`.wizard-fields input[data-i="${i}"]`).fill(values[i]);
+  await page.locator('[data-a="ok"]').click();await modal(6).click();await modal(1).click();
+  await page.waitForFunction(()=>!document.querySelector('#modal-overlay.show'));
+}
+
+test('province Add routes Branch and ATM into distinct sheets with matching headers, no historic data splitting',async()=>{
+  await setup();await provincialFixture();
+  const original=await page.evaluate(()=>JSON.stringify(WB.sheets['استان تهران']));
+  await beginProvincial('استان تهران','atm');
+  assert.deepEqual(await page.locator('.wizard-fields label').allTextContents(),['شاخص','نام','IP']);
+  assert.equal(await page.evaluate(()=>SheetExists('خودپرداز تهران')),false);
+  await finishProvincial(['ATM-NEW','ATM-ONLY','10.0.0.2']);
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['استان تهران'])),original);
+  assert.deepEqual(await page.evaluate(()=>WB.sheets['خودپرداز تهران'].rows),[['شاخص',null,'نام','IP'],['ATM-NEW',null,'ATM-ONLY','10.0.0.2']]);
+  assert.deepEqual(await page.evaluate(()=>state.provinceView),{province:'2-1',section:'atm'});
+  assert.match(await page.locator('#sheet-title').innerText(),/خودپرداز/);
+  assert.equal(await page.evaluate(()=>modMapping.GetMatchRows('FULLTEXT','ATM-ONLY','خودپرداز تهران').length),1);
+  // Repeated ATM adds use the existing destination, not another sheet or header.
+  await beginProvincial('استان تهران','atm');await finishProvincial(['ATM-SECOND','ATM-SECOND','10.0.0.3']);
+  assert.equal(await page.evaluate(()=>WB.order.filter(n=>n==='خودپرداز تهران').length),1);
+  assert.equal(await page.evaluate(()=>WB.sheets['خودپرداز تهران'].rows.length),3);
+  const atm=await page.evaluate(()=>JSON.stringify(WB.sheets['خودپرداز تهران']));
+  // Selecting the ATM source but choosing Branch still routes back to Branch.
+  await beginProvincial('خودپرداز تهران','branch');await finishProvincial(['BR-NEW','BRANCH-ONLY','10.0.0.4']);
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['خودپرداز تهران'])),atm);
+  assert.deepEqual(await page.evaluate(()=>WB.sheets['استان تهران'].rows.filter(r=>r[0]!=='BR-NEW')),JSON.parse(original).rows);
+  assert.equal(await page.evaluate(()=>WB.sheets['استان تهران'].rows.at(-1)[0]),'جمع');
+  assert.deepEqual(await page.evaluate(()=>WB.sheets['فارس'].rows),[['کد','نام فارس'],['F1','FARS-UNCHANGED']]);
+  await page.evaluate(()=>openProvinceSection('2-1','atm',false));assert.match(await page.locator('#sheet-body').innerText(),/ATM-ONLY/);assert.doesNotMatch(await page.locator('#sheet-body').innerText(),/BRANCH-ONLY/);
+  await page.evaluate(()=>{saveState();saveUIState();return flushDeepSave();});await page.reload();await page.locator('#stat-line').waitFor();
+  assert.deepEqual(await page.evaluate(()=>state.provinceView),{province:'2-1',section:'atm'});
+  assert.match(await page.locator('#sheet-body').innerText(),/ATM-SECOND/);
+});
+
+test('cancelling provincial add, blank input and cancelled confirmation create no sheets or records',async()=>{
+  await setup();await provincialFixture();const before=await page.evaluate(()=>JSON.stringify(WB.sheets['استان تهران']));
+  await beginProvincial('استان تهران','atm');await page.locator('[data-a="cancel"]').click();
+  assert.equal(await page.evaluate(()=>SheetExists('خودپرداز تهران')),false);
+  await beginProvincial('استان تهران','atm');await page.locator('[data-a="ok"]').click();await modal(1).click();
+  assert.equal(await page.evaluate(()=>SheetExists('خودپرداز تهران')),false);
+  await beginProvincial('استان تهران','atm');await page.locator('.wizard-fields input').first().fill('CANCELLED');await page.locator('[data-a="ok"]').click();await modal(7).click();
+  assert.equal(await page.evaluate(()=>SheetExists('خودپرداز تهران')),false);
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['استان تهران'])),before);
+});
+
+test('ATM routing survives JSON and Excel round trips and recognizes all province aliases',async()=>{
+  await setup();await provincialFixture();await beginProvincial('فارس','atm');await finishProvincial(['FATM1','FARS-ATM']);
+  const saved=await page.evaluate(()=>JSON.stringify(WB.sheets['خودپرداز فارس']));
+  const roundtrip=await page.evaluate(()=>{
+    const json={order:WB.order,sheets:WB.sheets,regionConfig:state.regionConfig,categoryConfig:state.categoryConfig};
+    if(!applyJsonBackup('roundtrip.json',JSON.parse(JSON.stringify(json))))return false;
+    const excel=BuildExportWorkbook();const buf=XLSX.write(excel,{type:'array',bookType:'xlsx'});
+    return modImport.ImportExcel('roundtrip.xlsx',buf);
+  });
+  assert.equal(roundtrip,true);
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['خودپرداز فارس'])),saved);
+  assert.deepEqual(await page.evaluate(()=>[provinceOf('خودپرداز فارس').id,categoryOf('خودپرداز فارس').id,provinceSheets('4-1','atm')]),['4-1','provinces',['خودپرداز فارس']]);
+  assert.equal(await page.evaluate(()=>PROVINCES.every(p=>provinceSheetInfo('خودپرداز '+p.name)?.province.id===p.id&&('خودپرداز '+p.name).length<=31)),true);
+  assert.equal(await page.evaluate(()=>provinceSheetInfo('خودپرداز کهکلویه').province.name),'کهگیلویه و بویراحمد');
+});
+
+test('level 3 can create an ATM destination only through confirmed record insertion; level 4 cannot inherit it',async()=>{
+  await setup();await provincialFixture();await createUser(3);await createUser(4,'user4',['2'],['استان تهران']);await logout();await login('user3');
+  await beginProvincial('استان تهران','atm');await finishProvincial(['LEVEL3ATM','RECORD','1.2.3.4']);
+  assert.equal(await page.locator('#sheet-body [contenteditable]').count(),0);
+  assert.equal(await page.evaluate(()=>WB.sheets[LOG_SHEET].rows.some(r=>r[1]==='ADD'&&r[2]==='خودپرداز تهران'&&r[4]==='کاربر 3')),true);
+  await logout();await login('user4');await page.locator('#access-viewer').waitFor();
+  assert.equal(await page.locator('[data-viewer-sheet="خودپرداز تهران"]').count(),0);
+  assert.equal(await page.evaluate(()=>Access.can('read','خودپرداز تهران')),false);
+  await page.evaluate(()=>startProvinceAdd('استان تهران'));assert.equal(await page.locator('[data-p="atm"]').count(),0);
+});
+
+test('UI-09 account migration sets the requested admin once and preserves other users and later password changes',async()=>{
+  await setup();await fixture();await createUser(3);
+  await page.evaluate(()=>{
+    const accounts=JSON.parse(localStorage.getItem('fam.accounts.v1'));delete accounts.adminPresetVersion;
+    const a=accounts.users.find(u=>u.role===1);a.username='old-owner';a.name='old-owner';a.hash='0'.repeat(64);
+    localStorage.setItem('fam.accounts.v1',JSON.stringify(accounts));
+  });
+  await page.reload();await page.locator('#auth-password').waitFor();await login('admin');
+  assert.equal(await page.evaluate(()=>Access.current().role),1);assert.equal(await page.locator('#st-user').innerText(),'admin');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.some(u=>u.username==='user3')),true);
+  await manager();await page.locator('#user-password').fill('changed-admin-secret');await page.locator('#user-save').click();await page.locator('#users-done').click();
+  await logout();await login('admin','changed-admin-secret');await page.reload();await page.locator('#stat-line').waitFor();
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).adminPresetVersion),1);
+  assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'ALPHA');
+});
+
+test('ATM template preserves header columns and header merges without copying records or data merges',async()=>{
+  await setup();await page.evaluate(()=>importValidatedSheets(['استان تهران'],{
+    'استان تهران':{rows:[['شاخص','نام',null,'IP'],['OLD','KEEP',null,'1.1.1.1'],[null,'KEEP2']],merges:[{r1:1,r2:1,c1:2,c2:3},{r1:2,r2:3,c1:1,c2:1}]}
+  },'merges.xlsx',true));
+  await beginProvincial('استان تهران','atm');await finishProvincial(['NEW','ATM','2.2.2.2']);
+  assert.deepEqual(await page.evaluate(()=>WB.sheets['خودپرداز تهران']),{rows:[['شاخص','نام',null,'IP'],['NEW','ATM',null,'2.2.2.2']],merges:[{r1:1,r2:1,c1:2,c2:3}]});
+  assert.equal(await page.locator('#sheet-body td[data-r="1"][data-c="2"]').getAttribute('colspan'),'2');
+});
+
+test('provincial add rejects changed templates and rolls back a failed destination write',async()=>{
+  await setup();await provincialFixture();
+  await beginProvincial('استان تهران','atm');await page.locator('.wizard-fields input').first().fill('STALE');await page.locator('[data-a="ok"]').click();
+  await page.evaluate(()=>{WB.sheets['استان تهران'].rows[0][0]='شناسه جدید';});await modal(6).click();
+  await page.locator('#modal-overlay').getByText(/در حین ورود اطلاعات تغییر/).waitFor();await modal(1).click();
+  assert.equal(await page.evaluate(()=>SheetExists('خودپرداز تهران')),false);
+  await beginProvincial('استان تهران','atm');await page.locator('.wizard-fields input').first().fill('ROLLBACK');await page.locator('[data-a="ok"]').click();
+  await page.evaluate(()=>{window.originalSetCellVal=setCellVal;setCellVal=()=>{throw Error('injected write failure');};});await modal(6).click();
+  await page.waitForFunction(()=>!document.querySelector('#modal-overlay.show'));
+  assert.equal(await page.evaluate(()=>SheetExists('خودپرداز تهران')),false);
+  await page.evaluate(()=>{setCellVal=window.originalSetCellVal;delete window.originalSetCellVal;});
+  assert.equal(await page.evaluate(()=>WB.sheets[CFG_SHEET].rows.some(r=>r[0]==='خودپرداز تهران')),false);
 });

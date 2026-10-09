@@ -26,6 +26,7 @@ const Access = (() => {
     catch(e){storageError=true;db=null;}
   }
   function persist(next){
+    next={...next,adminPresetVersion:next.adminPresetVersion || db?.adminPresetVersion || 0};
     validate(next);
     localStorage.setItem(KEY,JSON.stringify(next)); // quota errors fail before updating live accounts
     db=next;
@@ -104,8 +105,20 @@ const Access = (() => {
     const input=el('input',{id,type,class:'inp',value,required:true,autocomplete:type==='password'?'new-password':'off'});
     return {input,node:el('label',{class:'access-field',for:id},el('span',{text:label}),input)};
   }
-  function start(){
+  async function start(){
     load();
+    // Explicit UI-10 migration requested by the owner. Applied once, never on
+    // ordinary reload or workbook import. Future administrator changes survive.
+    if(!storageError && (!db || db.adminPresetVersion!==1)) {
+      try {
+        const seed={salt:'2a6bba0bc6555f065ef9ad543f493c29',hash:'23e59c6e32b1fded0f1ae34b5be83b3e72f15efbef1ef8862f8fef03a1f290c8'};
+        const users=db?db.users.map(u=>({...u})):[];
+        const existing=users.find(u=>u.username==='admin') || users.find(u=>u.enabled&&u.role===1);
+        const admin={...(existing||{}),id:existing?.id||crypto.randomUUID(),username:'admin',name:'admin',role:1,enabled:true,
+          regions:[],sheets:[],revision:crypto.randomUUID(),...seed};
+        persist({version:1,adminPresetVersion:1,users:existing?users.map(u=>u.id===existing.id?admin:u):[...users,admin]});
+      } catch(e) { storageError=true; }
+    }
     try{
       const session=JSON.parse(sessionStorage.getItem(SESSION)||'null');
       const user=db?.users.find(u=>u.id===session?.id && u.revision===session.revision && u.enabled);
@@ -113,37 +126,25 @@ const Access = (() => {
     }catch(e){}
     return new Promise(resolve=>{
       const root=el('div',{id:'auth-screen'}),form=el('form',{class:'access-login','aria-labelledby':'auth-title'});
-      const setup=!db&&!storageError;
-      const u=field('نام کاربری (حروف انگلیسی)','auth-username','text',setup?'admin':'');u.input.autocomplete='username';
-      const n=field('نام نمایشی مدیر','auth-name','text','WEB USER');
-      const p=field('رمز عبور','auth-password','password');p.input.autocomplete=setup?'new-password':'current-password';
-      const repeat=field('تکرار رمز عبور','auth-confirm','password');
+      const u=field('نام کاربری (حروف انگلیسی)','auth-username','text','');u.input.autocomplete='username';
+      const p=field('رمز عبور','auth-password','password');p.input.autocomplete='current-password';
       const error=el('p',{id:'auth-error',role:'alert',class:'category-error'});
-      const submit=el('button',{type:'submit',class:'btn btn-primary',id:'auth-submit',text:setup?'ساخت مدیر اولیه (سطح ۱)':'ورود'});
-      form.append(el('h2',{id:'auth-title',text:setup?'راه‌اندازی حساب مدیر':'ورود به فام'}),
+      const submit=el('button',{type:'submit',class:'btn btn-primary',id:'auth-submit',text:'ورود'});
+      form.append(el('h2',{id:'auth-title',text:'ورود به فام'}),
         el('p',{class:'hint',text:'نسخه محلی HTML — حساب‌ها و داده‌ها در همین مرورگر نگهداری می‌شوند. این محدودیت‌ها جای امنیت سمت سرور را نمی‌گیرند.'}));
       if(storageError){form.append(el('p',{role:'alert',text:'حساب‌های ذخیره‌شده قابل خواندن نیستند یا ذخیره‌سازی مرورگر مسدود است. برای جلوگیری از از‌دست‌رفتن دسترسی، راه‌اندازی مجدد خودکار انجام نمی‌شود. نسخه پشتیبان مرورگر را بررسی کنید.'}));}
       else{
-        form.append(u.node);if(setup)form.append(n.node);form.append(p.node);if(setup)form.append(repeat.node);form.append(error,submit);
+        form.append(u.node,p.node,error,submit);
         form.addEventListener('submit',async e=>{
           e.preventDefault();submit.disabled=true;error.textContent='';
           try{
             let user;
-            if(setup){
-              if(localStorage.getItem(KEY)!==null)throw Error('حساب مدیر قبلاً ساخته شده است؛ صفحه را تازه کنید.');
-              if(!/^[a-z0-9_.-]{3,40}$/.test(username(u.input.value)))throw Error('نام کاربری باید ۳ تا ۴۰ نویسه و شامل حروف انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.');
-              if(p.input.value!==repeat.input.value)throw Error('تکرار رمز مطابقت ندارد.');
-              user={id:crypto.randomUUID(),username:username(u.input.value),name:n.input.value.trim(),role:1,enabled:true,regions:[],sheets:[],revision:crypto.randomUUID(),...await credential(p.input.value)};
-              if(localStorage.getItem(KEY)!==null)throw Error('حساب مدیر قبلاً ساخته شده است؛ صفحه را تازه کنید.');
-              persist({version:1,users:[user]});
-            }else{
-              load();
-              if(storageError || !db)throw Error('حساب‌ها قابل خواندن نیستند؛ صفحه را تازه کنید.');
-              user=db.users.find(x=>x.username===username(u.input.value)&&x.enabled);
-              if(!user || await hashPassword(p.input.value,user.salt)!==user.hash)throw Error('نام کاربری یا رمز عبور نادرست است.');
-            }
-            establish(user);p.input.value='';repeat.input.value='';root.remove();resolve();
-          }catch(err){error.textContent=err.message;p.input.value='';repeat.input.value='';}
+            load();
+            if(storageError || !db)throw Error('حساب‌ها قابل خواندن نیستند؛ صفحه را تازه کنید.');
+            user=db.users.find(x=>x.username===username(u.input.value)&&x.enabled);
+            if(!user || await hashPassword(p.input.value,user.salt)!==user.hash)throw Error('نام کاربری یا رمز عبور نادرست است.');
+            establish(user);p.input.value='';root.remove();resolve();
+          }catch(err){error.textContent=err.message;p.input.value='';}
           finally{submit.disabled=false;}
         });
       }

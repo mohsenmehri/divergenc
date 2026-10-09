@@ -49,7 +49,7 @@ before(async () => {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/FAM.html`);
   await page.locator('#auth-password').fill('1109');
-  await page.locator('#auth-confirm').fill('1109');
+  await page.locator('#auth-username').fill('admin');
   await page.locator('#auth-submit').click();
   await page.waitForFunction(() => document.querySelector('#cp-c9 option') && document.getElementById('st-user').textContent.length > 0);
 });
@@ -487,7 +487,7 @@ test('UI-05 branding and header show only the editable identity', async () => {
   assert.equal(await page.locator('.hero h1').innerText(), 'سامانه مدیریت اطلاعات شبکه‌ی LAN, WAN، سراسری شعب و خودپردازها، مراکز داده و ...');
   assert.doesNotMatch(await page.locator('#topbar').innerText(), /رکورد ایندکس|بخش •|Network Admin/);
   assert.equal(await page.locator('#st-user').count(), 1);
-  assert.equal(await page.locator('#st-user').innerText(), 'WEB USER');
+  assert.equal(await page.locator('#st-user').innerText(), 'admin');
   for (const width of [1440, 800, 390, 320]) {
     await page.setViewportSize({width, height:1000});
     assert.equal(await page.locator('#st-user').isVisible(), true);
