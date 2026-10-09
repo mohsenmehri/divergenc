@@ -1,0 +1,20 @@
+/* Local account views; hidden before first paint, not merely disabled. */
+html.auth-pending #layout, html[data-role="4"] #layout {display:none!important;}
+html.auth-pending #access-viewer {display:none!important;}
+.access-hidden {display:none!important;}
+#auth-screen {position:fixed;inset:0;z-index:5000;overflow:auto;display:grid;place-items:center;padding:24px;background:#081321;direction:rtl;}
+.access-login {width:min(100%,440px);padding:28px;border:1px solid #284b65;border-radius:20px;background:#101f30;box-shadow:0 25px 90px #0008;color:#eef6ff;}
+.access-login h2{margin:0 0 16px;}
+.access-field {display:flex;flex-direction:column;gap:7px;margin:14px 0;}
+.access-field input,.access-login input,#user-form select {width:100%;min-height:42px;color:inherit;background:#0c1829;border:1px solid #38516c;border-radius:9px;padding:8px 12px;font:inherit;}
+#auth-username,#auth-password,#auth-confirm,#user-username,#user-password {direction:ltr;text-align:left;}
+.access-login .btn{width:100%;margin-top:12px;min-height:44px;}
+.access-check {display:flex;gap:8px;margin:14px 0;align-items:center;}
+.access-scopes {display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;max-height:220px;overflow:auto;padding:10px;border:1px solid #38516c;border-radius:8px;}
+.access-scopes label{display:flex;gap:8px;align-items:center;min-width:0;overflow-wrap:anywhere;}
+#access-viewer {position:relative;z-index:2;margin:24px auto;padding:24px;width:min(1400px,100%);direction:rtl;}
+.access-viewer-head,.access-viewer-nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:24px;}
+.access-viewer-head h2{flex:1;}
+#viewer-sheet-body{margin-top:24px;max-width:100%;overflow:auto;}
+#viewer-sheet-body .grid-wrap{max-height:75vh;}
+#user-error,#auth-error {white-space:normal;color:#ffabb6;}

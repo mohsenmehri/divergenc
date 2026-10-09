@@ -48,6 +48,9 @@ before(async () => {
   page.setDefaultTimeout(10000);
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/FAM.html`);
+  await page.locator('#auth-password').fill('1109');
+  await page.locator('#auth-confirm').fill('1109');
+  await page.locator('#auth-submit').click();
   await page.waitForFunction(() => document.querySelector('#cp-c9 option') && document.getElementById('st-user').textContent.length > 0);
 });
 after(async () => { if (browser) await browser.close(); if (server) await new Promise(r => server.close(r)); });
@@ -489,10 +492,9 @@ test('UI-05 branding and header show only the editable identity', async () => {
     await page.setViewportSize({width, height:1000});
     assert.equal(await page.locator('#st-user').isVisible(), true);
     await page.locator('#stat-line').click();
-    assert.equal(await page.locator('#modal-input').getAttribute('type'), 'password');
-    assert.equal(await page.locator('#modal-input').inputValue(), '');
+    assert.equal(await page.locator('#account-manage').isVisible(), true);
+    assert.equal(await page.locator('#account-logout').isVisible(), true);
     await page.keyboard.press('Escape');
-    await page.waitForFunction(() => !editUserName.busy);
   }
   await page.setViewportSize({width:1440, height:1000});
 });
@@ -506,55 +508,36 @@ async function enterSecret(value) {
   await modal(1).click();
 }
 
-test('admin confirmation protects name edits, including cancellation and persistence', async () => {
+test('account manager protects identity and preserves it independently of workbook backups', async () => {
   const initial = await page.evaluate(() => state.user);
-  for (const value of ['', '1234', '12346']) {
-    await page.locator('#stat-line').click();
-    await enterSecret(value);
-    await page.locator('#modal-overlay.show').getByText('رمز عبور نادرست است.').waitFor();
-    assert.equal(await page.locator('#modal-input').count(), 0);
-    assert.equal(await page.evaluate(() => state.user), initial);
-    await modal(1).click();
-  }
   await page.locator('#stat-line').click();
-  await enterSecret('1109');
-  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
-  await page.locator('#modal-input').fill('لغوشده');
-  await modal(2).click();
+  await page.locator('#account-manage').click();
+  await page.locator('#user-name').fill('لغوشده');
+  await page.locator('#users-done').click();
   assert.equal(await page.evaluate(() => state.user), initial);
   await page.locator('#stat-line').click();
-  await enterSecret('1109');
-  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
-  await page.locator('#modal-input').fill('   ');
-  await modal(1).click();
-  await page.locator('#modal-overlay.show').getByText('نام باید بین ۱ تا ۶۰ نویسه باشد.').waitFor();
-  await modal(1).click();
-  assert.equal(await page.evaluate(() => state.user), initial);
-  await page.locator('#stat-line').click();
-  await enterSecret('۱۱۰۹');
-  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
-  assert.equal(await page.locator('#modal-input').getAttribute('maxlength'), '60');
+  await page.locator('#account-manage').click();
+  assert.equal(await page.locator('#user-password').getAttribute('type'), 'password');
+  assert.equal(await page.locator('#user-password').inputValue(), '');
   const name = 'مدیر ارتباطات <b>شبکه</b>';
-  await page.locator('#modal-input').fill(name);
-  await modal(1).click();
+  await page.locator('#user-name').fill(name);
+  await page.locator('#user-save').click();
   await page.waitForFunction(name => document.getElementById('st-user').textContent === name, name);
   assert.equal(await page.locator('#st-user b').count(), 0);
-  assert.equal(await page.evaluate(() => ModalBox.lastValue), undefined);
+  await page.locator('#users-done').click();
   await page.evaluate(() => flushDeepSave());
   await page.reload();
   await page.waitForFunction(name => document.getElementById('st-user').textContent === name, name);
-  // Import must not be a second route to changing the admin-approved name.
   assert.equal(await page.evaluate(() => applyJsonBackup('identity-test.json', {
     order: WB.order, sheets: WB.sheets, categoryConfig: state.categoryConfig, user: 'unapproved'
   })), true);
   assert.equal(await page.evaluate(() => state.user), name);
   await page.locator('#stat-line').click();
-  assert.equal(await page.locator('#modal-input').getAttribute('type'), 'password');
-  await enterSecret('1109');
-  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
-  await page.locator('#modal-input').fill('WEB USER');
-  await modal(1).click();
-  await page.waitForFunction(() => !editUserName.busy);
+  await page.locator('#account-manage').click();
+  await page.locator('#user-name').fill('WEB USER');
+  await page.locator('#user-save').click();
+  await page.waitForFunction(() => state.user === 'WEB USER');
+  await page.locator('#users-done').click();
 });
 
 test('all web unlock paths use the new masked password and reject old passwords', async () => {
@@ -664,7 +647,7 @@ test('province navigation keeps all rows in Branch and ATMs empty without editin
   await page.locator('[data-province="3-14"][data-section="atm"]').click();
   assert.equal(await page.evaluate(() => state.currentSheet),null);
   assert.equal(await page.locator('#sheet-body table').count(),0);
-  assert.match(await page.locator('#sheet-body').innerText(),/فعلاً خالی/);
+  assert.equal(await page.locator('#sheet-body').innerText(),'');
   assert.equal(await page.locator('#sheet-title').innerText(),'کهگیلویه و بویراحمد — خودپرداز');
   await categoryReload();
   assert.equal(await page.locator('#sheet-title').innerText(),'کهگیلویه و بویراحمد — خودپرداز');
