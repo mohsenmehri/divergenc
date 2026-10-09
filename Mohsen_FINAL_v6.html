@@ -13,7 +13,7 @@
    ================================================================ */
 :root{
   --bg-0:#060c15;
-  --fx-strength:.3;
+  --fx-strength:.52;
   --bg-1:#0a1322;
   --bg-2:#101c2c;
   --glass:rgba(212,175,106,.05);
@@ -58,13 +58,19 @@ body{
 body::before{
   content:"";position:fixed;inset:-12%;pointer-events:none;z-index:0;
   background:
-    radial-gradient(720px 520px at 10% 8%, rgba(217,178,107,.40), transparent 62%),
-    radial-gradient(680px 480px at 90% 6%, rgba(47,212,196,.26), transparent 60%),
-    radial-gradient(640px 520px at 74% 96%, rgba(167,139,250,.30), transparent 62%),
-    radial-gradient(460px 340px at 22% 80%, rgba(47,212,196,.14), transparent 70%);
-  filter:blur(6px);
+    radial-gradient(980px 640px at 12% 16%, rgba(232,196,122,.42), transparent 58%),
+    radial-gradient(820px 620px at 82% 4%, rgba(124,92,255,.32), transparent 56%),
+    radial-gradient(760px 520px at 48% 108%, rgba(47,212,196,.22), transparent 60%),
+    radial-gradient(520px 420px at 70% 62%, rgba(255,176,92,.14), transparent 68%);
+  filter:blur(8px);
   opacity:var(--fx-strength);
-  animation:fxDrift 14s ease-in-out infinite alternate;
+  animation:fxDrift 18s ease-in-out infinite alternate;
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse at 42% 40%, transparent 36%, rgba(5,4,10,.22) 84%),
+    linear-gradient(180deg, rgba(5,4,10,.08), transparent 14%, transparent 82%, rgba(5,4,10,.2));
 }
 #fx-stage{position:fixed;inset:0;z-index:0;width:100%;height:100%;pointer-events:none;opacity:var(--fx-strength);}
 .fx-bar{
@@ -889,7 +895,7 @@ table.xl tbody tr:hover td,table.logtable tbody tr:hover td{background:rgba(217,
 (function () {
   try {
     var raw = localStorage.getItem("fam.fx.strength");
-    var n = raw == null || raw === "" ? 30 : parseInt(raw, 10);
+    var n = raw == null || raw === "" ? 52 : parseInt(raw, 10);
     if (!isFinite(n)) n = 30;
     n = Math.max(0, Math.min(100, n));
     document.documentElement.style.setProperty("--fx-strength", String(n / 100));
@@ -4910,7 +4916,7 @@ function bindFxStrength() {
     document.documentElement.style.setProperty("--fx-strength", String(n / 100));
     if (val) val.textContent = String(n).replace(/\d/g, function (d) { return digits[d]; }) + "٪";
   }
-  let start = 30;
+  let start = 52;
   try {
     const raw = localStorage.getItem("fam.fx.strength");
     if (raw != null && raw !== "") {
@@ -4936,20 +4942,28 @@ function startPhotonStage() {
     if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent || "")) return;
     const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const spec = [
-      { x: 0.13, y: 0.18, kind: "radio", s: 1.05 },
-      { x: 0.36, y: 0.30, kind: "router", s: 1.15 },
-      { x: 0.60, y: 0.16, kind: "switch", s: 1 },
-      { x: 0.74, y: 0.46, kind: "router", s: 1.08 },
-      { x: 0.18, y: 0.62, kind: "switch", s: 0.95 },
-      { x: 0.46, y: 0.84, kind: "radio", s: 1 },
-      { x: 0.84, y: 0.24, kind: "radio", s: 0.86 },
-      { x: 0.64, y: 0.70, kind: "switch", s: 0.92 }
+      { x: 0.15, y: 0.24, kind: "radio", s: 1.05 },
+      { x: 0.40, y: 0.36, kind: "router", s: 1.12 },
+      { x: 0.66, y: 0.18, kind: "radio", s: 0.92 },
+      { x: 0.20, y: 0.70, kind: "fabric", s: 1 },
+      { x: 0.52, y: 0.66, kind: "router", s: 1 },
+      { x: 0.76, y: 0.50, kind: "fabric", s: 0.86 },
+      { x: 0.46, y: 0.88, kind: "radio", s: 0.78 }
     ];
     const spans = [
-      [0, 1, "hop"], [1, 2, "core"], [2, 6, "hop"], [1, 3, "core"],
-      [1, 4, "access"], [4, 5, "hop"], [3, 5, "core"], [3, 7, "access"],
-      [7, 5, "access"], [2, 3, "core"], [6, 3, "hop"]
+      [0, 1, "gold"], [1, 2, "gold"], [1, 4, "teal"], [0, 3, "violet"],
+      [3, 4, "teal"], [4, 5, "gold"], [2, 5, "violet"], [3, 6, "violet"], [4, 6, "gold"]
     ];
+    const motes = [];
+    for (let i = 0; i < 48; i++) {
+      motes.push({
+        x: ((i * 97) % 100) / 100,
+        y: ((i * 53) % 100) / 100,
+        r: 8 + (i % 5) * 7,
+        k: i % 3,
+        ph: i * 0.17
+      });
+    }
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       const w = window.innerWidth || 1440;
@@ -4974,194 +4988,199 @@ function startPhotonStage() {
         y: u * u * a.y + 2 * u * t * cpt.y + t * t * b.y
       };
     }
-    function roundBox(x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-    }
-    function drawRouter(x, y, s) {
-      const r = 18 * s;
-      ctx.beginPath();
-      ctx.arc(x, y, r * 2.15, 0, 6.283);
-      ctx.fillStyle = "rgba(217,178,107,0.13)";
-      ctx.fill();
+    function bloom(x, y, r, inner, mid) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, inner);
+      g.addColorStop(0.42, mid);
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(x, y, r, 0, 6.283);
-      ctx.fillStyle = "rgba(12,16,28,0.62)";
       ctx.fill();
-      ctx.lineWidth = 2.2;
-      ctx.strokeStyle = "rgba(236,203,138,0.96)";
+    }
+    function jewel(x, y, s, glow) {
+      bloom(x, y, 70 * s, "rgba(255,248,226,0.9)", glow);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = "rgba(244,226,180,0.72)";
+      ctx.lineWidth = 1.15;
+      ctx.shadowColor = "rgba(232,196,122,0.85)";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 30 * s, 12 * s, 0.55, 0, 6.283);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(x, y, r * 0.52, 0.55, 5.55);
+      ctx.ellipse(0, 0, 30 * s, 12 * s, -0.85, 0, 6.283);
       ctx.stroke();
-      const ah = 0.55;
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#fffaf0";
       ctx.beginPath();
-      ctx.moveTo(x + Math.cos(ah) * r * 0.28, y + Math.sin(ah) * r * 0.28);
-      ctx.lineTo(x + Math.cos(ah) * r * 0.72, y + Math.sin(ah) * r * 0.72);
-      ctx.lineTo(x + Math.cos(ah + 0.7) * r * 0.42, y + Math.sin(ah + 0.7) * r * 0.42);
-      ctx.stroke();
-      for (let i = 0; i < 4; i++) {
-        const a = i * 1.5708 + 0.4;
+      ctx.arc(0, 0, 3.1 * s, 0, 6.283);
+      ctx.fill();
+      ctx.restore();
+    }
+    function fabric(x, y, s, spin) {
+      bloom(x, y, 120 * s, "rgba(47,212,196,0.16)", "rgba(47,212,196,0.05)");
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(spin);
+      ctx.strokeStyle = "rgba(125,232,214,0.55)";
+      ctx.lineWidth = 1.25;
+      ctx.shadowColor = "rgba(47,212,196,0.65)";
+      ctx.shadowBlur = 8;
+      for (let ring = 1; ring <= 3; ring++) {
+        const R = ring * 24 * s;
         ctx.beginPath();
-        ctx.moveTo(x + Math.cos(a) * r * 1.05, y + Math.sin(a) * r * 1.05);
-        ctx.lineTo(x + Math.cos(a) * r * 1.55, y + Math.sin(a) * r * 1.55);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * 6.283;
+          const px = Math.cos(a) * R, py = Math.sin(a) * R;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
         ctx.stroke();
       }
-    }
-    function drawSwitch(x, y, s) {
-      const w = 52 * s, h = 28 * s;
-      roundBox(x - w / 2, y - h / 2, w, h, 6);
-      ctx.fillStyle = "rgba(8,20,30,0.66)";
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(47,212,196,0.95)";
-      ctx.stroke();
       for (let i = 0; i < 6; i++) {
-        const px = x - w * 0.36 + i * (w * 0.13);
-        ctx.fillStyle = i % 3 === 0 ? "rgba(62,207,142,0.95)" : "rgba(232,196,122,0.9)";
-        ctx.fillRect(px, y + h * 0.16, 3.4, 3.4);
+        const a = (i / 6) * 6.283;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * 72 * s, Math.sin(a) * 72 * s);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255,246,220,0.85)";
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * 48 * s, Math.sin(a) * 48 * s, 2.1, 0, 6.283);
+        ctx.fill();
       }
-      ctx.strokeStyle = "rgba(47,212,196,0.85)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x - 9 * s, y - 1);
-      ctx.lineTo(x - 3 * s, y - 8 * s);
-      ctx.lineTo(x + 3 * s, y - 1);
-      ctx.moveTo(x + 2 * s, y + 1);
-      ctx.lineTo(x + 8 * s, y - 6 * s);
-      ctx.lineTo(x + 8 * s, y + 1);
-      ctx.stroke();
+      ctx.restore();
+      jewel(x, y, s * 0.62, "rgba(47,212,196,0.55)");
     }
-    function drawRadio(x, y, s) {
-      const hgt = 40 * s, base = 15 * s;
-      ctx.strokeStyle = "rgba(214,190,255,0.96)";
-      ctx.lineWidth = 1.8;
+    function radio(x, y, s, t) {
+      bloom(x, y, 260 * s, "rgba(176,130,255,0.34)", "rgba(232,196,122,0.1)");
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.85);
+      for (let i = 1; i <= 7; i++) {
+        const pulse = reduce ? 0 : Math.sin((t + i * 0.08) * 6.283) * 3 * s;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16 * s + i * 24 * s + pulse, -1.2, 1.2);
+        ctx.strokeStyle = i % 2 ? "rgba(226,198,255,0.82)" : "rgba(255,214,140,0.7)";
+        ctx.lineWidth = i % 3 === 0 ? 2.6 : 1.45;
+        ctx.shadowColor = i % 2 ? "rgba(170,120,255,0.95)" : "rgba(232,186,96,0.9)";
+        ctx.shadowBlur = 16;
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = "rgba(255,238,206,0.96)";
+      ctx.lineWidth = 2.1;
       ctx.beginPath();
-      ctx.moveTo(x, y - hgt);
-      ctx.lineTo(x - base, y + 10 * s);
-      ctx.lineTo(x + base, y + 10 * s);
-      ctx.closePath();
+      ctx.arc(-4 * s, 2 * s, 20 * s, 2.35, 5.5);
       ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#fff8e6";
       ctx.beginPath();
-      ctx.moveTo(x - base * 0.66, y - hgt * 0.15);
-      ctx.lineTo(x + base * 0.66, y - hgt * 0.15);
-      ctx.moveTo(x - base * 0.34, y - hgt * 0.55);
-      ctx.lineTo(x + base * 0.34, y - hgt * 0.55);
-      ctx.moveTo(x - base * 0.55, y + 2 * s);
-      ctx.lineTo(x + base * 0.2, y - hgt * 0.42);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(x + 7 * s, y - hgt + 4 * s, 7 * s, -0.5, 2.15);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(232,196,122,0.95)";
-      ctx.beginPath();
-      ctx.arc(x, y - hgt, 2.4, 0, 6.283);
+      ctx.arc(8 * s, -2 * s, 2.8, 0, 6.283);
       ctx.fill();
-    }
-    function drawWaves(x, y, s, t) {
-      const originY = y - 30 * s;
-      ctx.lineWidth = 2.3;
-      for (let i = 1; i <= 3; i++) {
-        ctx.strokeStyle = "rgba(206,176,255," + (0.9 - i * 0.14).toFixed(3) + ")";
-        ctx.beginPath();
-        ctx.arc(x + 4 * s, originY, 8 * s + i * 11 * s, -1.05, 1.05);
-        ctx.stroke();
-      }
-      const maxR = 150 * s;
-      for (let i = 0; i < 4; i++) {
-        const p = (t + i / 4) % 1;
-        const rad = 28 * s + p * maxR;
-        ctx.lineWidth = 2.4;
-        ctx.strokeStyle = "rgba(186,160,255," + (0.78 * (1 - p)).toFixed(3) + ")";
-        ctx.beginPath();
-        ctx.arc(x, originY, rad, -1.15, 1.15);
-        ctx.stroke();
-        ctx.strokeStyle = "rgba(232,196,122," + (0.55 * (1 - p)).toFixed(3) + ")";
-        ctx.beginPath();
-        ctx.arc(x, originY, rad * 0.82, Math.PI - 0.95, Math.PI + 0.95);
-        ctx.stroke();
-      }
+      ctx.restore();
       if (!reduce) {
-        const sweep = t * 6.283;
-        ctx.strokeStyle = "rgba(47,212,196,0.7)";
-        ctx.lineWidth = 2.4;
+        ctx.save();
+        ctx.translate(x + 8 * s, y - 2 * s);
+        ctx.rotate(-0.15 + Math.sin(t * 6.283) * 0.06);
+        const beam = ctx.createLinearGradient(0, 0, 210 * s, 0);
+        beam.addColorStop(0, "rgba(255,228,170,0.34)");
+        beam.addColorStop(1, "rgba(255,228,170,0)");
+        ctx.fillStyle = beam;
         ctx.beginPath();
-        ctx.arc(x, y, 58 * s, sweep - 0.5, sweep + 0.08);
-        ctx.stroke();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(200 * s, -22 * s);
+        ctx.lineTo(200 * s, 22 * s);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+    function silk(a, b, bow, tone, t, i) {
+      const cpt = bend(a, b, bow);
+      const ink = tone === "violet" ? "rgba(198,170,255,0.72)" : tone === "teal" ? "rgba(94,224,206,0.7)" : "rgba(236,203,138,0.78)";
+      const glow = tone === "violet" ? "rgba(168,130,255,0.9)" : tone === "teal" ? "rgba(47,212,196,0.85)" : "rgba(232,196,122,0.9)";
+      ctx.save();
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 22;
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = ink;
+      ctx.globalAlpha = 0.28;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.quadraticCurveTo(cpt.x, cpt.y, b.x, b.y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.9;
+      ctx.shadowBlur = 8;
+      ctx.lineWidth = 1.7;
+      ctx.strokeStyle = "rgba(255,248,230,0.82)";
+      ctx.stroke();
+      ctx.restore();
+      if (!reduce) {
+        for (let k = 0; k < 6; k++) {
+          const tt = (t * (tone === "gold" ? 0.85 : 0.55) + i * 0.09 - k * 0.028 + 1) % 1;
+          const p = along(a, b, cpt, tt);
+          ctx.fillStyle = "rgba(255,248,226," + (0.22 - k * 0.03).toFixed(3) + ")";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 8 - k * 1.05, 0, 6.283);
+          ctx.fill();
+        }
+        const head = along(a, b, cpt, (t * 0.7 + i * 0.09) % 1);
+        ctx.fillStyle = "#fffaf0";
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, 2.15, 0, 6.283);
+        ctx.fill();
       }
     }
     function frame() {
       try {
         const w = window.innerWidth || 1440;
         const h = window.innerHeight || 900;
-        const t = reduce ? 0.35 : (Date.now() / 2800) % 1;
+        const t = reduce ? 0.28 : (Date.now() / 5200) % 1;
         const nodes = spec.map(function (n) { return pt(n, w, h); });
         ctx.clearRect(0, 0, w, h);
-        for (let i = 0; i < nodes.length; i++) {
-          if (nodes[i].kind !== "radio") continue;
-          drawWaves(nodes[i].x, nodes[i].y, nodes[i].s, (t + i * 0.17) % 1);
+        for (let i = 0; i < motes.length; i++) {
+          const m = motes[i];
+          const drift = reduce ? 0 : Math.sin(t * 6.283 + m.ph) * 10;
+          const mx = m.x * w + drift;
+          const my = m.y * h + Math.cos(t * 6.283 + m.ph) * 8;
+          const col = m.k === 0 ? "rgba(232,196,122,0.16)" : m.k === 1 ? "rgba(176,140,255,0.14)" : "rgba(47,212,196,0.13)";
+          bloom(mx, my, m.r * 3.2, col, "rgba(0,0,0,0)");
         }
+        ctx.save();
+        ctx.translate(w * 0.46, h * 0.52);
+        ctx.rotate(-0.18);
+        ctx.scale(1, 0.38);
+        ctx.strokeStyle = "rgba(232,196,122,0.28)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.min(w, h) * 0.62, 0, 6.283);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(167,139,250,0.2)";
+        ctx.beginPath();
+        ctx.arc(40, -20, Math.min(w, h) * 0.46, 0, 6.283);
+        ctx.stroke();
+        ctx.restore();
         for (let i = 0; i < spans.length; i++) {
-          const a = nodes[spans[i][0]], b = nodes[spans[i][1]], kind = spans[i][2];
-          const bow = (i % 2 ? 1 : -1) * (28 + (i % 3) * 14);
-          const cpt = bend(a, b, bow);
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.quadraticCurveTo(cpt.x, cpt.y, b.x, b.y);
-          if (kind === "hop") {
-            ctx.setLineDash([7, 6]);
-            ctx.strokeStyle = "rgba(206,176,255,0.9)";
-            ctx.lineWidth = 2.2;
-          } else if (kind === "access") {
-            ctx.setLineDash([]);
-            ctx.strokeStyle = "rgba(47,212,196,0.78)";
-            ctx.lineWidth = 1.8;
-          } else {
-            ctx.setLineDash([]);
-            ctx.strokeStyle = "rgba(236,203,138,0.88)";
-            ctx.lineWidth = 2.8;
-          }
-          ctx.stroke();
-          ctx.setLineDash([]);
-          if (!reduce) {
-            const p = along(a, b, cpt, (t * (kind === "core" ? 1 : 0.65) + i * 0.13) % 1);
-            ctx.fillStyle = "rgba(255,252,232,0.28)";
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 6.5, 0, 6.283);
-            ctx.fill();
-            ctx.fillStyle = kind === "hop" ? "#efe6ff" : "#fff6d8";
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2.2, 0, 6.283);
-            ctx.fill();
-          }
+          const a = nodes[spans[i][0]], b = nodes[spans[i][1]];
+          silk(a, b, (i % 2 ? 1 : -1) * (36 + (i % 3) * 16), spans[i][2], t, i);
         }
         for (let i = 0; i < nodes.length; i++) {
           const n = nodes[i];
-          const leaves = n.kind === "router" ? 3 : n.kind === "switch" ? 2 : 1;
-          for (let k = 0; k < leaves; k++) {
-            const ang = -0.7 + k * 0.7 + (n.kind === "radio" ? 2.2 : 1.1);
-            const dist = 52 + n.s * 20 + k * 12;
-            const lx = n.x + Math.cos(ang) * dist;
-            const ly = n.y + Math.sin(ang) * dist;
-            ctx.strokeStyle = "rgba(47,212,196,0.5)";
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(n.x, n.y);
-            ctx.lineTo(lx, ly);
-            ctx.stroke();
-            ctx.fillStyle = "rgba(232,196,122,0.9)";
-            ctx.beginPath();
-            ctx.arc(lx, ly, 2.6, 0, 6.283);
-            ctx.fill();
+          if (n.kind === "radio") radio(n.x, n.y, n.s, (t + i * 0.17) % 1);
+          else if (n.kind === "fabric") fabric(n.x, n.y, n.s, t * 0.35 + i);
+          else {
+            jewel(n.x, n.y, n.s, "rgba(232,196,122,0.42)");
+            if (!reduce) {
+              const ang = t * 6.283 + i;
+              ctx.fillStyle = "rgba(255,236,190,0.95)";
+              ctx.beginPath();
+              ctx.arc(n.x + Math.cos(ang) * 36 * n.s, n.y + Math.sin(ang) * 15 * n.s, 2.3, 0, 6.283);
+              ctx.fill();
+            }
           }
-          if (n.kind === "router") drawRouter(n.x, n.y, n.s);
-          else if (n.kind === "switch") drawSwitch(n.x, n.y, n.s);
-          else drawRadio(n.x, n.y, n.s);
         }
       } catch (err) { return; }
       if (!reduce) requestAnimationFrame(frame);
@@ -5171,7 +5190,6 @@ function startPhotonStage() {
     window.addEventListener("resize", function () { try { resize(); } catch (e) {} });
   } catch (e) {}
 }
-
 window.addEventListener("DOMContentLoaded", async () => {
   bindFxStrength();
   startPhotonStage();
