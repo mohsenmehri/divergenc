@@ -48,7 +48,7 @@ before(async () => {
   page.setDefaultTimeout(10000);
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/FAM.html`);
-  await page.waitForFunction(() => document.getElementById('stat-line').textContent.includes('رکورد'));
+  await page.waitForFunction(() => document.querySelector('#cp-c9 option') && document.getElementById('st-user').textContent.length > 0);
 });
 after(async () => { if (browser) await browser.close(); if (server) await new Promise(r => server.close(r)); });
 
@@ -199,7 +199,7 @@ test('menu preference survives a full reload in both states', async () => {
     assert.equal(await page.evaluate(() => localStorage.getItem('fam.ui.menu-open')), String(open));
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#cp-c9 option') &&
-      document.getElementById('stat-line').textContent.includes('رکورد'));
+      document.querySelector('#cp-c9 option') && document.getElementById('st-user').textContent.length > 0);
     await assertMenu(open);
     await page.evaluate(() => { switchView('sheet'); switchView('panel'); });
     await assertMenu(open);
@@ -250,7 +250,7 @@ async function categoryManager() {
 async function categoryReload() {
   await page.evaluate(() => flushDeepSave());
   await page.reload();
-  await page.waitForFunction(() => document.querySelector('#cp-c9 option') && document.getElementById('stat-line').textContent.includes('رکورد'));
+  await page.waitForFunction(() => document.querySelector('#cp-c9 option') && document.querySelector('#cp-c9 option') && document.getElementById('st-user').textContent.length > 0);
 }
 async function businessSheets() {
   return page.evaluate(() => Object.fromEntries(WB.order.filter(IsDataSheet).map(n=>[n,WB.sheets[n]])));
@@ -474,6 +474,146 @@ test('workbook coordinate badges are absent from user-facing forms and descripti
   assert.doesNotMatch(await page.locator('#modal-overlay.show').innerText(),/C27/);
   await modal(1).click();
   await page.locator('[aria-controls="quick-remove"]').click();
+  await menu().click();
+});
+
+test('UI-05 branding and header show only the editable identity', async () => {
+  assert.equal(await page.title(), 'تجارت الکترونیک و فناوری اطلاعات ملل (فام)');
+  assert.equal(await page.locator('.brand-name').textContent(), 'تجارت الکترونیک و فناوری اطلاعات ملل (فام)');
+  assert.equal((await page.locator('.hero-tag').innerText()).trim(), 'اداره‌ی ارتباطات و شبکه');
+  assert.equal(await page.locator('.hero h1').innerText(), 'سامانه مدیریت اطلاعات شبکه‌ی LAN, WAN، سراسری شعب و خودپردازها، مراکز داده و ...');
+  assert.doesNotMatch(await page.locator('#topbar').innerText(), /رکورد ایندکس|بخش •|Network Admin/);
+  assert.equal(await page.locator('#st-user').count(), 1);
+  assert.equal(await page.locator('#st-user').innerText(), 'WEB USER');
+  for (const width of [1440, 800, 390, 320]) {
+    await page.setViewportSize({width, height:1000});
+    assert.equal(await page.locator('#st-user').isVisible(), true);
+    await page.locator('#stat-line').click();
+    assert.equal(await page.locator('#modal-input').getAttribute('type'), 'password');
+    assert.equal(await page.locator('#modal-input').inputValue(), '');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !editUserName.busy);
+  }
+  await page.setViewportSize({width:1440, height:1000});
+});
+
+async function enterSecret(value) {
+  const input = page.locator('#modal-input');
+  await input.waitFor();
+  assert.equal(await input.getAttribute('type'), 'password');
+  await input.fill(value);
+  assert.doesNotMatch(await page.locator('#modal-overlay').innerText(), /1109|12346?/);
+  await modal(1).click();
+}
+
+test('admin confirmation protects name edits, including cancellation and persistence', async () => {
+  const initial = await page.evaluate(() => state.user);
+  for (const value of ['', '1234', '12346']) {
+    await page.locator('#stat-line').click();
+    await enterSecret(value);
+    await page.locator('#modal-overlay.show').getByText('رمز عبور نادرست است.').waitFor();
+    assert.equal(await page.locator('#modal-input').count(), 0);
+    assert.equal(await page.evaluate(() => state.user), initial);
+    await modal(1).click();
+  }
+  await page.locator('#stat-line').click();
+  await enterSecret('1109');
+  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
+  await page.locator('#modal-input').fill('لغوشده');
+  await modal(2).click();
+  assert.equal(await page.evaluate(() => state.user), initial);
+  await page.locator('#stat-line').click();
+  await enterSecret('1109');
+  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
+  await page.locator('#modal-input').fill('   ');
+  await modal(1).click();
+  await page.locator('#modal-overlay.show').getByText('نام باید بین ۱ تا ۶۰ نویسه باشد.').waitFor();
+  await modal(1).click();
+  assert.equal(await page.evaluate(() => state.user), initial);
+  await page.locator('#stat-line').click();
+  await enterSecret('۱۱۰۹');
+  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
+  assert.equal(await page.locator('#modal-input').getAttribute('maxlength'), '60');
+  const name = 'مدیر ارتباطات <b>شبکه</b>';
+  await page.locator('#modal-input').fill(name);
+  await modal(1).click();
+  await page.waitForFunction(name => document.getElementById('st-user').textContent === name, name);
+  assert.equal(await page.locator('#st-user b').count(), 0);
+  assert.equal(await page.evaluate(() => ModalBox.lastValue), undefined);
+  await page.evaluate(() => flushDeepSave());
+  await page.reload();
+  await page.waitForFunction(name => document.getElementById('st-user').textContent === name, name);
+  // Import must not be a second route to changing the admin-approved name.
+  assert.equal(await page.evaluate(() => applyJsonBackup('identity-test.json', {
+    order: WB.order, sheets: WB.sheets, categoryConfig: state.categoryConfig, user: 'unapproved'
+  })), true);
+  assert.equal(await page.evaluate(() => state.user), name);
+  await page.locator('#stat-line').click();
+  assert.equal(await page.locator('#modal-input').getAttribute('type'), 'password');
+  await enterSecret('1109');
+  await page.waitForFunction(() => document.getElementById('modal-input')?.type === 'text');
+  await page.locator('#modal-input').fill('WEB USER');
+  await modal(1).click();
+  await page.waitForFunction(() => !editUserName.busy);
+});
+
+test('all web unlock paths use the new masked password and reject old passwords', async () => {
+  assert.deepEqual(await page.evaluate(async () => Promise.all(
+    ['1109','۱۱۰۹','١١٠٩','1234','12346','',null].map(verifyLocalPassword)
+  )), [true,true,true,false,false,false,false]);
+  for (const method of ['modUI.UnprotectControlPanel', 'modLayout.UnprotectCP', 'modFixUnlock.UnlockDataSheets', 'toggleSheetLock']) {
+    const sheet = await page.evaluate(() => {
+      const name = WB.order.find(IsDataSheet);
+      state.currentSheet = name; state.lockedSheets[name] = true; state.panelProtected = true;
+      return name;
+    });
+    for (const value of [null, '1234', '12346', '1109']) {
+      await page.evaluate(method => { void ({
+        'modUI.UnprotectControlPanel': () => modUI.UnprotectControlPanel(),
+        'modLayout.UnprotectCP': () => modLayout.UnprotectCP(),
+        'modFixUnlock.UnlockDataSheets': () => modFixUnlock.UnlockDataSheets(),
+        'toggleSheetLock': () => toggleSheetLock()
+      })[method](); }, method);
+      await page.locator('#modal-input').waitFor();
+      if (value === null) { await modal(2).click(); }
+      else {
+        await enterSecret(value);
+        if (value !== '1109') {
+          await page.locator('#modal-overlay.show').getByText('رمز عبور نادرست است.').waitFor();
+          await modal(1).click();
+        } else if (method === 'modFixUnlock.UnlockDataSheets') {
+          await modal(1).click();
+        }
+      }
+      const isPanel = method.includes('ControlPanel') || method.includes('UnprotectCP');
+      await page.waitForFunction(({sheet,isPanel,locked}) =>
+        (isPanel ? state.panelProtected : !!state.lockedSheets[sheet]) === locked,
+        {sheet,isPanel,locked:value !== '1109'});
+      assert.equal(await page.evaluate(() => ModalBox.lastValue), undefined);
+    }
+  }
+  await panel();
+});
+
+test('macro descriptions, source viewer and source exports do not reveal passwords', async () => {
+  await page.evaluate(() => switchView('macros'));
+  assert.doesNotMatch(await page.locator('#view-macros').innerText(), /\b(?:1109|1234|12346)\b/);
+  await page.evaluate(() => { showVbaSource('modConstants.bas'); });
+  const text = await page.locator('#modal-overlay.show').innerText();
+  assert.match(text, /\[REDACTED\]/);
+  assert.doesNotMatch(text, /\b(?:1109|1234|12346)\b/);
+  await modal(1).click();
+  const exported = await page.evaluate(() => {
+    const original = DownloadFile; let content;
+    try { DownloadFile = (name, text) => { content = text; }; modExportAllModules.DownloadModule('modConstants.bas'); }
+    finally { DownloadFile = original; }
+    return content;
+  });
+  assert.match(exported, /\[REDACTED\]/);
+  assert.doesNotMatch(exported, /\b(?:1109|1234|12346)\b/);
+  await panel();
+  await menu().click();
+  await page.screenshot({path:path.join(root,'test-results','branding-ui05.png')});
   await menu().click();
 });
 
