@@ -1095,6 +1095,23 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
   .cat-tiles,.tools-grid{grid-template-columns:1fr;}
 }
 
+
+.fold-bar,.fold-label-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.fold-bar{margin:0 2px 8px;}
+.fold-bar span{font-size:11px;font-weight:800;letter-spacing:.3px;color:var(--txt-1);}
+.fold-btn{
+  width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke);
+  background:rgba(2,10,27,.4);color:#e8c47a;
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 32px;
+}
+.fold-btn svg{width:16px;height:16px;transition:transform .32s ease;}
+.fold-btn[aria-expanded="false"] svg{transform:rotate(180deg);}
+.fold-panel{display:grid;grid-template-rows:1fr;transition:grid-template-rows .36s cubic-bezier(.22,.8,.24,1);}
+.fold-panel.is-folded{grid-template-rows:0fr;}
+.fold-panel>.fold-inner{overflow:hidden;min-height:0;}
+.card-body.fold-panel.is-folded{padding-top:0;padding-bottom:0;}
+.card-head .spacer{flex:1;}
+
 </style>
 <script>
 (function () {
@@ -1354,13 +1371,23 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
             </div>
             <div class="spacer"></div>
             <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
+            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-cats" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
           </div>
-          <div class="card-body">
+          <div class="card-body fold-panel" id="fold-cats">
+            <div class="fold-inner">
             <div class="cat-tiles" id="dash-cats"></div>
+            </div>
           </div>
         </div>
 
         <!-- SEARCH + ADD + REMOVE -->
+        <div class="fold-wrap">
+          <div class="fold-bar">
+            <span>جستجو، افزودن و حذف</span>
+            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-ops" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          </div>
+          <div class="fold-panel" id="fold-ops">
+            <div class="fold-inner">
         <div class="grid-add">
           <!-- SEARCH -->
           <div class="card">
@@ -1468,6 +1495,9 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
             </div>
           </div>
         </div>
+            </div>
+          </div>
+        </div>
 
         <!-- TOOLS -->
           <div class="card">
@@ -1479,8 +1509,12 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                 <div class="eyebrow">Tools &amp; Automation</div>
                 <h3>ابزارها و عملیات‌ها</h3>
               </div>
+              <div class="spacer"></div>
+              <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-tools" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
             </div>
             <div class="card-body">
+              <div class="fold-panel" id="fold-tools">
+                <div class="fold-inner">
               <div class="tools-grid">
                 <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.SaveChanges">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
@@ -1563,10 +1597,17 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                   <span>بازنشانی</span>
                 </div>
               </div>
+                </div>
+              </div>
 
               <!-- NAVIGATE -->
-              <div class="field" style="margin-top:15px">
+              <div class="field fold-field" style="margin-top:15px">
+                <div class="fold-label-row">
                 <label>باز کردن مستقیم بخش <span class="ref">C41</span></label>
+                <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-nav" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                </div>
+                <div class="fold-panel" id="fold-nav">
+                  <div class="fold-inner">
                 <div style="display:flex;gap:9px">
                   <select class="inp" id="cp-c41"></select>
                   <button class="btn btn-cyan" style="flex:0 0 auto" data-act="run-macro" data-arg="modUI.NavigateToSheet">
@@ -1574,11 +1615,20 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                     باز کردن بخش
                   </button>
                 </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
         <!-- FEED + STATUS -->
+        <div class="fold-wrap">
+          <div class="fold-bar">
+            <span>رویداد و وضعیت</span>
+            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-status" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          </div>
+          <div class="fold-panel" id="fold-status">
+            <div class="fold-inner">
         <div class="grid-2">
           <div class="card">
             <div class="card-head">
@@ -1615,6 +1665,9 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                 <span><i style="background:var(--amber)"></i>نیاز به مراقبت</span>
                 <span><i style="background:var(--red)"></i>خطا</span>
               </div>
+            </div>
+          </div>
+        </div>
             </div>
           </div>
         </div>
@@ -2337,6 +2390,9 @@ function switchView(name) {
   updateStatLine();
   const sb = document.getElementById("sidebar");
   if (sb) sb.classList.remove("open");
+  document.documentElement.classList.remove("menu-open");
+  const menuBtn = document.querySelector("[data-act=\"toggle-sidebar\"]");
+  if (menuBtn) menuBtn.setAttribute("aria-expanded", "false");
   if (typeof saveUIState === "function") saveUIState();
 }
 function GoToControlPanel() { switchView("panel"); }
@@ -5050,6 +5106,7 @@ const ACTIONS = {
   "go-cp": () => GoToControlPanel(),
   "switch-view": el => switchView(el.dataset.view),
   "toggle-sidebar": () => { const sb = document.getElementById("sidebar"); if (!sb) return; const open = sb.classList.toggle("open"); document.documentElement.classList.toggle("menu-open", open); const btn = document.querySelector("[data-act=\"toggle-sidebar\"]"); if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false"); },
+  "toggle-fold": el => { const panel = document.getElementById(el.dataset.fold); if (!panel) return; const folded = panel.classList.toggle("is-folded"); el.setAttribute("aria-expanded", folded ? "false" : "true"); },
   "toggle-lock": () => toggleSheetLock(),
   "filter-rows": () => filterSheetRows(),
   "export-sheet-csv": () => exportCurrentSheetCSV(),
