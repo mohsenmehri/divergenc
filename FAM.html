@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="02">
+<html lang="fa" dir="rtl" data-fam-ui="03">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1197,6 +1197,26 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
   .direct-nav-row .btn{justify-content:center;}
   .grid-add .search-rows{grid-template-columns:1fr;}
 }
+/* Category management is scoped to its dialog; existing cards are unchanged. */
+.category-toolbar{display:flex;justify-content:flex-end;margin-bottom:12px;}
+.mbox.category-manager{width:min(920px,94vw);max-width:920px;max-height:90vh;display:flex;flex-direction:column;}
+.mbox.category-manager > .c{overflow:auto;min-height:0;max-height:none;white-space:normal;}
+.category-manager > .t,.category-manager > .f{flex-shrink:0;}
+.category-manager-grid{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,2fr);gap:18px;margin-top:16px;}
+.category-list{display:flex;flex-direction:column;gap:8px;max-height:500px;overflow:auto;}
+.category-choice{display:flex;align-items:center;gap:8px;padding:12px;border:1px solid var(--stroke);border-radius:10px;background:var(--glass);text-align:right;}
+.category-choice span{flex:1;overflow-wrap:anywhere;}
+.category-choice svg{width:18px;height:18px;flex-shrink:0;}
+.category-choice.active{border-color:var(--cyan);background:rgba(47,212,196,.12);}
+.category-editor{min-width:0;display:flex;flex-direction:column;gap:9px;}
+.category-edit-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.category-sheet-list{max-height:280px;overflow:auto;border:1px solid var(--stroke);border-radius:10px;}
+.category-sheet{display:flex;align-items:center;gap:9px;padding:10px;border-bottom:1px solid var(--stroke);cursor:pointer;}
+.category-sheet span{flex:1;min-width:0;overflow-wrap:anywhere;}
+.category-sheet small{color:var(--txt-2);max-width:35%;overflow-wrap:anywhere;}
+.category-sheet input{accent-color:var(--cyan);width:17px;height:17px;flex-shrink:0;}
+.category-error{color:#f87171;}
+@media(max-width:600px){.category-manager-grid{grid-template-columns:1fr;}.category-list{max-height:170px;}.category-manager .f{flex-wrap:wrap;}}
 </style>
 <script>
 (function () {
@@ -1315,7 +1335,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-02</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-03</b></div>
     </div>
   </aside>
 
@@ -1463,6 +1483,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
           </div>
           <div class="card-body fold-panel" id="fold-cats">
             <div class="fold-inner">
+            <div class="category-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button></div>
             <div class="cat-tiles" id="dash-cats"></div>
             </div>
           </div>
@@ -1837,6 +1858,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         </div>
       </div>
       <div class="content">
+        <div class="category-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button></div>
         <div class="cat-bar" id="cat-bar"></div>
         <div id="sheet-catalog"></div>
         <div class="chip-bar" id="sheet-chips" style="display:none"></div>
@@ -2024,6 +2046,7 @@ const state = {
   showSystem: false,
   pageLimit: 300,
   catFilter: "all",
+  categoryConfig: null, // null = original automatic categories; otherwise versioned metadata
 };
 
 function ensureSheet(name, createIfMissing) {
@@ -2934,7 +2957,7 @@ function buildStateAttempts() {
     v: 2, order: WB.order, sheets: sheetsLite, cp: state.cp,
     undo: state.undo, panelProtected: state.panelProtected,
     lockedSheets: state.lockedSheets, user: state.user, showSystem: state.showSystem,
-    savedAt: Date.now()
+    savedAt: Date.now(), categoryConfig: state.categoryConfig
   };
   const attempts = [
     base,
@@ -2986,6 +3009,7 @@ function applyStatePayload(p) {
   state.user = p.user || "Web User";
   state.showSystem = !!p.showSystem;
   state.savedAt = p.savedAt || 0;
+  state.categoryConfig = normalizeCategoryConfig(p.categoryConfig);
   return true;
 }
 function loadState() {
@@ -3082,7 +3106,7 @@ function resetAll() {
 function backupAll() {
   const payload = { v: 2, workbook: "Mohsen_FINAL_v5.xlsm", exported: new Date().toISOString(),
     order: WB.order, sheets: WB.sheets, cp: state.cp, undo: state.undo,
-    lockedSheets: state.lockedSheets, user: state.user };
+    lockedSheets: state.lockedSheets, user: state.user, categoryConfig: state.categoryConfig };
   DownloadFile("Mohsen_FINAL_v5_backup_" + tsStamp() + ".json", JSON.stringify(payload), "application/json");
   WriteChangeLog("BACKUP", "-", "-", "SUCCESS", "JSON backup exported");
   Toast("پشتیبان‌گیری انجام شد.", "ok");
@@ -3101,6 +3125,7 @@ function restoreAll() {
         Object.assign(state.cp, p.cp || {});
         state.undo = p.undo || null;
         state.lockedSheets = p.lockedSheets || {};
+        state.categoryConfig = normalizeCategoryConfig(p.categoryConfig);
         saveState();
         WriteChangeLog("RESTORE", "-", "-", "SUCCESS", "JSON backup restored: " + f.name);
         Toast("بازیابی با موفقیت انجام شد.", "ok");
@@ -4483,6 +4508,8 @@ function applyJsonBackup(fileName, p) {
   if (p.cp && typeof p.cp === "object") Object.assign(state.cp, p.cp);
   if (p.lockedSheets && typeof p.lockedSheets === "object") state.lockedSheets = p.lockedSheets;
   if (p.user) state.user = String(p.user);
+  state.categoryConfig = normalizeCategoryConfig(p.categoryConfig);
+  refreshCategoryUI();
   saveState();
   return true;
 }
@@ -5247,6 +5274,7 @@ const ACTIONS = {
   "open-sheet": el => openSheetCard(el.dataset.name),
   "nav-sheet": el => modNavigator.NavToSelectedSheet(el.dataset.name),
   "open-category": el => openCategory(el.dataset.cat),
+  "manage-categories": () => manageCategories(),
   "set-filter": el => setCatFilter(el.dataset.cat),
   "show-vba": el => showVbaSource(el.dataset.name),
   "download-module": el => modExportAllModules.DownloadModule(el.dataset.name),
@@ -6717,13 +6745,153 @@ const CAT_OTHER = { id: "other", name: "سایر", sub: "Other", color: "#a39d8b
 
 // match priority: specific categories before broad keyword ones
 const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacenters", "services", "system"];
-function categoryOf(name) {
+// Only metadata is customized; no category operation edits/deletes worksheet data.
+function defaultCategoryConfig() {
+  return { version: 1, categories: SHEET_CATEGORIES.filter(c => c.id !== 'system')
+    .map(({id, name, sub, color, icon}) => ({id, name, sub, color, icon})), assignments: [] };
+}
+function normalizeCategoryConfig(value) {
+  if (value == null) return null; // legacy files retain the original automatic rules
+  if (value.version !== 1 || !Array.isArray(value.categories) || !Array.isArray(value.assignments)) return null;
+  const ids = new Set(), names = new Set(['همه بخش‌ها', 'سایر', 'سیستم'].map(NormalizeText)), categories = [];
+  for (const c of value.categories) {
+    if (!c || typeof c.id !== 'string' || !/^[a-z][a-z0-9_-]{0,79}$/.test(c.id) ||
+        ['all','other','system'].includes(c.id) || ids.has(c.id)) return null;
+    const name = typeof c.name === 'string' ? c.name.trim() : '';
+    if (!name || name.length > 80 || names.has(NormalizeText(name))) return null;
+    ids.add(c.id); names.add(NormalizeText(name));
+    categories.push({id:c.id, name, sub:typeof c.sub === 'string' ? c.sub.slice(0,100) : '',
+      color:/^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#2fd4c4',
+      icon:Object.hasOwn(CAT_ICON_SHAPES,c.icon) ? c.icon : 'layers'});
+  }
+  const assignments = new Map();
+  for (const pair of value.assignments) {
+    if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== 'string' || IsSystemSheet(pair[0])) continue;
+    if (pair[1] === 'other' || ids.has(pair[1])) assignments.set(pair[0], pair[1]);
+  }
+  return {version:1, categories, assignments:Array.from(assignments)};
+}
+function managedCategories(config = state.categoryConfig) {
+  return config ? config.categories : SHEET_CATEGORIES.filter(c => c.id !== 'system');
+}
+function categoryOf(name, config = state.categoryConfig) {
+  if (IsSystemSheet(name)) return SHEET_CATEGORIES.find(c => c.id === 'system');
+  const cats = managedCategories(config);
+  const override = config && config.assignments.find(pair => pair[0] === name);
+  if (override) return cats.find(c => c.id === override[1]) || CAT_OTHER;
+  // Keep the original priority. A deleted default category falls back to Other,
+  // rather than unexpectedly reassigning its worksheets to a broader rule.
   for (const id of CAT_MATCH_ORDER) {
-    const c = SHEET_CATEGORIES.find(x => x.id === id);
-    if (c && c.test(name)) return c;
+    const original = SHEET_CATEGORIES.find(c => c.id === id);
+    if (original && original.test(name)) return cats.find(c => c.id === id) || CAT_OTHER;
   }
   return CAT_OTHER;
 }
+function refreshCategoryUI() {
+  if (state.catFilter !== 'all' && !allCatsWithOther().some(c => c.id === state.catFilter)) state.catFilter = 'all';
+  renderDashCats(); renderSheetCatalog(); renderSheetChips();
+  modUI.SetupSheetDropdown(); modUI.SetupAddSheetDropdown(); modUI.SetupNavSheetDropdown();
+  saveUIState();
+}
+function manageCategories() {
+  const draft = JSON.parse(JSON.stringify(state.categoryConfig || defaultCategoryConfig()));
+  let selected = draft.categories[0]?.id || '', pendingDelete = '', query = '';
+  const previousFocus = document.activeElement;
+  const overlay = document.getElementById('modal-overlay');
+  const box = el('div', {class:'mbox category-manager', role:'dialog', 'aria-modal':'true', 'aria-labelledby':'category-manager-title'});
+  const error = el('p', {id:'category-error', role:'alert', class:'category-error'});
+  const list = el('div', {class:'category-list', 'aria-label':'دسته‌ها'});
+  const editor = el('div', {class:'category-editor'});
+  const close = () => { overlay.classList.remove('show'); clear(overlay); previousFocus?.focus(); };
+  const action = (text, id, fn, cls='btn btn-ghost btn-sm') => el('button', {type:'button', id, class:cls, onclick:fn, text});
+  const setAssignment = (sheet, id) => {
+    draft.assignments = draft.assignments.filter(pair => pair[0] !== sheet);
+    draft.assignments.push([sheet,id]);
+  };
+  const renderList = () => {
+    clear(list);
+    for (const c of draft.categories) {
+      list.appendChild(el('button', {type:'button', class:'category-choice' + (c.id === selected ? ' active' : ''),
+        'data-category-id':c.id, 'aria-pressed':String(c.id === selected), onclick:() => {
+          selected=c.id; pendingDelete=''; renderList(); renderEditor();
+        }}, catSvgNode(c), el('span', {text:c.name || 'بدون نام'}),
+        el('b', {text:String(WB.order.filter(n => IsDataSheet(n) && categoryOf(n,draft).id === c.id).length)})));
+    }
+    if (!draft.categories.length) list.appendChild(el('p',{class:'hint',text:'دسته‌ای وجود ندارد. یک دسته جدید بسازید.'}));
+  };
+  const renderEditor = () => {
+    clear(editor);
+    const c = draft.categories.find(c => c.id === selected);
+    if (!c) { editor.appendChild(el('p',{class:'hint',text:'برای ویرایش، یک دسته انتخاب کنید یا دسته جدید بسازید.'})); return; }
+    const name = el('input', {id:'category-name',class:'inp',value:c.name,maxlength:80,oninput:e=>{
+      c.name=e.target.value; error.textContent=''; renderList();
+    }});
+    const rows = el('div',{class:'category-sheet-list'});
+    const count = el('p',{class:'hint','aria-live':'polite'});
+    const matches = () => WB.order.filter(n => IsDataSheet(n) && NormalizeText(n).includes(NormalizeText(query)));
+    const renderRows = () => {
+      clear(rows);
+      const sheets = matches();
+      count.textContent = sheets.length + ' شیت قابل نمایش · ' + WB.order.filter(n=>IsDataSheet(n) && categoryOf(n,draft).id===c.id).length + ' شیت در این دسته';
+      sheets.forEach(n => {
+        const current = categoryOf(n,draft);
+        const checkbox = el('input',{type:'checkbox',checked:current.id===c.id,'data-category-sheet':n,
+          onchange:e=>{
+            setAssignment(n,e.target.checked ? c.id : 'other');renderRows();renderList();
+            [...rows.querySelectorAll('input')].find(input=>input.dataset.categorySheet===n)?.focus();
+          }});
+        rows.appendChild(el('label',{class:'category-sheet'},checkbox,el('span',{text:n}),el('small',{text:current.name})));
+      });
+      if (!sheets.length) rows.appendChild(el('p',{class:'hint',text:'شیتی یافت نشد. ابتدا فایل داده وارد کنید یا عبارت جستجو را تغییر دهید.'}));
+    };
+    editor.append(el('label',{for:'category-name',text:'نام دسته'}),name,
+      el('div',{class:'category-edit-actions'},action(pendingDelete===c.id ? 'تأیید حذف دسته' : 'حذف دسته','category-delete',()=>{
+        if(pendingDelete!==c.id) { pendingDelete=c.id;renderEditor();return; }
+        // Explicitly release both auto-assigned and manually assigned worksheets.
+        WB.order.filter(n=>IsDataSheet(n) && categoryOf(n,draft).id===c.id).forEach(n=>setAssignment(n,'other'));
+        draft.assignments=draft.assignments.map(([n,id])=>[n,id===c.id ? 'other' : id]);
+        draft.categories=draft.categories.filter(x=>x.id!==c.id);
+        selected=draft.categories[0]?.id || '';pendingDelete='';renderList();renderEditor();
+      },'btn btn-red btn-sm')),
+      el('p',{class:'hint',text:pendingDelete===c.id ? 'با تأیید، فقط دسته حذف می‌شود؛ شیت‌ها در «سایر» باقی می‌مانند. برای اعمال نهایی، ذخیره تغییرات را بزنید.' : 'هر شیت یک دسته دارد. انتخاب شیت، آن را به این دسته منتقل می‌کند؛ برداشتن تیک، آن را به «سایر» می‌برد.'}),
+      el('label',{for:'category-sheet-search',text:'جستجوی شیت‌ها'}),
+      el('input',{id:'category-sheet-search',class:'inp',placeholder:'نام شیت…',value:query,oninput:e=>{query=e.target.value;renderRows();}}),
+      el('div',{class:'category-edit-actions'},
+        action('افزودن نتایج جستجو','category-add-visible',()=>{matches().forEach(n=>setAssignment(n,c.id));renderRows();renderList();}),
+        action('برداشتن نتایج از این دسته','category-remove-visible',()=>{matches().filter(n=>categoryOf(n,draft).id===c.id).forEach(n=>setAssignment(n,'other'));renderRows();renderList();})),count,rows);
+    renderRows();
+  };
+  box.append(el('div',{class:'t'},el('span',{id:'category-manager-title',text:'مدیریت دسته‌بندی بخش‌های شبکه'}),
+    action('×','category-close',close)),
+    el('div',{class:'c'},
+      el('p',{class:'hint',text:'دسته‌های فعلی حفظ شده‌اند. تغییرات فقط با «ذخیره تغییرات» اعمال می‌شوند؛ هیچ شیت یا داده‌ای حذف نمی‌شود. «همه بخش‌ها» نمای کلی و «سایر» محل شیت‌های بدون دسته است. شیت‌های سیستمی قابل انتقال نیستند.'}),
+      action('+ افزودن دسته','category-new',()=>{
+        let n=1;while(draft.categories.some(c=>c.name==='دسته جدید '+n))n++;
+        selected='custom-'+crypto.randomUUID();
+        draft.categories.push({id:selected,name:'دسته جدید '+n,sub:'',color:'#2fd4c4',icon:'layers'});
+        pendingDelete='';error.textContent='';renderList();renderEditor();editor.querySelector('input')?.focus();
+      },'btn btn-cyan btn-sm'),
+      el('div',{class:'category-manager-grid'},list,editor),error),
+    el('div',{class:'f'},action('ذخیره تغییرات','category-save',()=>{
+      const clean = normalizeCategoryConfig(draft);
+      if(!clean) {error.textContent='نام دسته‌ها نباید خالی، تکراری یا بیشتر از ۸۰ نویسه باشد. نام‌های «همه بخش‌ها»، «سایر» و «سیستم» رزرو شده‌اند.';return;}
+      state.categoryConfig=clean;
+      WriteChangeLog('CATEGORIES','-','-','SUCCESS','Category names and worksheet assignments updated');
+      saveState();refreshCategoryUI();close();Toast('دسته‌بندی‌ها اعمال شدند. برای انتقال به دستگاه دیگر، پشتیبان JSON بگیرید.','ok');
+    },'btn btn-primary'),action('انصراف','category-cancel',close)));
+  box.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();close();}
+    if(e.key==='Tab') {
+      const focusable=[...box.querySelectorAll('button,input')].filter(e=>!e.disabled && e.getClientRects().length);
+      const first=focusable[0],last=focusable[focusable.length-1];
+      if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
+    }
+  });
+  clear(overlay);overlay.appendChild(box);overlay.classList.add('show');renderList();renderEditor();
+  box.querySelector('#category-name')?.focus();
+}
+
 function sheetsOfCategory(catId) {
   return WB.order.filter(n => {
     if (catId === "all") return true;
@@ -6749,7 +6917,7 @@ function catSvgNode(cat, cls) {
   }, ...shapes.map(([tag, attrs]) => sEl(tag, attrs)));
 }
 function allCatsWithOther() {
-  const list = SHEET_CATEGORIES.slice();
+  const list = managedCategories().concat(SHEET_CATEGORIES.find(c => c.id === 'system'));
   const hasOther = WB.order.some(n => categoryOf(n).id === "other");
   if (hasOther) list.push(CAT_OTHER);
   return list;
@@ -6810,6 +6978,7 @@ function openCategory(catId) {
 
 /* ---- category filter bar + sheet card catalog ---- */
 function renderCatBar() {
+  if (state.catFilter !== 'all' && !allCatsWithOther().some(c => c.id === state.catFilter)) state.catFilter = 'all';
   const host = document.getElementById("cat-bar");
   if (!host) return;
   const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#d9b26b", icon: "layers" }].concat(

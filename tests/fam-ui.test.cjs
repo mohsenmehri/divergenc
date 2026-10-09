@@ -242,6 +242,134 @@ test('CSV import, direct navigation, search and add/remove launch still work', a
   await menu().click();
 });
 
+async function categoryManager() {
+  await panel();
+  await page.locator('#view-panel [data-act="manage-categories"]').click();
+  await page.locator('#category-manager-title').waitFor();
+}
+async function categoryReload() {
+  await page.evaluate(() => flushDeepSave());
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('#cp-c9 option') && document.getElementById('stat-line').textContent.includes('رکورد'));
+}
+async function businessSheets() {
+  return page.evaluate(() => Object.fromEntries(WB.order.filter(IsDataSheet).map(n=>[n,WB.sheets[n]])));
+}
+let customCategoryId, savedCategoryName = 'دسته آزمایشی <b>متن</b>';
+
+test('category manager creates, renames, moves sheets and cancels without changing data', async () => {
+  await page.evaluate(() => importCsvText('تجهیزات آزمایشی.csv', 'شاخص,نام\n201,تجهیز آزمایشی\n'));
+  const before = await businessSheets();
+  assert.equal(await page.evaluate(()=>categoryOf('تجهیزات آزمایشی').id),'equipment');
+  await categoryManager();
+  assert.equal(await page.locator('[data-category-id]').count(),6);
+  await page.locator('#category-new').click();
+  await page.locator('#category-name').fill(savedCategoryName);
+  await page.locator('[data-category-sheet="تجهیزات آزمایشی"]').check();
+  await page.locator('[data-category-sheet="شبکه آزمایشی"]').check();
+  customCategoryId = await page.locator('.category-choice.active').getAttribute('data-category-id');
+  // Changes are staged until Save.
+  assert.equal(await page.evaluate(()=>categoryOf('تجهیزات آزمایشی').id),'equipment');
+  await page.locator('#category-save').click();
+  assert.equal(await page.evaluate(()=>categoryOf('تجهیزات آزمایشی').id),customCategoryId);
+  assert.equal(await page.evaluate(()=>categoryOf('شبکه آزمایشی').id),customCategoryId);
+  assert.deepEqual(await businessSheets(),before);
+  assert.equal(await page.locator(`#dash-cats [data-cat="${customCategoryId}"] .ct-name`).textContent(),savedCategoryName);
+  assert.equal(await page.locator(`#dash-cats [data-cat="${customCategoryId}"] .ct-name b`).count(),0);
+  assert.equal(await page.locator('#cp-c7 optgroup').evaluateAll(es=>es.some(e=>e.label.includes('<b>متن</b>'))),true);
+  await categoryReload();
+  assert.equal(await page.evaluate(()=>categoryOf('تجهیزات آزمایشی').id),customCategoryId);
+  await categoryManager();
+  await page.locator(`[data-category-id="${customCategoryId}"]`).click();
+  await page.locator('#category-name').fill('تغییر لغوشده');
+  await page.locator('[data-category-sheet="تجهیزات آزمایشی"]').uncheck();
+  await page.locator('#category-cancel').click();
+  assert.equal(await page.evaluate(()=>categoryOf('تجهیزات آزمایشی').name),savedCategoryName);
+  await categoryManager();
+  await page.locator('[data-category-id="services"]').click();
+  await page.locator('#category-name').fill('شبکه‌های سازمان');
+  await page.locator('#category-save').click();
+  assert.equal(await page.evaluate(()=>managedCategories().find(c=>c.id==='services').name),'شبکه‌های سازمان');
+});
+
+test('category names validate; membership filtering and mobile management work', async () => {
+  await categoryManager();
+  await page.locator('#category-name').fill('   ');
+  await page.locator('#category-save').click();
+  assert.equal(await page.locator('#modal-overlay.show').count(),1);
+  assert.match(await page.locator('#category-error').textContent(),/خالی/);
+  await page.locator('#category-name').fill(savedCategoryName);
+  await page.locator('#category-save').click();
+  assert.match(await page.locator('#category-error').textContent(),/تکراری/);
+  await page.locator('#category-cancel').click();
+  await page.setViewportSize({width:390,height:844});
+  await categoryManager();
+  await page.locator(`[data-category-id="${customCategoryId}"]`).click();
+  await page.locator('#category-sheet-search').fill('تجهیزات');
+  assert.equal(await page.locator('[data-category-sheet]').count(),1);
+  await page.locator('#category-remove-visible').click();
+  await page.locator('#category-save').click();
+  assert.equal(await page.evaluate(()=>categoryOf('تجهیزات آزمایشی').id),'other');
+  assert.equal(await page.evaluate(()=>categoryOf('شبکه آزمایشی').id),customCategoryId);
+  await categoryManager();
+  const bounds=await page.locator('.category-manager').boundingBox();
+  assert.ok(bounds.x>=0 && bounds.x+bounds.width<=390);
+  assert.equal(await page.locator('[data-category-sheet="CONTROL_PANEL"]').count(),0);
+  await page.screenshot({path:path.join(root,'test-results','category-manager-mobile.png')});
+  await page.locator('#category-cancel').click();
+  await page.setViewportSize({width:1485,height:1000});
+});
+
+test('JSON backup and both restore routes preserve category names and memberships', async () => {
+  const expected=await page.evaluate(()=>state.categoryConfig);
+  const downloaded=page.waitForEvent('download');
+  await page.evaluate(()=>backupAll());
+  const download=await downloaded;
+  const file=await download.path();
+  const content=fs.readFileSync(file);
+  assert.deepEqual(JSON.parse(content).categoryConfig,expected);
+  await page.evaluate(()=>{state.categoryConfig=null;refreshCategoryUI();});
+  await page.locator('#import-file-input').setInputFiles({name:'categories.json',mimeType:'application/json',buffer:content});
+  await page.waitForFunction(()=>state.categoryConfig!==null);
+  assert.deepEqual(await page.evaluate(()=>state.categoryConfig),expected);
+  await page.evaluate(()=>{state.categoryConfig=null;refreshCategoryUI();});
+  const chooserPromise=page.waitForEvent('filechooser');
+  await page.evaluate(()=>restoreAll());
+  const chooser=await chooserPromise;
+  await chooser.setFiles({name:'categories.json',mimeType:'application/json',buffer:content});
+  await page.waitForFunction(()=>state.categoryConfig!==null);
+  assert.deepEqual(await page.evaluate(()=>state.categoryConfig),expected);
+  await categoryReload();
+  assert.deepEqual(await page.evaluate(()=>state.categoryConfig),expected);
+  // Old backups with no category field use the original defaults.
+  assert.equal(await page.evaluate(()=>normalizeCategoryConfig(undefined)),null);
+  assert.equal(await page.evaluate(()=>normalizeCategoryConfig({version:1,categories:[{id:'system',name:'bad'}],assignments:[]})),null);
+});
+
+test('deleting custom/default categories preserves worksheets and resets a removed filter', async () => {
+  const before=await businessSheets();
+  await page.evaluate(id=>setCatFilter(id),customCategoryId);
+  await categoryManager();
+  await page.locator(`[data-category-id="${customCategoryId}"]`).click();
+  await page.locator('#category-delete').click();
+  await page.locator('#category-delete').click();
+  await page.locator('#category-save').click();
+  assert.equal(await page.evaluate(()=>state.catFilter),'all');
+  assert.equal(await page.evaluate(()=>categoryOf('شبکه آزمایشی').id),'other');
+  await categoryManager();
+  await page.locator('[data-category-id="equipment"]').click();
+  await page.locator('#category-delete').click();
+  await page.locator('#category-delete').click();
+  await page.locator('#category-save').click();
+  assert.deepEqual(await businessSheets(),before);
+  await categoryReload();
+  assert.equal(await page.evaluate(()=>managedCategories().some(c=>c.id==='equipment')),false);
+  assert.equal(await page.evaluate(()=>categoryOf('تجهیزات جدید واردشده').id),'other');
+  assert.equal(await page.evaluate(()=>categoryOf('CONTROL_PANEL').id),'system');
+  // Restore the tested starting preferences for subsequent interactive inspection.
+  await page.evaluate(()=>{state.categoryConfig=null;saveState();refreshCategoryUI();});
+});
+
 test('no uncaught browser errors or duplicate IDs', async () => {
   assert.deepEqual(errors, []);
   const duplicates = await page.locator('[id]').evaluateAll(es => {
