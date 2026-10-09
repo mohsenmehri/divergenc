@@ -1143,7 +1143,7 @@ function renderFeed() {
   if (!host) return;
   const log = WB.sheets[LOG_SHEET];
   const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ""));
-  const colors = { ADD: "#73bf69", REMOVE: "#f2495c", UNDO: "#f2cc0c", EDIT: "#5794f2", ERROR: "#f2495c", ARCHIVE_FAIL: "#f2495c" };
+  const colors = { ADD: "#5dffb0", REMOVE: "#ff4d7a", UNDO: "#ffb020", EDIT: "#8b7cff", ERROR: "#ff4d7a", ARCHIVE_FAIL: "#ff4d7a" };
   clear(host);
   if (!rows.length) {
     host.appendChild(el("div", { class: "empty-state", style: { padding: "22px" }, text: "\u0647\u0646\u0648\u0632 \u0631\u0648\u06cc\u062f\u062f\u06cc \u062b\u0628\u062a \u0646\u0634\u062f\u0647 \u0627\u0633\u062a." }));
@@ -1295,7 +1295,103 @@ function bindPanelEvents() {
   });
 }
 
+
+function startPhotonStage() {
+  try {
+    const c = document.getElementById("fx-stage");
+    if (!c || typeof c.getContext !== "function") return;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent || "")) return;
+    const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const nodes = [];
+    const N = 96;
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const w = window.innerWidth || 1440;
+      const h = window.innerHeight || 900;
+      c.width = Math.floor(w * dpr);
+      c.height = Math.floor(h * dpr);
+      c.style.width = w + "px";
+      c.style.height = h + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function seed() {
+      nodes.length = 0;
+      const w = window.innerWidth || 1440;
+      const h = window.innerHeight || 900;
+      for (let i = 0; i < N; i++) {
+        nodes.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.42,
+          vy: (Math.random() - 0.5) * 0.42,
+          r: Math.random() * 1.7 + 0.5,
+          k: i % 3
+        });
+      }
+    }
+    const ink = ["rgba(214,255,63,", "rgba(255,61,138,", "rgba(180,160,255,"];
+    function frame() {
+      try {
+        const w = window.innerWidth || 1440;
+        const h = window.innerHeight || 900;
+        ctx.clearRect(0, 0, w, h);
+        if (!reduce) {
+          for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            n.x += n.vx; n.y += n.vy;
+            if (n.x < 0 || n.x > w) n.vx *= -1;
+            if (n.y < 0 || n.y > h) n.vy *= -1;
+          }
+        }
+        for (let i = 0; i < nodes.length; i++) {
+          const a = nodes[i];
+          for (let j = i + 1; j < nodes.length; j++) {
+            const b = nodes[j];
+            const dx = a.x - b.x, dy = a.y - b.y;
+            const d = Math.hypot(dx, dy);
+            if (d > 168) continue;
+            ctx.strokeStyle = "rgba(214,255,63," + (0.34 * (1 - d / 168)).toFixed(3) + ")";
+            ctx.lineWidth = 1.15;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+            if (!reduce && ((i * 3 + j) % 9 === 0)) {
+              const t = ((Date.now() / 1600) + i * 0.13) % 1;
+              ctx.fillStyle = "#f6ffe4";
+              ctx.beginPath();
+              ctx.arc(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 1.7, 0, 6.283);
+              ctx.fill();
+            }
+          }
+        }
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i];
+          if (i % 8 === 0) {
+            ctx.fillStyle = ink[n.k] + "0.18)";
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.r * 7, 0, 6.283);
+            ctx.fill();
+          }
+          ctx.fillStyle = ink[n.k] + "0.95)";
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r + (i % 8 === 0 ? 1.2 : 0), 0, 6.283);
+          ctx.fill();
+        }
+      } catch (err) { return; }
+      if (!reduce) requestAnimationFrame(frame);
+    }
+    resize();
+    seed();
+    frame();
+    window.addEventListener("resize", function () { try { resize(); seed(); } catch (e) {} });
+  } catch (e) {}
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
+  startPhotonStage();
   // observable error handling: nothing gets swallowed silently
   window.addEventListener("error", e => {
     LogError("Window", "onerror", e && e.error && e.error.number ? e.error.number : 0,
@@ -1383,22 +1479,22 @@ const CAT_ICON_SHAPES = {
   layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
 const SHEET_CATEGORIES = [
-  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#ff9830", icon: "pin",
+  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#d6ff3f", icon: "pin",
     test: n => PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
-  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#5794f2", icon: "server",
+  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#8b7cff", icon: "server",
     test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#b877d9", icon: "globe",
+  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#ff3d8a", icon: "globe",
     test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری/.test(n) },
-  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#f2cc0c", icon: "signal",
+  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#ffb020", icon: "signal",
     test: n => /جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک/.test(n) },
-  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#73bf69", icon: "chip",
+  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#5dffb0", icon: "chip",
     test: n => /تجهیزات|EOL|EOS/.test(n) },
-  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#ff780a", icon: "coins",
+  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#c9a6ff", icon: "coins",
     test: n => /هزینه/.test(n) },
-  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#8e8ea0", icon: "gear",
+  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#9aa0b8", icon: "gear",
     test: n => IsSystemSheet(n) },
 ];
-const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#6e6e82", icon: "layers", test: () => true };
+const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#7c7c94", icon: "layers", test: () => true };
 
 // match priority: specific categories before broad keyword ones
 const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacenters", "services", "system"];
@@ -1492,7 +1588,7 @@ function openCategory(catId) {
 function renderCatBar() {
   const host = document.getElementById("cat-bar");
   if (!host) return;
-  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#ff9830", icon: "layers" }].concat(
+  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#d6ff3f", icon: "layers" }].concat(
     allCatsWithOther().filter(c => c.id !== "system" || state.showSystem));
   clear(host);
   cats.forEach(c => {
@@ -1662,8 +1758,8 @@ function openSheetCard(name) {
 /* ---- grouped navigator ---- */
 function renderGroupedNavigator() {
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
-  const colors = { provinces: "#ff9830", datacenters: "#5794f2", services: "#b877d9", carriers: "#f2cc0c",
-                   equipment: "#73bf69", costs: "#ff780a", system: "#8e8ea0", other: "#6e6e82", all: "#ff9830" };
+  const colors = { provinces: "#d6ff3f", datacenters: "#8b7cff", services: "#ff3d8a", carriers: "#ffb020",
+                   equipment: "#5dffb0", costs: "#c9a6ff", system: "#9aa0b8", other: "#7c7c94", all: "#d6ff3f" };
   const root = document.createDocumentFragment();
   let idx = 0;
   cats.forEach(c => {
