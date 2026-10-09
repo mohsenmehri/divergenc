@@ -844,6 +844,32 @@ test('region validation, mobile dialog and deleting all regions preserve all 31 
   await page.screenshot({path:path.join(root,'test-results','filter-ui07.png')});
 });
 
+test('supplied FAM logo is embedded unchanged and fits the sidebar on desktop and mobile', async () => {
+  const image=page.locator('.brand-logo img');
+  const data=await image.getAttribute('src');
+  assert.deepEqual(Buffer.from(data.split(',')[1],'base64'),fs.readFileSync(path.join(root,'fam.png')));
+  assert.match(await image.getAttribute('alt'),/فام/);
+  assert.equal(await page.locator('.brand-logo svg').count(),0);
+  await page.waitForFunction(()=>document.querySelector('.brand-logo img').complete && document.querySelector('.brand-logo img').naturalWidth>0);
+  for(const width of [1440,800,390,320]){
+    await page.setViewportSize({width,height:1000});
+    if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await menu().click();
+    await assertMenu(true);
+    const fits=await image.evaluate(img=>{
+      const r=img.getBoundingClientRect(),b=img.closest('.brand').getBoundingClientRect();
+      return r.width>0 && r.height>0 && r.left>=b.left && r.right<=b.right && r.top>=b.top && r.bottom<=b.bottom && getComputedStyle(img).objectFit==='contain';
+    });
+    assert.equal(fits,true);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await page.locator('#sidebar').evaluate(e=>e.scrollTop=0);
+  fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+  await page.waitForFunction(()=>{const r=document.getElementById('sidebar').getBoundingClientRect();return r.left>=0 && r.right<=innerWidth;});
+  await page.locator('.brand').screenshot({path:path.join(root,'test-results','fam-logo-ui08.png'),animations:'disabled'});
+  await menu().click();
+});
+
 test('no uncaught browser errors or duplicate IDs', async () => {
   assert.deepEqual(errors, []);
   const duplicates = await page.locator('[id]').evaluateAll(es => {
