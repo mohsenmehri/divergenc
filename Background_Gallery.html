@@ -6,41 +6,32 @@
 <title>پنج طرح متحرک — روتر، سوئیچ، ساختمان، دیتاسنتر</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
 <style>
-:root{
-  --bg:#04060d; --ink:#eef1f7; --dim:#98a1b3; --line:rgba(255,255,255,.12);
-  --font:"Vazirmatn",Tahoma,system-ui,sans-serif;
-  --mono:ui-monospace,Menlo,Consolas,monospace;
-}
+:root{--ink:#eef1f7;--dim:#98a1b3;--line:rgba(255,255,255,.12);
+  --font:"Vazirmatn",Tahoma,system-ui,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:#04060d;color:var(--ink);font-family:var(--font)}
 .plate{
-  position:fixed;left:0;right:0;top:58px;bottom:148px;width:100%;height:calc(100% - 206px);
-  object-fit:contain;object-position:center center;background:#04060d;
-  opacity:0;z-index:0;pointer-events:none;transition:opacity .35s ease;
+  position:fixed;left:0;right:0;top:54px;bottom:142px;width:100%;height:calc(100% - 196px);
+  object-fit:contain;background:#04060d;opacity:0;z-index:0;pointer-events:none;transition:opacity .35s ease;
 }
 .plate.on{opacity:1}
 #fx{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
 .ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
-.head{padding:16px 22px 0}
+.head{padding:14px 18px 0}
 .head h1{margin:0;font-size:15px;font-weight:800}
-.head p{margin:4px 0 0;font-size:12px;color:var(--dim);max-width:80ch;line-height:1.8}
+.head p{margin:4px 0 0;font-size:12px;color:var(--dim);max-width:78ch;line-height:1.75}
 .head .now{font-family:var(--mono);font-size:10.5px;color:#e9d9a8;letter-spacing:.12em}
-.dock{
-  margin-top:auto;padding:22px 18px 16px;display:flex;flex-wrap:wrap;gap:8px;
-  background:linear-gradient(180deg, rgba(4,6,13,0), rgba(4,6,13,.94) 24%, #04060d 70%);
-}
-.pick{
-  pointer-events:auto;text-align:start;font-family:var(--font);cursor:pointer;
+.dock{margin-top:auto;padding:22px 14px 14px;display:flex;flex-wrap:wrap;gap:8px;
+  background:linear-gradient(180deg, rgba(4,6,13,0), rgba(4,6,13,.96) 22%, #04060d 68%)}
+.pick{pointer-events:auto;text-align:start;font-family:var(--font);cursor:pointer;
   background:rgba(10,14,24,.96);border:1px solid var(--line);border-radius:12px;
-  padding:10px 12px;color:var(--dim);flex:1 1 180px;max-width:250px;
-}
-.pick:hover{border-color:rgba(255,255,255,.28);color:#e8edf5}
+  padding:10px 12px;color:var(--dim);flex:1 1 168px;max-width:240px}
 .pick.on{border-color:#e0c58d;background:rgba(38,30,14,.96);color:#fff}
 .pick b{display:block;font-size:13px;font-weight:800;color:#fff;margin-bottom:2px}
 .pick span{display:block;font-size:11px;line-height:1.65;color:var(--dim)}
 .pick.on span{color:#e6d9bd}
 .pick em{display:block;font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#9d9079;margin-top:5px}
-.foot{font-family:var(--mono);font-size:10px;color:#6a7382;padding:0 22px 10px}
+.foot{font-family:var(--mono);font-size:10px;color:#6a7382;padding:0 18px 10px}
 @media(max-width:900px){.pick{max-width:none;flex:1 1 46%}}
 </style>
 </head>
@@ -58,193 +49,171 @@ html,body{margin:0;height:100%;overflow:hidden;background:#04060d;color:var(--in
     <p id="nowDesc"></p>
   </div>
   <div class="dock" id="dock"></div>
-  <div class="foot">کلیدهای ۱ تا ۵ · عکس ثابت نیست: بسته، حلقه و چشمک پورت زنده‌اند · بعد از انتخاب، همان روی صفحهٔ اصلی می‌نشیند</div>
+  <div class="foot">کلیدهای ۱ تا ۵ · عکس زمینه است و نورها رویش حرکت می‌کنند · بعد از انتخاب، همان روی صفحهٔ اصلی می‌نشیند</div>
 </div>
 <script>
-
 "use strict";
 const CONCEPTS = [
-  { id: 'A', name: 'CAMPUS LIVE', fa: 'محوطه زنده', desc: 'همان محوطه، ولی زنده: بسته روی کابل MPLS می\u200cدود، حلقهٔ PTMP باز می\u200cشود، پورت روتر و سوئیچ چشمک می\u200cزند.' },
-  { id: 'B', name: 'RACK AISLE', fa: 'راهرو رک', desc: 'داخل دیتاسنتر حرکت دارد: نور کف اینترانت و اینترنت، چشمک رک\u200cها، و پرتو برج پشت شیشه.' },
-  { id: 'C', name: 'STREET CABINET', fa: 'کابینت خیابان', desc: 'کابینت باز است و بسته\u200cها از روتر و سوئیچ تا دیتاسنتر می\u200cروند. بادبزن PTMP و ماهواره هم می\u200cتپند.' },
-  { id: 'D', name: 'BUILDING CUT', fa: 'برش ساختمان', desc: 'داخل ساختمان بریده\u200cشده رک زنده است. فیبر تا دیتاسنتر جریان دارد و حلقهٔ اینترانت می\u200cچرخد.' },
-  { id: 'E', name: 'EQUIPMENT TABLE', fa: 'میز تجهیزات', desc: 'روی میز، ساختمان و روتر و سوئیچ و دیتاسنتر با لینک\u200cهای در حال حرکت به هم وصل\u200cاند.' }
+  { id: 'A', name: 'CAMPUS LIVE', fa: 'محوطه زنده', desc: 'همان محوطه، ولی زنده: بسته روی MPLS، حلقه PTMP، ضربان LTE، چرخش اینترانت و پرتو ماهواره.', aw: 1376, ah: 768 },
+  { id: 'B', name: 'RACK AISLE', fa: 'راهرو رک', desc: 'راهروی دیتاسنتر با روتر و سوئیچ. نور روی فیبر و اینترانت می\u200cدود و سرورها چشمک می\u200cزنند.', aw: 1376, ah: 768 },
+  { id: 'C', name: 'STREET CABINET', fa: 'کابینت خیابان', desc: 'کابینت باز با روتر و سوئیچ. بادبزن PTMP و کابل MPLS تا دیتاسنتر در حرکت\u200cاند.', aw: 1376, ah: 768 },
+  { id: 'D', name: 'BUILDING CUT', fa: 'برش ساختمان', desc: 'ساختمان بریده با رک روتر و سوئیچ. فیبر تا دیتاسنتر و پرتو بام زنده است.', aw: 1376, ah: 768 },
+  { id: 'E', name: 'EQUIPMENT TABLE', fa: 'میز تجهیزات', desc: 'میز شب: ساختمان، روتر، سوئیچ و دیتاسنتر، و هر لینک با نور خودش می\u200cلغزد.', aw: 1376, ah: 768 }
 ];
-const FX = [
-  {
-    rings: [[0.13, 0.1, "gold"], [0.43, 0.36, "gold"]],
-    beams: [[0.14, 0.12, 0.22, 0.38], [0.43, 0.38, 0.3, 0.37], [0.43, 0.38, 0.35, 0.36]],
-    paths: [[[0.3, 0.8], [0.46, 0.76], [0.62, 0.72]], "gold", 0.16],
-    orbit: [0.62, 0.76, 0.11, 0.05, "cyan", 0.12],
-    blinks: [[0.1, 0.72], [0.16, 0.72], [0.22, 0.72], [0.1, 0.82], [0.16, 0.82], [0.22, 0.82], [0.28, 0.82]],
-    pulse: [0.9, 0.55, "blue"],
-    lte: [0.52, 0.48]
-  },
-  {
-    rings: [[0.58, 0.08, "gold"], [0.82, 0.3, "gold"]],
-    beams: [[0.82, 0.28, 0.76, 0.42]],
-    paths: [[[0.2, 0.7], [0.36, 0.62], [0.48, 0.55]], "cyan", 0.18],
-    paths2: [[[0.5, 0.58], [0.62, 0.68], [0.74, 0.8]], "blue", 0.14],
-    orbit: [0.34, 0.6, 0.08, 0.04, "cyan", 0.1],
-    blinks: [[0.08, 0.66], [0.12, 0.66], [0.16, 0.66], [0.2, 0.66], [0.28, 0.46], [0.32, 0.5], [0.4, 0.5], [0.48, 0.54]],
-    pulse: [0.55, 0.48, "blue"],
-    lte: [0.72, 0.42]
-  },
-  {
-    rings: [[0.28, 0.08, "gold"], [0.08, 0.38, "gold"]],
-    beams: [[0.28, 0.1, 0.22, 0.34], [0.08, 0.36, 0.24, 0.34], [0.08, 0.36, 0.3, 0.36]],
-    paths: [[[0.6, 0.64], [0.7, 0.6], [0.82, 0.52]], "gold", 0.15],
-    orbit: [0.72, 0.62, 0.08, 0.035, "cyan", 0.11],
-    blinks: [[0.5, 0.44], [0.54, 0.44], [0.58, 0.44], [0.5, 0.58], [0.54, 0.58], [0.58, 0.58]],
-    pulse: [0.92, 0.42, "blue"],
-    lte: [0.68, 0.32]
-  },
-  {
-    rings: [[0.12, 0.1, "gold"], [0.32, 0.3, "gold"]],
-    beams: [[0.14, 0.12, 0.3, 0.32], [0.32, 0.32, 0.22, 0.38], [0.32, 0.32, 0.28, 0.38]],
-    paths: [[[0.4, 0.62], [0.52, 0.6], [0.64, 0.58]], "gold", 0.16],
-    orbit: [0.55, 0.7, 0.12, 0.045, "cyan", 0.1],
-    blinks: [[0.2, 0.54], [0.24, 0.54], [0.22, 0.62], [0.26, 0.62], [0.66, 0.52], [0.7, 0.56], [0.74, 0.52]],
-    pulse: [0.88, 0.5, "blue"],
-    lte: [0.46, 0.28]
-  },
-  {
-    rings: [[0.18, 0.12, "gold"], [0.14, 0.42, "gold"]],
-    beams: [[0.18, 0.16, 0.12, 0.46], [0.15, 0.42, 0.3, 0.5], [0.15, 0.42, 0.34, 0.55]],
-    paths: [[[0.4, 0.58], [0.48, 0.6], [0.56, 0.58]], "gold", 0.18],
-    orbit: [0.48, 0.66, 0.16, 0.06, "cyan", 0.1],
-    blinks: [[0.38, 0.52], [0.39, 0.56], [0.5, 0.6], [0.54, 0.6], [0.58, 0.6], [0.8, 0.52], [0.84, 0.55]],
-    pulse: [0.68, 0.4, "blue"],
-    lte: [0.22, 0.66]
-  }
-];
-let cur = 0, W = 1440, H = 900, DPR = 1;
-const cv = document.getElementById("fx");
-const ctx = cv.getContext("2d");
+const fx = document.getElementById("fx");
+const fctx = fx.getContext("2d");
 const plates = document.querySelectorAll(".plate");
-const dock = document.getElementById("dock");
-function rect() {
-  const top = 58, bot = 148;
-  const bw = W, bh = Math.max(80, H - top - bot);
-  const scale = Math.min(bw / 1376, bh / 768);
-  const dw = 1376 * scale, dh = 768 * scale;
-  return { ox: (bw - dw) / 2, oy: top + (bh - dh) / 2, dw: dw, dh: dh };
-}
-function at(ix, iy) {
-  const r = rect();
-  return [r.ox + ix * r.dw, r.oy + iy * r.dh];
-}
-function glow(x, y, rad, col, a) {
-  const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-  g.addColorStop(0, col.replace("A", a.toFixed(3)));
-  g.addColorStop(1, col.replace("A", "0"));
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832); ctx.fill();
-}
-const COL = { gold: "rgba(255,220,150,A)", cyan: "rgba(120,240,230,A)", blue: "rgba(120,180,255,A)", green: "rgba(90,230,160,A)" };
-function packet(x0, y0, x1, y1, u, k) {
-  const x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u;
-  glow(x, y, 14, COL[k], 0.55);
-  ctx.fillStyle = "rgba(255,248,220,0.95)";
-  ctx.beginPath(); ctx.arc(x, y, 2.4, 0, 6.2832); ctx.fill();
-}
-function drawFx(t) {
-  const fx = FX[cur];
-  const r = rect();
-  ctx.clearRect(0, 0, W, H);
-  fx.rings.forEach(function (rg, i) {
-    const p = at(rg[0], rg[1]);
-    for (let k = 0; k < 3; k++) {
-      const u = (t * 0.14 + k / 3 + i * 0.1) % 1;
-      ctx.strokeStyle = "rgba(244,214,150," + (0.55 * (1 - u)).toFixed(3) + ")";
-      ctx.lineWidth = 1.3;
-      ctx.beginPath();
-      ctx.ellipse(p[0], p[1], 16 + u * 54, 8 + u * 22, -0.2, 0, 6.2832);
-      ctx.stroke();
-    }
-  });
-  fx.beams.forEach(function (b, i) {
-    const a = at(b[0], b[1]), c = at(b[2], b[3]);
-    ctx.strokeStyle = "rgba(255,214,140,0.28)";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]); ctx.stroke();
-    packet(a[0], a[1], c[0], c[1], (t * 0.22 + i * 0.31) % 1, "gold");
-  });
-  [fx.paths, fx.paths2].forEach(function (path) {
-    if (!path) return;
-    const pts = path[0].map(function (p) { return at(p[0], p[1]); });
-    ctx.strokeStyle = path[1] === "gold" ? "rgba(255,206,120,0.35)" : "rgba(80,190,255,0.35)";
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-    ctx.stroke();
-    for (let n = 0; n < 3; n++) {
-      const u = (t * path[2] + n / 3) % 1;
-      const seg = u * (pts.length - 1);
-      const i = Math.min(pts.length - 2, Math.floor(seg));
-      const f = seg - i;
-      packet(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], f, path[1]);
-    }
-  });
-  if (fx.orbit) {
-    const o = fx.orbit;
-    const c = at(o[0], o[1]);
-    const rx = o[2] * r.dw, ry = o[3] * r.dh;
-    ctx.strokeStyle = "rgba(90,220,210,0.35)";
-    ctx.lineWidth = 1.4;
-    ctx.beginPath(); ctx.ellipse(c[0], c[1], rx, ry, 0, 0, 6.2832); ctx.stroke();
-    for (let n = 0; n < 3; n++) {
-      const a = (t * o[5] + n / 3) * 6.2832;
-      const x = c[0] + Math.cos(a) * rx, y = c[1] + Math.sin(a) * ry;
-      glow(x, y, 12, COL.cyan, 0.5);
-      ctx.fillStyle = "rgba(220,255,250,0.95)";
-      ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 6.2832); ctx.fill();
-    }
-  }
-  fx.blinks.forEach(function (b, i) {
-    const on = Math.sin(t * 4.2 + i * 0.9) > -0.15;
-    if (!on) return;
-    const p = at(b[0], b[1]);
-    glow(p[0], p[1], 7, i % 3 === 0 ? COL.green : COL.gold, 0.7);
-    ctx.fillStyle = "rgba(255,246,210,0.95)";
-    ctx.beginPath(); ctx.arc(p[0], p[1], 1.6, 0, 6.2832); ctx.fill();
-  });
-  if (fx.pulse) {
-    const p = at(fx.pulse[0], fx.pulse[1]);
-    const a = 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(t * 1.6));
-    glow(p[0], p[1], 28, COL.blue, a);
-  }
-  if (fx.lte) {
-    const p = at(fx.lte[0], fx.lte[1]);
-    const a = 0.16 + 0.1 * Math.sin(t * 1.3);
-    glow(p[0], p[1], 26, COL.cyan, a);
-  }
-  const flareY = r.oy + r.dh * 0.08;
-  const flare = ctx.createLinearGradient(r.ox, 0, r.ox + r.dw, 0);
-  flare.addColorStop(0, "rgba(255,214,150,0)");
-  flare.addColorStop(0.45 + 0.08 * Math.sin(t * 0.3), "rgba(255,236,200,0.45)");
-  flare.addColorStop(1, "rgba(255,214,150,0)");
-  ctx.fillStyle = flare;
-  ctx.fillRect(r.ox, flareY, r.dw, 2);
-}
+let cur = 0, W = 1440, H = 900, DPR = 1, box = {x:0,y:54,w:1440,h:700};
+const TAU = Math.PI * 2;
+
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 1.5);
   W = window.innerWidth || 1440; H = window.innerHeight || 900;
-  cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
-  cv.style.width = W + "px"; cv.style.height = H + "px";
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  fx.width = Math.floor(W * DPR); fx.height = Math.floor(H * DPR);
+  fx.style.width = W + "px"; fx.style.height = H + "px";
+  fctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  layout();
 }
-function frame(t) { drawFx(t); }
+function layout() {
+  const c = CONCEPTS[cur];
+  const top = 54, bottom = 142;
+  const aw = W, ah = H - top - bottom;
+  const ir = c.aw / c.ah, ar = aw / ah;
+  let w, h, x, y;
+  if (ir > ar) { w = aw; h = aw / ir; x = 0; y = top + (ah - h) / 2; }
+  else { h = ah; w = ah * ir; y = top; x = (aw - w) / 2; }
+  box = {x:x, y:y, w:w, h:h};
+}
+function P(ix, iy) { return [box.x + ix * box.w, box.y + iy * box.h]; }
+function glow(x, y, r, col, a) {
+  const g = fctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, "rgba(" + col + "," + a + ")");
+  g.addColorStop(1, "rgba(" + col + ",0)");
+  fctx.fillStyle = g; fctx.beginPath(); fctx.arc(x, y, r, 0, TAU); fctx.fill();
+}
+function dot(x, y, r, col, a) {
+  fctx.fillStyle = "rgba(" + col + "," + a + ")";
+  fctx.beginPath(); fctx.arc(x, y, r, 0, TAU); fctx.fill();
+}
+function quad(x0, y0, cx, cy, x1, y1, u) {
+  const v = 1 - u;
+  return [v*v*x0 + 2*v*u*cx + u*u*x1, v*v*y0 + 2*v*u*cy + u*u*y1];
+}
+function rider(a, b, c, t, sp, col) {
+  const A = P(a[0], a[1]), B = P(b[0], b[1]), C = P(c[0], c[1]);
+  const u = (t * sp) % 1;
+  const p = quad(A[0], A[1], B[0], B[1], C[0], C[1], u);
+  const q = quad(A[0], A[1], B[0], B[1], C[0], C[1], (u - 0.04 + 1) % 1);
+  fctx.strokeStyle = "rgba(" + col + ",.35)"; fctx.lineWidth = 1.6;
+  fctx.beginPath(); fctx.moveTo(A[0], A[1]); fctx.quadraticCurveTo(B[0], B[1], C[0], C[1]); fctx.stroke();
+  glow(p[0], p[1], 12, col, 0.7); dot(p[0], p[1], 2.2, "255,248,230", 0.95); dot(q[0], q[1], 1.4, col, 0.6);
+}
+function rings(ix, iy, t, col) {
+  const p = P(ix, iy);
+  for (let i = 0; i < 3; i++) {
+    const u = (t * 0.16 + i / 3) % 1;
+    fctx.strokeStyle = "rgba(" + col + "," + (0.45 * (1 - u)).toFixed(3) + ")";
+    fctx.lineWidth = 1.2;
+    fctx.beginPath(); fctx.ellipse(p[0], p[1], 14 + u * 54, 8 + u * 22, -0.2, 0, TAU); fctx.stroke();
+  }
+}
+function beamPulse(a, b, t, col) {
+  const A = P(a[0], a[1]), B = P(b[0], b[1]);
+  const u = (t * 0.22) % 1;
+  const x = A[0] + (B[0] - A[0]) * u, y = A[1] + (B[1] - A[1]) * u;
+  fctx.strokeStyle = "rgba(" + col + ",.28)"; fctx.lineWidth = 1.4;
+  fctx.beginPath(); fctx.moveTo(A[0], A[1]); fctx.lineTo(B[0], B[1]); fctx.stroke();
+  glow(x, y, 9, col, 0.8); dot(x, y, 2, "255,248,230", 1);
+}
+function ringRide(ix, iy, rx, ry, t, col) {
+  const c = P(ix, iy);
+  const RX = rx * box.w, RY = ry * box.h;
+  fctx.strokeStyle = "rgba(" + col + ",.28)"; fctx.lineWidth = 1.3;
+  fctx.beginPath(); fctx.ellipse(c[0], c[1], RX, RY, 0, 0, TAU); fctx.stroke();
+  for (let i = 0; i < 3; i++) {
+    const a = t * 0.7 + i * TAU / 3;
+    const x = c[0] + Math.cos(a) * RX, y = c[1] + Math.sin(a) * RY;
+    glow(x, y, 8, col, 0.55); dot(x, y, 1.7, "255,248,230", 0.95);
+  }
+}
+function sparks(pts, t, col) {
+  for (let i = 0; i < pts.length; i++) {
+    if (Math.sin(t * 4 + i * 1.3) < 0.15) continue;
+    const p = P(pts[i][0], pts[i][1]);
+    dot(p[0], p[1], 1.5, col, 0.9);
+  }
+}
+const GOLD = "255,214,140", CYAN = "80,220,210", BLUE = "120,180,255", AMBER = "255,180,80";
+const SCENES = [
+  function (t) {
+    rider([0.28,0.78],[0.46,0.68],[0.62,0.60], t, 0.16, GOLD);
+    rider([0.22,0.80],[0.40,0.74],[0.55,0.66], t + 0.4, 0.14, GOLD);
+    rings(0.42, 0.36, t, GOLD);
+    beamPulse([0.13,0.10],[0.20,0.30], t, GOLD);
+    ringRide(0.55, 0.70, 0.12, 0.045, t, CYAN);
+    sparks([[0.16,0.78],[0.20,0.78],[0.24,0.80],[0.12,0.72],[0.18,0.72]], t, AMBER);
+    glow.apply(null, P(0.90,0.52).concat([26, BLUE, 0.18 + 0.08 * Math.sin(t * 2)]));
+  },
+  function (t) {
+    rider([0.20,0.72],[0.34,0.55],[0.48,0.40], t, 0.18, GOLD);
+    rider([0.24,0.78],[0.40,0.62],[0.50,0.42], t + 0.35, 0.15, CYAN);
+    rider([0.50,0.42],[0.68,0.36],[0.84,0.28], t, 0.16, BLUE);
+    rings(0.82, 0.48, t, GOLD);
+    beamPulse([0.50,0.10],[0.48,0.36], t, GOLD);
+    sparks([[0.10,0.62],[0.14,0.62],[0.18,0.64],[0.22,0.66],[0.08,0.68],[0.16,0.68]], t, "80,230,150");
+  },
+  function (t) {
+    rings(0.10, 0.40, t, GOLD);
+    beamPulse([0.28,0.08],[0.18,0.42], t, GOLD);
+    rider([0.48,0.62],[0.62,0.70],[0.78,0.54], t, 0.16, GOLD);
+    ringRide(0.66, 0.66, 0.08, 0.035, t, CYAN);
+    const h = P(0.70, 0.32);
+    fctx.strokeStyle = "rgba(80,220,210," + (0.35 + 0.2 * Math.sin(t * 1.4)).toFixed(3) + ")";
+    fctx.lineWidth = 1.2; fctx.beginPath(); fctx.arc(h[0], h[1], 16 + 6 * Math.sin(t), 0, TAU); fctx.stroke();
+    sparks([[0.46,0.48],[0.48,0.55],[0.50,0.58],[0.44,0.52]], t, AMBER);
+    glow.apply(null, P(0.90,0.48).concat([22, BLUE, 0.16 + 0.08 * Math.sin(t * 1.7)]));
+  },
+  function (t) {
+    beamPulse([0.12,0.12],[0.30,0.28], t, GOLD);
+    rings(0.34, 0.24, t, GOLD);
+    rider([0.40,0.52],[0.52,0.60],[0.66,0.46], t, 0.17, GOLD);
+    ringRide(0.58, 0.58, 0.12, 0.04, t, CYAN);
+    sparks([[0.22,0.55],[0.28,0.55],[0.34,0.55],[0.20,0.50]], t, "80,230,150");
+    glow.apply(null, P(0.86,0.42).concat([20, BLUE, 0.16 + 0.07 * Math.sin(t * 2)]));
+  },
+  function (t) {
+    beamPulse([0.16,0.12],[0.14,0.40], t, GOLD);
+    rings(0.16, 0.40, t, GOLD);
+    rider([0.28,0.52],[0.38,0.58],[0.50,0.52], t, 0.2, GOLD);
+    rider([0.54,0.52],[0.64,0.56],[0.74,0.48], t + 0.3, 0.16, GOLD);
+    ringRide(0.46, 0.60, 0.16, 0.045, t, CYAN);
+    sparks([[0.48,0.52],[0.52,0.53],[0.56,0.52],[0.60,0.53],[0.32,0.48],[0.34,0.52]], t, AMBER);
+    glow.apply(null, P(0.66,0.36).concat([28, BLUE, 0.18 + 0.08 * Math.sin(t * 1.8)]));
+  }
+];
+function frame(t) {
+  fctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  fctx.clearRect(0, 0, W, H);
+  fctx.globalCompositeOperation = "lighter";
+  SCENES[cur](t);
+  const flareY = box.y + box.h * 0.08 + Math.sin(t * 0.3) * 4;
+  const flare = fctx.createLinearGradient(0, 0, W, 0);
+  flare.addColorStop(0, "rgba(255,214,150,0)");
+  flare.addColorStop(0.45, "rgba(255,236,210,0.35)");
+  flare.addColorStop(0.7, "rgba(255,180,80,0.08)");
+  flare.addColorStop(1, "rgba(255,214,150,0)");
+  fctx.fillStyle = flare;
+  fctx.fillRect(box.x, flareY, box.w, 2);
+  fctx.globalCompositeOperation = "source-over";
+}
+const dock = document.getElementById("dock");
 CONCEPTS.forEach(function (c, i) {
   const b = document.createElement("button");
   b.type = "button";
   b.className = "pick" + (i === 0 ? " on" : "");
-  const title = document.createElement("b");
-  title.textContent = c.fa;
-  const desc = document.createElement("span");
-  desc.textContent = c.desc;
-  const meta = document.createElement("em");
-  meta.textContent = c.id + " · " + c.name;
+  const title = document.createElement("b"); title.textContent = c.fa;
+  const desc = document.createElement("span"); desc.textContent = c.desc;
+  const meta = document.createElement("em"); meta.textContent = c.id + " · " + c.name;
   b.appendChild(title); b.appendChild(desc); b.appendChild(meta);
   b.addEventListener("click", function () { select(i); });
   dock.appendChild(b);
@@ -255,6 +224,7 @@ function select(i) {
   Array.prototype.forEach.call(dock.children, function (el, k) { el.classList.toggle("on", k === i); });
   document.getElementById("nowTag").textContent = "CONCEPT " + CONCEPTS[i].id + " — " + CONCEPTS[i].name;
   document.getElementById("nowDesc").textContent = CONCEPTS[i].desc;
+  layout();
 }
 addEventListener("keydown", function (e) {
   const n = parseInt(e.key, 10);
@@ -269,14 +239,13 @@ function loop() {
   frame((window.performance && performance.now ? performance.now() : Date.now()) / 1000);
   raf = requestAnimationFrame(loop);
 }
-if (!ctx) resize();
-else if (reduce) frame(1.4);
+if (!fctx) resize();
+else if (reduce) frame(1.2);
 else loop();
 document.addEventListener("visibilitychange", function () {
   if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
   else if (!raf && !reduce) loop();
 });
-
 </script>
 </body>
 </html>
