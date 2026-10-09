@@ -370,6 +370,113 @@ test('deleting custom/default categories preserves worksheets and resets a remov
   await page.evaluate(()=>{state.categoryConfig=null;saveState();refreshCategoryUI();});
 });
 
+test('category cards automatically fill a row up to twenty then wrap, including Other', async () => {
+  const original=await page.evaluate(()=>state.categoryConfig);
+  for (const width of [1920,1440,390]) {
+    await page.setViewportSize({width,height:1000});
+    for (const count of [1,7,20,21,40,41]) {
+      await page.evaluate(count=>{
+        state.categoryConfig={version:1,categories:Array.from({length:count},(_,i)=>({id:'test-'+i,name:'دسته '+i,sub:'',color:'#2fd4c4',icon:'layers'})),
+          assignments:WB.order.filter(IsDataSheet).map(n=>[n,'test-0'])};
+        renderDashCats();
+      },count);
+      const boxes=await page.locator('#dash-cats .cat-tile').evaluateAll(es=>es.map(e=>{
+        const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width};
+      }));
+      assert.equal(boxes.length,count);
+      const cols=Math.min(count,20);
+      boxes.forEach((b,i)=>{
+        assert.ok(Math.abs(b.y-boxes[Math.floor(i/cols)*cols].y)<1);
+        assert.ok(Math.abs(b.width-boxes[0].width)<1);
+        if(i>=cols) assert.ok(b.y>boxes[i-cols].y);
+      });
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    }
+  }
+  await page.evaluate(original=>{state.categoryConfig=original;renderDashCats();},original);
+  await page.setViewportSize({width:1440,height:1000});
+});
+
+test('quick actions expand inline without executing and stay synchronized with dashboard', async () => {
+  await menu().click();
+  const before=await businessSheets();
+  const currentView=await page.evaluate(()=>state.currentView);
+  for(const key of ['search','add','remove','undo','nav']) {
+    const trigger=page.locator(`[aria-controls="quick-${key}"]`);
+    await trigger.click();
+    assert.equal(await trigger.getAttribute('aria-expanded'),'true');
+    assert.equal(await page.locator(`#quick-${key}`).evaluate(e=>e.inert),false);
+    assert.equal(await page.locator('#modal-overlay.show').count(),0);
+    assert.equal(await page.evaluate(()=>state.currentView),currentView);
+    await trigger.click();
+    assert.equal(await page.locator(`#quick-${key}`).evaluate(e=>e.inert),true);
+  }
+  assert.deepEqual(await businessSheets(),before);
+  await page.locator('[aria-controls="quick-add"]').click();
+  await page.locator('#quick-cp-c16').selectOption('شبکه آزمایشی');
+  assert.equal(await page.locator('#cp-c16').inputValue(),'شبکه آزمایشی');
+  await page.locator('#quick-add [data-arg="modAddRecord.StartAddWizard"]').click();
+  await page.locator('#modal-overlay .wizard-fields').waitFor();
+  await page.locator('#modal-overlay [data-a="cancel"]').click();
+  await page.locator('[aria-controls="quick-search"]').click();
+  await page.locator('#quick-cp-c7').selectOption('شبکه آزمایشی');
+  await page.locator('#quick-cp-c9').selectOption('شاخص');
+  await page.locator('#quick-cp-c11').fill('101');
+  assert.equal(await page.locator('#cp-c11').inputValue(),'101');
+  const prev=await page.evaluate(()=>state.cp.B12);
+  await page.locator('#quick-exact-toggle').click();
+  assert.notEqual(await page.evaluate(()=>state.cp.B12),prev);
+  await page.locator('#quick-search [data-arg="modSearchEngine.SearchRecords"]').click();
+  await modal(1).click();
+  await page.waitForFunction(()=>state.currentView==='results' && state.results.length===1);
+  await assertMenu(true);
+  await page.locator('[aria-controls="quick-remove"]').click();
+  await page.locator('#quick-cp-c23').selectOption('شبکه آزمایشی');
+  await page.locator('#quick-cp-c25').selectOption('شاخص');
+  await page.locator('#quick-cp-c27').fill('101');
+  await page.locator('#quick-remove [data-arg="modRemoveRecord.StartRemoveWizard"]').click();
+  await page.locator('#modal-input').waitFor();await modal(2).click();
+  await page.locator('[aria-controls="quick-nav"]').click();
+  await page.locator('#quick-cp-c41').selectOption('شبکه آزمایشی');
+  await page.locator('#quick-nav [data-arg="modUI.NavigateToSheet"]').click();
+  await page.waitForFunction(()=>state.currentSheet==='شبکه آزمایشی' && state.currentView==='sheet');
+  await assertMenu(true);
+  await panel();
+  await page.locator('#cp-c16').selectOption('تجهیزات آزمایشی');
+  assert.equal(await page.locator('#quick-cp-c16').inputValue(),'تجهیزات آزمایشی');
+  for(const width of [1440,800,390,320]) {
+    await page.setViewportSize({width,height:1000});
+    assert.equal(await page.locator('#quick-access').evaluate(root=>{
+      const bounds=root.getBoundingClientRect();
+      return [...root.querySelectorAll('input,select,button')].every(e=>{
+        const r=e.getBoundingClientRect();return r.left>=bounds.left-1 && r.right<=bounds.right+1;
+      });
+    }),true);
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await page.screenshot({path:path.join(root,'test-results','quick-access-ui04.png')});
+  assert.deepEqual(await businessSheets(),before);
+  for(const key of ['search','add','remove','undo','nav']) {
+    const trigger=page.locator(`[aria-controls="quick-${key}"]`);
+    if(await trigger.getAttribute('aria-expanded')==='true')await trigger.click();
+  }
+  await menu().click();
+});
+
+test('workbook coordinate badges are absent from user-facing forms and descriptions', async () => {
+  assert.equal(await page.locator('.ref').count(),0);
+  const text=await page.locator('#view-panel').innerText();
+  assert.doesNotMatch(text,/\b(?:B12|C7|C9|C11|C16|C23|C25|C27|C41)\b/);
+  await menu().click();
+  await page.locator('[aria-controls="quick-remove"]').click();
+  await page.locator('#quick-cp-c27').fill('');
+  await page.locator('#quick-remove [data-arg="modRemoveRecord.StartRemoveWizard"]').click();
+  assert.doesNotMatch(await page.locator('#modal-overlay.show').innerText(),/C27/);
+  await modal(1).click();
+  await page.locator('[aria-controls="quick-remove"]').click();
+  await menu().click();
+});
+
 test('no uncaught browser errors or duplicate IDs', async () => {
   assert.deepEqual(errors, []);
   const duplicates = await page.locator('[id]').evaluateAll(es => {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="03">
+<html lang="fa" dir="rtl" data-fam-ui="04">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1217,6 +1217,46 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 .category-sheet input{accent-color:var(--cyan);width:17px;height:17px;flex-shrink:0;}
 .category-error{color:#f87171;}
 @media(max-width:600px){.category-manager-grid{grid-template-columns:1fr;}.category-list{max-height:170px;}.category-manager .f{flex-wrap:wrap;}}
+
+/* Category count controls the columns (up to twenty); scrolling is confined
+   to the category strip on screens too narrow for readable mini-cards. */
+.category-grid-viewport{overflow-x:auto;max-width:100%;padding:3px 0;}
+#dash-cats{grid-template-columns:repeat(var(--cat-columns,1),minmax(0,1fr));gap:8px;min-width:calc(var(--cat-columns,1) * 64px);}
+#dash-cats .cat-tile{container-type:inline-size;container-name:category-tile;min-width:0;min-height:136px;text-align:right;padding:12px 8px;}
+#dash-cats .ct-name{overflow-wrap:anywhere;}
+#dash-cats .ct-val{left:8px;top:8px;}
+#dash-cats .cat-tile:focus-visible{outline:2px solid var(--cyan);outline-offset:-3px;}
+@container category-tile (max-width:125px){
+  #dash-cats .ct-ico{width:26px;height:26px;margin:0 0 6px;}
+  #dash-cats .ct-ico svg{width:16px;height:16px;}
+  #dash-cats .ct-val{position:static;font-size:18px;}
+  #dash-cats .ct-name{font-size:11px;line-height:1.5;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
+  #dash-cats .ct-meta,#dash-cats .ct-ring{display:none;}
+}
+@container category-tile (max-width:65px){
+  #dash-cats .ct-ico{width:22px;height:22px;}
+  #dash-cats .ct-name{font-size:10px;}
+}
+/* Sidebar disclosures share the dashboard's fields and actions, at rail size. */
+#quick-access{gap:6px;}
+.quick-item{min-width:0;}
+.quick-trigger{width:100%;text-align:right;font-family:var(--font);}
+.quick-trigger span{flex:1;min-width:0;}
+.quick-trigger .quick-chevron{width:14px;height:14px;flex:0 0 14px;transition:transform .2s;}
+.quick-trigger[aria-expanded="true"]{background:var(--glass-2);border-color:var(--stroke-2);}
+.quick-trigger[aria-expanded="true"] .quick-chevron{transform:rotate(180deg);}
+.quick-panel .fold-inner > *{margin:6px 0 8px;padding:12px 10px;border:1px solid var(--stroke);border-radius:12px;background:rgba(3,9,22,.55);}
+.quick-panel .field{min-width:0;}
+.quick-panel .search-rows{grid-template-columns:1fr;}
+.quick-panel .card-body{display:flex;flex-direction:column;gap:12px;}
+.quick-panel .search-value-row{margin-top:0 !important;}
+.quick-panel .inp{width:100%;min-width:0;font-size:12px;}
+.quick-panel .btn{font-size:11px;padding:10px;justify-content:center;}
+.quick-panel .hint,.quick-panel .dash-note{font-size:10px;line-height:1.9;}
+.quick-panel .exact-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:0 !important;}
+.quick-panel .exact-label{font-size:11px;}
+.quick-panel .direct-nav-row{flex-direction:column;align-items:stretch;}
+.quick-panel .switch:focus-visible,.quick-trigger:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px;}
 </style>
 <script>
 (function () {
@@ -1278,22 +1318,36 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
     </nav>
 
     <div class="side-sect">دسترسی سریع</div>
-    <nav class="side-nav">
-      <div class="nav-item" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        افزودن رکورد
+    <nav class="side-nav" id="quick-access" aria-label="دسترسی سریع">
+      <div class="quick-item">
+        <button type="button" class="nav-item quick-trigger" data-act="toggle-quick" aria-controls="quick-search" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>جستجوی هوشمند</span><svg class="quick-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="quick-panel fold-panel is-folded" id="quick-search" inert><div class="fold-inner"></div></div>
       </div>
-      <div class="nav-item" data-act="run-macro" data-arg="modRemoveRecord.StartRemoveWizard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>
-        حذف رکورد
+      <div class="quick-item">
+        <button type="button" class="nav-item quick-trigger" data-act="toggle-quick" aria-controls="quick-add" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>افزودن رکورد</span><svg class="quick-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="quick-panel fold-panel is-folded" id="quick-add" inert><div class="fold-inner"></div></div>
       </div>
-      <div class="nav-item" data-act="run-macro" data-arg="modUndo.UndoLastRemove">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
-        برگشت آخرین رکورد حذف شده
+      <div class="quick-item">
+        <button type="button" class="nav-item quick-trigger" data-act="toggle-quick" aria-controls="quick-remove" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg><span>حذف رکورد</span><svg class="quick-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="quick-panel fold-panel is-folded" id="quick-remove" inert><div class="fold-inner"></div></div>
       </div>
-      <div class="nav-item" data-act="run-macro" data-arg="modNavigator.ShowSheetNavigator">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
-        انتخاب بخش‌ها
+      <div class="quick-item">
+        <button type="button" class="nav-item quick-trigger" data-act="toggle-quick" aria-controls="quick-undo" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg><span>برگشت آخرین رکورد حذف شده</span><svg class="quick-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="quick-panel fold-panel is-folded" id="quick-undo" inert><div class="fold-inner"><div class="quick-undo-body"><p id="quick-undo-status" class="hint"></p><button type="button" class="btn btn-amber btn-block" data-act="run-macro" data-arg="modUndo.UndoLastRemove">بازگردانی آخرین حذف</button></div></div></div>
+      </div>
+      <div class="quick-item">
+        <button type="button" class="nav-item quick-trigger" data-act="toggle-quick" aria-controls="quick-nav" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg><span>انتخاب بخش‌ها</span><svg class="quick-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="quick-panel fold-panel is-folded" id="quick-nav" inert><div class="fold-inner"></div></div>
       </div>
     </nav>
 
@@ -1335,7 +1389,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-03</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-04</b></div>
     </div>
   </aside>
 
@@ -1484,7 +1538,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
           <div class="card-body fold-panel" id="fold-cats">
             <div class="fold-inner">
             <div class="category-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button></div>
-            <div class="cat-tiles" id="dash-cats"></div>
+            <div class="category-grid-viewport"><div class="cat-tiles" id="dash-cats"></div></div>
             </div>
           </div>
         </div>
@@ -1519,17 +1573,17 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
             <div class="card-body">
               <div class="search-rows">
                 <div class="field">
-                  <label>فیلتر بخش <span class="ref">C7</span></label>
+                  <label>فیلتر بخش</label>
                   <select class="inp" id="cp-c7"></select>
                 </div>
                 <div class="field">
-                  <label>ستون جستجو <span class="ref">C9</span></label>
+                  <label>ستون جستجو</label>
                   <select class="inp" id="cp-c9"></select>
                 </div>
               </div>
               <div class="search-value-row" style="margin-top:13px">
                 <div class="field">
-                  <label>مقدار جستجو <span class="ref">C11</span></label>
+                  <label>مقدار جستجو</label>
                   <input class="inp" type="text" id="cp-c11" placeholder="مثال: IP، نام شعبه، شاخص، شماره پرونده…">
                 </div>
               </div>
@@ -1539,7 +1593,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                 </div>
                 <div>
                   <div class="exact-label">تطابق دقیق (Exact Match)</div>
-                  <div class="hint">حالت ON = دقیقاً برابر / OFF = شامل عبارت · <span class="mono">B12</span></div>
+                  <div class="hint">حالت ON = دقیقاً برابر / OFF = شامل عبارت</div>
                 </div>
               </div>
               <div class="dash-note">
@@ -1566,7 +1620,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
             </div>
             <div class="card-body">
               <div class="field">
-                <label>بخش مقصد <span class="ref">C16</span></label>
+                <label>بخش مقصد</label>
                 <select class="inp" id="cp-c16"></select>
               </div>
               <div class="hint">برای بخش‌های استانی، نوع بخش (شعبه / خودپرداز) پرسیده می‌شود و فیلدها با مقادیر پیش‌فرض ردیف قبل نمایش داده می‌شوند.</div>
@@ -1590,15 +1644,15 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
             </div>
             <div class="card-body">
               <div class="field">
-                <label>فیلتر بخش <span class="ref">C23</span></label>
+                <label>فیلتر بخش</label>
                 <select class="inp" id="cp-c23"></select>
               </div>
               <div class="field">
-                <label>ستون جستجو <span class="ref">C25</span></label>
+                <label>ستون جستجو</label>
                 <select class="inp" id="cp-c25"></select>
               </div>
               <div class="field">
-                <label>مقدار جستجو <span class="ref">C27</span></label>
+                <label>مقدار جستجو</label>
                 <input class="inp" type="text" id="cp-c27" placeholder="مقدار مورد حذف…">
               </div>
               <div style="display:flex;gap:9px">
@@ -1732,7 +1786,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
           <div class="card-body fold-panel" id="fold-nav">
             <div class="fold-inner">
               <div class="field">
-                <label for="cp-c41">انتخاب بخش <span class="ref">C41</span></label>
+                <label for="cp-c41">انتخاب بخش</label>
                 <div class="direct-nav-row">
                   <select class="inp" id="cp-c41"></select>
                   <button class="btn btn-cyan" data-act="run-macro" data-arg="modUI.NavigateToSheet">
@@ -3716,7 +3770,7 @@ const modRemoveRecord = {
     const searchKey = TrimText(state.cp.C25) || "FULLTEXT";
     const searchValue = TrimText(state.cp.C27);
     if (!searchValue) {
-      await ShowMsg("مقدار جستجو (C27) را وارد کنید.", vbExclamation, "Remove");
+      await ShowMsg("مقدار جستجو را وارد کنید.", vbExclamation, "Remove");
       return;
     }
     const matches = modMapping.GetMatchRows(searchKey, searchValue, sheetFilter);
@@ -4195,6 +4249,7 @@ function fillSelect(id, options, selected, keepOptionalBlank, grouped) {
     opt.value = selected; opt.textContent = (selected === "FULLTEXT") ? "تمامی ستون ها" : selected; opt.selected = true;
     sel.appendChild(opt);
   }
+  syncQuickForms();
 }
 function renderExactToggle() {
   const t = document.getElementById("exact-toggle");
@@ -4202,6 +4257,7 @@ function renderExactToggle() {
   t.classList.toggle("on", on);
   t.classList.toggle("off", !on);
   t.querySelector(".txt").textContent = on ? "ON" : "OFF";
+  syncQuickForms();
 }
 function applyPanelProtection() {
   // In the original, only C7/C9/C11/C16/C23/C25/C27/C41/B12 are unlocked.
@@ -4851,18 +4907,18 @@ async function Workbook_Open() {
 const MACRO_REGISTRY = [
   // module, macro, description, runner
   ["modUI", "Auto_Open", "اجرای خودکار هنگام باز شدن فایل (شروع watcher)", () => Workbook_Open()],
-  ["modUI", "StartWatcher", "شروع ناظر تغییرات C7/C23 (clsWatcher1)", () => { clsWatcher1.WatchSheet(); Toast("Watcher فعال شد.", "ok"); }],
+  ["modUI", "StartWatcher", "شروع ناظر تغییرات فیلترهای جستجو و حذف (clsWatcher1)", () => { clsWatcher1.WatchSheet(); Toast("Watcher فعال شد.", "ok"); }],
   ["modUI", "InstallDataManager", "نصب/بازسازی کامل دیتامanager", () => modUI.InstallDataManager()],
   ["modUI", "RefreshPanel", "بازسازی پنل کنترل و dropdown ها", () => modUI.RefreshPanel()],
   ["modUI", "FixControlPanelGrid", "اصلاح طرح‌بندی پنل", () => modLayout.DrawControlPanelLayout()],
-  ["modUI", "SetupSheetDropdown", "ساخت dropdown فیلتر شیت (C7)", () => modUI.SetupSheetDropdown()],
-  ["modUI", "SetupAddSheetDropdown", "ساخت dropdown شیت مقصد (C16)", () => modUI.SetupAddSheetDropdown()],
-  ["modUI", "SetupKeyDropdown", "ساخت dropdown ستون جستجو (C9) مطابق شیت انتخابی", () => modUI.SetupKeyDropdown()],
-  ["modUI", "SetupRemoveKeyDropdown", "ساخت dropdown ستون حذف (C25)", () => modUI.SetupRemoveKeyDropdown()],
-  ["modUI", "SetupNavSheetDropdown", "ساخت dropdown ناوبری (C41)", () => modUI.SetupNavSheetDropdown()],
-  ["modUI", "ToggleExactMatch", "کلید تطابق دقیق جستجو (B12)", () => modUI.ToggleExactMatch()],
+  ["modUI", "SetupSheetDropdown", "ساخت dropdown فیلتر شیت", () => modUI.SetupSheetDropdown()],
+  ["modUI", "SetupAddSheetDropdown", "ساخت dropdown شیت مقصد", () => modUI.SetupAddSheetDropdown()],
+  ["modUI", "SetupKeyDropdown", "ساخت dropdown ستون جستجو مطابق شیت انتخابی", () => modUI.SetupKeyDropdown()],
+  ["modUI", "SetupRemoveKeyDropdown", "ساخت dropdown ستون حذف", () => modUI.SetupRemoveKeyDropdown()],
+  ["modUI", "SetupNavSheetDropdown", "ساخت dropdown ناوبری", () => modUI.SetupNavSheetDropdown()],
+  ["modUI", "ToggleExactMatch", "کلید تطابق دقیق جستجو", () => modUI.ToggleExactMatch()],
   ["modUI", "CreateExactMatchToggle", "ساخت کلید تطابق دقیق", () => { renderExactToggle(); Toast("Exact toggle آماده است.", "ok"); }],
-  ["modUI", "NavigateToSheet", "باز کردن مستقیم شیت انتخابی (C41)", () => modUI.NavigateToSheet()],
+  ["modUI", "NavigateToSheet", "باز کردن مستقیم شیت انتخابی", () => modUI.NavigateToSheet()],
   ["modUI", "ProtectControlPanel", "قفل کنترل پنل با رمز (شبیه‌سازی رفتار Excel، نه امنیت واقعی)", () => modUI.ProtectControlPanel()],
   ["modUI", "UnprotectControlPanel", "باز کردن قفل کنترل پنل (رمز 1234 — شبیه‌سازی، نه امنیت واقعی)", () => modUI.UnprotectControlPanel()],
 
@@ -5020,7 +5076,7 @@ const VBA_MODULE_META = {
   "modCreateUndoButton.bas": "ساخت دکمه UNDO",
   "modErrorLog.bas": "ثبت خطاها",
   "modExport.bas": "خروجی‌گیری (Excel/CSV)",
-  "clsWatcher1.cls": "ناظر تغییرات C7/C23 (نسخه بهبودیافته)",
+  "clsWatcher1.cls": "ناظر تغییرات فیلترهای جستجو و حذف (نسخه بهبودیافته)",
   "clsWatcher.cls": "ناظر تغییرات",
   "frmSectionPicker.frm": "فرم انتخاب بخش",
   "CFieldInput.cls": "کلاس ورود فیلد (YES/NO/CANCEL)",
@@ -5211,6 +5267,7 @@ function RunMacroIndex(mod, name) {
   if (entry) entry[3]();
 }
 function RunMacro(path) {
+  syncQuickForms();
   const [mod, name] = path.split(".");
   const entry = MACRO_REGISTRY.find(m => m[0] === mod && m[1] === name);
   if (!entry) {
@@ -5247,6 +5304,83 @@ function restoreSidebarState() {
   try { open = localStorage.getItem(SIDEBAR_PREF_KEY) === "true"; } catch (e) {}
   setSidebarOpen(open);
 }
+/* Sidebar forms mirror the canonical dashboard controls, not workbook copies. */
+function syncQuickForms() {
+  document.querySelectorAll('#quick-access [data-cp-source]').forEach(mirror => {
+    const source = document.getElementById(mirror.dataset.cpSource);
+    if (!source) return;
+    if (source.tagName === 'SELECT') {
+      if (mirror.innerHTML !== source.innerHTML) mirror.replaceChildren(...[...source.children].map(n => n.cloneNode(true)));
+      mirror.value = source.value;
+    } else if (source.tagName === 'INPUT') {
+      mirror.value = source.value;
+    } else if (source.id === 'exact-toggle') {
+      mirror.classList.toggle('on', source.classList.contains('on'));
+      mirror.classList.toggle('off', source.classList.contains('off'));
+      mirror.querySelector('.txt').textContent = source.querySelector('.txt').textContent;
+      mirror.setAttribute('aria-pressed', String(source.classList.contains('on')));
+    }
+  });
+  const undo = document.getElementById('quick-undo-status');
+  if (undo) undo.textContent = state.undo && state.undo.valid ? 'آخرین حذف برای بازگردانی آماده است.' : 'فعلاً حذف قابل بازگردانی وجود ندارد.';
+}
+function toggleQuickForm(button) {
+  const panel = document.getElementById(button.getAttribute('aria-controls'));
+  if (!panel) return;
+  const open = button.getAttribute('aria-expanded') !== 'true';
+  button.setAttribute('aria-expanded', String(open));
+  panel.classList.toggle('is-folded', !open);
+  panel.inert = !open;
+  syncQuickForms();
+}
+function buildQuickForms() {
+  const cards = document.querySelectorAll('#fold-ops .grid-add > .card');
+  const templates = { search: cards[0]?.querySelector('.card-body'), add: cards[1]?.querySelector('.card-body'), remove: cards[2]?.querySelector('.card-body'), nav: document.querySelector('#fold-nav .field') };
+  Object.entries(templates).forEach(([key, template]) => {
+    const host = document.querySelector('#quick-' + key + ' > .fold-inner');
+    if (!template || !host) return;
+    const content = template.cloneNode(true);
+    content.querySelectorAll('[id]').forEach(node => {
+      const originalId = node.id;
+      node.id = 'quick-' + originalId;
+      node.dataset.cpSource = originalId;
+      if (originalId === 'exact-toggle') {
+        node.dataset.act = 'quick-exact';
+        node.setAttribute('role', 'button'); node.tabIndex = 0;
+        node.setAttribute('aria-label', 'تطابق دقیق');
+      }
+    });
+    [content, ...content.querySelectorAll('.field')].filter(node => node.matches('.field')).forEach(field => {
+      const label = field.querySelector('label'), input = field.querySelector('input,select');
+      if (label && input) label.htmlFor = input.id;
+    });
+    // Use the separate Undo disclosure, rather than duplicating its action here.
+    if (key === 'remove') content.querySelector('[data-arg="modUndo.UndoLastRemove"]')?.remove();
+    host.replaceChildren(content);
+  });
+  const root = document.getElementById('quick-access');
+  for (const type of ['input', 'change']) root.addEventListener(type, event => {
+    const mirror = event.target.closest('[data-cp-source]');
+    if (!mirror || !['INPUT','SELECT'].includes(mirror.tagName)) return;
+    const source = document.getElementById(mirror.dataset.cpSource);
+    if (!source) return;
+    source.value = mirror.value;
+    source.dispatchEvent(new Event(type, {bubbles:true}));
+    syncQuickForms();
+  });
+  // Canonical dashboard events update any open sidebar form too.
+  for (const type of ['input', 'change']) document.addEventListener(type, event => {
+    if (event.target.id && event.target.id.startsWith('cp-')) syncQuickForms();
+  });
+  root.addEventListener('keydown', event => {
+    if (event.target.dataset.act === 'quick-exact' && ['Enter',' '].includes(event.key)) {
+      event.preventDefault(); modUI.ToggleExactMatch();
+    }
+    // Text fields do not auto-submit: opening and filling a disclosure is safe.
+  });
+  syncQuickForms();
+}
+
 const ACTIONS = {
   "run-macro": el => RunMacro(el.dataset.arg),
   "run-macro-index": el => RunMacroIndex(el.dataset.mod, el.dataset.name),
@@ -5275,6 +5409,8 @@ const ACTIONS = {
   "nav-sheet": el => modNavigator.NavToSelectedSheet(el.dataset.name),
   "open-category": el => openCategory(el.dataset.cat),
   "manage-categories": () => manageCategories(),
+  "toggle-quick": button => toggleQuickForm(button),
+  "quick-exact": () => modUI.ToggleExactMatch(),
   "set-filter": el => setCatFilter(el.dataset.cat),
   "show-vba": el => showVbaSource(el.dataset.name),
   "download-module": el => modExportAllModules.DownloadModule(el.dataset.name),
@@ -5324,6 +5460,7 @@ function initUIFromState() {
   renderSheetCatalog();
   updateStatLine();
   renderDashboard();
+  syncQuickForms();
 }
 
 function bindPanelEvents() {
@@ -6681,6 +6818,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   bindDelegatedEvents();
   bindPanelEvents();
+  buildQuickForms();
   await Workbook_Open();
   initUIFromState();
   renderResultsView();
@@ -6952,15 +7090,19 @@ function renderDashCats() {
   const host = document.getElementById("dash-cats");
   if (!host) return;
   clear(host);
+  host.style.setProperty('--cat-columns', '1');
   if (!WB.order.some(n => IsDataSheet(n))) {
     host.appendChild(emptyStateNode());
     return;
   }
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
+  host.style.setProperty('--cat-columns', String(Math.min(20, Math.max(1, cats.length))));
   cats.forEach(c => {
     const st = catStats(c.id);
-    host.appendChild(el("div", {
-      class: "cat-tile", style: { color: c.color },
+    host.appendChild(el("button", {
+      type: "button", class: "cat-tile", style: { color: c.color },
+      title: c.name + ' — ' + st.count + ' بخش — ' + st.rows.toLocaleString('fa-IR') + ' رکورد',
+      'aria-label': c.name + '، ' + st.count + ' بخش',
       "data-act": "open-category", "data-cat": c.id
     },
       el("div", { class: "ct-val", text: String(st.count) }),
