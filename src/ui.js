@@ -1305,7 +1305,7 @@ function startPhotonStage() {
     if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent || "")) return;
     const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const nodes = [];
-    const N = 96;
+    const N = 118;
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       const w = window.innerWidth || 1440;
@@ -1351,18 +1351,23 @@ function startPhotonStage() {
             const b = nodes[j];
             const dx = a.x - b.x, dy = a.y - b.y;
             const d = Math.hypot(dx, dy);
-            if (d > 168) continue;
-            ctx.strokeStyle = "rgba(214,255,63," + (0.34 * (1 - d / 168)).toFixed(3) + ")";
-            ctx.lineWidth = 1.15;
+            if (d > 196) continue;
+            ctx.strokeStyle = "rgba(214,255,63," + (0.55 * (1 - d / 196)).toFixed(3) + ")";
+            ctx.lineWidth = 1.35;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
-            if (!reduce && ((i * 3 + j) % 9 === 0)) {
-              const t = ((Date.now() / 1600) + i * 0.13) % 1;
-              ctx.fillStyle = "#f6ffe4";
+            if (!reduce && ((i * 3 + j) % 5 === 0)) {
+              const t = ((Date.now() / 1200) + i * 0.13) % 1;
+              const px = a.x + (b.x - a.x) * t, py = a.y + (b.y - a.y) * t;
+              ctx.fillStyle = "rgba(255,255,255,0.35)";
               ctx.beginPath();
-              ctx.arc(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 1.7, 0, 6.283);
+              ctx.arc(px, py, 6, 0, 6.283);
+              ctx.fill();
+              ctx.fillStyle = "#fffce8";
+              ctx.beginPath();
+              ctx.arc(px, py, 2.4, 0, 6.283);
               ctx.fill();
             }
           }

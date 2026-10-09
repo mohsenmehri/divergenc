@@ -78,6 +78,7 @@ body::before{
   border-radius:4px;color:#14180a;font-weight:800;font-size:16px;
   background:#d6ff3f;
   box-shadow:0 0 18px rgba(214,255,63,.55);
+  animation:pulseRing 2.4s ease-out infinite;
 }
 .brand-name{font-size:12px;font-weight:750;line-height:1.45;color:#f4f5f8;}
 .brand-name span{color:#d6ff3f;}
@@ -512,6 +513,7 @@ table.block-table thead th,.block-table th{position:sticky;top:0;z-index:2;backg
 @keyframes sheen{0%,55%{transform:translateX(-130%);}100%{transform:translateX(130%);}}
 @keyframes drift{from{transform:translate3d(0,0,0) scale(1);}to{transform:translate3d(-3%,2%,0) scale(1.06);}}
 @keyframes pulse{0%,100%{opacity:.45;}50%{opacity:1;}}
+@keyframes pulseRing{0%{box-shadow:0 0 0 0 rgba(214,255,63,.65);}70%{box-shadow:0 0 0 12px rgba(214,255,63,0);}100%{box-shadow:0 0 0 0 rgba(214,255,63,0);}}
 
 @media (max-width:1100px){
   #sidebar{width:220px;flex-basis:220px;}
