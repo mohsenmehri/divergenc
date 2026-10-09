@@ -353,3 +353,35 @@ test('provincial add rejects changed templates and rolls back a failed destinati
   await page.evaluate(()=>{setCellVal=window.originalSetCellVal;delete window.originalSetCellVal;});
   assert.equal(await page.evaluate(()=>WB.sheets[CFG_SHEET].rows.some(r=>r[0]==='خودپرداز تهران')),false);
 });
+
+test('UI-11 keeps the complete Persian brand on one line and category labels centered without reports',async()=>{
+  await setup();await fixture();await page.locator('[data-act="toggle-sidebar"]').click();
+  for(const width of [1440,800,390,320]){
+    await page.setViewportSize({width,height:900});
+    await page.waitForFunction(()=>{const r=document.getElementById('sidebar').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;});
+    await page.waitForFunction(()=>{const e=document.querySelector('.brand-name');return e.scrollWidth<=e.clientWidth+1;});
+    const brand=await page.locator('.brand-name').evaluate(e=>{
+      const range=document.createRange();range.selectNodeContents(e);
+      return {width:e.clientWidth,scroll:e.scrollWidth,tops:[...range.getClientRects()].map(r=>Math.round(r.top)),height:e.clientHeight,line:parseFloat(getComputedStyle(e).lineHeight)};
+    });
+    assert.ok(brand.scroll<=brand.width+1,JSON.stringify({width,...brand}));
+    assert.ok(brand.height<=brand.line+1,JSON.stringify({width,...brand}));
+  }
+  await page.setViewportSize({width:1440,height:1000});await page.locator('[data-act="toggle-sidebar"]').click();
+  assert.equal(await page.locator('#dash-cats .ct-meta').count(),0);
+  assert.doesNotMatch(await page.locator('#dash-cats').innerText(),/رکورد|[a-z]/i);
+  const cards=await page.locator('#dash-cats .cat-tile').evaluateAll(es=>es.map(e=>{
+    const r=e.getBoundingClientRect(),g=e.querySelector('.ct-content').getBoundingClientRect(),i=e.querySelector('.ct-ico').getBoundingClientRect(),t=e.querySelector('.ct-name').getBoundingClientRect(),v=e.querySelector('.ct-val').getBoundingClientRect();
+    return {name:e.dataset.cat,dx:Math.abs(g.x+g.width/2-r.x-r.width/2),dy:Math.abs(g.y+g.height/2-r.y-r.height/2),ix:Math.abs(i.x+i.width/2-r.x-r.width/2),tx:Math.abs(t.x+t.width/2-r.x-r.width/2),countLeft:v.left-r.left,countTop:v.top-r.top,title:e.title};
+  }));
+  for(const card of cards){
+    assert.ok(card.dx<=1&&card.dy<=1&&card.ix<=1&&card.tx<=1,JSON.stringify(card));
+    assert.ok(Math.abs(card.countLeft-9)<=1&&Math.abs(card.countTop-9)<=1,JSON.stringify(card));
+    assert.doesNotMatch(card.title,/رکورد/);
+  }
+  fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+  await page.locator('#dash-cats').screenshot({path:path.join(root,'test-results/fam-categories-ui11.png'),animations:'disabled'});
+  await page.locator('[data-act="toggle-sidebar"]').click();
+  await page.waitForFunction(()=>document.getElementById('sidebar').getBoundingClientRect().right<=innerWidth);
+  await page.locator('.brand').screenshot({path:path.join(root,'test-results/fam-brand-ui11.png'),animations:'disabled'});
+});

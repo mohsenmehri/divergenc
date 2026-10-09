@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="10" class="auth-pending">
+<html lang="fa" dir="rtl" data-fam-ui="11" class="auth-pending">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -174,7 +174,7 @@ html.menu-open #layout{padding-right:calc(var(--sidebar-w) + var(--sidebar-float
 }
 .brand-logo img{display:block;width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.brand-name{font-size:13px;font-weight:800;letter-spacing:0;line-height:1.55;}
+.brand-name{font-size:clamp(9px,calc((var(--sidebar-w) - 104px) / 18),11px);font-weight:800;letter-spacing:0;line-height:1.55;white-space:nowrap;min-width:0;}
 .brand-name span{background:var(--grad-main);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .brand-sub{grid-column:1 / -1;font-size:9px;color:var(--txt-2);letter-spacing:0;line-height:1.6;direction:ltr;text-align:center;white-space:nowrap;}
 .side-sect{padding:12px 18px 6px;font-size:9.5px;letter-spacing:1.8px;color:var(--txt-2);text-transform:uppercase;font-weight:700;}
@@ -1223,14 +1223,17 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
    to the category strip on screens too narrow for readable mini-cards. */
 .category-grid-viewport{overflow-x:auto;max-width:100%;padding:3px 0;}
 #dash-cats{grid-template-columns:repeat(var(--cat-columns,1),minmax(0,1fr));gap:8px;min-width:calc(var(--cat-columns,1) * 64px);}
-#dash-cats .cat-tile{container-type:inline-size;container-name:category-tile;min-width:0;min-height:136px;text-align:right;padding:12px 8px;}
-#dash-cats .ct-name{overflow-wrap:anywhere;}
+#dash-cats .cat-tile{container-type:inline-size;container-name:category-tile;min-width:0;min-height:136px;text-align:center;padding:12px 8px;align-items:center;justify-content:center;}
+#dash-cats .ct-content{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;min-width:0;position:relative;z-index:1;}
+#dash-cats .ct-content .ct-ico{margin:0;flex-shrink:0;}
+#dash-cats .ct-name{overflow-wrap:anywhere;max-width:100%;text-align:center;}
 #dash-cats .ct-val{left:8px;top:8px;}
 #dash-cats .cat-tile:focus-visible{outline:2px solid var(--cyan);outline-offset:-3px;}
 @container category-tile (max-width:125px){
   #dash-cats .ct-ico{width:26px;height:26px;margin:0 0 6px;}
   #dash-cats .ct-ico svg{width:16px;height:16px;}
-  #dash-cats .ct-val{position:static;font-size:18px;}
+  #dash-cats .ct-val{font-size:18px;}
+  #dash-cats .ct-content{gap:6px;}
   #dash-cats .ct-name{font-size:11px;line-height:1.5;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;}
   #dash-cats .ct-meta,#dash-cats .ct-ring{display:none;}
 }
@@ -1473,7 +1476,7 @@ html.auth-pending #access-viewer {display:none!important;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-10</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-11</b></div>
     </div>
     </div>
   </aside>
@@ -7513,17 +7516,17 @@ function renderDashCats() {
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
   host.style.setProperty('--cat-columns', String(Math.min(20, Math.max(1, cats.length))));
   cats.forEach(c => {
-    const st = catStats(c.id);
+    const st = {count: sheetsOfCategory(c.id).length};
     host.appendChild(el("button", {
       type: "button", class: "cat-tile", style: { color: c.color },
-      title: c.name + ' — ' + st.count + ' بخش — ' + st.rows.toLocaleString('fa-IR') + ' رکورد',
+      title: c.name + ' — ' + st.count + ' شیت',
       'aria-label': c.name + '، ' + st.count + ' بخش',
       "data-act": "open-category", "data-cat": c.id
     },
       el("div", { class: "ct-val", text: String(st.count) }),
-      el("div", { class: "ct-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
-      el("div", { class: "ct-name", style: { color: "var(--txt-0)" }, text: c.name }),
-      el("div", { class: "ct-meta", text: st.rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f \u00b7 " + c.sub }),
+      el("div", { class: "ct-content" },
+        el("div", { class: "ct-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
+        el("div", { class: "ct-name", style: { color: "var(--txt-0)" }, text: c.name })),
       el("div", { class: "ct-ring" })));
   });
 }
