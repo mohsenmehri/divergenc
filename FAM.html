@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="06">
+<html lang="fa" dir="rtl" data-fam-ui="07">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1308,6 +1308,14 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
  .region-choice{padding:12px;}
 }
 
+/* UI-07: the filter field and submit button always form one adjacent unit. */
+.sheet-filter-group{display:flex;align-items:center;gap:8px;flex:1;min-width:0;max-width:448px;}
+#view-sheet .sheet-filter-group .inp{width:0;min-width:0;max-width:none;flex:1;}
+.sheet-filter-group .btn{flex-shrink:0;}
+.province-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.region-choice b{overflow-wrap:anywhere;max-width:100%;}
+@media(max-width:1000px){.sheet-filter-group{max-width:none;}}
+@media(max-width:540px){.sheet-filter-group{grid-column:1/-1;width:100%;}}
 </style>
 <script>
 (function () {
@@ -1440,7 +1448,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-06</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-07</b></div>
     </div>
   </aside>
 
@@ -1950,10 +1958,12 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
           <div class="sheet-nav-filter">
             <button type="button" class="btn btn-ghost btn-sm" data-act="manage-categories">مدیریت دسته‌بندی‌ها</button>
             <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
-            <input class="inp" id="sheet-filter" aria-label="فیلتر سریع ردیف‌ها" placeholder="فیلتر سریع ردیف‌ها…">
+            <div class="sheet-filter-group">
+              <input class="inp" id="sheet-filter" aria-label="فیلتر سریع ردیف‌ها" placeholder="فیلتر سریع ردیف‌ها…">
+              <button class="btn btn-primary btn-sm" data-act="filter-rows">فیلتر</button>
+            </div>
           </div>
           <div class="sheet-data-actions">
-            <button class="btn btn-primary btn-sm" data-act="filter-rows">فیلتر</button>
             <button class="btn btn-ghost btn-sm" data-act="export-sheet-csv">⬇ CSV</button>
             <button class="btn btn-ghost btn-sm" data-act="toggle-lock">قفل/باز بخش</button>
           </div>
@@ -2184,6 +2194,7 @@ const state = {
   showSystem: false,
   pageLimit: 300,
   catFilter: "all",
+  regionConfig: null, // null preserves the original four-region arrangement
   provinceRegion: "1",
   provinceView: null, // navigation only; every existing province row stays in Branch
   categoryConfig: null, // null = original automatic categories; otherwise versioned metadata
@@ -3118,7 +3129,7 @@ function buildStateAttempts() {
     v: 2, order: WB.order, sheets: sheetsLite, cp: state.cp,
     undo: state.undo, panelProtected: state.panelProtected,
     lockedSheets: state.lockedSheets, user: state.user, showSystem: state.showSystem,
-    savedAt: Date.now(), categoryConfig: state.categoryConfig
+    savedAt: Date.now(), categoryConfig: state.categoryConfig, regionConfig: state.regionConfig
   };
   const attempts = [
     base,
@@ -3171,6 +3182,7 @@ function applyStatePayload(p) {
   state.showSystem = !!p.showSystem;
   state.savedAt = p.savedAt || 0;
   state.categoryConfig = normalizeCategoryConfig(p.categoryConfig);
+  state.regionConfig = normalizeRegionConfig(p.regionConfig);
   return true;
 }
 function loadState() {
@@ -3268,7 +3280,7 @@ function resetAll() {
 function backupAll() {
   const payload = { v: 2, workbook: "Mohsen_FINAL_v5.xlsm", exported: new Date().toISOString(),
     order: WB.order, sheets: WB.sheets, cp: state.cp, undo: state.undo,
-    lockedSheets: state.lockedSheets, user: state.user, categoryConfig: state.categoryConfig };
+    lockedSheets: state.lockedSheets, user: state.user, categoryConfig: state.categoryConfig, regionConfig: state.regionConfig };
   DownloadFile("Mohsen_FINAL_v5_backup_" + tsStamp() + ".json", JSON.stringify(payload), "application/json");
   WriteChangeLog("BACKUP", "-", "-", "SUCCESS", "JSON backup exported");
   Toast("پشتیبان‌گیری انجام شد.", "ok");
@@ -3288,6 +3300,7 @@ function restoreAll() {
         state.undo = p.undo || null;
         state.lockedSheets = p.lockedSheets || {};
         state.categoryConfig = normalizeCategoryConfig(p.categoryConfig);
+        state.regionConfig = normalizeRegionConfig(p.regionConfig);
         saveState();
         WriteChangeLog("RESTORE", "-", "-", "SUCCESS", "JSON backup restored: " + f.name);
         Toast("بازیابی با موفقیت انجام شد.", "ok");
@@ -4673,6 +4686,7 @@ function applyJsonBackup(fileName, p) {
   if (p.lockedSheets && typeof p.lockedSheets === "object") state.lockedSheets = p.lockedSheets;
   // Imported business backups must not change the locally admin-approved identity.
   state.categoryConfig = normalizeCategoryConfig(p.categoryConfig);
+  state.regionConfig = normalizeRegionConfig(p.regionConfig);
   refreshCategoryUI();
   saveState();
   return true;
@@ -5517,6 +5531,7 @@ const ACTIONS = {
   "nav-sheet": el => modNavigator.NavToSelectedSheet(el.dataset.name),
   "open-category": el => openCategory(el.dataset.cat),
   "manage-categories": () => manageCategories(),
+  "manage-regions": () => manageRegions(),
   "toggle-quick": button => toggleQuickForm(button),
   "quick-exact": () => modUI.ToggleExactMatch(),
   "set-filter": el => setCatFilter(el.dataset.cat),
@@ -6932,7 +6947,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderResultsView();
   // restore the last open sheet/filter ("stay where you were")
   const uiSaved = uiSavedBoot;
-  if (uiSaved && PROVINCE_REGIONS.some(r => r.id === uiSaved.provinceRegion)) state.provinceRegion = uiSaved.provinceRegion;
+  if (uiSaved && managedRegions().some(r => r.id === uiSaved.provinceRegion)) state.provinceRegion = uiSaved.provinceRegion;
   const savedProvince = uiSaved?.provinceView;
   if (savedProvince && PROVINCES.some(p => p.id === savedProvince.province) && ['branch','atm'].includes(savedProvince.section)
       && managedCategories().some(c => c.id === 'provinces')) {
@@ -6998,12 +7013,130 @@ const PROVINCES = PROVINCE_REGIONS.flatMap(region => region.names.map((name,i) =
   id:region.id+'-'+(i+1), name, region:region.id,
   aliases:[name,...(PROVINCE_ALIASES[name] || [])].map(provinceKey)
 })));
-function provinceOf(name) { return PROVINCES.find(p => p.aliases.includes(provinceKey(name))) || null; }
+// Region configuration is metadata only. Province IDs and worksheet data never change.
+function defaultRegionConfig() {
+  return {version:1, regions:PROVINCE_REGIONS.map(({id,name})=>({id,name})),
+    assignments:PROVINCES.map(p=>[p.id,p.region])};
+}
+function normalizeRegionConfig(value) {
+  if (value == null) return null;
+  if (value.version !== 1 || !Array.isArray(value.regions) || !Array.isArray(value.assignments)) return null;
+  const ids = new Set(), names = new Set([NormalizeText('بدون منطقه')]), regions=[];
+  for (const r of value.regions) {
+    if (!r || typeof r.id !== 'string' || !/^(?:[1-4]|region-[a-z0-9-]{1,80})$/.test(r.id) || ids.has(r.id)) return null;
+    const name = typeof r.name === 'string' ? r.name.trim() : '';
+    if (!name || name.length > 80 || names.has(NormalizeText(name))) return null;
+    ids.add(r.id); names.add(NormalizeText(name)); regions.push({id:r.id,name});
+  }
+  const map=new Map();
+  for (const pair of value.assignments) {
+    if (!Array.isArray(pair) || pair.length!==2 || !PROVINCES.some(p=>p.id===pair[0]) || map.has(pair[0])) return null;
+    if (pair[1]!=='unassigned' && !ids.has(pair[1])) return null;
+    map.set(pair[0],pair[1]);
+  }
+  return {version:1,regions,assignments:PROVINCES.map(p=>[p.id,map.get(p.id)||'unassigned'])};
+}
+function managedProvinces(config = state.regionConfig) {
+  if (!config) return PROVINCES;
+  const map=new Map(config.assignments);
+  return PROVINCES.map(p=>({...p,region:map.get(p.id)||'unassigned'}));
+}
+function managedRegions(config = state.regionConfig) {
+  const provinces=managedProvinces(config);
+  const regions=(config ? config.regions : PROVINCE_REGIONS).map(r=>({id:r.id,name:r.name,
+    names:provinces.filter(p=>p.region===r.id).map(p=>p.name)}));
+  const names=provinces.filter(p=>p.region==='unassigned').map(p=>p.name);
+  if (names.length) regions.push({id:'unassigned',name:'بدون منطقه',names});
+  return regions;
+}
+function refreshRegionUI() {
+  const regions=managedRegions();
+  if (!regions.some(r=>r.id===state.provinceRegion)) state.provinceRegion=regions[0]?.id || 'unassigned';
+  const p=managedProvinces().find(p=>p.id===state.provinceView?.province);
+  if (p) {
+    state.provinceRegion=p.region;
+    if (state.provinceView.section==='atm') showProvinceEmpty(p,'atm');
+  }
+  renderSheetCatalog();
+}
+function manageRegions() {
+  const draft=JSON.parse(JSON.stringify(state.regionConfig || defaultRegionConfig()));
+  let selected=draft.regions[0]?.id || '', pendingDelete='', query='';
+  const previousFocus=document.activeElement, overlay=document.getElementById('modal-overlay');
+  const box=el('div',{class:'mbox category-manager',role:'dialog','aria-modal':'true','aria-labelledby':'region-manager-title'});
+  const error=el('p',{id:'region-error',class:'category-error',role:'alert'});
+  const list=el('div',{class:'category-list','aria-label':'مناطق'}), editor=el('div',{class:'category-editor'});
+  const action=(text,id,fn,cls='btn btn-ghost btn-sm')=>el('button',{type:'button',id,class:cls,text,onclick:fn});
+  const close=()=>{overlay.classList.remove('show');clear(overlay);if(previousFocus?.isConnected)previousFocus.focus();};
+  const setAssignment=(id,region)=>{
+    draft.assignments=draft.assignments.filter(pair=>pair[0]!==id);draft.assignments.push([id,region]);
+  };
+  const renderList=()=>{
+    clear(list);
+    draft.regions.forEach(r=>list.appendChild(el('button',{type:'button',class:'category-choice'+(selected===r.id?' active':''),
+      'data-region-id':r.id,'aria-pressed':String(selected===r.id),onclick:()=>{selected=r.id;pendingDelete='';renderList();renderEditor();}},
+      el('span',{text:r.name || 'بدون نام'}),el('b',{text:String(draft.assignments.filter(a=>a[1]===r.id).length)}))));
+    list.appendChild(el('p',{class:'hint',text:'بدون منطقه: '+draft.assignments.filter(a=>a[1]==='unassigned').length+' استان'}));
+  };
+  const renderEditor=()=>{
+    clear(editor);
+    const r=draft.regions.find(r=>r.id===selected);
+    if(!r){editor.appendChild(el('p',{class:'hint',text:'برای تخصیص استان‌ها، ابتدا یک منطقه بسازید.'}));return;}
+    const rows=el('div',{class:'category-sheet-list'});
+    const renderRows=()=>{
+      clear(rows);
+      managedProvinces(draft).filter(p=>NormalizeText(p.name).includes(NormalizeText(query))).forEach(p=>{
+        const region=draft.regions.find(r=>r.id===p.region);
+        const input=el('input',{type:'checkbox',checked:p.region===r.id,'data-region-province':p.id,
+          onchange:e=>{setAssignment(p.id,e.target.checked?r.id:'unassigned');renderRows();renderList();
+            rows.querySelector('[data-region-province="'+p.id+'"]')?.focus();}});
+        rows.appendChild(el('label',{class:'category-sheet'},input,el('span',{text:p.name}),el('small',{text:region?.name || 'بدون منطقه'})));
+      });
+      if(!rows.childElementCount)rows.appendChild(el('p',{class:'hint',text:'استانی با این نام یافت نشد.'}));
+    };
+    editor.append(el('label',{for:'region-name',text:'نام منطقه'}),
+      el('input',{id:'region-name',class:'inp',value:r.name,maxlength:80,oninput:e=>{r.name=e.target.value;error.textContent='';renderList();}}),
+      el('div',{class:'category-edit-actions'},action(pendingDelete===r.id?'تأیید حذف منطقه':'حذف منطقه','region-delete',()=>{
+        if(pendingDelete!==r.id){pendingDelete=r.id;renderEditor();return;}
+        draft.assignments=draft.assignments.map(([p,id])=>[p,id===r.id?'unassigned':id]);
+        draft.regions=draft.regions.filter(x=>x.id!==r.id);selected=draft.regions[0]?.id || '';pendingDelete='';renderList();renderEditor();
+      },'btn btn-red btn-sm')),
+      el('p',{class:'hint',text:pendingDelete===r.id?'با تأیید حذف، استان‌ها به «بدون منطقه» می‌روند. برای اعمال نهایی ذخیره کنید.':'تیک هر استان آن را به این منطقه منتقل می‌کند؛ برداشتن تیک، استان را بدون منطقه می‌کند. هر استان فقط یک منطقه دارد.'}),
+      el('label',{for:'region-province-search',text:'جستجوی استان‌ها'}),
+      el('input',{id:'region-province-search',class:'inp',placeholder:'نام استان…',value:query,oninput:e=>{query=e.target.value;renderRows();}}),rows);
+    renderRows();
+  };
+  box.append(el('div',{class:'t'},el('span',{id:'region-manager-title',text:'مدیریت مناطق و استان‌ها'}),action('×','region-close',close)),
+    el('div',{class:'c'},el('p',{class:'hint',text:'تغییرات فقط با «ذخیره تغییرات» اعمال می‌شوند. حذف منطقه یا برداشتن استان، هیچ شیت یا رکوردی را حذف نمی‌کند. همه داده‌ها همچنان در شعبه باقی می‌مانند.'}),
+      action('+ افزودن منطقه','region-new',()=>{
+        let n=1;while(draft.regions.some(r=>r.name==='منطقه جدید '+n))n++;
+        selected='region-'+crypto.randomUUID();draft.regions.push({id:selected,name:'منطقه جدید '+n});
+        pendingDelete='';error.textContent='';renderList();renderEditor();editor.querySelector('input')?.focus();
+      },'btn btn-cyan btn-sm'),el('div',{class:'category-manager-grid'},list,editor),error),
+    el('div',{class:'f'},action('ذخیره تغییرات','region-save',()=>{
+      const clean=normalizeRegionConfig(draft);
+      if(!clean){error.textContent='نام منطقه نباید خالی، تکراری، بیشتر از ۸۰ نویسه یا «بدون منطقه» باشد.';return;}
+      state.regionConfig=clean;refreshRegionUI();saveState();close();Toast('مناطق و استان‌ها ذخیره شدند.','ok');
+    },'btn btn-primary'),action('انصراف','region-cancel',close)));
+  box.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();close();}
+    if(e.key==='Tab'){
+      const items=[...box.querySelectorAll('button,input')].filter(e=>!e.disabled && e.getClientRects().length);
+      const first=items[0],last=items[items.length-1];
+      if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
+    }
+  });
+  clear(overlay);overlay.appendChild(box);overlay.classList.add('show');renderList();renderEditor();
+  (box.querySelector('#region-name') || box.querySelector('#region-new')).focus();
+}
+
+function provinceOf(name) { return managedProvinces().find(p => p.aliases.includes(provinceKey(name))) || null; }
 function provinceSheets(id) {
   return WB.order.filter(n => SheetExists(n) && categoryOf(n).id === 'provinces' && provinceOf(n)?.id === id);
 }
 function selectProvinceRegion(id) {
-  if (!PROVINCE_REGIONS.some(r => r.id === id)) return;
+  if (!managedRegions().some(r => r.id === id)) return;
   state.provinceRegion = id;
   renderSheetCatalog(); saveUIState();
 }
@@ -7011,14 +7144,14 @@ function showProvinceEmpty(province, section) {
   state.currentSheet = null;
   const label = section === 'atm' ? 'خودپرداز' : 'شعبه';
   document.getElementById('sheet-title').textContent = province.name + ' — ' + label;
-  document.getElementById('sheet-sub').textContent = PROVINCE_REGIONS.find(r => r.id === province.region).name + ' / ' + province.name + ' / ' + label;
+  document.getElementById('sheet-sub').textContent = managedRegions().find(r => r.id === province.region).name + ' / ' + province.name + ' / ' + label;
   const host = document.getElementById('sheet-body'); clear(host);
   host.appendChild(el('div',{class:'province-empty',text:section === 'atm'
     ? 'بخش خودپرداز فعلاً خالی است. همه داده‌های فعلی این استان در «شعبه» نگهداری می‌شوند؛ هنوز هیچ رکوردی تفکیک نشده است.'
     : 'برای این استان در این دسته، شیت داده‌ای موجود نیست. هیچ شیت یا رکوردی به‌صورت خودکار ساخته نمی‌شود.'}));
 }
 function openProvinceSection(id, section, scroll = true) {
-  const province = PROVINCES.find(p => p.id === id);
+  const province = managedProvinces().find(p => p.id === id);
   if (!province || !['branch','atm'].includes(section)) return;
   state.provinceRegion = province.region;
   state.provinceView = {province:id, section};
@@ -7037,16 +7170,17 @@ function openProvinceSection(id, section, scroll = true) {
 }
 function renderProvinceHierarchy(names, category) {
   const root = el('section',{class:'province-browser','aria-label':category.name});
-  root.append(el('h3',{text:category.name}),el('p',{class:'hint',text:'۴ منطقه · ۳۱ استان · همه داده‌های فعلی در «شعبه» هستند؛ «خودپرداز» فعلاً خالی است.'}));
+  root.append(el('div',{class:'province-heading'},el('h3',{text:category.name}),el('button',{type:'button',class:'btn btn-ghost btn-sm','data-act':'manage-regions',text:'مدیریت مناطق'})),el('p',{class:'hint',text:managedRegions().filter(r=>r.id!=='unassigned').length.toLocaleString('fa-IR')+' منطقه · ۳۱ استان · همه داده‌های فعلی در «شعبه» هستند؛ «خودپرداز» فعلاً خالی است.'}));
   const regions = el('div',{class:'region-grid','aria-label':'انتخاب منطقه'});
-  const region = PROVINCE_REGIONS.find(r => r.id === state.provinceRegion) || PROVINCE_REGIONS[0];
-  PROVINCE_REGIONS.forEach(r => regions.appendChild(el('button',{
+  const regionList = managedRegions();
+  const region = regionList.find(r => r.id === state.provinceRegion) || regionList[0];
+  regionList.forEach(r => regions.appendChild(el('button',{
     type:'button',class:'region-choice'+(r.id === region.id ? ' active' : ''),
     'data-act':'province-region','data-region':r.id,'aria-pressed':String(r.id === region.id)
   },el('b',{text:r.name}),el('small',{text:r.names.length.toLocaleString('fa-IR')+' استان'}))));
   root.appendChild(regions);
   const grid = el('div',{class:'province-grid','aria-label':region.name});
-  PROVINCES.filter(p => p.region === region.id).forEach(p => {
+  managedProvinces().filter(p => p.region === region.id).forEach(p => {
     const sheets = names.filter(n => provinceOf(n)?.id === p.id);
     const selected = state.provinceView?.province === p.id;
     const buttons = el('div',{class:'province-sections'});
@@ -7059,7 +7193,7 @@ function renderProvinceHierarchy(names, category) {
       el('h4',{text:p.name}),el('p',{class:'hint',text:sheets.length ? 'داده‌ها در شیت اصلی محفوظ‌اند' : 'هنوز داده‌ای در این دسته نیست'}),buttons));
   });
   root.appendChild(grid);
-  const selected = PROVINCES.find(p => p.id === state.provinceView?.province);
+  const selected = managedProvinces().find(p => p.id === state.provinceView?.province);
   if (selected && selected.region === region.id && state.provinceView.section === 'branch') {
     const source = el('div',{class:'province-selection'},el('h4',{text:selected.name+' — شعبه'}));
     const sheets = names.filter(n => provinceOf(n)?.id === selected.id);
@@ -7379,6 +7513,8 @@ function renderSheetCatalog() {
   if (!host) return;
   clear(host);
   if (!WB.order.some(n => IsDataSheet(n) || (state.showSystem && IsSystemSheet(n)))) {
+    const provinces = managedCategories().find(c=>c.id==='provinces');
+    if (provinces && ['all','provinces'].includes(state.catFilter || 'all')) host.appendChild(renderProvinceHierarchy([], provinces));
     host.appendChild(emptyStateNode("\u0647\u06cc\u0686 \u0628\u062e\u0634 \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u062f\u0631 \u06a9\u0627\u0631 \u0646\u06cc\u0633\u062a \u2014 \u0627\u0628\u062a\u062f\u0627 \u0641\u0627\u06cc\u0644 \u062f\u0627\u062f\u0647 \u062e\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f."));
     return;
   }

@@ -711,6 +711,9 @@ test('dashboard buttons and sheet toolbar align side by side and stay within mob
     assert.equal(dims.overflow,false,`width=${width}`);
     assert.ok(dims.rs.every(r=>r.left>=0&&r.right<=width&&r.height===40));
     const [manager,dash,input] = dims.rs;
+    const filterButton = dims.rs.find(r=>r.id==='filter-rows');
+    assert.ok(Math.abs(input.top-filterButton.top)<1, 'Filter stays on the same row as its input');
+    assert.ok(Math.abs(input.left-filterButton.right-8)<1, 'Filter gap is exactly 8px, including mobile');
     assert.equal(manager.top,dash.top);
     assert.ok(manager.left>=dash.right);
     if(width>540) { assert.equal(dash.top,input.top);assert.ok(dash.left>=input.right); }
@@ -720,6 +723,125 @@ test('dashboard buttons and sheet toolbar align side by side and stay within mob
   await page.screenshot({path:path.join(root,'test-results','regions-ui06.png')});
   await panel();
   await page.screenshot({path:path.join(root,'test-results','buttons-ui06.png')});
+});
+
+async function regionManager() {
+  await page.evaluate(()=>openCategory('provinces'));
+  await page.locator('[data-act="manage-regions"]').click();
+  await page.locator('#region-manager-title').waitFor();
+}
+let regionId;
+test('region manager stages renames, additions, province moves and removals without changing rows', async () => {
+  await page.evaluate(()=>{
+    state.regionConfig=null;state.categoryConfig=null;
+    ensureSheet('استان تهران',true).rows=[['شاخص','نام'],['77','اطلاعات محفوظ']];
+    saveState();initUIFromState();
+  });
+  const before=await businessSheets();
+  await regionManager();
+  await page.locator('#region-name').fill('منطقه شمال <b>نام</b>');
+  await page.locator('[data-region-province="2-1"]').check();
+  await page.locator('[data-region-province="1-1"]').uncheck();
+  assert.equal(await page.evaluate(()=>state.regionConfig),null);
+  await page.locator('#region-new').click();
+  regionId=await page.locator('.category-choice.active').getAttribute('data-region-id');
+  await page.locator('#region-name').fill('منطقه آزمایشی');
+  await page.locator('#region-province-search').fill('گلستان');
+  assert.equal(await page.locator('[data-region-province]').count(),1);
+  await page.locator('[data-region-province="1-5"]').check();
+  await page.locator('#region-save').click();
+  assert.equal(await page.evaluate(()=>provinceOf('استان تهران').region),'1');
+  assert.equal(await page.evaluate(()=>provinceOf('خراسان رضوی').region),'unassigned');
+  assert.equal(await page.evaluate(()=>provinceOf('گلستان').region),regionId);
+  assert.equal(await page.locator('[data-region="1"] b').innerText(),'منطقه شمال <b>نام</b>');
+  assert.equal(await page.locator('[data-region="1"] b b').count(),0);
+  const expected=await page.evaluate(()=>state.regionConfig);
+  await regionManager();
+  await page.locator('#region-name').fill('لغوشده');
+  await page.locator('[data-region-province="2-1"]').uncheck();
+  await page.locator('#region-cancel').click();
+  assert.deepEqual(await page.evaluate(()=>state.regionConfig),expected);
+  await regionManager();await page.locator('#region-new').click();await page.keyboard.press('Escape');
+  assert.deepEqual(await page.evaluate(()=>state.regionConfig),expected);
+  await categoryReload();
+  assert.deepEqual(await page.evaluate(()=>state.regionConfig),expected);
+  assert.deepEqual(await businessSheets(),before);
+});
+
+test('region metadata survives all save and backup paths; legacy JSON restores defaults', async () => {
+  const expected=await page.evaluate(()=>state.regionConfig);
+  assert.ok(expected);
+  assert.equal(await page.evaluate(()=>buildStateAttempts().attempts.every(p=>JSON.stringify(p.regionConfig)===JSON.stringify(state.regionConfig))),true);
+  const downloadPromise=page.waitForEvent('download');await page.evaluate(()=>backupAll());
+  const download=await downloadPromise;const bytes=fs.readFileSync(await download.path());
+  assert.deepEqual(JSON.parse(bytes).regionConfig,expected);
+  await page.evaluate(()=>{state.regionConfig=null;});
+  await page.locator('#import-file-input').setInputFiles({name:'regions.json',mimeType:'application/json',buffer:bytes});
+  await page.waitForFunction(()=>state.regionConfig!==null);
+  assert.deepEqual(await page.evaluate(()=>state.regionConfig),expected);
+  await page.evaluate(()=>{state.regionConfig=null;});
+  const chooserPromise=page.waitForEvent('filechooser');await page.evaluate(()=>restoreAll());
+  await (await chooserPromise).setFiles({name:'regions.json',mimeType:'application/json',buffer:bytes});
+  await page.waitForFunction(()=>state.regionConfig!==null);
+  assert.deepEqual(await page.evaluate(()=>state.regionConfig),expected);
+  await categoryReload();assert.deepEqual(await page.evaluate(()=>state.regionConfig),expected);
+  // CSV data import retains the region metadata, while an old full backup uses defaults.
+  await page.evaluate(()=>importCsvText('منطقه تست.csv','نام\nنمونه\n'));
+  assert.deepEqual(await page.evaluate(()=>state.regionConfig),expected);
+  const legacy=JSON.parse(bytes);delete legacy.regionConfig;
+  await page.evaluate(p=>applyJsonBackup('legacy.json',p),legacy);
+  assert.equal(await page.evaluate(()=>state.regionConfig),null);
+  assert.deepEqual(await page.evaluate(()=>managedRegions().map(r=>r.names.length)),[5,1,14,11]);
+  await page.evaluate(p=>applyJsonBackup('regions.json',p),JSON.parse(bytes));
+});
+
+test('region validation, mobile dialog and deleting all regions preserve all 31 provinces', async () => {
+  const before=await businessSheets();
+  await regionManager();
+  for(const invalid of ['','منطقه دو','بدون منطقه']){
+    await page.locator('#region-name').fill(invalid);await page.locator('#region-save').click();
+    assert.match(await page.locator('#region-error').innerText(),/نام منطقه/);
+    assert.equal(await page.locator('#region-manager-title').isVisible(),true);
+  }
+  await page.locator('#region-cancel').click();
+  for(const width of [390,320]){
+    await page.setViewportSize({width,height:900});await regionManager();
+    assert.equal(await page.locator('.category-manager').evaluate(box=>box.scrollWidth<=box.clientWidth+1),true);
+    await page.locator('#region-close').click();
+  }
+  await page.setViewportSize({width:1440,height:1000});await regionManager();
+  await page.locator('[data-region-id="1"]').click();
+  await page.locator('#region-delete').click();
+  assert.equal(await page.locator('[data-region-id="1"]').count(),1);
+  await page.locator('#region-delete').click();await page.locator('#region-save').click();
+  assert.equal(await page.evaluate(()=>provinceOf('استان تهران').region),'unassigned');
+  await page.locator('[data-region="unassigned"]').click();
+  await page.locator('[data-province="2-1"][data-section="branch"]').click();
+  assert.equal(await page.evaluate(()=>state.currentSheet),'استان تهران');
+  assert.match(await page.locator('#sheet-body').innerText(),/اطلاعات محفوظ/);
+  await regionManager();
+  while(await page.locator('[data-region-id]').count()){
+    await page.locator('#region-delete').click();await page.locator('#region-delete').click();
+  }
+  await page.locator('#region-save').click();
+  assert.deepEqual(await page.evaluate(()=>managedRegions().map(r=>[r.id,r.names.length])),[['unassigned',31]]);
+  assert.equal(await page.locator('.province-card').count(),31);
+  assert.deepEqual(await businessSheets(),before);
+  const validation=await page.evaluate(()=>{
+    const r=defaultRegionConfig();r.assignments.push(['2-1','3']);
+    return normalizeRegionConfig(r);
+  });
+  assert.equal(validation,null);
+  // Reassign from the unassigned group after deleting every region.
+  await regionManager();await page.locator('#region-new').click();
+  await page.locator('#region-name').fill('منطقه بازسازی‌شده');
+  await page.locator('[data-region-province="2-1"]').check();
+  await page.screenshot({path:path.join(root,'test-results','region-manager-ui07.png')});
+  await page.locator('#region-save').click();
+  assert.notEqual(await page.evaluate(()=>provinceOf('استان تهران').region),'unassigned');
+  assert.deepEqual(await businessSheets(),before);
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:path.join(root,'test-results','filter-ui07.png')});
 });
 
 test('no uncaught browser errors or duplicate IDs', async () => {
