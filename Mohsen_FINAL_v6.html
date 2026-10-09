@@ -42,6 +42,7 @@
   --glow-c:0 0 0 1px rgba(217,178,107,.35),0 0 28px -6px rgba(217,178,107,.35);
   --r-lg:18px; --r-md:13px; --r-sm:9px;
   --sidebar-w:312px;
+  --sidebar-float:16px;
   --topbar-h:62px;
   --font:"Vazirmatn","Segoe UI",Tahoma,system-ui,-apple-system,sans-serif;
   --mono:"Cascadia Code","Consolas","JetBrains Mono",monospace;
@@ -145,14 +146,18 @@ input,select,textarea{font-family:var(--font);}
 
 /* ============ SIDEBAR ============ */
 #sidebar{
-  width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
-  position:sticky;top:0;height:100vh;
-  background:linear-gradient(180deg,rgba(15,24,48,.92),rgba(9,14,30,.96));
-  border-left:1px solid var(--stroke);
-  display:flex;flex-direction:column;
-  backdrop-filter:blur(18px);
-  z-index:60;
+  position:fixed;z-index:60;
+  top:var(--sidebar-float);right:var(--sidebar-float);bottom:var(--sidebar-float);
+  width:var(--sidebar-w);height:auto;flex:none;
+  display:flex;flex-direction:column;overflow:auto;
+  border-radius:22px;
+  border:1px solid rgba(217,178,107,.32);
+  background:linear-gradient(180deg,rgba(15,24,48,.78),rgba(9,14,30,.86));
+  box-shadow:0 26px 64px -22px rgba(0,0,0,.75),0 0 0 1px rgba(217,178,107,.1),inset 0 1px 0 rgba(255,255,255,.07);
+  backdrop-filter:blur(22px);
 }
+#sidebar::-webkit-scrollbar{width:8px;}
+#sidebar::-webkit-scrollbar-thumb{background:rgba(217,178,107,.35);border-radius:99px;}
 .brand{display:flex;align-items:flex-start;gap:11px;padding:18px 16px 14px;}
 .brand-logo{
   width:42px;height:42px;border-radius:13px;background:var(--grad-main);
@@ -201,7 +206,7 @@ input,select,textarea{font-family:var(--font);}
 .dot.a{background:var(--amber);box-shadow:0 0 8px var(--amber);}
 
 /* ============ MAIN ============ */
-#main-wrap{flex:1;min-width:0;display:flex;flex-direction:column;}
+#main-wrap{flex:1;min-width:0;display:flex;flex-direction:column;margin-right:calc(var(--sidebar-w) + var(--sidebar-float) * 2);}
 
 /* ============ TOPBAR ============ */
 #topbar{
@@ -725,8 +730,13 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 
 /* responsive */
 @media (max-width:980px){
-  #sidebar{position:fixed;right:-100%;transition:.28s;height:100vh;}
-  #sidebar.open{right:0;}
+  #main-wrap{margin-right:0;}
+  #sidebar{
+    top:10px;bottom:10px;height:auto;
+    right:calc(-1 * (var(--sidebar-w) + 28px));
+    transition:right .28s ease;
+  }
+  #sidebar.open{right:10px;}
   #sidebar .brand{padding-top:14px;}
   .burger{display:flex !important;}
 }
