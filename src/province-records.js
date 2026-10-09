@@ -96,6 +96,6 @@ async function startProvinceAdd(selectedName) {
   if(!ok)return;
   modUI.SetupSheetDropdown();modUI.SetupAddSheetDropdown();modUI.SetupNavSheetDropdown();
   state.cp.C16=destination;document.getElementById('cp-c16').value=destination;syncQuickForms();saveState();
-  await ShowMsg('رکورد در «'+destination+'» ذخیره شد.',vbInformation,'Add Record - Done');
+  await ShowMsg('رکورد در «'+destination+'» ذخیره شد.',vbInformation,'افزودن داده — انجام شد');
   state.catFilter='provinces';switchView('sheet');renderSheetView(destination);saveUIState();
 }

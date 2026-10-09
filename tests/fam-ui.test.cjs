@@ -827,10 +827,10 @@ test('region validation, mobile dialog and deleting all regions preserve all 31 
   await page.screenshot({path:path.join(root,'test-results','filter-ui07.png')});
 });
 
-test('supplied FAM logo is embedded unchanged and fits the sidebar on desktop and mobile', async () => {
+test('processed fam-1 logo is embedded unchanged and fits the sidebar on desktop and mobile', async () => {
   const image=page.locator('.brand-logo img');
   const data=await image.getAttribute('src');
-  assert.deepEqual(Buffer.from(data.split(',')[1],'base64'),fs.readFileSync(path.join(root,'fam.png')));
+  assert.deepEqual(Buffer.from(data.split(',')[1],'base64'),fs.readFileSync(path.join(root,'assets/fam-1-glass.png')));
   assert.match(await image.getAttribute('alt'),/فام/);
   assert.equal(await page.locator('.brand-logo svg').count(),0);
   await page.waitForFunction(()=>document.querySelector('.brand-logo img').complete && document.querySelector('.brand-logo img').naturalWidth>0);

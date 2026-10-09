@@ -193,6 +193,7 @@ test('brand stays frozen above the scrollable menu, English translation fits on 
   for(const width of [1440,800,390,320]){
     await page.setViewportSize({width,height:650});
     await page.waitForFunction(()=>{const r=document.getElementById('sidebar').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;});
+    await page.waitForFunction(()=>{const e=document.querySelector('.brand-sub');return e.scrollWidth<=e.clientWidth+1;});
     const top=await page.locator('.brand').evaluate(e=>e.getBoundingClientRect().top);
     await page.locator('#sidebar-scroll').evaluate(e=>e.scrollTop=e.scrollHeight);
     const geometry=await page.evaluate(()=>{
@@ -384,4 +385,42 @@ test('UI-11 keeps the complete Persian brand on one line and category labels cen
   await page.locator('[data-act="toggle-sidebar"]').click();
   await page.waitForFunction(()=>document.getElementById('sidebar').getBoundingClientRect().right<=innerWidth);
   await page.locator('.brand').screenshot({path:path.join(root,'test-results/fam-brand-ui11.png'),animations:'disabled'});
+});
+
+test('UI-12 Persian controls, removed captions and new glass logo retain working actions',async()=>{
+  await setup();await fixture();
+  assert.equal(await page.locator('#view-panel .eyebrow').count(),0);
+  assert.equal(await page.locator('#fold-ops .dash-note').count(),0);
+  assert.equal(await page.locator('#quick-search .dash-note').count(),0);
+  const expected=[['modSearchEngine.SearchRecords','جستجو'],['modAddRecord.StartAddWizard','اضافه کردن داده'],['modRemoveRecord.StartRemoveWizard','پاک کردن داده'],['modUndo.UndoLastRemove','برگشت']];
+  for(const [action,label] of expected)assert.equal((await page.locator(`#fold-ops [data-arg="${action}"]`).innerText()).trim(),label);
+  assert.equal(await page.locator('#fold-ops h3').nth(1).innerText(),'افزودن داده');
+  for(const e of await page.locator('[data-act="export-xlsx"], [data-arg^="modExport."]').all())assert.doesNotMatch(await e.innerText(),/export/i);
+  await page.evaluate(()=>{state.cp.B12='ON';renderExactToggle();});
+  assert.equal(await page.locator('#exact-toggle .txt').innerText(),'روشن');
+  await page.locator('#exact-toggle').click();assert.equal(await page.evaluate(()=>state.cp.B12),'OFF');
+  assert.equal(await page.locator('#exact-toggle .txt').innerText(),'خاموش');
+  assert.equal(await page.locator('#quick-exact-toggle .txt').textContent(),'خاموش');
+  await page.locator('#exact-toggle').click();assert.equal(await page.evaluate(()=>state.cp.B12),'ON');
+  await page.locator('#cp-c7').selectOption('Network Test');await page.locator('#cp-c9').selectOption('FULLTEXT');await page.locator('#cp-c11').fill('ALPHA');
+  await page.locator('#fold-ops [data-arg="modSearchEngine.SearchRecords"]').click();await page.locator('#results-body .match-block[data-match]').waitFor();
+  assert.equal(await page.locator('#results-body input.cell-in[data-ci="1"]').inputValue(),'ALPHA');
+  await modal(1).click();
+  await page.evaluate(()=>switchView('panel'));
+  const logo=await page.locator('.brand-logo img').getAttribute('src');assert.deepEqual(Buffer.from(logo.split(',')[1],'base64'),fs.readFileSync(path.join(root,'assets/fam-1-glass.png')));
+  await page.locator('[data-act="toggle-sidebar"]').click();
+  for(const width of [1440,800,390,320]){
+    await page.setViewportSize({width,height:900});
+    await page.waitForFunction(()=>{const e=document.querySelector('.brand-sub');return e.scrollWidth<=e.clientWidth+1;});
+    const g=await page.evaluate(()=>{
+      const p=document.querySelector('.brand-name').getBoundingClientRect(),en=document.querySelector('.brand-sub').getBoundingClientRect(),logo=document.querySelector('.brand-logo').getBoundingClientRect();
+      return {under:en.top>=p.bottom,aligned:Math.abs(en.right-p.right)<1,notUnderLogo:en.right<logo.left,persian:document.querySelector('.brand-name').scrollWidth<=document.querySelector('.brand-name').clientWidth+1};
+    });
+    assert.ok(g.under&&g.aligned&&g.notUnderLogo&&g.persian,JSON.stringify({width,...g}));
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await page.waitForFunction(()=>document.getElementById('sidebar').getBoundingClientRect().right<=innerWidth);
+  await page.locator('.brand').screenshot({path:path.join(root,'test-results/fam-brand-ui12.png'),animations:'disabled'});
+  await page.locator('[data-act="toggle-sidebar"]').click();
+  await page.locator('#fold-ops').screenshot({path:path.join(root,'test-results/fam-operations-ui12.png'),animations:'disabled'});
 });
