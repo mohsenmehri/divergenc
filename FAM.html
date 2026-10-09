@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-fam-ui="02">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1096,9 +1096,6 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 }
 
 
-.fold-bar,.fold-label-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.fold-bar{margin:0 2px 8px;}
-.fold-bar span{font-size:11px;font-weight:800;letter-spacing:.3px;color:var(--txt-1);}
 .fold-btn{
   width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke);
   background:rgba(2,10,27,.4);color:#e8c47a;
@@ -1112,6 +1109,94 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 .card-body.fold-panel.is-folded{padding-top:0;padding-bottom:0;}
 .card-head .spacer{flex:1;}
 
+
+/* Uniform dashboard frames: padding belongs inside the animated fold,
+   so both expanded and collapsed headers keep all four corners aligned. */
+.dashboard-section{container-type:inline-size;}
+/* Fixed RTL columns: icon | heading | optional action | fold arrow.
+   The last column is reserved in EVERY header, even without an action. */
+.dashboard-section > .card-head{
+  display:grid;grid-template-columns:34px minmax(0,1fr) auto 40px;
+  padding:16px 18px;min-height:74px;gap:12px;align-items:center;
+}
+.dashboard-section > .card-head > .ico{grid-column:1;grid-row:1;}
+.dashboard-section > .card-head > div:not(.ico):not(.spacer){grid-column:2;grid-row:1;min-width:0;}
+.dashboard-section > .card-head > .spacer{display:none;}
+.dashboard-section > .card-head > .btn{grid-column:3;grid-row:1;}
+.dashboard-section > .card-head h3{
+  margin:0;font-family:var(--font);font-size:13px;font-weight:800;
+  line-height:1.7;letter-spacing:0;color:var(--txt-0);overflow-wrap:anywhere;
+}
+.dashboard-section > .card-head .eyebrow{font:700 9px/1.5 var(--font);letter-spacing:0;}
+.dashboard-section > .card-head > .fold-btn{
+  grid-column:4;grid-row:1;justify-self:end;align-self:center;
+  margin:0;width:40px;height:40px;
+}
+.app-version{font-size:10px;color:var(--txt-2);text-align:center;padding:10px 0 0;}
+.dashboard-section > .card-body.fold-panel{padding:0;}
+.dashboard-section > .fold-panel > .fold-inner{padding-inline:18px;}
+.dashboard-section > .fold-panel > .fold-inner::after{content:"";display:block;height:18px;}
+.dashboard-section .grid-add,.dashboard-section .grid-2{gap:16px;}
+@container(max-width:1000px){
+  .dashboard-section .grid-add,.dashboard-section .grid-2{grid-template-columns:1fr;}
+}
+@container(max-width:520px){
+  .dashboard-section .cat-tiles,.dashboard-section .tools-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .dashboard-section .grid-add .search-rows{grid-template-columns:1fr;}
+  .grid-add .card-body > div:last-child{flex-wrap:wrap;}
+}
+.direct-nav-row{display:flex;align-items:center;gap:10px;}
+.direct-nav-row .inp{flex:1;min-width:0;}
+.direct-nav-row .btn{flex-shrink:0;}
+.fold-btn:focus-visible,.burger:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+
+/* One predictable header grid; actions stay together rather than producing
+   uneven rows. ResizeObserver keeps the content/menu below its real height. */
+#topbar{
+  height:auto;min-height:var(--topbar-h);padding:10px 18px;
+  display:grid;grid-template-columns:auto minmax(180px,1fr) minmax(160px,260px) auto auto;
+  grid-template-areas:"menu title search actions user" "menu stats search actions user";
+  gap:4px 14px;align-items:center;
+}
+#topbar > .burger{grid-area:menu;}
+#topbar > .page-title{grid-area:title;}
+#topbar > .top-search{grid-area:search;width:100%;min-width:0;}
+#topbar > .stat-pill{grid-area:stats;justify-self:start;max-width:100%;padding:0;border:0;background:none;font-size:10px;}
+#topbar > .top-actions{grid-area:actions;display:flex;align-items:center;gap:8px;min-width:0;}
+#topbar > .user-chip{grid-area:user;min-width:0;}
+#topbar > .spacer{display:none;}
+#topbar .page-title{font-size:14px;}
+#topbar .page-title small{font-size:9px;letter-spacing:.5px;}
+#topbar .top-actions .icon-btn{width:36px;height:36px;border-radius:10px;}
+#topbar .top-actions .stat-pill{height:36px;border-radius:10px;min-width:0;}
+#topbar #save-indicator{max-width:160px;}
+@media(max-width:1200px){
+  #topbar{
+    grid-template-columns:auto minmax(0,1fr) auto;
+    grid-template-areas:"menu title user" "search search actions" "stats stats stats";
+    gap:8px 12px;
+  }
+  #topbar .top-search{max-width:none;}
+  #topbar > .stat-pill{justify-self:stretch;text-align:start;}
+}
+@media(max-width:760px){
+  #topbar{padding:8px 10px;grid-template-columns:auto minmax(0,1fr) auto;
+    grid-template-areas:"menu title user" "search search search" "actions actions actions" "stats stats stats";}
+  #topbar > .top-actions{flex-wrap:wrap;}
+  #topbar #save-indicator{margin-inline-start:auto;order:1;max-width:calc(100% - 176px);}
+  #topbar .page-title{font-size:12px;}
+  #topbar .page-title span{display:block;white-space:normal;}
+  #topbar .user-chip{padding:4px;}
+  #topbar .user-chip .un,#topbar .user-chip .ur{display:none;}
+  .dashboard-section > .card-head{padding:14px 12px;gap:8px;}
+  .dashboard-section > .fold-panel > .fold-inner{padding-inline:12px;}
+  .dashboard-section > .card-head{grid-template-columns:34px minmax(0,1fr) 40px;}
+  .dashboard-section > .card-head > .fold-btn{grid-column:3;}
+  .dashboard-section > .card-head > .btn{grid-column:1 / -1;grid-row:2;justify-content:center;}
+  .direct-nav-row{align-items:stretch;flex-direction:column;}
+  .direct-nav-row .btn{justify-content:center;}
+  .grid-add .search-rows{grid-template-columns:1fr;}
+}
 </style>
 <script>
 (function () {
@@ -1136,7 +1221,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 <div id="layout">
 
   <!-- ================= SIDEBAR ================= -->
-  <aside id="sidebar">
+  <aside id="sidebar" inert>
     <div class="brand">
       <div class="brand-logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="#241703" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px">
@@ -1230,6 +1315,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-02</b></div>
     </div>
   </aside>
 
@@ -1251,6 +1337,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
       </div>
       <div class="spacer"></div>
       <div class="stat-pill" id="stat-line">در حال بارگذاری…</div>
+      <div class="top-actions">
       <button class="icon-btn accent" title="ورود فایل داده (اکسل / CSV / JSON)" data-act="open-file">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
       </button>
@@ -1264,6 +1351,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
       <button class="icon-btn" title="خروجی‌ها" data-act="run-macro" data-arg="modExport.ExportSearchResults">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
       </button>
+      </div>
       <div class="user-chip">
         <div class="avatar">ND</div>
         <div>
@@ -1360,7 +1448,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         </div>
 
         <!-- SHEET CATEGORIES -->
-        <div class="card">
+        <div class="card dashboard-section">
           <div class="card-head">
             <div class="ico g-cyan">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
@@ -1371,7 +1459,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
             </div>
             <div class="spacer"></div>
             <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
-            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-cats" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-cats" aria-controls="fold-cats" aria-expanded="true" aria-label="جمع و باز کردن دسته‌بندی بخش‌های شبکه" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
           </div>
           <div class="card-body fold-panel" id="fold-cats">
             <div class="fold-inner">
@@ -1381,12 +1469,19 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         </div>
 
         <!-- SEARCH + ADD + REMOVE -->
-        <div class="fold-wrap">
-          <div class="fold-bar">
-            <span>جستجو، افزودن و حذف</span>
-            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-ops" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="card dashboard-section">
+          <div class="card-head">
+            <div class="ico g-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5M18 3v6m-3-3h6"/></svg>
+            </div>
+            <div>
+              <div class="eyebrow">عملیات داده</div>
+              <h3>جستجو، افزودن و حذف</h3>
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-ops" aria-controls="fold-ops" aria-expanded="true" aria-label="جمع و باز کردن جستجو، افزودن و حذف" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
           </div>
-          <div class="fold-panel" id="fold-ops">
+          <div class="card-body fold-panel" id="fold-ops">
             <div class="fold-inner">
         <div class="grid-add">
           <!-- SEARCH -->
@@ -1500,7 +1595,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
         </div>
 
         <!-- TOOLS -->
-          <div class="card">
+          <div class="card dashboard-section">
             <div class="card-head">
               <div class="ico g-violet">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.7-1.6L13.4 2h-2.8l-.4 2.9a7 7 0 0 0-2.7 1.6l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .5.1 1.1.2 1.6l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2.7 1.6l.4 2.9h2.8l.4-2.9a7 7 0 0 0 2.7-1.6l2.3 1 2-3.4-2-1.5c.1-.5.2-1 .2-1.6z"/></svg>
@@ -1510,10 +1605,9 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                 <h3>ابزارها و عملیات‌ها</h3>
               </div>
               <div class="spacer"></div>
-              <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-tools" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+              <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-tools" aria-controls="fold-tools" aria-expanded="true" aria-label="جمع و باز کردن ابزارها و عملیات‌ها" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
             </div>
-            <div class="card-body">
-              <div class="fold-panel" id="fold-tools">
+            <div class="card-body fold-panel" id="fold-tools">
                 <div class="fold-inner">
               <div class="tools-grid">
                 <div class="tool-tile" data-act="run-macro" data-arg="modSearchEngine.SaveChanges">
@@ -1598,36 +1692,52 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
                 </div>
               </div>
                 </div>
-              </div>
+            </div>
+          </div>
 
-              <!-- NAVIGATE -->
-              <div class="field fold-field" style="margin-top:15px">
-                <div class="fold-label-row">
-                <label>باز کردن مستقیم بخش <span class="ref">C41</span></label>
-                <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-nav" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
-                </div>
-                <div class="fold-panel" id="fold-nav">
-                  <div class="fold-inner">
-                <div style="display:flex;gap:9px">
+        <!-- DIRECT NAVIGATION -->
+        <div class="card dashboard-section">
+          <div class="card-head">
+            <div class="ico g-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+            </div>
+            <div>
+              <div class="eyebrow">دسترسی سریع</div>
+              <h3>باز کردن مستقیم بخش</h3>
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-nav" aria-controls="fold-nav" aria-expanded="true" aria-label="جمع و باز کردن کارت دسترسی مستقیم" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          </div>
+          <div class="card-body fold-panel" id="fold-nav">
+            <div class="fold-inner">
+              <div class="field">
+                <label for="cp-c41">انتخاب بخش <span class="ref">C41</span></label>
+                <div class="direct-nav-row">
                   <select class="inp" id="cp-c41"></select>
-                  <button class="btn btn-cyan" style="flex:0 0 auto" data-act="run-macro" data-arg="modUI.NavigateToSheet">
+                  <button class="btn btn-cyan" data-act="run-macro" data-arg="modUI.NavigateToSheet">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
                     باز کردن بخش
                   </button>
                 </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
+        </div>
 
         <!-- FEED + STATUS -->
-        <div class="fold-wrap">
-          <div class="fold-bar">
-            <span>رویداد و وضعیت</span>
-            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-status" aria-expanded="true" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="card dashboard-section">
+          <div class="card-head">
+            <div class="ico g-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>
+            </div>
+            <div>
+              <div class="eyebrow">پایش سیستم</div>
+              <h3>رویداد و وضعیت</h3>
+            </div>
+            <div class="spacer"></div>
+            <button type="button" class="fold-btn" data-act="toggle-fold" data-fold="fold-status" aria-controls="fold-status" aria-expanded="true" aria-label="جمع و باز کردن رویداد و وضعیت" title="جمع و باز کردن"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
           </div>
-          <div class="fold-panel" id="fold-status">
+          <div class="card-body fold-panel" id="fold-status">
             <div class="fold-inner">
         <div class="grid-2">
           <div class="card">
@@ -2388,11 +2498,7 @@ function switchView(name) {
   if (name === "macros") renderMacrosView();
   if (name === "panel" && typeof renderDashboard === "function") renderDashboard();
   updateStatLine();
-  const sb = document.getElementById("sidebar");
-  if (sb) sb.classList.remove("open");
-  document.documentElement.classList.remove("menu-open");
-  const menuBtn = document.querySelector("[data-act=\"toggle-sidebar\"]");
-  if (menuBtn) menuBtn.setAttribute("aria-expanded", "false");
+  // Navigation leaves the menu exactly as the user set it with its button.
   if (typeof saveUIState === "function") saveUIState();
 }
 function GoToControlPanel() { switchView("panel"); }
@@ -3939,7 +4045,11 @@ const modUI = {
     return list;
   },
 
-  SetupSheetDropdown() { fillSelect("cp-c7", this.BuildSheetList(true), state.cp.C7, true, true); },
+  SetupSheetDropdown() {
+    const sheets = this.BuildSheetList(true);
+    fillSelect("cp-c7", sheets, state.cp.C7, true, true);
+    fillSelect("cp-c23", sheets, state.cp.C23, true, true);
+  },
   SetupAddSheetDropdown() { fillSelect("cp-c16", this.BuildSheetList(false), state.cp.C16, true, true); },
   SetupNavSheetDropdown() { fillSelect("cp-c41", this.BuildSheetList(false), state.cp.C41, true, true); },
   SetupKeyDropdown() {
@@ -5093,6 +5203,23 @@ function RunMacro(path) {
    table). Data strings only travel through DOM attributes (dataset),
    never through executable JS strings.
    ================================================================ */
+// Sidebar state is a UI preference, independent of view/workbook state.
+// Only the menu button writes this preference; navigation never changes it.
+const SIDEBAR_PREF_KEY = "fam.ui.menu-open";
+function setSidebarOpen(open) {
+  const sb = document.getElementById("sidebar");
+  const btn = document.querySelector('[data-act="toggle-sidebar"]');
+  if (!sb || !btn) return;
+  sb.classList.toggle("open", open);
+  sb.inert = !open;
+  document.documentElement.classList.toggle("menu-open", open);
+  btn.setAttribute("aria-expanded", String(open));
+}
+function restoreSidebarState() {
+  let open = false;
+  try { open = localStorage.getItem(SIDEBAR_PREF_KEY) === "true"; } catch (e) {}
+  setSidebarOpen(open);
+}
 const ACTIONS = {
   "run-macro": el => RunMacro(el.dataset.arg),
   "run-macro-index": el => RunMacroIndex(el.dataset.mod, el.dataset.name),
@@ -5105,8 +5232,14 @@ const ACTIONS = {
   "reset-all": () => resetAll(),
   "go-cp": () => GoToControlPanel(),
   "switch-view": el => switchView(el.dataset.view),
-  "toggle-sidebar": () => { const sb = document.getElementById("sidebar"); if (!sb) return; const open = sb.classList.toggle("open"); document.documentElement.classList.toggle("menu-open", open); const btn = document.querySelector("[data-act=\"toggle-sidebar\"]"); if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false"); },
-  "toggle-fold": el => { const panel = document.getElementById(el.dataset.fold); if (!panel) return; const folded = panel.classList.toggle("is-folded"); el.setAttribute("aria-expanded", folded ? "false" : "true"); },
+  "toggle-sidebar": () => {
+    const sb = document.getElementById("sidebar");
+    if (!sb) return;
+    const open = !sb.classList.contains("open");
+    setSidebarOpen(open);
+    try { localStorage.setItem(SIDEBAR_PREF_KEY, String(open)); } catch (e) {}
+  },
+  "toggle-fold": el => { const panel = document.getElementById(el.dataset.fold); if (!panel) return; const folded = panel.classList.toggle("is-folded"); panel.inert = folded; el.setAttribute("aria-expanded", folded ? "false" : "true"); },
   "toggle-lock": () => toggleSheetLock(),
   "filter-rows": () => filterSheetRows(),
   "export-sheet-csv": () => exportCurrentSheetCSV(),
@@ -6476,6 +6609,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   bindFxStrength();
   if (typeof bindFxTheme === "function") bindFxTheme();
   bindFloatingLayout();
+  restoreSidebarState();
   startPhotonStage();
   // observable error handling: nothing gets swallowed silently
   window.addEventListener("error", e => {

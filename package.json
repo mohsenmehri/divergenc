@@ -1,0 +1,6 @@
+{
+  "name": "fam-ui-checks",
+  "private": true,
+  "scripts": { "test": "node --test tests/fam-ui.test.cjs" },
+  "devDependencies": { "@sparticuz/chromium": "^138.0.2", "playwright": "^1.56.1" }
+}
