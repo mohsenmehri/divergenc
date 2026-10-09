@@ -1143,7 +1143,7 @@ function renderFeed() {
   if (!host) return;
   const log = WB.sheets[LOG_SHEET];
   const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ""));
-  const colors = { ADD: "#1f6b45", REMOVE: "#c2412a", UNDO: "#8a5a12", EDIT: "#1e4b8a", ERROR: "#c2412a", ARCHIVE_FAIL: "#c2412a" };
+  const colors = { ADD: "#3dffb0", REMOVE: "#ff4d9a", UNDO: "#ffb020", EDIT: "#3ef0ff", ERROR: "#ff5d86", ARCHIVE_FAIL: "#ff5d86" };
   clear(host);
   if (!rows.length) {
     host.appendChild(el("div", { class: "empty-state", style: { padding: "22px" }, text: "\u0647\u0646\u0648\u0632 \u0631\u0648\u06cc\u062f\u062f\u06cc \u062b\u0628\u062a \u0646\u0634\u062f\u0647 \u0627\u0633\u062a." }));
@@ -1383,22 +1383,22 @@ const CAT_ICON_SHAPES = {
   layers: [["path", { d: "m12 2 9 5-9 5-9-5z" }], ["path", { d: "m3 12 9 5 9-5" }], ["path", { d: "m3 17 9 5 9-5" }]]
 };
 const SHEET_CATEGORIES = [
-  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#1e4b8a", icon: "pin",
+  { id: "provinces", name: "استان‌ها و شعب", sub: "LAN · Branch · ATM", blurb: "توپولوژی شعب و خودپرداز — LAN شعبه و uplink به WAN", color: "#3ef0ff", icon: "pin",
     test: n => PROVINCIAL_SHEETS.indexOf(n) >= 0 || /^شعب/.test(n) || /ادغامی|تخریب/.test(n) },
-  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#1f6b45", icon: "server",
+  { id: "datacenters", name: "مراکز داده و دفاتر", sub: "DC · Core · Site", blurb: "هسته شبکه — مرکز داده، ساختمان و سایت سازمانی", color: "#7aa2ff", icon: "server",
     test: n => /مرکز داده|ساختمان|سازمان/.test(n) },
-  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#c2412a", icon: "globe",
+  { id: "services", name: "سرویس‌های شبکه", sub: "MPLS · VPN · VSAT · SIP", blurb: "مدارهای WAN و سرویس — MPLS، VPN، VSAT، SIP، اینترنت", color: "#ff4d9a", icon: "globe",
     test: n => /شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری/.test(n) },
-  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#8a5a12", icon: "signal",
+  { id: "carriers", name: "اپراتورها و جمع‌آوری", sub: "PSP · Last-mile", blurb: "لینک اپراتور و last-mile — PSP، مبین‌نت، آسیاتک", color: "#ffb020", icon: "signal",
     test: n => /جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک/.test(n) },
-  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#3c372f", icon: "chip",
+  { id: "equipment", name: "تجهیزات و چرخه عمر", sub: "Router · Switch · EOL", blurb: "موجودی روتر و سوییچ — مدل، سریال، EOL/EOS", color: "#3dffb0", icon: "chip",
     test: n => /تجهیزات|EOL|EOS/.test(n) },
-  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#6b3a6e", icon: "coins",
+  { id: "costs", name: "هزینه‌ها و قراردادها", sub: "Circuit cost", blurb: "هزینه مدار و قرارداد مخابرات", color: "#c9a6ff", icon: "coins",
     test: n => /هزینه/.test(n) },
-  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#5c564e", icon: "gear",
+  { id: "system", name: "سیستم", sub: "Index · Log", blurb: "لایه سیستم — ایندکس جستجو و تاریخچه", color: "#8ea0b8", icon: "gear",
     test: n => IsSystemSheet(n) },
 ];
-const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#6f675e", icon: "layers", test: () => true };
+const CAT_OTHER = { id: "other", name: "سایر", sub: "Unclassified", blurb: "موجودی که در دامنه‌های بالا جا نشده", color: "#6d7c90", icon: "layers", test: () => true };
 
 // match priority: specific categories before broad keyword ones
 const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacenters", "services", "system"];
@@ -1443,14 +1443,13 @@ function allCatsWithOther() {
 /* ---- dashboard category tiles ---- */
 function emptyStateNode(msg) {
   const art = sEl("svg", { class: "es-art", viewBox: "0 0 320 120", fill: "none", "aria-hidden": "true" },
-    sEl("rect", { x: "18", y: "16", width: "284", height: "88", stroke: "#1a1714", "stroke-width": "1.4" }),
-    sEl("rect", { x: "18", y: "16", width: "284", height: "20", fill: "#1a1714" }),
-    sEl("text", { x: "30", y: "30", fill: "#f6f1e7", "font-size": "10", "font-family": "Vazirmatn, sans-serif", "font-weight": "700" }, "INDEX"),
-    sEl("rect", { x: "30", y: "48", width: "52", height: "16", fill: "#1e4b8a" }),
-    sEl("rect", { x: "90", y: "48", width: "128", height: "16", stroke: "#1a1714" }),
-    sEl("rect", { x: "226", y: "48", width: "60", height: "16", fill: "#c2412a" }),
-    sEl("path", { d: "M30 78 H290 M30 90 H190", stroke: "#d9d0c3", "stroke-width": "1" }),
-    sEl("text", { x: "30", y: "116", fill: "#5c564e", "font-size": "9", "font-family": "Vazirmatn, sans-serif" }, "HQ  ·  BRANCH  ·  ATM"));
+    sEl("rect", { x: "8", y: "8", width: "304", height: "104", rx: "12", stroke: "rgba(62,240,255,.35)" }),
+    sEl("path", { d: "M48 60 H120 M200 60 H272 M160 28 V92", stroke: "#3ef0ff", "stroke-width": "1.4", "stroke-dasharray": "4 6" }),
+    sEl("rect", { x: "120", y: "40", width: "80", height: "40", rx: "8", stroke: "#3ef0ff" }),
+    sEl("text", { x: "160", y: "64", "text-anchor": "middle", fill: "#7af6ff", "font-size": "11", "font-family": "Vazirmatn, sans-serif", "font-weight": "800" }, "CORE"),
+    sEl("circle", { cx: "48", cy: "60", r: "8", stroke: "#3dffb0" }),
+    sEl("circle", { cx: "272", cy: "60", r: "8", stroke: "#ff4d9a" }),
+    sEl("text", { x: "160", y: "104", "text-anchor": "middle", fill: "#9eb0c6", "font-size": "9", "font-family": "Vazirmatn, sans-serif" }, "PE  ·  CORE  ·  CE"));
   return el("div", { class: "empty-state fade-in" },
     art,
     el("div", { class: "es-ico" },
@@ -1494,7 +1493,7 @@ function openCategory(catId) {
 function renderCatBar() {
   const host = document.getElementById("cat-bar");
   if (!host) return;
-  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#1a1714", icon: "layers" }].concat(
+  const cats = [{ id: "all", name: "\u0647\u0645\u0647 \u0628\u062e\u0634\u200c\u0647\u0627", color: "#3ef0ff", icon: "layers" }].concat(
     allCatsWithOther().filter(c => c.id !== "system" || state.showSystem));
   clear(host);
   cats.forEach(c => {
@@ -1664,8 +1663,8 @@ function openSheetCard(name) {
 /* ---- grouped navigator ---- */
 function renderGroupedNavigator() {
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
-  const colors = { provinces: "#1e4b8a", datacenters: "#1f6b45", services: "#c2412a", carriers: "#8a5a12",
-                   equipment: "#3c372f", costs: "#6b3a6e", system: "#5c564e", other: "#6f675e", all: "#1a1714" };
+  const colors = { provinces: "#3ef0ff", datacenters: "#7aa2ff", services: "#ff4d9a", carriers: "#ffb020",
+                   equipment: "#3dffb0", costs: "#c9a6ff", system: "#8ea0b8", other: "#6d7c90", all: "#3ef0ff" };
   const root = document.createDocumentFragment();
   let idx = 0;
   cats.forEach(c => {

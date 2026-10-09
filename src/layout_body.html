@@ -70,8 +70,8 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="page-title">
-        <span id="top-title">داشبورد عملیات شبکه</span>
-        <small id="top-sub">Network Operations Dashboard</small>
+        <span id="top-title">کنسول روتینگ و سوئیچینگ</span>
+        <small id="top-sub">Routing &amp; Switching Console</small>
       </div>
       <div class="top-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -107,53 +107,80 @@
 
         <!-- HERO -->
         <div class="hero">
-          <div class="hero-schematic" aria-hidden="true">
-            <svg viewBox="0 0 200 100" fill="none">
-              <rect x="8" y="10" width="184" height="80" stroke="currentColor" stroke-width="1"/>
-              <rect x="18" y="22" width="36" height="22" fill="#f6f1e7"/>
-              <text x="36" y="37" text-anchor="middle" fill="#1e4b8a" font-size="9" font-family="Vazirmatn, sans-serif" font-weight="700">HQ</text>
-              <path d="M54 33 H78" stroke="currentColor" stroke-width="1.4"/>
-              <rect x="78" y="24" width="18" height="18" stroke="currentColor" stroke-width="1.3"/>
-              <path d="M96 33 H118" stroke="currentColor" stroke-width="1.6"/>
-              <rect x="118" y="24" width="28" height="18" fill="#c2412a"/>
-              <text x="132" y="36" text-anchor="middle" fill="#fff" font-size="8" font-family="Vazirmatn, sans-serif">ATM</text>
-              <path d="M36 44 V62 H150" stroke="currentColor" stroke-width="1.2"/>
-              <rect x="150" y="54" width="30" height="16" stroke="currentColor"/>
-              <text x="165" y="65" text-anchor="middle" fill="#f6f1e7" font-size="8" font-family="Vazirmatn, sans-serif">BR</text>
-              <rect x="70" y="70" width="22" height="12" stroke="currentColor"/>
-              <text x="81" y="79" text-anchor="middle" fill="#f6f1e7" font-size="7" font-family="Vazirmatn, sans-serif">DC</text>
-            </svg>
-            <div class="hero-cap">HQ · شعبه · ATM · DC</div>
-          </div>
           <div class="hero-txt">
-            <span class="hero-tag">مدار · IP · VLAN · شعبه</span>
+            <span class="hero-tag">ROUTING · SWITCHING · FIBER</span>
             <h1>سامانه مدیریت اطلاعات شبکه‌ی <em>LAN, WAN</em> سراسری شعب و خودپردازها مراکز داده</h1>
+          </div>
+          <div class="hero-fabric" aria-hidden="true">
+            <svg viewBox="0 0 640 210" fill="none">
+              <rect x="1.5" y="1.5" width="637" height="207" rx="16" stroke="rgba(62,240,255,.28)"/>
+              <ellipse class="fx-ring" cx="320" cy="100" rx="138" ry="62"/>
+              <ellipse class="fx-ring mag" cx="320" cy="100" rx="98" ry="42"/>
+              <path class="fx-fiber" d="M92 44 C 150 44, 190 78, 248 92"/>
+              <path class="fx-fiber up" d="M392 88 C 450 70, 500 48, 546 44"/>
+              <path class="fx-fiber mag" d="M92 166 C 150 166, 190 128, 248 116"/>
+              <path class="fx-fiber" d="M392 116 C 450 136, 500 160, 546 166"/>
+              <path class="fx-fiber up" d="M320 38 V58"/>
+              <path class="fx-fiber mag" d="M320 142 V162"/>
+              <path class="fx-fiber" d="M54 64 V146"/>
+              <path class="fx-fiber up" d="M586 64 V146"/>
+              <rect class="fx-node" x="18" y="24" width="74" height="40" rx="9"/>
+              <text x="55" y="48" text-anchor="middle" fill="#7af6ff" font-size="12" font-family="Vazirmatn,sans-serif" font-weight="800">PE</text>
+              <rect class="fx-node" x="18" y="146" width="74" height="40" rx="9"/>
+              <text x="55" y="170" text-anchor="middle" fill="#ff8ab4" font-size="12" font-family="Vazirmatn,sans-serif" font-weight="800">CE</text>
+              <rect x="248" y="58" width="144" height="84" rx="12" fill="#0c1622" stroke="#3ef0ff" stroke-opacity=".8"/>
+              <text x="320" y="80" text-anchor="middle" fill="#e9fdff" font-size="12" font-family="Vazirmatn,sans-serif" font-weight="800">CORE</text>
+              <circle class="fx-led" cx="268" cy="98" r="3.2"/>
+              <circle class="fx-led g" cx="284" cy="98" r="3.2"/>
+              <circle class="fx-led" cx="300" cy="98" r="3.2"/>
+              <circle class="fx-led m" cx="316" cy="98" r="3.2"/>
+              <circle class="fx-led g" cx="332" cy="98" r="3.2"/>
+              <circle class="fx-led" cx="348" cy="98" r="3.2"/>
+              <circle class="fx-led m" cx="364" cy="98" r="3.2"/>
+              <circle class="fx-led g" cx="268" cy="116" r="3.2"/>
+              <circle class="fx-led" cx="284" cy="116" r="3.2"/>
+              <circle class="fx-led m" cx="300" cy="116" r="3.2"/>
+              <circle class="fx-led g" cx="316" cy="116" r="3.2"/>
+              <circle class="fx-led" cx="332" cy="116" r="3.2"/>
+              <circle class="fx-led m" cx="348" cy="116" r="3.2"/>
+              <circle class="fx-led g" cx="364" cy="116" r="3.2"/>
+              <rect class="fx-node" x="546" y="24" width="76" height="40" rx="9"/>
+              <text x="584" y="48" text-anchor="middle" fill="#7af6ff" font-size="12" font-family="Vazirmatn,sans-serif" font-weight="800">DC</text>
+              <rect class="fx-node" x="546" y="146" width="76" height="40" rx="9"/>
+              <text x="584" y="170" text-anchor="middle" fill="#3dffb0" font-size="12" font-family="Vazirmatn,sans-serif" font-weight="800">BR</text>
+              <rect class="fx-node" x="276" y="164" width="88" height="32" rx="9"/>
+              <text x="320" y="185" text-anchor="middle" fill="#ffb020" font-size="11" font-family="Vazirmatn,sans-serif" font-weight="800">ATM</text>
+              <text x="320" y="22" text-anchor="middle" fill="#9eb0c6" font-size="10" font-family="Vazirmatn,sans-serif">WAN</text>
+              <text x="20" y="118" fill="#9eb0c6" font-size="9" font-family="Vazirmatn,sans-serif">LAN</text>
+            </svg>
           </div>
         </div>
 
-        <!-- SHEET CATEGORIES -->
-        <div class="card">
-          <div class="card-head">
-            <div class="ico g-cyan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
-            </div>
-            <div>
-              <div class="eyebrow">بخش ها</div>
-              <h3>دسته‌بندی بخش ها شبکه</h3>
-              <div class="sec-lead">دفتر مدار: شعبه، خودپرداز، IP، VLAN، روتر، سوییچ و قرارداد مخابرات.</div>
-            </div>
-            <div class="spacer"></div>
-            <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
+        <div class="jump">
+          <span class="jump-led" aria-hidden="true"></span>
+          <div class="jump-copy">
+            <div class="eyebrow">DIRECT OPEN</div>
+            <label for="cp-c41">باز کردن مستقیم بخش <span class="ref">C41</span></label>
           </div>
-          <div class="card-body">
-            <div class="cat-tiles" id="dash-cats"></div>
+          <select class="inp" id="cp-c41"></select>
+          <button class="btn btn-cyan" data-act="run-macro" data-arg="modUI.NavigateToSheet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
+            باز کردن بخش
+          </button>
+        </div>
+
+        <div class="ops-head">
+          <div>
+            <div class="eyebrow">ROUTING CONSOLE</div>
+            <h2>عملیات روزانه مدار</h2>
           </div>
+          <p>بخش را انتخاب کنید، ستون را مشخص کنید، بعد IP، VLAN، سریال روتر یا شماره مدار را بنویسید.</p>
         </div>
 
         <!-- SEARCH + ADD + REMOVE -->
         <div class="grid-add">
           <!-- SEARCH -->
-          <div class="card">
+          <div class="card lane lookup">
             <div class="card-head">
               <div class="ico g-cyan">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -166,17 +193,17 @@
             <div class="card-body">
               <div class="search-rows">
                 <div class="field">
-                  <label>فیلتر بخش <span class="ref">C7</span></label>
+                  <label><b class="sn">۱</b> فیلتر بخش <span class="ref">C7</span></label>
                   <select class="inp" id="cp-c7"></select>
                 </div>
                 <div class="field">
-                  <label>ستون جستجو <span class="ref">C9</span></label>
+                  <label><b class="sn">۲</b> ستون جستجو <span class="ref">C9</span></label>
                   <select class="inp" id="cp-c9"></select>
                 </div>
               </div>
               <div class="search-value-row" style="margin-top:13px">
                 <div class="field">
-                  <label>مقدار جستجو <span class="ref">C11</span></label>
+                  <label><b class="sn">۳</b> مقدار جستجو <span class="ref">C11</span></label>
                   <input class="inp" type="text" id="cp-c11" placeholder="IP، hostname شعبه، VLAN، سریال روتر، شماره مدار…">
                 </div>
               </div>
@@ -202,7 +229,7 @@
           </div>
 
           <!-- ADD -->
-          <div class="card action-card">
+          <div class="card action-card lane provision">
             <div class="card-head">
               <div class="ico g-green">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
@@ -214,7 +241,7 @@
             </div>
             <div class="card-body">
               <div class="field">
-                <label>بخش مقصد <span class="ref">C16</span></label>
+                <label><b class="sn">۱</b> بخش مقصد <span class="ref">C16</span></label>
                 <select class="inp" id="cp-c16"></select>
               </div>
               <div class="hint">روی شعب، نوع سایت (شعبه یا خودپرداز) پرسیده می‌شود و فیلدها از آخرین رکورد همان مدار پر می‌شوند — مثل clone یک CPE.</div>
@@ -226,7 +253,7 @@
           </div>
 
           <!-- REMOVE -->
-          <div class="card action-card">
+          <div class="card action-card lane retire">
             <div class="card-head">
               <div class="ico g-red">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 7h16M9 7V5h6v2m-8 0 1 13h8l1-13"/></svg>
@@ -238,15 +265,15 @@
             </div>
             <div class="card-body">
               <div class="field">
-                <label>فیلتر بخش <span class="ref">C23</span></label>
+                <label><b class="sn">۱</b> فیلتر بخش <span class="ref">C23</span></label>
                 <select class="inp" id="cp-c23"></select>
               </div>
               <div class="field">
-                <label>ستون جستجو <span class="ref">C25</span></label>
+                <label><b class="sn">۲</b> ستون جستجو <span class="ref">C25</span></label>
                 <select class="inp" id="cp-c25"></select>
               </div>
               <div class="field">
-                <label>مقدار جستجو <span class="ref">C27</span></label>
+                <label><b class="sn">۳</b> مقدار جستجو <span class="ref">C27</span></label>
                 <input class="inp" type="text" id="cp-c27" placeholder="مقدار مورد حذف…">
               </div>
               <div style="display:flex;gap:9px">
@@ -257,6 +284,26 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+
+        <!-- SHEET CATEGORIES -->
+        <div class="card">
+          <div class="card-head">
+            <div class="ico g-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+            </div>
+            <div>
+              <div class="eyebrow">بخش ها</div>
+              <h3>دسته‌بندی بخش ها شبکه</h3>
+              <div class="sec-lead">دفتر مدار: شعبه، خودپرداز، IP، VLAN، روتر، سوییچ و قرارداد مخابرات.</div>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn btn-ghost btn-sm" data-act="switch-view" data-view="sheet">مشاهده همه بخش‌ها ←</button>
+          </div>
+          <div class="card-body">
+            <div class="cat-tiles" id="dash-cats"></div>
           </div>
         </div>
 
@@ -356,16 +403,6 @@
               </div>
 
               <!-- NAVIGATE -->
-              <div class="field" style="margin-top:15px">
-                <label>باز کردن مستقیم بخش <span class="ref">C41</span></label>
-                <div style="display:flex;gap:9px">
-                  <select class="inp" id="cp-c41"></select>
-                  <button class="btn btn-cyan" style="flex:0 0 auto" data-act="run-macro" data-arg="modUI.NavigateToSheet">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14m0 0-6-6m6 6-6 6"/></svg>
-                    باز کردن بخش
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
