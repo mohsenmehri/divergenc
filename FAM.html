@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="12" class="auth-pending">
+<html lang="fa" dir="rtl" data-fam-ui="13" class="auth-pending">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1356,6 +1356,14 @@ html.auth-pending #access-viewer {display:none!important;}
 #viewer-sheet-body{margin-top:24px;max-width:100%;overflow:auto;}
 #viewer-sheet-body .grid-wrap{max-height:75vh;}
 #user-error,#auth-error {white-space:normal;color:#ffabb6;}
+
+.user-editor-mode{border:1px solid rgba(47,212,196,.35);border-radius:10px;padding:12px;margin-bottom:14px;background:rgba(47,212,196,.06);}
+.user-editor-mode h3{margin:0 0 5px;font-size:14px;overflow-wrap:anywhere;}
+.user-editor-mode p{margin:0;}
+#users-status{color:#80e8bf;white-space:normal;overflow-wrap:anywhere;}
+#users-status:empty{display:none;}
+[aria-labelledby="users-title"] .category-list .is-selected{border-color:var(--cyan);background:rgba(47,212,196,.12);}
+[aria-labelledby="users-title"] .category-list button{white-space:normal;overflow-wrap:anywhere;text-align:right;}
 </style>
 </head>
 <body>
@@ -1477,7 +1485,7 @@ html.auth-pending #access-viewer {display:none!important;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-12</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-13</b></div>
     </div>
     </div>
   </aside>
@@ -7873,18 +7881,35 @@ const Access = (() => {
     if(!requirePermission('users'))return;
     const ov=document.getElementById('modal-overlay');const previous=document.activeElement;
     const box=el('div',{class:'mbox category-manager',role:'dialog','aria-modal':'true','aria-labelledby':'users-title'});
-    const list=el('div',{class:'category-list'}),area=el('div',{class:'category-editor'});
-    let selected=current().id;
-    const close=()=>{ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
+    const list=el('div',{class:'category-list','aria-label':'کاربران ذخیره‌شده'}),area=el('div',{class:'category-editor'});
+    const summary=el('p',{id:'users-summary',class:'hint'});
+    const status=el('p',{id:'users-status',role:'status','aria-live':'polite'});
+    // Creation is the default and remains separate from an explicitly selected
+    // account. Saving one new user must never turn the next draft into an edit.
+    let selected=null, saving=false;
+    const close=()=>{if(saving)return;ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
     const button=(text,id,fn)=>el('button',{type:'button',id,class:'btn btn-ghost btn-sm',text,onclick:fn});
     const drawList=()=>{
-      clear(list);db.users.forEach(u=>list.appendChild(button(u.name+' · سطح '+u.role+(u.enabled?'':' · غیرفعال'),'user-'+u.id,()=>{selected=u.id;drawEditor();})));
+      summary.textContent=db.users.length.toLocaleString('fa-IR')+' کاربر ذخیره‌شده · '+db.users.filter(u=>u.enabled&&u.role===1).length.toLocaleString('fa-IR')+' مدیر فعال سطح ۱';
+      clear(list);db.users.forEach(u=>{
+        const item=button('ویرایش: '+u.name+' ('+u.username+') · سطح '+u.role+(u.enabled?'':' · غیرفعال'),'user-'+u.id,()=>{
+          if(saving)return;selected=u.id;status.textContent='';drawList();drawEditor();
+        });
+        item.classList.toggle('is-selected',selected===u.id);
+        item.setAttribute('aria-pressed',String(selected===u.id));
+        list.appendChild(item);
+      });
     };
     const drawEditor=()=>{
       clear(area);
       const original=db.users.find(u=>u.id===selected);
       const draft=original?JSON.parse(JSON.stringify(original)):{id:crypto.randomUUID(),username:'',name:'',role:3,enabled:true,regions:[],sheets:[]};
-      const form=el('form',{id:'user-form'}),error=el('p',{id:'user-error',role:'alert',class:'category-error'});
+      const form=el('form',{id:'user-form','data-mode':original?'edit':'create','data-user-id':draft.id}),error=el('p',{id:'user-error',role:'alert',class:'category-error'});
+      const mode=el('div',{class:'user-editor-mode'},
+        el('h3',{id:'user-mode-title',text:original?'ویرایش کاربر: '+original.username:'افزودن کاربر جدید'}),
+        el('p',{class:'hint',text:original
+          ? 'ذخیره، همین حساب را تغییر می‌دهد؛ حتی اگر نام کاربری را عوض کنید. برای ساخت حساب جداگانه، «کاربر جدید» را بزنید.'
+          : 'این فرم یک حساب مستقل می‌سازد؛ هیچ‌یک از کاربران موجود تغییر نمی‌کنند.'}));
       const un=field('نام کاربری','user-username','text',draft.username),name=field('نام نمایشی','user-name','text',draft.name);
       const pw=field(original?'رمز جدید (خالی = بدون تغییر)':'رمز عبور','user-password','password');pw.input.required=!original;
       un.input.maxLength=40;name.input.maxLength=60;pw.input.maxLength=128;
@@ -7900,11 +7925,11 @@ const Access = (() => {
       if(!sheets.childElementCount)sheets.appendChild(el('p',{class:'hint',text:'برای انتخاب بخش‌ها، ابتدا دادهٔ اکسل وارد کنید.'}));
       scopes.append(el('h4',{text:'مناطق مجاز'}),regions,el('h4',{text:'بخش‌های مجاز'}),sheets);
       const showScopes=()=>{scopes.hidden=role.value!=='4';};role.addEventListener('change',showScopes);showScopes();
-      const save=el('button',{type:'submit',id:'user-save',class:'btn btn-primary',text:'ذخیره کاربر'});
-      form.append(un.node,name.node,pw.node,el('label',{for:'user-role',text:'سطح دسترسی'}),role,
+      const save=el('button',{type:'submit',id:'user-save',class:'btn btn-primary',text:original?'ذخیره تغییرات همین کاربر':'ایجاد کاربر جدید'});
+      form.append(mode,un.node,name.node,pw.node,el('label',{for:'user-role',text:'سطح دسترسی'}),role,
         el('label',{class:'access-check'},enabled,txt('حساب فعال است')),scopes,error,save);
       form.addEventListener('submit',async e=>{
-        e.preventDefault();if(!requirePermission('users'))return;save.disabled=true;error.textContent='';
+        e.preventDefault();if(saving || !requirePermission('users'))return;saving=true;save.disabled=true;error.textContent='';
         try{
           const changed={...draft,username:username(un.input.value),name:name.input.value.trim(),role:Number(role.value),enabled:enabled.checked,
             regions:[...rs],sheets:[...ss],revision:crypto.randomUUID()};
@@ -7914,23 +7939,26 @@ const Access = (() => {
           if(pw.input.value)Object.assign(changed,await credential(pw.input.value));
           if(!can('users'))throw Error('مجوز مدیریت کاربران تغییر کرده است.');
           const next={version:1,users:original?db.users.map(u=>u.id===original.id?changed:u):db.users.concat(changed)};
+          if(original && !next.users.some(u=>u.enabled&&u.role===1))throw Error('حداقل یک مدیر فعال سطح ۱ لازم است. شما در حال ویرایش حساب «'+original.username+'» هستید، نه افزودن کاربر جدید. برای ساخت حساب جداگانه، «کاربر جدید» را بزنید.');
           persist(next);pw.input.value='';
           if(changed.id===activeId){if(!changed.enabled || changed.role!==1){await logout();return;}establish(changed);}
-          selected=changed.id;drawList();drawEditor();updateStatLine();Toast('کاربر ذخیره شد.','ok');
-        }catch(e){error.textContent=e.message;}finally{save.disabled=false;}
+          selected=original?changed.id:null;
+          status.textContent=original?'تغییرات کاربر «'+changed.username+'» ذخیره شد.':'کاربر «'+changed.username+'» با سطح '+changed.role+' ساخته شد. فرم خالی برای کاربر بعدی آماده است.';
+          drawList();drawEditor();updateStatLine();if(!original)area.querySelector('#user-username').focus();Toast(original?'تغییرات کاربر ذخیره شد.':'کاربر جدید ساخته شد.','ok');
+        }catch(e){error.textContent=e.message;}finally{saving=false;save.disabled=false;}
       });
       area.appendChild(form);
       if(original)area.appendChild(button('حذف کاربر','user-delete',async()=>{
-        if(!requirePermission('users'))return;
+        if(saving || !requirePermission('users'))return;
         if(!confirm('کاربر «'+original.name+'» حذف شود؟ داده‌های شیت‌ها حذف نمی‌شوند.'))return;
         try{persist({version:1,users:db.users.filter(u=>u.id!==original.id)});
-          if(original.id===activeId){await logout();return;}selected=db.users[0].id;drawList();drawEditor();
+          if(original.id===activeId){await logout();return;}selected=null;status.textContent='کاربر حذف شد؛ فرم افزودن کاربر جدید آماده است.';drawList();drawEditor();
         }catch(e){error.textContent=e.message;}
       }));
     };
     box.append(el('div',{class:'t'},el('span',{id:'users-title',text:'مدیریت کاربران محلی'}),button('×','users-close',close)),
       el('div',{class:'c'},el('p',{class:'hint',text:'فقط سطح ۱ کاربران را مدیریت می‌کند. رمزها به صورت متن ذخیره یا نمایش داده نمی‌شوند. تغییرات فرم تا ذخیره اعمال نمی‌شوند. حساب‌ها در پشتیبان دادهٔ اکسل/JSON قرار نمی‌گیرند.'}),
-        button('+ کاربر جدید','user-new',()=>{selected=null;drawEditor();}),el('div',{class:'category-manager-grid'},list,area)),
+        button('+ کاربر جدید','user-new',()=>{if(saving)return;selected=null;status.textContent='';drawList();drawEditor();area.querySelector('#user-username').focus();}),summary,status,el('div',{class:'category-manager-grid'},list,area)),
       el('div',{class:'f'},button('بستن','users-done',close)));
     box.addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();close();}

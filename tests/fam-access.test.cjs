@@ -46,6 +46,7 @@ async function fixture(){
   await page.evaluate(()=>flushDeepSave());
 }
 async function manager(){await page.locator('#stat-line').click();await page.locator('#account-manage').click();}
+async function selectOwnUser(){const id=await page.evaluate(()=>Access.current().id);await page.locator('#user-'+id).click();}
 async function createUser(role,username='user'+role,regions=[],sheets=[]){
   await manager();await page.locator('#user-new').click();
   await page.locator('#user-username').fill(username);await page.locator('#user-name').fill('کاربر '+role);
@@ -86,7 +87,7 @@ test('preset admin gate, password hashing, failed login, reload session and logo
 });
 
 test('user manager rejects duplicates and loss of last administrator, no passwords in data backups',async()=>{
-  await setup();await manager();
+  await setup();await manager();await selectOwnUser();
   await page.locator('#user-role').selectOption('2');await page.locator('#user-save').click();
   await page.locator('#user-error').filter({hasText:'حداقل یک مدیر'}).waitFor();
   await page.locator('#user-role').selectOption('1');await page.locator('#user-enabled').uncheck();await page.locator('#user-save').click();
@@ -326,7 +327,7 @@ test('UI-09 account migration sets the requested admin once and preserves other 
   await page.reload();await page.locator('#auth-password').waitFor();await login('admin');
   assert.equal(await page.evaluate(()=>Access.current().role),1);assert.equal(await page.locator('#st-user').innerText(),'admin');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.some(u=>u.username==='user3')),true);
-  await manager();await page.locator('#user-password').fill('changed-admin-secret');await page.locator('#user-save').click();await page.locator('#users-done').click();
+  await manager();await selectOwnUser();await page.locator('#user-password').fill('changed-admin-secret');await page.locator('#user-save').click();await page.locator('#users-done').click();
   await logout();await login('admin','changed-admin-secret');await page.reload();await page.locator('#stat-line').waitFor();
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).adminPresetVersion),1);
   assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'ALPHA');
@@ -423,4 +424,61 @@ test('UI-12 Persian controls, removed captions and new glass logo retain working
   await page.locator('.brand').screenshot({path:path.join(root,'test-results/fam-brand-ui12.png'),animations:'disabled'});
   await page.locator('[data-act="toggle-sidebar"]').click();
   await page.locator('#fold-ops').screenshot({path:path.join(root,'test-results/fam-operations-ui12.png'),animations:'disabled'});
+});
+
+test('UI-13 opens a new-user form and creates successive users of all levels without replacing the existing administrator',async()=>{
+  await setup();await manager();
+  assert.equal(await page.locator('#user-form').getAttribute('data-mode'),'create');
+  assert.equal(await page.locator('#user-username').inputValue(),'');
+  assert.equal(await page.locator('#user-delete').count(),0);
+  // Reproduce the reported starting point: a single saved level-one Mohsen.
+  await selectOwnUser();await page.locator('#user-username').fill('mohsen');await page.locator('#user-name').fill('Mohsen');
+  await page.locator('#user-save').click();await page.waitForFunction(()=>Access.current().username==='mohsen');
+  await page.locator('#users-done').click();await manager();
+  const original=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users[0]);
+  const ids=new Set();
+  // No repeated '+ new' click required, including immediately after creating a level 1 user.
+  for(const role of [1,2,3,4]){
+    assert.equal(await page.locator('#user-form').getAttribute('data-mode'),'create');
+    const id=await page.locator('#user-form').getAttribute('data-user-id');assert.ok(!ids.has(id));ids.add(id);
+    assert.equal(await page.locator('#user-save').innerText(),'ایجاد کاربر جدید');
+    await page.locator('#user-username').fill('new'+role);await page.locator('#user-name').fill('کاربر تازه '+role);
+    await page.locator('#user-password').fill(password);await page.locator('#user-role').selectOption(String(role));
+    await page.locator('#user-save').click();
+    await page.waitForFunction(name=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.some(u=>u.username===name),'new'+role);
+    await page.waitForFunction(()=>document.getElementById('user-username').value==='');
+    assert.equal(await page.locator('#user-error').innerText(),'');
+    assert.equal(await page.locator('#user-password').inputValue(),'');
+    assert.match(await page.locator('#users-status').innerText(),new RegExp('new'+role));
+    assert.equal(await page.locator('#user-delete').count(),0);
+  }
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.find(u=>u.username==='mohsen')),original);
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.map(u=>u.role)),[1,1,2,3,4]);
+  assert.match(await page.locator('#users-summary').innerText(),/۵ کاربر ذخیره‌شده · ۲ مدیر فعال/);
+  for(const width of [1440,390,320]){
+    await page.setViewportSize({width,height:1000});
+    assert.equal(await page.locator('.category-manager').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true);
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+  await page.locator('.category-manager').screenshot({path:path.join(root,'test-results/users-create-ui13.png'),animations:'disabled'});
+  await page.locator('#users-done').click();await logout();await login('new2');
+  assert.equal(await page.evaluate(()=>Access.current().role),2);
+});
+
+test('UI-13 creation cancellation and edit-to-new transitions cannot overwrite an existing account',async()=>{
+  await setup();await manager();await selectOwnUser();
+  const original=await page.evaluate(()=>localStorage.getItem('fam.accounts.v1'));
+  assert.equal(await page.locator('#user-form').getAttribute('data-mode'),'edit');
+  await page.locator('#user-username').fill('user1');await page.locator('#user-name').fill('user1');await page.locator('#user-role').selectOption('2');
+  await page.locator('#user-save').click();await page.locator('#user-error').filter({hasText:'نه افزودن کاربر جدید'}).waitFor();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('fam.accounts.v1')),original);
+  await page.locator('#user-new').click();assert.equal(await page.locator('#user-username').inputValue(),'');
+  await page.locator('#user-username').fill('user1');await page.locator('#user-name').fill('user1');await page.locator('#user-password').fill(password);await page.locator('#user-role').selectOption('2');
+  await page.locator('#user-save').click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.length===2);
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users[0].username),'admin');
+  const saved=await page.evaluate(()=>localStorage.getItem('fam.accounts.v1'));
+  await page.locator('#user-username').fill('not-saved');await page.locator('#user-name').fill('لغو');await page.locator('#users-done').click();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('fam.accounts.v1')),saved);
+  await manager();assert.equal(await page.locator('#user-form').getAttribute('data-mode'),'create');assert.equal(await page.locator('#user-username').inputValue(),'');
 });

@@ -18,3 +18,11 @@ html.auth-pending #access-viewer {display:none!important;}
 #viewer-sheet-body{margin-top:24px;max-width:100%;overflow:auto;}
 #viewer-sheet-body .grid-wrap{max-height:75vh;}
 #user-error,#auth-error {white-space:normal;color:#ffabb6;}
+
+.user-editor-mode{border:1px solid rgba(47,212,196,.35);border-radius:10px;padding:12px;margin-bottom:14px;background:rgba(47,212,196,.06);}
+.user-editor-mode h3{margin:0 0 5px;font-size:14px;overflow-wrap:anywhere;}
+.user-editor-mode p{margin:0;}
+#users-status{color:#80e8bf;white-space:normal;overflow-wrap:anywhere;}
+#users-status:empty{display:none;}
+[aria-labelledby="users-title"] .category-list .is-selected{border-color:var(--cyan);background:rgba(47,212,196,.12);}
+[aria-labelledby="users-title"] .category-list button{white-space:normal;overflow-wrap:anywhere;text-align:right;}

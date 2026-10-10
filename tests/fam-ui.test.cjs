@@ -512,11 +512,13 @@ test('account manager protects identity and preserves it independently of workbo
   const initial = await page.evaluate(() => state.user);
   await page.locator('#stat-line').click();
   await page.locator('#account-manage').click();
+  await page.locator('#user-'+await page.evaluate(()=>Access.current().id)).click();
   await page.locator('#user-name').fill('لغوشده');
   await page.locator('#users-done').click();
   assert.equal(await page.evaluate(() => state.user), initial);
   await page.locator('#stat-line').click();
   await page.locator('#account-manage').click();
+  await page.locator('#user-'+await page.evaluate(()=>Access.current().id)).click();
   assert.equal(await page.locator('#user-password').getAttribute('type'), 'password');
   assert.equal(await page.locator('#user-password').inputValue(), '');
   const name = 'مدیر ارتباطات <b>شبکه</b>';
@@ -534,6 +536,7 @@ test('account manager protects identity and preserves it independently of workbo
   assert.equal(await page.evaluate(() => state.user), name);
   await page.locator('#stat-line').click();
   await page.locator('#account-manage').click();
+  await page.locator('#user-'+await page.evaluate(()=>Access.current().id)).click();
   await page.locator('#user-name').fill('WEB USER');
   await page.locator('#user-save').click();
   await page.waitForFunction(() => state.user === 'WEB USER');
