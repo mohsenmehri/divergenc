@@ -245,7 +245,9 @@ async function provincialFixture(){
   },'provincial.xlsx',true));
 }
 async function beginProvincial(name,section){
-  await page.evaluate(()=>switchView('panel'));await page.locator('#cp-c16').selectOption(name);
+  await page.evaluate(()=>switchView('panel'));
+  if(await page.locator('#studio-tab-add').count())await page.locator('#studio-tab-add').click();
+  await page.locator('#cp-c16').selectOption(name);
   await page.locator('#fold-ops [data-arg="modAddRecord.StartAddWizard"]').click();
   await page.locator(`[data-p="${section}"]`).click();
 }
