@@ -655,3 +655,108 @@ for(const role of [1,2,3,4])test(`UI-15 in-app source viewing and downloads are 
   }
   await page.evaluate(()=>{DownloadFile=originalDownload;delete window.originalDownload;delete window.sourceDownloads;});
 });
+
+test('UI-16 typing and sidebar mirrors persist without serializing workbook; drafts survive reload',async()=>{
+  await setup();await fixture();
+  const before=await page.evaluate(()=>({data:localStorage.getItem(LS_KEY),accounts:localStorage.getItem('fam.accounts.v1')}));
+  await page.evaluate(()=>{window.packCalls=0;const pack=packLZ;packLZ=function(...args){packCalls++;return pack(...args);};});
+  await page.locator('#cp-c11').fill('جستجوی شبکه ۱۲۳');await page.locator('#cp-c27').fill('حذف آزمایشی');
+  assert.equal(await page.locator('#quick-access [data-cp-source="cp-c11"]').inputValue(),'جستجوی شبکه ۱۲۳');
+  await page.locator('#quick-access [data-cp-source="cp-c11"]').evaluate(e=>{e.value='عبارت نهایی';e.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal(await page.locator('#cp-c11').inputValue(),'عبارت نهایی');
+  assert.equal(await page.evaluate(()=>packCalls),0);
+  assert.deepEqual(await page.evaluate(()=>({data:localStorage.getItem(LS_KEY),accounts:localStorage.getItem('fam.accounts.v1')})),before);
+  const draft=await page.evaluate(()=>JSON.parse(localStorage.getItem(LS_KEY_PANEL_DRAFT)));
+  assert.equal(draft.C11,'عبارت نهایی');assert.equal(draft.C27,'حذف آزمایشی');assert.ok(JSON.stringify(draft).length<300);
+  await page.reload();await page.waitForFunction(()=>document.querySelector('#cp-c9 option')&&Access.current());
+  assert.equal(await page.locator('#cp-c11').inputValue(),'عبارت نهایی');assert.equal(await page.locator('#cp-c27').inputValue(),'حذف آزمایشی');
+  assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'ALPHA');
+});
+
+test('UI-16 complete saves fold drafts into data; stale/corrupt drafts cannot override newer data',async()=>{
+  await setup();await fixture();await page.locator('#cp-c11').fill('current search');
+  assert.equal(await page.evaluate(()=>saveState()),true);
+  assert.equal(await page.evaluate(()=>localStorage.getItem(LS_KEY_PANEL_DRAFT)),null);
+  assert.equal(await page.evaluate(()=>readStoredState().cp.C11),'current search');
+  const results=await page.evaluate(()=>{
+    const outcomes=[];
+    for(const raw of ['{bad',JSON.stringify({v:1,baseSavedAt:state.savedAt-1,C11:'stale',C27:'stale'}),
+      JSON.stringify({v:1,baseSavedAt:state.savedAt,C11:{unexpected:true},C27:'bad'})]){
+      localStorage.setItem(LS_KEY_PANEL_DRAFT,raw);outcomes.push(restorePanelDraft());
+    }
+    return {outcomes,value:state.cp.C11};
+  });
+  assert.deepEqual(results,{outcomes:[false,false,false],value:'current search'});
+  // A genuine workbook replacement supersedes the draft and retains its own defaults.
+  await page.locator('#cp-c11').fill('old workbook search');
+  await page.evaluate(()=>{state.cp.C11='';importValidatedSheets(['Replacement'],{Replacement:{rows:[['ID','Name'],['R1','NEW']],merges:[]}},'replacement.xlsx',true);});
+  assert.equal(await page.evaluate(()=>localStorage.getItem(LS_KEY_PANEL_DRAFT)),null);
+  await page.reload();await page.waitForFunction(()=>document.querySelector('#cp-c9 option')&&Access.current());
+  assert.equal(await page.locator('#cp-c11').inputValue(),'');
+  assert.equal(await page.evaluate(()=>WB.sheets.Replacement.rows[1][1]),'NEW');
+});
+
+test('UI-16 draft quota failure uses existing full-save fallback without losing input',async()=>{
+  await setup();await fixture();
+  await page.evaluate(()=>{
+    const set=Storage.prototype.setItem;window.restoreStorage=()=>Storage.prototype.setItem=set;
+    Storage.prototype.setItem=function(key,value){if(key===LS_KEY_PANEL_DRAFT)throw new DOMException('test quota','QuotaExceededError');return set.call(this,key,value);};
+  });
+  await page.locator('#cp-c11').fill('quota fallback');
+  assert.equal(await page.evaluate(()=>readStoredState().cp.C11),'quota fallback');
+  assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'ALPHA');
+  await page.evaluate(()=>restoreStorage());
+});
+
+test('UI-16 unchanged cell blur does not save or convert numeric cells, real edits remain durable',async()=>{
+  await setup();await fixture();
+  await page.evaluate(()=>{WB.sheets['Network Test'].rows.push([42,'NUMBER']);saveState();switchView('sheet');renderSheetView('Network Test');});
+  await page.evaluate(()=>{window.packCalls=0;const pack=packLZ;packLZ=function(...args){packCalls++;return pack(...args);};});
+  const number=page.locator('#sheet-body td[data-r="3"][data-c="1"]');await number.focus();await number.blur();
+  assert.equal(await page.evaluate(()=>packCalls),0);assert.equal(await page.evaluate(()=>cellVal('Network Test',3,1,true)),42);
+  const cell=page.locator('#sheet-body td[data-r="2"][data-c="2"]');await cell.fill('PERSISTED-EDIT');await cell.blur();
+  assert.ok(await page.evaluate(()=>packCalls)>0);
+  assert.equal(await page.evaluate(()=>readStoredState().sheets['Network Test'].rows[1][1]),'PERSISTED-EDIT');
+  await page.reload();await page.waitForFunction(()=>document.querySelector('#cp-c9 option')&&Access.current());
+  assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'PERSISTED-EDIT');
+  assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[2][0]),42);
+});
+
+test('UI-16 visible merge map preserves merged cells, more rows and late data',async()=>{
+  await setup();
+  await page.evaluate(()=>{
+    const rows=Array.from({length:1000},(_,i)=>[i===0?'ID':String(i),i===0?'Name':'R'+i,'extra']);
+    rows[298][1]='MERGE-ANCHOR';rows[900][1]='LATE-ROW';
+    importValidatedSheets(['Merged'],{Merged:{rows,merges:[{r1:299,c1:2,r2:305,c2:3},{r1:700,c1:2,r2:720,c2:3}]}},'merged.xlsx',true);
+    state.pageLimit=300;switchView('sheet');renderSheetView('Merged');
+  });
+  const anchor=()=>page.locator('#sheet-body td[data-r="299"][data-c="2"]');
+  assert.equal(await anchor().getAttribute('rowspan'),'2');assert.equal(await anchor().getAttribute('colspan'),'2');
+  assert.equal(await page.locator('#sheet-body td[data-r="300"][data-c="2"]').count(),0);
+  await page.locator('#sheet-body [data-act="show-more-rows"]').click();
+  assert.equal(await anchor().getAttribute('rowspan'),'7');assert.equal(await anchor().innerText(),'MERGE-ANCHOR');
+  await page.locator('#sheet-body [data-act="show-more-rows"]').click();
+  assert.equal(await page.locator('#sheet-body td[data-r="901"][data-c="2"]').innerText(),'LATE-ROW');
+  const before=await page.evaluate(()=>JSON.stringify(WB.sheets.Merged));
+  assert.equal(await page.evaluate(()=>withTransactionSync(()=>{WB.sheets.Merged.rows[900][1]='BAD';throw Error('rollback test');})),undefined);
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets.Merged)),before);
+});
+
+test('UI-16 drafts survive IndexedDB-only saves even when the UI save timestamp differs',async()=>{
+  await setup();await fixture();
+  for(const explicit of [true,false]){
+    await page.evaluate(()=>{
+      const set=Storage.prototype.setItem;
+      Storage.prototype.setItem=function(key,value){if(key===LS_KEY)throw new DOMException('test quota','QuotaExceededError');return set.call(this,key,value);};
+      WB.sheets['Network Test'].rows[1][1]='DEEP-ONLY';
+    });
+    if(explicit)assert.equal(await page.evaluate(()=>saveNow()),true);
+    else assert.equal(await page.evaluate(()=>saveState()),false);
+    await page.locator('#cp-c11').fill('deep-only '+explicit);
+    assert.equal(await page.evaluate(()=>flushDeepSave()),true);
+    assert.equal(await page.evaluate(async()=>{const p=await idbGet();const draft=JSON.parse(localStorage.getItem(LS_KEY_PANEL_DRAFT));return p.savedAt===draft.baseSavedAt;}),true);
+    await page.reload();await page.waitForFunction(()=>document.querySelector('#cp-c9 option')&&Access.current());
+    assert.equal(await page.locator('#cp-c11').inputValue(),'deep-only '+explicit);
+    assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'DEEP-ONLY');
+  }
+});

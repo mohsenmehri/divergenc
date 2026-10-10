@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="15" class="auth-pending">
+<html lang="fa" dir="rtl" data-fam-ui="16" class="auth-pending">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1493,7 +1493,7 @@ html.auth-pending #access-viewer {display:none!important;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-15</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-16</b></div>
     </div>
     </div>
   </aside>
@@ -2763,6 +2763,7 @@ function renderSheetView(name) {
   if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0628\u062e\u0634 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
   const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
   const locked = !!state.lockedSheets[name];
+  const editable = Access.can("manual") && !locked && !IsSystemSheet(name);
   let lastRow = sh.rows.length;
   while (lastRow > 0 && rowIsEmpty(sh, lastRow)) lastRow--;
 
@@ -2772,8 +2773,8 @@ function renderSheetView(name) {
   const mergeMap = new Map();
   (sh.merges || []).forEach(m => {
     if (!m) return;
-    for (let rr = m.r1; rr <= m.r2; rr++)
-      for (let cc = m.c1; cc <= m.c2; cc++)
+    for (let rr = Math.max(1, m.r1); rr <= Math.min(m.r2, limit); rr++)
+      for (let cc = Math.max(1, m.c1); cc <= Math.min(m.c2, lastCol, MAX_DATA_COLS); cc++)
         mergeMap.set(rr + "," + cc, m);
   });
   const maxC = Math.min(lastCol, MAX_DATA_COLS);
@@ -2790,7 +2791,6 @@ function renderSheetView(name) {
       const m = mergeMap.get(r + "," + c);
       if (m && (m.r1 !== r || m.c1 !== c)) continue; // covered by merge anchor
       const v = cellVal(name, r, c, true);
-      const editable = Access.can("manual") && !locked && !IsSystemSheet(name);
       const tdAttrs = { "data-c": c, "data-r": r, text: (v === null || v === undefined ? "" : v) };
       if (m) {
         const rs = Math.min(m.r2, limit) - m.r1 + 1;
@@ -2815,13 +2815,16 @@ function renderSheetView(name) {
   }
 
   // cell editing → write back
-  if (Access.can("manual") && !locked && !IsSystemSheet(name)) {
+  if (editable) {
     body.querySelectorAll("td[contenteditable]").forEach(td => {
       td.addEventListener("blur", () => {
         if (!Access.require("manual")) return;
         const r = parseInt(td.parentElement.dataset.r, 10);
         const c = parseInt(td.dataset.c, 10);
         const newVal = td.textContent.trim();
+        // Merely focusing a cell must not rewrite/compress the whole workbook.
+        const previous = cellVal(name, r, c, true);
+        if (newVal === String(previous ?? "")) return;
         setCellVal(name, r, c, newVal, true);
         saveState();
         if (name === IDX_SHEET) updateStatLine();
@@ -3184,6 +3187,9 @@ function buildStateAttempts() {
 }
 function saveState() {
   const built = buildStateAttempts();
+  // Use the payload timestamp, not the UI indicator (which can differ for
+  // IndexedDB-only saves). Drafts belong to this attempted workbook snapshot.
+  panelDraftBaseAt = built.base.savedAt;
   let ok = false;
   for (const payload of built.attempts) {
     try {
@@ -3195,6 +3201,9 @@ function saveState() {
   }
   scheduleDeepSave(built.base);
   if (ok) {
+    // The full payload now includes both draft fields. An old draft must never
+    // override a later import, reset, or successfully saved workbook.
+    try { localStorage.removeItem(LS_KEY_PANEL_DRAFT); } catch (e) {}
     saveUIState();
     updateSaveIndicator();
     return true;
@@ -3220,6 +3229,7 @@ function applyStatePayload(p) {
   state.user = normalizeUserName(p.user);
   state.showSystem = !!p.showSystem;
   state.savedAt = p.savedAt || 0;
+  panelDraftBaseAt = state.savedAt;
   state.categoryConfig = normalizeCategoryConfig(p.categoryConfig);
   state.regionConfig = normalizeRegionConfig(p.regionConfig);
   return true;
@@ -3234,6 +3244,35 @@ async function loadDeepState() {
     if (!p) return false;
     if ((p.savedAt || 0) < (state.savedAt || 0)) return false; // localStorage is newer
     return applyStatePayload(p);
+  } catch (e) { return false; }
+}
+
+/* UI-16: typing is not a workbook mutation. Persist only these two small
+   fields, synchronously, so reload/closing the tab needs no debounce flush.
+   Tie the draft to the saved workbook; reject stale drafts after data restore.
+   The full save path, rollback snapshots and data durability stay unchanged. */
+const LS_KEY_PANEL_DRAFT = LS_KEY + "_panel_draft";
+let panelDraftBaseAt = 0;
+function savePanelDraft() {
+  try {
+    localStorage.setItem(LS_KEY_PANEL_DRAFT, JSON.stringify({
+      v: 1, baseSavedAt: panelDraftBaseAt,
+      C11: state.cp.C11, C27: state.cp.C27
+    }));
+    return true;
+  } catch (e) {
+    // Preserve the existing quota fallback and visible failure handling.
+    return saveState();
+  }
+}
+function restorePanelDraft() {
+  try {
+    const draft = JSON.parse(localStorage.getItem(LS_KEY_PANEL_DRAFT) || "null");
+    if (!draft || draft.v !== 1 || draft.baseSavedAt !== panelDraftBaseAt
+      || typeof draft.C11 !== "string" || typeof draft.C27 !== "string") return false;
+    state.cp.C11 = draft.C11;
+    state.cp.C27 = draft.C27;
+    return true;
   } catch (e) { return false; }
 }
 
@@ -3314,7 +3353,7 @@ function resetAll() {
   ConfirmBox("\u0628\u0627\u0632\u0646\u0634\u0627\u0646\u06cc \u062f\u0627\u062f\u0647\u200c\u0647\u0627", "\u0647\u0645\u0647 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u0630\u062e\u06cc\u0631\u0647\u200c\u0634\u062f\u0647 \u062f\u0631 \u0627\u06cc\u0646 \u0645\u0631\u0648\u0631\u06af\u0631 \u067e\u0627\u06a9 \u0645\u06cc\u200c\u0634\u0648\u062f \u0648 \u062f\u0627\u062f\u0647\u200c\u0647\u0627\u06cc \u0627\u0648\u0644\u06cc\u0647 \u0641\u0627\u06cc\u0644 Excel \u0628\u0627\u0632\u0645\u06cc\u200c\u06af\u0631\u062f\u062f. \u0645\u0637\u0645\u0626\u0646\u06cc\u062f\u061f",
     async () => {
       if (!Access.require("admin")) return;
-      try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY_UI); } catch (e) {}
+      try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY_UI); localStorage.removeItem(LS_KEY_PANEL_DRAFT); } catch (e) {}
       try { if (typeof idbDelete === "function") await idbDelete(); } catch (e) {}
       location.reload();
     });
@@ -5494,8 +5533,9 @@ function restoreSidebarState() {
   setSidebarOpen(open);
 }
 /* Sidebar forms mirror the canonical dashboard controls, not workbook copies. */
-function syncQuickForms() {
+function syncQuickForms(sourceId) {
   document.querySelectorAll('#quick-access [data-cp-source]').forEach(mirror => {
+    if (sourceId && mirror.dataset.cpSource !== sourceId) return;
     const source = document.getElementById(mirror.dataset.cpSource);
     if (!source) return;
     if (source.tagName === 'SELECT') {
@@ -5510,6 +5550,7 @@ function syncQuickForms() {
       mirror.setAttribute('aria-pressed', String(source.classList.contains('on')));
     }
   });
+  if (sourceId) return; // typing cannot change options or undo status
   const undo = document.getElementById('quick-undo-status');
   if (undo) undo.textContent = state.undo && state.undo.valid ? 'آخرین حذف برای بازگردانی آماده است.' : 'فعلاً حذف قابل بازگردانی وجود ندارد.';
 }
@@ -5555,11 +5596,12 @@ function buildQuickForms() {
     if (!source) return;
     source.value = mirror.value;
     source.dispatchEvent(new Event(type, {bubbles:true}));
-    syncQuickForms();
+    // The canonical event synchronizes mirrors once in the document listener.
   });
   // Canonical dashboard events update any open sidebar form too.
   for (const type of ['input', 'change']) document.addEventListener(type, event => {
-    if (event.target.id && event.target.id.startsWith('cp-')) syncQuickForms();
+    if (event.target.id && event.target.id.startsWith('cp-'))
+      syncQuickForms(type === 'input' && event.target.tagName === 'INPUT' ? event.target.id : undefined);
   });
   root.addEventListener('keydown', event => {
     if (event.target.dataset.act === 'quick-exact' && ['Enter',' '].includes(event.key)) {
@@ -5662,12 +5704,12 @@ function bindPanelEvents() {
   const g = id => document.getElementById(id);
   g("cp-c7").addEventListener("change", e => { state.cp.C7 = e.target.value; onSearchSheetChanged(); });
   g("cp-c9").addEventListener("change", e => { state.cp.C9 = e.target.value; saveState(); });
-  g("cp-c11").addEventListener("input", e => { state.cp.C11 = e.target.value; saveState(); });
+  g("cp-c11").addEventListener("input", e => { state.cp.C11 = e.target.value; savePanelDraft(); });
   g("cp-c11").addEventListener("keydown", e => { if (e.key === "Enter") RunMacro("modSearchEngine.SearchRecords"); });
   g("cp-c16").addEventListener("change", e => { state.cp.C16 = e.target.value; saveState(); });
   g("cp-c23").addEventListener("change", e => { state.cp.C23 = e.target.value; onRemoveSheetChanged(); });
   g("cp-c25").addEventListener("change", e => { state.cp.C25 = e.target.value; saveState(); });
-  g("cp-c27").addEventListener("input", e => { state.cp.C27 = e.target.value; saveState(); });
+  g("cp-c27").addEventListener("input", e => { state.cp.C27 = e.target.value; savePanelDraft(); });
   g("cp-c27").addEventListener("keydown", e => { if (e.key === "Enter") RunMacro("modRemoveRecord.StartRemoveWizard"); });
   g("cp-c41").addEventListener("change", e => { state.cp.C41 = e.target.value; saveState(); });
   g("exact-toggle").addEventListener("click", () => modUI.ToggleExactMatch());
@@ -7011,6 +7053,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     state.cp.C41 = "";
     state.user = "WEB USER";
   }
+  restorePanelDraft();
   await Access.start();
   if (!Access.can("admin")) state.showSystem = false;
   if (Access.current().role === 4) {
