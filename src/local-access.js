@@ -55,6 +55,7 @@ const Access = (() => {
   function can(operation,sheet){
     const u=current();if(!u)return false;
     if(operation==='users')return u.role===1;
+    if(operation==='own-password')return true;
     if(operation==='read'){
       if(!SheetExists(sheet))return false;
       if(u.role<=2)return true;
@@ -161,8 +162,70 @@ const Access = (() => {
     const u=current();if(!u)return;
     const content=el('div',{},el('p',{text:u.name+' — '+u.username+' — سطح '+u.role}));
     if(can('users'))content.appendChild(el('button',{type:'button',class:'btn btn-primary',id:'account-manage',text:'مدیریت کاربران',onclick:()=>{document.querySelector('#modal-overlay button[data-id="1"]')?.click();manageUsers();}}));
+    content.appendChild(el('button',{type:'button',class:'btn btn-primary',id:'account-password',text:can('users')?'تغییر رمز عبور من':'ویرایش حساب من (فقط رمز عبور)',onclick:()=>{document.querySelector('#modal-overlay button[data-id="1"]')?.click();editOwnPassword();}}));
     content.appendChild(el('button',{type:'button',class:'btn btn-ghost',id:'account-logout',text:'خروج از حساب',onclick:()=>logout()}));
     ModalBox({title:'حساب کاربری',contentNode:content,buttons:[{id:IDOK,label:'بستن',cls:'ok'}]});
+  }
+  // No target ID or profile payload is accepted: this path can only replace the
+  // credentials of the authenticated owner. Full account edits stay level-1-only.
+  function editOwnPassword(){
+    if(!requirePermission('own-password'))return;
+    const ownerId=current().id, ownerRevision=db.users.find(u=>u.id===ownerId).revision;
+    const ov=document.getElementById('modal-overlay'),previous=document.activeElement;
+    const box=el('div',{class:'mbox own-password-dialog',role:'dialog','aria-modal':'true','aria-labelledby':'password-title'});
+    const form=el('form',{id:'password-form'}),error=el('p',{id:'password-error',role:'alert',class:'category-error'});
+    const old=field('رمز عبور فعلی','password-current','password');old.input.autocomplete='current-password';
+    const fresh=field('رمز عبور جدید','password-new','password');
+    const repeat=field('تکرار رمز عبور جدید','password-confirm','password');
+    [old,fresh,repeat].forEach(f=>{f.input.maxLength=128;f.input.dir='ltr';});
+    const save=el('button',{type:'submit',id:'password-save',class:'btn btn-primary',text:'ذخیره رمز جدید'});
+    let saving=false;
+    const close=()=>{
+      if(saving)return;
+      [old,fresh,repeat].forEach(f=>{f.input.value='';});
+      ov.classList.remove('show');clear(ov);if(previous?.isConnected)previous.focus();
+    };
+    const closeButton=el('button',{type:'button',id:'password-close',class:'btn btn-ghost btn-sm',text:'×','aria-label':'بستن تغییر رمز',onclick:close});
+    const cancel=el('button',{type:'button',id:'password-cancel',class:'btn btn-ghost',text:'انصراف',onclick:close});
+    form.append(el('div',{class:'c'},el('p',{text:'حساب: '+current().username}),
+      el('p',{class:'hint',text:'فقط رمز عبور حساب خودتان تغییر می‌کند. نام کاربری، نام نمایشی، سطح و محدودهٔ دسترسی بدون تغییر می‌مانند.'}),
+      old.node,fresh.node,repeat.node,error),el('div',{class:'f'},save,cancel));
+    form.addEventListener('submit',async e=>{
+      e.preventDefault();if(saving || !requirePermission('own-password'))return;
+      const currentPassword=old.input.value,newPassword=fresh.input.value,confirmation=repeat.input.value;
+      saving=true;save.disabled=true;cancel.disabled=true;closeButton.disabled=true;error.textContent='';
+      [old,fresh,repeat].forEach(f=>{f.input.disabled=true;});
+      try{
+        if(current()?.id!==ownerId)throw Error('حساب واردشده تغییر کرده است؛ دوباره وارد شوید.');
+        if(newPassword!==confirmation)throw Error('تکرار رمز جدید مطابقت ندارد.');
+        const stored=validate(JSON.parse(localStorage.getItem(KEY)));
+        const owner=stored.users.find(u=>u.id===ownerId&&u.enabled);
+        if(!owner || owner.revision!==ownerRevision)throw Error('اطلاعات حساب تغییر کرده است؛ دوباره وارد شوید.');
+        if(await hashPassword(currentPassword,owner.salt)!==owner.hash)throw Error('رمز عبور فعلی نادرست است.');
+        const replacement=await credential(newPassword);
+        // Re-read after PBKDF2 awaits. Do not overwrite a concurrent admin reset,
+        // revocation, or unrelated account update with this form's old snapshot.
+        const latest=validate(JSON.parse(localStorage.getItem(KEY)));
+        const live=latest.users.find(u=>u.id===ownerId&&u.enabled);
+        if(!form.isConnected || !can('own-password') || current()?.id!==ownerId || !live || live.revision!==ownerRevision)
+          throw Error('اطلاعات حساب تغییر کرده است؛ دوباره وارد شوید.');
+        const changed={...live,...replacement,revision:crypto.randomUUID()};
+        persist({...latest,users:latest.users.map(u=>u.id===ownerId?changed:u)});
+        establish(changed); // keep this tab signed in; other tabs are revoked by storage events
+        saving=false;close();Toast('رمز عبور حساب شما تغییر کرد.','ok');
+      }catch(err){error.textContent=err.message;}
+      finally{saving=false;save.disabled=false;cancel.disabled=false;closeButton.disabled=false;[old,fresh,repeat].forEach(f=>{f.input.disabled=false;});}
+    });
+    box.append(el('div',{class:'t'},el('span',{id:'password-title',text:'تغییر رمز عبور حساب من'}),closeButton),form);
+    box.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){e.preventDefault();close();}
+      if(e.key==='Tab'){
+        const fs=[...box.querySelectorAll('input,button')].filter(n=>!n.disabled&&n.getClientRects().length),first=fs[0],last=fs.at(-1);
+        if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
+        else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+      }
+    });
+    clear(ov);ov.appendChild(box);ov.classList.add('show');old.input.focus();
   }
   function manageUsers(){
     if(!requirePermission('users'))return;
@@ -290,5 +353,5 @@ const Access = (() => {
     // Data/region changes in another tab may change the allowed region of a sheet.
     if(e.key===LS_KEY && current()?.role===4){document.documentElement.classList.add('auth-pending');document.getElementById('access-viewer')?.remove();location.reload();}
   });
-  return Object.freeze({start,current,can,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,manageUsers,logout,renderViewer});
+  return Object.freeze({start,current,can,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,editOwnPassword,manageUsers,logout,renderViewer});
 })();

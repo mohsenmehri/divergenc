@@ -26,3 +26,11 @@ html.auth-pending #access-viewer {display:none!important;}
 #users-status:empty{display:none;}
 [aria-labelledby="users-title"] .category-list .is-selected{border-color:var(--cyan);background:rgba(47,212,196,.12);}
 [aria-labelledby="users-title"] .category-list button{white-space:normal;overflow-wrap:anywhere;text-align:right;}
+
+.own-password-dialog{min-width:0;max-width:520px;}
+.own-password-dialog .c{white-space:normal;}
+.own-password-dialog .access-field input{text-align:left;}
+#password-close{margin-inline-start:auto;}
+.own-password-dialog .f{display:flex;gap:8px;flex-wrap:wrap;}
+#password-error{color:#ffabb6;white-space:normal;overflow-wrap:anywhere;}
+#account-password{margin-inline:6px;margin-block:6px;}

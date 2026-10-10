@@ -482,3 +482,122 @@ test('UI-13 creation cancellation and edit-to-new transitions cannot overwrite a
   assert.equal(await page.evaluate(()=>localStorage.getItem('fam.accounts.v1')),saved);
   await manager();assert.equal(await page.locator('#user-form').getAttribute('data-mode'),'create');assert.equal(await page.locator('#user-username').inputValue(),'');
 });
+
+async function ownPasswordMenu(){
+  if(await page.locator('#access-viewer').count())await page.getByRole('button',{name:'حساب کاربری / خروج'}).click();
+  else await page.locator('#stat-line').click();
+  await page.locator('#account-password').click();await page.locator('#password-current').waitFor();
+}
+const accounts=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')));
+async function fillOwnPassword(old,next,confirmation=next){
+  await page.locator('#password-current').fill(old);await page.locator('#password-new').fill(next);await page.locator('#password-confirm').fill(confirmation);
+}
+for(const role of [1,2,3,4])test(`UI-14 level ${role} changes only own password and retains profile, scopes and session`,async()=>{
+  await setup();await fixture();
+  const region=await page.evaluate(()=>managedRegions()[0].id);
+  await createUser(role,'user'+role,role===4?[region]:[],role===4?['Network Test']:[]);await logout();await login('user'+role);
+  const before=await accounts(),owner=before.users.find(u=>u.username==='user'+role);
+  const workbook=await page.evaluate(()=>JSON.stringify(WB.sheets));
+  if(role!==1){
+    await page.evaluate(()=>Access.accountMenu());assert.equal(await page.locator('#account-manage').count(),0);await modal(1).click();
+    assert.equal(await page.evaluate(()=>Access.can('users')),false);
+    await page.evaluate(()=>Access.manageUsers());assert.equal(await page.locator('#user-form').count(),0);
+  }
+  let otherTab;
+  if(role===2){
+    otherTab=await context.newPage();await otherTab.goto(url);
+    await otherTab.locator('#auth-username').fill('user2');await otherTab.locator('#auth-password').fill(password);await otherTab.locator('#auth-submit').click();
+    await otherTab.waitForFunction(()=>Access.current()?.role===2);
+  }
+  await ownPasswordMenu();
+  assert.equal(await page.locator('#password-form input').count(),3);
+  assert.equal(await page.locator('#password-form input:not([type="password"]), #password-form select').count(),0);
+  await fillOwnPassword(password,'next-password-'+role);
+  await page.locator('#password-save').click();await page.locator('#password-form').waitFor({state:'detached'});
+  if(otherTab){await otherTab.locator('#auth-password').waitFor();await otherTab.close();}
+  const after=await accounts(),changed=after.users.find(u=>u.id===owner.id);
+  assert.notEqual(changed.hash,owner.hash);assert.notEqual(changed.salt,owner.salt);assert.notEqual(changed.revision,owner.revision);
+  assert.deepEqual({...changed,hash:owner.hash,salt:owner.salt,revision:owner.revision},owner);
+  assert.deepEqual(after.users.filter(u=>u.id!==owner.id),before.users.filter(u=>u.id!==owner.id));
+  assert.equal(after.adminPresetVersion,before.adminPresetVersion);
+  assert.ok(!JSON.stringify(after).includes('next-password-'+role));
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(sessionStorage.getItem('fam.session.v1'))),{id:owner.id,revision:changed.revision});
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets)),workbook);
+  await page.reload();await page.waitForFunction(()=>Access.current()&&!document.documentElement.classList.contains('auth-pending'));
+  assert.equal(await page.evaluate(()=>Access.current().id),owner.id);
+  await logout();await page.locator('#auth-username').fill('user'+role);await page.locator('#auth-password').fill(password);await page.locator('#auth-submit').click();
+  await page.locator('#auth-error').filter({hasText:'نادرست'}).waitFor();
+  await login('user'+role,'next-password-'+role);
+  if(role===4){assert.equal(await page.locator('#layout').isVisible(),false);assert.equal(await page.evaluate(()=>Access.can('manual')),false);}
+});
+
+test('UI-14 password validation, cancellation, narrow layout and ignored foreign target cannot change profiles',async()=>{
+  await setup();await createUser(2);await logout();await login('user2');
+  const before=await accounts(),admin=before.users.find(u=>u.role===1);
+  await page.evaluate(id=>Access.editOwnPassword(id,{role:1,username:'hijacked'}),admin.id);
+  await fillOwnPassword(password,'safe-new-password','mismatch');await page.locator('#password-save').click();
+  await page.locator('#password-error').filter({hasText:'مطابقت ندارد'}).waitFor();assert.deepEqual(await accounts(),before);
+  await fillOwnPassword('incorrect','safe-new-password');await page.locator('#password-save').click();
+  await page.locator('#password-error').filter({hasText:'فعلی نادرست'}).waitFor();assert.deepEqual(await accounts(),before);
+  await fillOwnPassword(password,'123');await page.locator('#password-save').click();
+  await page.locator('#password-error').filter({hasText:'۴ تا ۱۲۸'}).waitFor();assert.deepEqual(await accounts(),before);
+  for(const width of [390,320]){
+    await page.setViewportSize({width,height:650});
+    await page.waitForFunction(()=>{const e=document.querySelector('.own-password-dialog'),r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&e.scrollWidth<=e.clientWidth+1;});
+  }
+  fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+  await page.screenshot({path:path.join(root,'test-results/own-password-ui14-mobile.png')});
+  await page.locator('#password-cancel').click();assert.deepEqual(await accounts(),before);
+  await ownPasswordMenu();assert.equal(await page.locator('#password-new').inputValue(),'');await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#password-form').count(),0);
+  await page.evaluate(id=>Access.editOwnPassword(id,{role:1}),admin.id);
+  await fillOwnPassword(password,'safe-new-password');await page.locator('#password-save').click();await page.locator('#password-form').waitFor({state:'detached'});
+  const after=await accounts();assert.deepEqual(after.users.find(u=>u.id===admin.id),admin);
+  const own=after.users.find(u=>u.username==='user2');assert.equal(own.role,2);assert.notEqual(own.hash,before.users.find(u=>u.id===own.id).hash);
+});
+
+test('UI-14 rejects stale password writes after hashing and preserves unrelated concurrent account updates',async()=>{
+  await setup();await createUser(2);await logout();await login('user2');
+  // Hold the real WebCrypto derivation, deterministically simulating an admin
+  // change during hashing without relying on machine-speed timing.
+  await page.evaluate(()=>{
+    const derive=crypto.subtle.deriveBits.bind(crypto.subtle);
+    crypto.subtle.deriveBits=async(...args)=>{await new Promise(resolve=>{window.releasePasswordHash=resolve;});return derive(...args);};
+  });
+  await ownPasswordMenu();await fillOwnPassword(password,'safe-new-password');await page.locator('#password-save').click();
+  await page.waitForFunction(()=>typeof window.releasePasswordHash==='function');
+  await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('fam.accounts.v1'));d.users.find(u=>u.username==='user2').revision='admin-reset';localStorage.setItem('fam.accounts.v1',JSON.stringify(d));window.releasePasswordHash();window.releasePasswordHash=null;});
+  const reset=await accounts();await page.waitForFunction(()=>typeof window.releasePasswordHash==='function');await page.evaluate(()=>window.releasePasswordHash());
+  await page.locator('#password-error').filter({hasText:'اطلاعات حساب تغییر'}).waitFor();assert.deepEqual(await accounts(),reset);
+  await page.reload();await page.locator('#auth-username').waitFor();await login('user2');
+  await page.evaluate(()=>{
+    const derive=crypto.subtle.deriveBits.bind(crypto.subtle);let held=false;
+    crypto.subtle.deriveBits=async(...args)=>{if(!held){held=true;await new Promise(resolve=>{window.releasePasswordHash=resolve;});}return derive(...args);};
+  });
+  await ownPasswordMenu();await fillOwnPassword(password,'safe-new-password');await page.locator('#password-save').click();
+  await page.waitForFunction(()=>typeof window.releasePasswordHash==='function');
+  await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('fam.accounts.v1'));d.users.find(u=>u.username==='admin').name='Concurrent administrator';localStorage.setItem('fam.accounts.v1',JSON.stringify(d));window.releasePasswordHash();});
+  await page.locator('#password-form').waitFor({state:'detached'});
+  assert.equal((await accounts()).users.find(u=>u.username==='admin').name,'Concurrent administrator');
+});
+
+
+test('UI-14 level 1 fully edits another administrator and its own profile',async()=>{
+  await setup();await fixture();await createUser(1,'secondadmin');
+  const original=await accounts(),target=original.users.find(u=>u.username==='secondadmin');
+  const region=await page.evaluate(()=>managedRegions()[0].id);
+  await manager();await page.locator('#user-'+target.id).click();
+  await page.locator('#user-username').fill('renamedadmin');await page.locator('#user-name').fill('نام جدید');
+  await page.locator('#user-password').fill('changed-admin-password');await page.locator('#user-role').selectOption('4');
+  await page.locator('#user-enabled').uncheck();await page.locator(`[data-user-region="${region}"]`).check();
+  await page.locator('[data-user-sheet="Network Test"]').check();await page.locator('#user-save').click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.some(u=>u.username==='renamedadmin'));
+  const changed=(await accounts()).users.find(u=>u.id===target.id);
+  assert.equal(changed.name,'نام جدید');assert.equal(changed.role,4);assert.equal(changed.enabled,false);
+  assert.deepEqual(changed.regions,[region]);assert.deepEqual(changed.sheets,['Network Test']);assert.notEqual(changed.hash,target.hash);
+  await page.locator('#user-enabled').check();await page.locator('#user-role').selectOption('1');await page.locator('#user-save').click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.find(u=>u.username==='renamedadmin').role===1);
+  await selectOwnUser();await page.locator('#user-name').fill('مدیر اصلی');await page.locator('#user-save').click();
+  await page.waitForFunction(()=>Access.current().name==='مدیر اصلی');await page.locator('#users-done').click();
+  await logout();await login('renamedadmin','changed-admin-password');assert.equal(await page.evaluate(()=>Access.can('users')),true);
+});
