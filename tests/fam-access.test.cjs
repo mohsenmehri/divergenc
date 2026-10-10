@@ -831,3 +831,67 @@ if(!process.env.FAM_THEME && !process.env.FAM_FILE)test('theme selection works o
   assert.deepEqual(await page.evaluate(()=>['manual','admin','export','users'].map(p=>Access.can(p))),[false,false,false,false]);
   await logout();assert.equal(await page.locator('.access-login .fam-theme-toggle').count(),1);
 });
+
+if(process.env.FAM_FILE==='FAM-Grid.html'){
+  test('Grid record drawer preserves numeric and whitespace values, rejects stale and locked writes, rolls back failures',async()=>{
+    await setup();await fixture();
+    await page.evaluate(()=>{WB.sheets['Network Test'].rows[1]=[42,'  ALPHA  '];renderSheetView('Network Test');});
+    const open=()=>page.evaluate(()=>FamGrid.openRecord('Network Test',2));
+    const close=()=>page.locator('#grid-record-dialog .grid-record-close').click();
+    await open();await page.locator('#grid-record-save').click();
+    assert.deepEqual(await page.evaluate(()=>WB.sheets['Network Test'].rows[1]),[42,'  ALPHA  ']);
+    await open();await page.locator('#grid-record-2').fill('NEW');
+    await page.evaluate(()=>{WB.sheets['Network Test'].rows[1][1]='CONCURRENT';});
+    await page.locator('#grid-record-save').click();assert.match(await page.locator('#grid-record-error').innerText(),/تغییر کرده/);
+    assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'CONCURRENT');await close();
+    await open();await page.locator('#grid-record-2').fill('LOCKED');await page.evaluate(()=>{state.lockedSheets['Network Test']=true;});
+    await page.locator('#grid-record-save').click();assert.match(await page.locator('#grid-record-error').innerText(),/مجوز/);await close();
+    await page.evaluate(()=>{delete state.lockedSheets['Network Test'];});
+    await open();await page.locator('#grid-record-1').fill('CHANGED-ID');await page.locator('#grid-record-2').fill('CHANGED-NAME');
+    const before=await page.evaluate(()=>JSON.stringify(WB.sheets['Network Test']));
+    await page.evaluate(()=>{window.gridOriginalSet=setCellVal;setCellVal=(...args)=>{if(args[2]===2)throw Error('test drawer rollback');return gridOriginalSet(...args);};});
+    await page.locator('#grid-record-save').click();
+    assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['Network Test'])),before);
+    assert.match(await page.locator('#grid-record-error').innerText(),/ناموفق/);
+    await page.evaluate(()=>{setCellVal=gridOriginalSet;});await close();
+    await open();await page.locator('#grid-record-2').fill('SAVED');await page.locator('#grid-record-save').click();
+    assert.deepEqual(await page.evaluate(()=>WB.sheets['Network Test'].rows[1]),[42,'SAVED']);
+    await page.reload();await page.waitForFunction(()=>Access.current()&&document.querySelector('#cp-c9 option'));
+    assert.deepEqual(await page.evaluate(()=>WB.sheets['Network Test'].rows[1]),[42,'SAVED']);
+  });
+  test('Grid new controls cannot bypass roles, sample cannot overwrite data',async()=>{
+    await setup();await fixture();await createUser(3);await createUser(4,'user4',[],['Network Test']);
+    const before=await page.evaluate(()=>JSON.stringify(WB.sheets['Network Test']));
+    await page.evaluate(()=>document.getElementById('grid-demo').click());
+    assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['Network Test'])),before);
+    for(const role of [3,4]){
+      await logout();await login('user'+role);
+      await page.evaluate(()=>FamGrid.openRecord('Network Test',2));
+      assert.equal(await page.locator('#grid-record-save').isDisabled(),true);
+      assert.equal(await page.locator('#grid-record-2').getAttribute('readonly'),'');
+      await page.locator('#grid-record-2').evaluate(e=>e.value='DENIED');
+      await page.locator('.grid-record-form').dispatchEvent('submit');
+      assert.match(await page.locator('#grid-record-error').innerText(),/مجوز/);
+      await page.locator('.grid-record-close').click();
+      await page.evaluate(()=>document.getElementById('grid-demo').click());
+      assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['Network Test'])),before);
+    }
+  });
+}
+
+if(process.env.FAM_FILE==='FAM-Grid.html')test('Grid gallery loads more rows and reapplies active filter without changing workbook order',async()=>{
+  await setup();
+  await page.evaluate(()=>{
+    const rows=[['ID','Name'],...Array.from({length:500},(_,i)=>[i+1,'R'+(i+1)])];
+    importValidatedSheets(['Grid Long'],{'Grid Long':{rows,merges:[]}},'grid-long.xlsx',true);
+    state.pageLimit=300;renderSheetView('Grid Long');
+  });
+  const before=await page.evaluate(()=>JSON.stringify(WB.sheets['Grid Long']));
+  await page.locator('#sheet-filter').fill('R499');await page.locator('.grid-filter [data-act="filter-rows"]').click();
+  await page.locator('.grid-view-btn').filter({hasText:'نمای کارت‌ها'}).click();
+  assert.equal(await page.locator('.grid-record-card').count(),0);
+  await page.locator('#grid-gallery [data-act="show-more-rows"]').click();
+  assert.equal(await page.locator('.grid-record-card').count(),1);
+  assert.match(await page.locator('.grid-record-card').innerText(),/R499/);
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['Grid Long'])),before);
+});
