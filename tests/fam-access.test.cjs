@@ -14,7 +14,7 @@ before(async()=>{
     execFileSync('tar',['xf','-','-C',dir],{input:zlib.brotliDecompressSync(fs.readFileSync(path.join(pkg,'bin/al2023.tar.br')))});
     process.env.LD_LIBRARY_PATH=[path.join(dir,'lib'),process.env.LD_LIBRARY_PATH].filter(Boolean).join(':');
   }
-  server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(path.join(root,'FAM.html')));});
+  server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(path.join(root,process.env.FAM_FILE||'FAM.html')));});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));url=`http://127.0.0.1:${server.address().port}/FAM.html`;
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||await binary.executablePath(),args:binary.args.filter(a=>a!=='--disable-web-security'),headless:true});
   context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
@@ -195,6 +195,10 @@ test('brand stays frozen above the scrollable menu, English translation fits on 
     await page.setViewportSize({width,height:650});
     await page.waitForFunction(()=>{const r=document.getElementById('sidebar').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;});
     await page.waitForFunction(()=>{const e=document.querySelector('.brand-sub');return e.scrollWidth<=e.clientWidth+1;});
+    // ResizeObserver updates the floating offset after the viewport reflows.
+    // Compare scrolling only after that update, not across two different layouts.
+    await page.waitForFunction(()=>Math.abs(document.getElementById('sidebar').getBoundingClientRect().top-
+      (Math.round(document.getElementById('topbar').getBoundingClientRect().height)+12))<1);
     const top=await page.locator('.brand').evaluate(e=>e.getBoundingClientRect().top);
     await page.locator('#sidebar-scroll').evaluate(e=>e.scrollTop=e.scrollHeight);
     const geometry=await page.evaluate(()=>{
@@ -225,7 +229,7 @@ test('administrator resets passwords, changes roles and deletes users without ch
 });
 
 test('the deployed HTML embeds exactly one copy of each account source and remains standalone',async()=>{
-  const html=fs.readFileSync(path.join(root,'FAM.html'),'utf8');
+  const html=fs.readFileSync(path.join(root,process.env.FAM_FILE||'FAM.html'),'utf8');
   for(const [module,ext,tag] of [['local-access','css','style'],['local-access','js','script'],['province-records','js','script']]){
     const matches=[...html.matchAll(new RegExp(`<${tag} id="fam-${module}-${ext}">\\n([\\s\\S]*?)</${tag}>`,'g'))];
     assert.equal(matches.length,1);assert.equal(matches[0][1],fs.readFileSync(path.join(root,`src/${module}.${ext}`),'utf8'));
@@ -327,7 +331,9 @@ test('UI-09 account migration sets the requested admin once and preserves other 
   await page.reload();await page.locator('#auth-password').waitFor();await login('admin');
   assert.equal(await page.evaluate(()=>Access.current().role),1);assert.equal(await page.locator('#st-user').innerText(),'admin');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.some(u=>u.username==='user3')),true);
-  await manager();await selectOwnUser();await page.locator('#user-password').fill('changed-admin-secret');await page.locator('#user-save').click();await page.locator('#users-done').click();
+  await manager();await selectOwnUser();await page.locator('#user-password').fill('changed-admin-secret');await page.locator('#user-save').click();
+  // Closing is intentionally ignored while PBKDF2 is saving; wait for completion.
+  await page.locator('#users-status').filter({hasText:'ذخیره شد'}).waitFor();await page.locator('#users-done').click();
   await logout();await login('admin','changed-admin-secret');await page.reload();await page.locator('#stat-line').waitFor();
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).adminPresetVersion),1);
   assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'ALPHA');
@@ -759,4 +765,21 @@ test('UI-16 drafts survive IndexedDB-only saves even when the UI save timestamp 
     assert.equal(await page.locator('#cp-c11').inputValue(),'deep-only '+explicit);
     assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'DEEP-ONLY');
   }
+});
+
+if(process.env.FAM_FILE==='FAM-Operations.html')test('UI B demo requires admin data rights even when invoked directly, never overwrites data',async()=>{
+  await setup();await createUser(2);await createUser(3);await createUser(4);
+  for(const role of [3,4]){
+    await logout();await login('user'+role);
+    assert.equal(await page.locator('#operations-demo').isVisible(),false);
+    const before=await page.evaluate(()=>JSON.stringify(WB));
+    await page.evaluate(()=>document.getElementById('operations-demo').click());
+    assert.equal(await page.evaluate(()=>JSON.stringify(WB)),before);
+  }
+  await logout();await login('user2');
+  await page.locator('#operations-demo').click();
+  await page.waitForFunction(()=>WB.sheets['تهران']?.rows.length===13);
+  const before=await page.evaluate(()=>JSON.stringify(WB));
+  await page.locator('#operations-demo').click();
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB)),before);
 });

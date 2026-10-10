@@ -37,7 +37,7 @@ before(async () => {
   }
   server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(fs.readFileSync(path.join(root, 'FAM.html')));
+    res.end(fs.readFileSync(path.join(root, process.env.FAM_FILE || 'FAM.html')));
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   browser = await chromium.launch({
@@ -481,7 +481,7 @@ test('workbook coordinate badges are absent from user-facing forms and descripti
 });
 
 test('UI-05 branding and header show only the editable identity', async () => {
-  assert.equal(await page.title(), 'تجارت الکترونیک و فناوری اطلاعات ملل (فام)');
+  assert.equal(await page.title(), (process.env.FAM_FILE === 'FAM-Operations.html' ? 'میزکار عملیاتی — ' : '') + 'تجارت الکترونیک و فناوری اطلاعات ملل (فام)');
   assert.equal(await page.locator('.brand-name').textContent(), 'تجارت الکترونیک و فناوری اطلاعات ملل (فام)');
   assert.equal((await page.locator('.hero-tag').innerText()).trim(), 'اداره‌ی ارتباطات و شبکه');
   assert.equal(await page.locator('.hero h1').innerText(), 'سامانه مدیریت اطلاعات شبکه‌ی LAN, WAN، سراسری شعب و خودپردازها، مراکز داده و ...');
