@@ -1,21 +1,25 @@
-/* UI B: presentation only. Core operations and Access remain in FAM.html. */
-window.addEventListener('DOMContentLoaded',()=>{
+/* Light theme layout only; original DOM nodes and form state are retained. */
+(function(){
   const hero=document.querySelector('#view-panel .hero');
-  hero.querySelector('.hero-net')?.remove();
-  const heading=el('h2',{class:'operations-heading',text:'میزکار مدیریت داده'});
+  const heading=el('h2',{class:'operations-heading operations-only',text:'میزکار مدیریت داده'});
   hero.querySelector('.hero-txt').insertBefore(heading,hero.querySelector('h1'));
-  const intro=el('div',{class:'operations-intro-actions'},
-    el('span',{class:'operations-version',text:'B / میزکار عملیاتی',dir:'auto'}),
+  const intro=el('div',{class:'operations-intro-actions operations-only'},
+    el('span',{class:'operations-version',text:'تم ۲ / میزکار روشن',dir:'auto'}),
     el('button',{type:'button',class:'btn btn-primary','data-act':'open-file',text:'ورود فایل داده'}),
     el('button',{type:'button',class:'btn btn-ghost',id:'operations-demo',text:'آزمایش با دادهٔ نمونه'}));
   hero.appendChild(intro);
-  const nav=el('nav',{class:'operations-nav','aria-label':'صفحه‌های اصلی'});
+  const nav=el('nav',{class:'operations-nav operations-only','aria-label':'صفحه‌های اصلی'});
   [['panel','میزکار'],['sheet','مرور داده‌ها'],['results','نتایج جستجو'],['log','تاریخچه']].forEach(([view,label])=>{
     nav.appendChild(el('button',{type:'button',class:'btn','data-act':'switch-view','data-view':view,text:label}));
   });
   hero.after(nav);
   const ops=document.getElementById('fold-ops').closest('.dashboard-section');
-  nav.after(ops); // put actual operations before the category catalogue
+  const originalPosition=document.createComment('Original operations position');
+  ops.before(originalPosition);
+  window.FamOperationsLayout=light=>{
+    if(light)nav.after(ops);else originalPosition.after(ops);
+  };
+  window.FamOperationsLayout(window.FamTheme?.current()==='light');
   document.getElementById('operations-demo').addEventListener('click',()=>{
     if(!Access.require('admin'))return;
     if(WB.order.some(IsDataSheet)){
@@ -36,4 +40,4 @@ window.addEventListener('DOMContentLoaded',()=>{
     }
   });
   // No automatic opening/closing of the menu, and no change to stored accounts.
-});
+})();

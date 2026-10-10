@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="16" data-fam-variant="operations" class="auth-pending">
+<html lang="fa" dir="rtl" data-fam-ui="16" data-default-theme="light" data-fam-variant="operations" class="auth-pending">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1373,7 +1373,7 @@ html.auth-pending #access-viewer {display:none!important;}
 #password-error{color:#ffabb6;white-space:normal;overflow-wrap:anywhere;}
 #account-password{margin-inline:6px;margin-block:6px;}
 </style>
-<style id="fam-operations-css">
+<style id="fam-operations-css" media="not all">
 /* UI B / Operations — bright, quiet, data-first. Loaded after the shared UI. */
 :root{color-scheme:light;--bg-0:#f3f6fa;--bg-1:#fff;--bg-2:#edf3f7;--glass:#f7f9fc;--glass-2:#eaf3f3;--stroke:#dce4ec;--stroke-2:#a5b9c8;--txt-0:#192d42;--txt-1:#465d73;--txt-2:#667b8e;--cyan:#087f83;--blue:#276bb7;--green:#167750;--red:#bf3548;--amber:#916315;--violet:#6a56a4;--grad-main:linear-gradient(135deg,#087f83,#075e67);--grad-btn:linear-gradient(135deg,#087f83,#075e67);--grad-green:linear-gradient(135deg,#168060,#11664d);--grad-red:linear-gradient(135deg,#c74454,#ac3040);--grad-amber:linear-gradient(135deg,#93691e,#785416);--shadow-1:0 2px 8px #182c4005;--shadow-2:0 12px 35px #182c4010;--r-lg:14px;--r-md:10px;--sidebar-w:312px;--sidebar-float:12px;}
 body{background:var(--bg-0);color:var(--txt-0);}
@@ -1489,6 +1489,71 @@ input[type=checkbox]{accent-color:#087f83;}
 table.xl thead th{background:#edf3f7;color:#536d82;}
 .access-login .btn{justify-content:center;}
 </style>
+<style id="fam-ui-theme-css">
+/* Shared switch controls; light-only nodes never change the original theme. */
+html:not([data-ui-theme="light"]) .operations-only{display:none!important;}
+#topbar .top-actions .fam-theme-toggle,.fam-theme-toggle{width:auto;min-width:60px;height:36px;padding:0 9px;white-space:nowrap;font:600 11px var(--font);flex-shrink:0;}
+.fam-theme-toggle:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+.access-login>.fam-theme-toggle{margin-top:16px;display:block;margin-inline-start:auto;}
+@media(max-width:760px){#topbar #save-indicator{max-width:none;margin-inline-start:0;}}
+</style>
+<script id="fam-ui-theme-js">
+/* Two visual themes on the same document, workbook, session and origin. */
+(function(){
+  const key='fam.ui.theme',root=document.documentElement;
+  const normalize=value=>value==='light'?'light':'original';
+  let current=normalize(root.dataset.defaultTheme);
+  try{const saved=localStorage.getItem(key);if(saved==='light'||saved==='original')current=saved;}catch(e){}
+  function paint(){
+    root.dataset.uiTheme=current;
+    document.getElementById('fam-operations-css').media=current==='light'?'all':'not all';
+  }
+  // Executed in <head>, before the body/login is painted.
+  paint();
+  function updateButtons(){
+    document.querySelectorAll('.fam-theme-toggle').forEach(button=>{
+      button.textContent=current==='light'?'تم ۲ ☀':'تم ۱ ◐';
+      button.title=current==='light'?'تم ۲: روشن — تغییر به تم اصلی':'تم ۱: اصلی — تغییر به تم روشن';
+      button.setAttribute('aria-label',button.title);
+      button.setAttribute('aria-pressed',String(current==='light'));
+    });
+  }
+  function set(value,persist=true){
+    const next=normalize(value),changed=next!==current;
+    current=next;paint();
+    window.FamOperationsLayout?.(current==='light');
+    updateButtons();
+    if(persist){try{localStorage.setItem(key,current);}catch(e){/* Theme still works for this visit. */}}
+    if(changed){
+      window.famRefreshFx?.();
+      // Refit floating menu without changing its open/closed state.
+      window.dispatchEvent(new Event('fam:theme-change'));
+    }
+  }
+  window.FamTheme={current:()=>current,set};
+  window.addEventListener('storage',e=>{if(e.key===key||e.key===null)set(e.key===null?'original':e.newValue,false);});
+  window.addEventListener('DOMContentLoaded',()=>{
+    const observed=new WeakSet();
+    const observer=new MutationObserver(mount);
+    function mount(){
+      for(const host of [document.querySelector('#topbar .top-actions'),document.querySelector('.access-login'),document.querySelector('.access-viewer-head')]){
+        if(!host||host.querySelector('.fam-theme-toggle'))continue;
+        const button=document.createElement('button');
+        button.type='button';button.className='icon-btn fam-theme-toggle';
+        button.addEventListener('click',()=>set(current==='light'?'original':'light'));
+        host.appendChild(button);
+      }
+      const viewer=document.getElementById('access-viewer');
+      if(viewer&&!observed.has(viewer)){observed.add(viewer);observer.observe(viewer,{childList:true});}
+      updateButtons();
+    }
+    // Observe only roots, not workbook rows/cells or typing.
+    observer.observe(document.body,{childList:true});
+    mount();
+    window.FamOperationsLayout?.(current==='light');
+  });
+})();
+</script>
 </head>
 <body>
 <div id="fx-plate" aria-hidden="true"></div>
@@ -1609,7 +1674,7 @@ table.xl thead th{background:#edf3f7;color:#536d82;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-16 · B</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-16</b></div>
     </div>
     </div>
   </aside>
@@ -6962,7 +7027,7 @@ window.famBrand = famBrand;
           PhotoMotion(id, ctx, t, w, h);
         }
       } catch (err) {}
-      if (!reduce && my === gen && window.__fxTheme === id) requestAnimationFrame(frame);
+      if (!reduce && my === gen && window.__fxTheme === id) window.__famAltFrame = requestAnimationFrame(frame);
     }
     frame();
   }
@@ -6970,6 +7035,8 @@ window.famBrand = famBrand;
     return id === "current" || !!PHOTOS[id] || FamArt.has(id);
   }
   function setTheme(id) {
+    cancelAnimationFrame(window.__famAltFrame);
+    cancelAnimationFrame(window.__famPhotonFrame);
     if (!known(id)) id = "current";
     window.__fxTheme = id;
     gen += 1;
@@ -6977,12 +7044,14 @@ window.famBrand = famBrand;
     try { localStorage.setItem("fam.fx.theme", id); } catch (err) {}
     const sel = document.getElementById("fx-theme");
     if (sel && sel.value !== id) sel.value = id;
+    if (window.FamTheme?.current() === "light") return;
     if (id === "current") {
       if (typeof window.startPhotonStage === "function") window.startPhotonStage();
       return;
     }
     loop(id, gen);
   }
+  window.famRefreshFx = function () { setTheme(window.__fxTheme || "current"); };
   window.bindFxTheme = function () {
     const sel = document.getElementById("fx-theme");
     let id = "current";
@@ -7010,6 +7079,8 @@ window.famBrand = famBrand;
 /* FAM-FX-END */
 
 function startPhotonStage() {
+  cancelAnimationFrame(window.__famPhotonFrame);
+  if (window.FamTheme?.current() === "light") return;
   try {
     const c = document.getElementById("fx-stage");
     if (!c || typeof c.getContext !== "function") return;
@@ -7098,7 +7169,7 @@ function startPhotonStage() {
           ctx.fill();
         }
       } catch (err) { return; }
-      if (!reduce) requestAnimationFrame(frame);
+      if (!reduce) window.__famPhotonFrame = requestAnimationFrame(frame);
     }
     resize();
     frame();
@@ -7121,12 +7192,15 @@ function bindFloatingLayout() {
   };
   fit();
   window.addEventListener("resize", fit);
+  window.addEventListener("fam:theme-change", fit);
   if (typeof ResizeObserver === "function") new ResizeObserver(fit).observe(bar);
 }
 window.addEventListener("DOMContentLoaded", async () => {
-  // UI B: no decorative Canvas loop is started. Operational behavior is shared.
+  bindFxStrength();
+  if (typeof bindFxTheme === "function") bindFxTheme();
   bindFloatingLayout();
   restoreSidebarState();
+  startPhotonStage();
   // observable error handling: nothing gets swallowed silently
   window.addEventListener("error", e => {
     LogError("Window", "onerror", e && e.error && e.error.number ? e.error.number : 0,
@@ -8341,24 +8415,28 @@ async function startProvinceAdd(selectedName) {
 }
 </script>
 <script id="fam-operations-js">
-/* UI B: presentation only. Core operations and Access remain in FAM.html. */
-window.addEventListener('DOMContentLoaded',()=>{
+/* Light theme layout only; original DOM nodes and form state are retained. */
+(function(){
   const hero=document.querySelector('#view-panel .hero');
-  hero.querySelector('.hero-net')?.remove();
-  const heading=el('h2',{class:'operations-heading',text:'میزکار مدیریت داده'});
+  const heading=el('h2',{class:'operations-heading operations-only',text:'میزکار مدیریت داده'});
   hero.querySelector('.hero-txt').insertBefore(heading,hero.querySelector('h1'));
-  const intro=el('div',{class:'operations-intro-actions'},
-    el('span',{class:'operations-version',text:'B / میزکار عملیاتی',dir:'auto'}),
+  const intro=el('div',{class:'operations-intro-actions operations-only'},
+    el('span',{class:'operations-version',text:'تم ۲ / میزکار روشن',dir:'auto'}),
     el('button',{type:'button',class:'btn btn-primary','data-act':'open-file',text:'ورود فایل داده'}),
     el('button',{type:'button',class:'btn btn-ghost',id:'operations-demo',text:'آزمایش با دادهٔ نمونه'}));
   hero.appendChild(intro);
-  const nav=el('nav',{class:'operations-nav','aria-label':'صفحه‌های اصلی'});
+  const nav=el('nav',{class:'operations-nav operations-only','aria-label':'صفحه‌های اصلی'});
   [['panel','میزکار'],['sheet','مرور داده‌ها'],['results','نتایج جستجو'],['log','تاریخچه']].forEach(([view,label])=>{
     nav.appendChild(el('button',{type:'button',class:'btn','data-act':'switch-view','data-view':view,text:label}));
   });
   hero.after(nav);
   const ops=document.getElementById('fold-ops').closest('.dashboard-section');
-  nav.after(ops); // put actual operations before the category catalogue
+  const originalPosition=document.createComment('Original operations position');
+  ops.before(originalPosition);
+  window.FamOperationsLayout=light=>{
+    if(light)nav.after(ops);else originalPosition.after(ops);
+  };
+  window.FamOperationsLayout(window.FamTheme?.current()==='light');
   document.getElementById('operations-demo').addEventListener('click',()=>{
     if(!Access.require('admin'))return;
     if(WB.order.some(IsDataSheet)){
@@ -8379,7 +8457,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     }
   });
   // No automatic opening/closing of the menu, and no change to stored accounts.
-});
+})();
 </script>
 </body>
 </html>

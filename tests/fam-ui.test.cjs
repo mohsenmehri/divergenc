@@ -45,6 +45,7 @@ before(async () => {
     args: binary.args.filter(a => a !== '--disable-web-security'), headless: true
   });
   page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  if(process.env.FAM_THEME)await page.addInitScript(theme=>localStorage.setItem('fam.ui.theme',theme),process.env.FAM_THEME);
   page.setDefaultTimeout(10000);
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/FAM.html`);

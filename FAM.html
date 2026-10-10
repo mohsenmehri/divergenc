@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="16" class="auth-pending">
+<html lang="fa" dir="rtl" data-fam-ui="16" data-default-theme="original" class="auth-pending">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1373,6 +1373,187 @@ html.auth-pending #access-viewer {display:none!important;}
 #password-error{color:#ffabb6;white-space:normal;overflow-wrap:anywhere;}
 #account-password{margin-inline:6px;margin-block:6px;}
 </style>
+<style id="fam-operations-css" media="not all">
+/* UI B / Operations — bright, quiet, data-first. Loaded after the shared UI. */
+:root{color-scheme:light;--bg-0:#f3f6fa;--bg-1:#fff;--bg-2:#edf3f7;--glass:#f7f9fc;--glass-2:#eaf3f3;--stroke:#dce4ec;--stroke-2:#a5b9c8;--txt-0:#192d42;--txt-1:#465d73;--txt-2:#667b8e;--cyan:#087f83;--blue:#276bb7;--green:#167750;--red:#bf3548;--amber:#916315;--violet:#6a56a4;--grad-main:linear-gradient(135deg,#087f83,#075e67);--grad-btn:linear-gradient(135deg,#087f83,#075e67);--grad-green:linear-gradient(135deg,#168060,#11664d);--grad-red:linear-gradient(135deg,#c74454,#ac3040);--grad-amber:linear-gradient(135deg,#93691e,#785416);--shadow-1:0 2px 8px #182c4005;--shadow-2:0 12px 35px #182c4010;--r-lg:14px;--r-md:10px;--sidebar-w:312px;--sidebar-float:12px;}
+body{background:var(--bg-0);color:var(--txt-0);}
+*,*::before,*::after{animation:none!important;transition:none!important;backdrop-filter:none!important;}
+body::before,body::after,#fx-stage,#fx-plate,#fx-flare,#fx-ghost,#fx-leak,#fx-mark,.hero-net,.hero::before,.hero::after,.cat-tile::before,.cat-tile::after,.cat-tile .ct-ring{display:none!important;}
+.side-foot>.fx-bar{display:none;}
+#sidebar{background:#fff;border:1px solid var(--stroke);border-radius:14px;box-shadow:0 4px 20px #23384e08;}
+.brand{background:#fff;border-bottom:1px solid var(--stroke);padding-block:18px;}
+.brand-logo{background:#edf4f8;border-color:#dbe7ef;box-shadow:none;}
+.brand-name{color:#1c3448;}.brand-name span{background:none;color:var(--cyan);}
+.side-sect{letter-spacing:0;color:#7a8c9c;font-size:10px;padding-top:19px;}
+.nav-item{color:#52667a;border-radius:8px;padding:11px 12px;font-size:12px;}
+.nav-item:hover,.nav-item.active{background:#eaf5f3;color:#066d70;transform:none;box-shadow:none;border-color:#d8ece8;}
+.nav-item.active::before{background:#087f83;box-shadow:none;}
+.nav-badge{background:#e9eff4;border:0;color:#496479;box-shadow:none;}
+.side-foot{border-top:1px solid var(--stroke);margin-top:18px;}.side-status{color:var(--txt-2);}
+.quick-panel .fold-inner>*{background:#f5f8fa;border-color:var(--stroke);}
+#topbar{background:#fff;border-bottom:1px solid var(--stroke);box-shadow:none;padding:11px 22px;}
+#topbar .page-title{color:#20354b;}#topbar .page-title small{color:#7c8c9e;font-weight:500;}
+.top-search{background:#f4f7fa;border-color:#e1e8ef;}.top-search input{color:var(--txt-0);}.top-search input::placeholder{color:#7c8e9f;}
+.icon-btn{background:#f6f8fb;border:1px solid #dfe7ef;color:#516a7f;box-shadow:none;}
+.icon-btn.accent{color:#087f83;background:#eff8f6;border-color:#d3e8e3;}
+#stat-line{color:#456379!important;}#save-indicator{background:#f1f7f4;color:#4b7561;border-color:#dcebe2;}
+.content{gap:18px;padding:25px 28px 40px;}
+.hero{padding:4px 0 8px;border:0;box-shadow:none;background:none;min-height:0;gap:24px;align-items:center;overflow:visible;}
+.hero-txt{min-width:0;}.hero-tag{color:#61778b;background:none;border:0;padding:0;font-size:11px;}.hero-tag svg{color:#087f83;}
+.operations-heading{font-size:27px;letter-spacing:-.6px;font-weight:800;margin:8px 0 7px;line-height:1.65;color:#183147;}
+.hero h1{font-size:12px;font-weight:400;line-height:1.95;color:#738598;margin:0;letter-spacing:0;}
+.hero h1 em{background:none;color:#526b7c;-webkit-text-fill-color:currentColor;font-style:normal;}
+.operations-intro-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex:0 0 175px;}
+.operations-version{font-size:10px;font-weight:600;color:#638089;text-align:center;margin-bottom:3px;}
+.operations-intro-actions .btn{justify-content:center;margin:0;font-size:11px;min-height:38px;}
+.operations-nav{display:flex;gap:24px;flex-wrap:wrap;border-bottom:1px solid #dce5ed;}
+.operations-nav .btn{border:0;border-radius:0;padding:10px 2px 13px;color:#5a7085;background:none;font-size:12px;font-weight:600;box-shadow:none;}
+.operations-nav [data-view="panel"]{color:#087f83;border-bottom:2px solid #087f83;}
+.operations-nav .btn:hover{color:#087f83;transform:none;}
+.card,.macro-mod{background:#fff;border-color:#dce5ed;box-shadow:none;}
+.card:hover{border-color:#c8d5df;}.card::before,.card::after{display:none;}
+.dashboard-section>.card-head{padding:14px 18px;min-height:61px;border-bottom:1px solid #edf1f5;}
+.dashboard-section>.card-head h3{font-size:13px;color:#234159;}
+.card-head .ico{border-radius:8px;width:32px;height:32px;flex-basis:32px;}
+.g-cyan{background:#e7f4f2;color:#0d8281;}.g-green{background:#eaf6ef;color:#21805c;}.g-red{background:#fcedef;color:#b74455;}.g-violet{background:#f1edf9;color:#8062b3;}.g-blue{background:#ebf1fa;color:#356da5;}.g-amber{background:#fbf3e3;color:#916e2c;}
+.fold-btn{background:#f8fafc;color:#688294;border-color:#e4ebf2;border-radius:8px!important;}
+#fold-ops>.fold-inner{padding:0;}#fold-ops>.fold-inner::after{display:none;}
+#fold-ops .grid-add{grid-template-columns:1.25fr .85fr 1fr;gap:0;}
+#fold-ops .grid-add>.card{border:0;border-left:1px solid #e7edf3;border-radius:0;box-shadow:none;}
+#fold-ops .grid-add>.card:last-child{border-left:0;}
+#fold-ops .grid-add>.card>.card-head{padding:20px 20px 4px;}
+#fold-ops .grid-add>.card>.card-body{padding:16px 20px 22px;}
+#fold-ops .grid-add>.card:first-child{background:#fbfdfd;}
+#fold-ops .grid-add .search-rows{grid-template-columns:1fr 1fr;}
+#fold-ops .grid-add .card-head h3{font-size:12px;}
+.field label,.exact-label{color:#50677d;font-size:11px;font-weight:600;}
+.inp,input.inp,select.inp,.field input,.field select,.field textarea{background:#fff;color:#263f54;border:1px solid #d4dfe8;border-radius:8px;box-shadow:none;min-height:40px;font-size:12px;}
+.inp:focus,.field input:focus,.field select:focus{border-color:#299a96;box-shadow:0 0 0 3px #148a8610;outline:none;}
+.inp option,.inp optgroup{background:#fff;color:#233e53;}
+.hint,.dash-note{color:#76889a;font-size:10px;line-height:1.9;}
+.btn{border-radius:8px;font-weight:600;box-shadow:none;}.btn:hover{transform:none;filter:none;}
+.btn-primary{background:#087f83;color:#fff;}.btn-green{background:#147b5b;color:#fff;}.btn-red{background:#bd4050;color:#fff;}.btn-amber{background:#f9f1e1;color:#866423;border:1px solid #eddfbd;}
+.btn-ghost{background:#fff;border:1px solid #d9e4ec;color:#536c80;}.btn-ghost:hover{background:#f3f8fa;color:#087f83;}
+.switch{box-shadow:none!important;}.switch.on{background:#11857e;border-color:#11857e;}.switch.off{background:#9aaaba;border-color:#9aaaba;}.switch .txt{color:#fff!important;}
+#dash-cats .cat-tile{background:#fff;box-shadow:none;border-color:#e0e8ef;border-radius:9px;min-height:104px;}
+#dash-cats .cat-tile:hover{background:#f5faf9;transform:none;border-color:#99c8be;}
+#dash-cats .ct-ico{border-radius:8px;}#dash-cats .ct-val{font-size:13px;color:#8396a7;}
+#dash-cats .ct-name{font-size:11px;font-weight:600;}
+#fold-cats:not(.is-folded)>.fold-inner{padding-top:16px;}
+.empty-state{padding:28px 16px!important;color:var(--txt-2);background:#fafcfd;border:1px dashed #dae4ed;border-radius:10px;}
+.empty-state>svg,.empty-state .es-ico{display:none;}.empty-state h3{font-size:14px;color:#29485f;}.empty-state p{color:#73889b;font-size:11px;}.empty-state .btn{margin-top:10px;}
+.tool-tile{background:#f8fafc;border:1px solid #e3eaf0;color:#49667d;}.tool-tile:hover{background:#eef6f5;transform:none;}
+.view-head{background:#fff;border-bottom:1px solid var(--stroke);}.view-head h2{color:#1d3d55;}.view-head .sub{color:#73899a;}
+.sheet-card,.sheet-card:hover{background:#fff!important;border-color:#dde7ef;box-shadow:none;transform:none;color:#253e52;}
+.sheet-card::before,.sheet-card::after,.sheet-card .sc-glow{display:none;}.sheet-card h3,.sheet-card .sc-name{color:#284960;}
+.sheet-chip,.cat-pill,.region-tab,.province-card{background:#fff;color:#4e6b80;border-color:#d9e4ec;box-shadow:none;}
+.sheet-chip.active,.cat-pill.active,.region-tab.active{background:#e7f4f1!important;color:#076e70;border-color:#9dccbf;}
+.province-selection{background:#fff;border-color:#d8e5ec;}.province-selection h4{color:#284d61;}
+.grid-wrap{background:#fff;border-color:#dbe5ed;}.xl th,.xl td{border-color:#e5ebf1!important;}
+table.xl td{color:#324b60;font-size:12px;padding:9px 12px;background:#fff;}
+table.xl tbody tr:nth-child(even) td{background:#f8fafc;}
+table.xl th,table.xl .rn,table.xl thead .rn{background:#edf3f7;color:#5e778b;font-size:10px;}
+table.xl td[contenteditable]:focus{outline:2px solid #0c8b84;outline-offset:-2px;background:#f0faf6;}
+.logtable th{background:#eaf1f6;color:#3a5e77;}.logtable td{border-color:#e4ebf1;}
+.match-block{box-shadow:none;border:1px solid #dce5ed;}.match-title{background:#e8f3f1;color:#176d67;}.block-sep{background:#f2f6f8;}
+.mbox{background:#fff;color:#233d52;border-color:#d5e2ec;box-shadow:0 18px 70px #0e273033;}.mbox .t{background:#f1f6f9;color:#2c4f65;border-color:#e0e9f0;}.mbox .c{color:#344e62;}.mbox .f{border-top:1px solid #edf2f6;}
+#modal-overlay{background:#23384965;}.category-choice,.access-scopes{background:#f7fafb;border-color:#dbe5ec;color:#3e5b70;}
+.access-field input,.access-login input,#user-form select,.own-password-dialog .access-field input{background:#fff;color:#203c52;border-color:#cfdee9;}
+.user-editor-mode{background:#edf7f4;border-color:#c9e6dc;}.user-editor-mode h3{color:#186f65;}
+#users-status{color:#157450;}#user-error,#auth-error,#password-error{color:#b42f44;}
+#auth-screen{background:#eef3f7;background-image:radial-gradient(#c7d7e5 1px,transparent 1px);background-size:22px 22px;}
+.access-login{background:#fff;color:#233f54;border-color:#d8e4ed;box-shadow:0 14px 60px #2a526c12;border-radius:18px;}
+.access-login h2{font-size:23px;color:#176e72;}.access-login .hint{color:#768b9d;}
+.toast{background:#fff;color:#2f5166;border-color:#ccdedf;box-shadow:0 6px 24px #29475a15;}
+.act-badge{color:#466274;}.act-ADD{color:#147d50;}.act-REMOVE,.act-ERROR{color:#b03545;}.act-EDIT{color:#246db0;}
+#access-viewer{color:#263f54;}#operations-demo{color:#57778a;}
+html[data-role="3"] #operations-demo,html[data-role="4"] #operations-demo{display:none;}
+@container(max-width:850px){#fold-ops .grid-add{grid-template-columns:1fr;}#fold-ops .grid-add>.card{border-left:0;border-bottom:1px solid #e7edf3;}#fold-ops .grid-add>.card:last-child{border-bottom:0;}}
+@media(min-width:1201px){#topbar{grid-template-columns:auto minmax(150px,1fr) minmax(200px,300px) auto;grid-template-areas:"menu title search actions" "menu stats search actions";}}
+@media(max-width:760px){.content{padding:18px 12px 28px;gap:14px;}.hero{flex-direction:column;align-items:stretch;gap:14px;}.operations-heading{font-size:23px;}.operations-intro-actions{flex:none;display:grid;grid-template-columns:1fr 1fr;}.operations-version{grid-column:1/-1;text-align:right;}.operations-nav{gap:19px;}.operations-nav .btn{font-size:11px;}#topbar{padding:10px 12px;}.dashboard-section>.card-head{padding:12px;}.hero h1{font-size:11px;}#fold-ops .grid-add .search-rows{grid-template-columns:1fr;}.category-manager-grid{grid-template-columns:1fr;}}
+@media(prefers-reduced-motion:no-preference){:focus-visible{outline:2px solid #138e89;outline-offset:3px;}}
+/* Shared widgets also appear in results, user dialogs and quick-access forms. */
+.btn::before,.btn::after{display:none;}.btn-primary svg{stroke:currentColor;}
+.grid-add .exact-wrap,.action-card .hint{background:#f4f8fa;border-color:#e0e9f0;border-radius:8px;}
+.tool-tile svg{color:#377b84!important;}
+select.inp{background-image:linear-gradient(45deg,transparent 50%,#6c889a 50%),linear-gradient(135deg,#6c889a 50%,transparent 50%);background-position:18px calc(50% + 1px),24px calc(50% + 1px);background-size:6px 6px;background-repeat:no-repeat;padding-left:36px;}
+.block-table th{background:#edf3f7;color:#536d82;}.block-table td{border-color:#e3eaf0;background:#fff;}.block-table td .cell-in:focus{background:#eff9f6;box-shadow:inset 0 0 0 1.5px #138980;}
+.match-title .tag{background:#fff;border-color:#b9d7d0;color:#296d64;}.match-block.remove .match-title{background:#fbedef;color:#ad3548;border-color:#eed0d6;}
+.category-choice{color:#34556c;}.category-error{color:#b83348;}
+input[type=checkbox]{accent-color:#087f83;}
+:focus-visible{outline:2px solid #138e89;outline-offset:3px;}
+.access-login input:focus,.access-field input:focus,#user-form select:focus,.own-password-dialog .access-field input:focus,.mbox input.m-in:focus,.wf input:focus{background:#fff;color:#203c52;border-color:#299a96;box-shadow:0 0 0 3px #148a8610;}
+.wf{background:#f5f9fb;border-color:#e0e9f0;}.wf label{color:#536d82;}.wf input,.mbox input.m-in{background:#fff;border-color:#ccdce7;color:#263f54;}
+.sheet-card .sc-rows{background:#edf3f7;color:#536e83;border-color:#dce6ee;}.sheet-card .sc-tag{background:#edf6f3;color:#3d786d;border-color:#d5e9e2;}
+.sheet-card.active{border-color:#6fb7ae;}.cat-pill.active{box-shadow:none;color:#087f83;}
+table.xl thead th{background:#edf3f7;color:#536d82;}
+.access-login .btn{justify-content:center;}
+</style>
+<style id="fam-ui-theme-css">
+/* Shared switch controls; light-only nodes never change the original theme. */
+html:not([data-ui-theme="light"]) .operations-only{display:none!important;}
+#topbar .top-actions .fam-theme-toggle,.fam-theme-toggle{width:auto;min-width:60px;height:36px;padding:0 9px;white-space:nowrap;font:600 11px var(--font);flex-shrink:0;}
+.fam-theme-toggle:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+.access-login>.fam-theme-toggle{margin-top:16px;display:block;margin-inline-start:auto;}
+@media(max-width:760px){#topbar #save-indicator{max-width:none;margin-inline-start:0;}}
+</style>
+<script id="fam-ui-theme-js">
+/* Two visual themes on the same document, workbook, session and origin. */
+(function(){
+  const key='fam.ui.theme',root=document.documentElement;
+  const normalize=value=>value==='light'?'light':'original';
+  let current=normalize(root.dataset.defaultTheme);
+  try{const saved=localStorage.getItem(key);if(saved==='light'||saved==='original')current=saved;}catch(e){}
+  function paint(){
+    root.dataset.uiTheme=current;
+    document.getElementById('fam-operations-css').media=current==='light'?'all':'not all';
+  }
+  // Executed in <head>, before the body/login is painted.
+  paint();
+  function updateButtons(){
+    document.querySelectorAll('.fam-theme-toggle').forEach(button=>{
+      button.textContent=current==='light'?'تم ۲ ☀':'تم ۱ ◐';
+      button.title=current==='light'?'تم ۲: روشن — تغییر به تم اصلی':'تم ۱: اصلی — تغییر به تم روشن';
+      button.setAttribute('aria-label',button.title);
+      button.setAttribute('aria-pressed',String(current==='light'));
+    });
+  }
+  function set(value,persist=true){
+    const next=normalize(value),changed=next!==current;
+    current=next;paint();
+    window.FamOperationsLayout?.(current==='light');
+    updateButtons();
+    if(persist){try{localStorage.setItem(key,current);}catch(e){/* Theme still works for this visit. */}}
+    if(changed){
+      window.famRefreshFx?.();
+      // Refit floating menu without changing its open/closed state.
+      window.dispatchEvent(new Event('fam:theme-change'));
+    }
+  }
+  window.FamTheme={current:()=>current,set};
+  window.addEventListener('storage',e=>{if(e.key===key||e.key===null)set(e.key===null?'original':e.newValue,false);});
+  window.addEventListener('DOMContentLoaded',()=>{
+    const observed=new WeakSet();
+    const observer=new MutationObserver(mount);
+    function mount(){
+      for(const host of [document.querySelector('#topbar .top-actions'),document.querySelector('.access-login'),document.querySelector('.access-viewer-head')]){
+        if(!host||host.querySelector('.fam-theme-toggle'))continue;
+        const button=document.createElement('button');
+        button.type='button';button.className='icon-btn fam-theme-toggle';
+        button.addEventListener('click',()=>set(current==='light'?'original':'light'));
+        host.appendChild(button);
+      }
+      const viewer=document.getElementById('access-viewer');
+      if(viewer&&!observed.has(viewer)){observed.add(viewer);observer.observe(viewer,{childList:true});}
+      updateButtons();
+    }
+    // Observe only roots, not workbook rows/cells or typing.
+    observer.observe(document.body,{childList:true});
+    mount();
+    window.FamOperationsLayout?.(current==='light');
+  });
+})();
+</script>
 </head>
 <body>
 <div id="fx-plate" aria-hidden="true"></div>
@@ -6846,7 +7027,7 @@ window.famBrand = famBrand;
           PhotoMotion(id, ctx, t, w, h);
         }
       } catch (err) {}
-      if (!reduce && my === gen && window.__fxTheme === id) requestAnimationFrame(frame);
+      if (!reduce && my === gen && window.__fxTheme === id) window.__famAltFrame = requestAnimationFrame(frame);
     }
     frame();
   }
@@ -6854,6 +7035,8 @@ window.famBrand = famBrand;
     return id === "current" || !!PHOTOS[id] || FamArt.has(id);
   }
   function setTheme(id) {
+    cancelAnimationFrame(window.__famAltFrame);
+    cancelAnimationFrame(window.__famPhotonFrame);
     if (!known(id)) id = "current";
     window.__fxTheme = id;
     gen += 1;
@@ -6861,12 +7044,14 @@ window.famBrand = famBrand;
     try { localStorage.setItem("fam.fx.theme", id); } catch (err) {}
     const sel = document.getElementById("fx-theme");
     if (sel && sel.value !== id) sel.value = id;
+    if (window.FamTheme?.current() === "light") return;
     if (id === "current") {
       if (typeof window.startPhotonStage === "function") window.startPhotonStage();
       return;
     }
     loop(id, gen);
   }
+  window.famRefreshFx = function () { setTheme(window.__fxTheme || "current"); };
   window.bindFxTheme = function () {
     const sel = document.getElementById("fx-theme");
     let id = "current";
@@ -6894,6 +7079,8 @@ window.famBrand = famBrand;
 /* FAM-FX-END */
 
 function startPhotonStage() {
+  cancelAnimationFrame(window.__famPhotonFrame);
+  if (window.FamTheme?.current() === "light") return;
   try {
     const c = document.getElementById("fx-stage");
     if (!c || typeof c.getContext !== "function") return;
@@ -6982,7 +7169,7 @@ function startPhotonStage() {
           ctx.fill();
         }
       } catch (err) { return; }
-      if (!reduce) requestAnimationFrame(frame);
+      if (!reduce) window.__famPhotonFrame = requestAnimationFrame(frame);
     }
     resize();
     frame();
@@ -7005,6 +7192,7 @@ function bindFloatingLayout() {
   };
   fit();
   window.addEventListener("resize", fit);
+  window.addEventListener("fam:theme-change", fit);
   if (typeof ResizeObserver === "function") new ResizeObserver(fit).observe(bar);
 }
 window.addEventListener("DOMContentLoaded", async () => {
@@ -8225,6 +8413,51 @@ async function startProvinceAdd(selectedName) {
   await ShowMsg('رکورد در «'+destination+'» ذخیره شد.',vbInformation,'افزودن داده — انجام شد');
   state.catFilter='provinces';switchView('sheet');renderSheetView(destination);saveUIState();
 }
+</script>
+<script id="fam-operations-js">
+/* Light theme layout only; original DOM nodes and form state are retained. */
+(function(){
+  const hero=document.querySelector('#view-panel .hero');
+  const heading=el('h2',{class:'operations-heading operations-only',text:'میزکار مدیریت داده'});
+  hero.querySelector('.hero-txt').insertBefore(heading,hero.querySelector('h1'));
+  const intro=el('div',{class:'operations-intro-actions operations-only'},
+    el('span',{class:'operations-version',text:'تم ۲ / میزکار روشن',dir:'auto'}),
+    el('button',{type:'button',class:'btn btn-primary','data-act':'open-file',text:'ورود فایل داده'}),
+    el('button',{type:'button',class:'btn btn-ghost',id:'operations-demo',text:'آزمایش با دادهٔ نمونه'}));
+  hero.appendChild(intro);
+  const nav=el('nav',{class:'operations-nav operations-only','aria-label':'صفحه‌های اصلی'});
+  [['panel','میزکار'],['sheet','مرور داده‌ها'],['results','نتایج جستجو'],['log','تاریخچه']].forEach(([view,label])=>{
+    nav.appendChild(el('button',{type:'button',class:'btn','data-act':'switch-view','data-view':view,text:label}));
+  });
+  hero.after(nav);
+  const ops=document.getElementById('fold-ops').closest('.dashboard-section');
+  const originalPosition=document.createComment('Original operations position');
+  ops.before(originalPosition);
+  window.FamOperationsLayout=light=>{
+    if(light)nav.after(ops);else originalPosition.after(ops);
+  };
+  window.FamOperationsLayout(window.FamTheme?.current()==='light');
+  document.getElementById('operations-demo').addEventListener('click',()=>{
+    if(!Access.require('admin'))return;
+    if(WB.order.some(IsDataSheet)){
+      Toast('دادهٔ نمونه فقط در محیط خالی وارد می‌شود؛ اطلاعات موجود شما جایگزین نشد.','warn');return;
+    }
+    const headers=['شاخص','نام شعبه','IP LAN','نوع ارتباط','وضعیت'];
+    const provinces=['تهران','فارس','خراسان رضوی'];
+    const sheets={};
+    provinces.forEach((name,p)=>{
+      sheets[name]={rows:[headers,...Array.from({length:12},(_,i)=>[
+        'DEMO-'+(p+1)+'-'+String(i+1).padStart(2,'0'),
+        'شعبهٔ نمونه '+name+' '+(i+1),
+        '192.0.2.'+(p*20+i+1),i%2?'فیبر نوری':'MPLS','آزمایشی'
+      ])],merges:[]};
+    });
+    if(importValidatedSheets(provinces,sheets,'دادهٔ نمونهٔ آزمایشی.xlsx',true)){
+      Toast('۳۶ ردیف نمونه وارد شد؛ این اطلاعات واقعی شعب نیستند.','ok');
+    }
+  });
+  // No automatic opening/closing of the menu, and no change to stored accounts.
+})();
 </script>
 </body>
 </html>

@@ -18,6 +18,7 @@ before(async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));url=`http://127.0.0.1:${server.address().port}/FAM.html`;
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||await binary.executablePath(),args:binary.args.filter(a=>a!=='--disable-web-security'),headless:true});
   context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
+  if(process.env.FAM_THEME)await context.addInitScript(theme=>localStorage.setItem('fam.ui.theme',theme),process.env.FAM_THEME);
   page=await context.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));
 });
 beforeEach(async()=>{
@@ -767,7 +768,7 @@ test('UI-16 drafts survive IndexedDB-only saves even when the UI save timestamp 
   }
 });
 
-if(process.env.FAM_FILE==='FAM-Operations.html')test('UI B demo requires admin data rights even when invoked directly, never overwrites data',async()=>{
+if(process.env.FAM_FILE==='FAM-Operations.html'||process.env.FAM_THEME==='light')test('UI B demo requires admin data rights even when invoked directly, never overwrites data',async()=>{
   await setup();await createUser(2);await createUser(3);await createUser(4);
   for(const role of [3,4]){
     await logout();await login('user'+role);
@@ -782,4 +783,49 @@ if(process.env.FAM_FILE==='FAM-Operations.html')test('UI B demo requires admin d
   const before=await page.evaluate(()=>JSON.stringify(WB));
   await page.locator('#operations-demo').click();
   assert.equal(await page.evaluate(()=>JSON.stringify(WB)),before);
+});
+
+if(!process.env.FAM_THEME && !process.env.FAM_FILE)test('two themes switch in place, retain drafts and forms, persist selection and default to original',async()=>{
+  assert.equal(await page.evaluate(()=>FamTheme.current()),'original');
+  await setup();await fixture();
+  const toggle=page.locator('#topbar .fam-theme-toggle');
+  await page.locator('#cp-c11').fill('پیش‌نویس تم');
+  const before=await page.evaluate(()=>({data:JSON.stringify(WB),accounts:localStorage.getItem('fam.accounts.v1'),menu:document.getElementById('sidebar').className}));
+  await toggle.click();
+  assert.equal(await page.evaluate(()=>FamTheme.current()),'light');
+  assert.equal(await page.locator('#cp-c11').inputValue(),'پیش‌نویس تم');
+  assert.deepEqual(await page.evaluate(()=>({data:JSON.stringify(WB),accounts:localStorage.getItem('fam.accounts.v1'),menu:document.getElementById('sidebar').className})),before);
+  assert.equal(await page.locator('.operations-heading').isVisible(),true);
+  assert.equal(await page.evaluate(()=>!!(document.getElementById('fold-ops').compareDocumentPosition(document.getElementById('fold-cats'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
+  await page.locator('#cp-c16').selectOption('Network Test');
+  await page.locator('#fold-ops [data-arg="modAddRecord.StartAddWizard"]').click();
+  await page.locator('.wizard-fields input').first().fill('UNSAVED');
+  await page.evaluate(()=>FamTheme.set('original'));
+  assert.equal(await page.locator('.wizard-fields input').first().inputValue(),'UNSAVED');
+  await page.locator('[data-a="cancel"]').click();
+  assert.equal(await page.locator('.operations-heading').isVisible(),false);
+  assert.equal(await page.evaluate(()=>!!(document.getElementById('fold-cats').compareDocumentPosition(document.getElementById('fold-ops'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
+  await toggle.click();await page.reload();await page.waitForFunction(()=>Access.current()&&document.querySelector('#cp-c9 option'));
+  assert.equal(await page.evaluate(()=>FamTheme.current()),'light');
+  assert.equal(await page.locator('#cp-c11').inputValue(),'پیش‌نویس تم');
+  assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows[1][1]),'ALPHA');
+  await toggle.click();await page.reload();await page.waitForFunction(()=>Access.current()&&document.querySelector('#cp-c9 option'));
+  assert.equal(await page.evaluate(()=>FamTheme.current()),'original');
+  await page.evaluate(()=>localStorage.setItem('fam.ui.theme','invalid'));
+  await page.reload();await page.waitForFunction(()=>Access.current()&&document.querySelector('#cp-c9 option'));
+  assert.equal(await page.evaluate(()=>FamTheme.current()),'original');
+});
+
+if(!process.env.FAM_THEME && !process.env.FAM_FILE)test('theme selection works on login and read-only level 4 without granting data permissions',async()=>{
+  await page.locator('.access-login .fam-theme-toggle').click();
+  assert.equal(await page.evaluate(()=>FamTheme.current()),'light');
+  await setup();await fixture();await createUser(4,'user4',[],['Network Test']);
+  await logout();assert.equal(await page.locator('.access-login .fam-theme-toggle').getAttribute('aria-pressed'),'true');
+  await login('user4');
+  const toggle=page.locator('.access-viewer-head .fam-theme-toggle');
+  await toggle.click();assert.equal(await page.evaluate(()=>FamTheme.current()),'original');
+  await toggle.click();assert.equal(await page.evaluate(()=>FamTheme.current()),'light');
+  assert.equal(await page.locator('#layout').isVisible(),false);
+  assert.deepEqual(await page.evaluate(()=>['manual','admin','export','users'].map(p=>Access.can(p))),[false,false,false,false]);
+  await logout();assert.equal(await page.locator('.access-login .fam-theme-toggle').count(),1);
 });

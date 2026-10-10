@@ -1,0 +1,6 @@
+/* Shared switch controls; light-only nodes never change the original theme. */
+html:not([data-ui-theme="light"]) .operations-only{display:none!important;}
+#topbar .top-actions .fam-theme-toggle,.fam-theme-toggle{width:auto;min-width:60px;height:36px;padding:0 9px;white-space:nowrap;font:600 11px var(--font);flex-shrink:0;}
+.fam-theme-toggle:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+.access-login>.fam-theme-toggle{margin-top:16px;display:block;margin-inline-start:auto;}
+@media(max-width:760px){#topbar #save-indicator{max-width:none;margin-inline-start:0;}}
