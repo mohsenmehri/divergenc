@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl" data-fam-ui="14" class="auth-pending">
+<html lang="fa" dir="rtl" data-fam-ui="15" class="auth-pending">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
@@ -1493,7 +1493,7 @@ html.auth-pending #access-viewer {display:none!important;}
         <div><span class="dot g"></span> ایندکس جستجو: <b id="st-index">—</b> رکورد</div>
         <div><span class="dot a"></span> قفل پنل: <b id="st-lock">—</b></div>
       </div>
-      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-14</b></div>
+      <div class="app-version">نسخه رابط: <b dir="ltr">FAM UI-15</b></div>
     </div>
     </div>
   </aside>
@@ -3735,11 +3735,6 @@ const modAddRecord = {
         el("span", { text: "\u0627\u0646\u062a\u062e\u0627\u0628 \u0628\u062e\u0634" }),
         el("span", { class: "x", text: "\u2715" })));
       box.appendChild(el("div", { class: "c" },
-        txt("\u0634\u06cc\u062a: " + TrimText(sheetName)), el("br"),
-        txt("--------------------------------"), el("br"),
-        el("b", { text: "\u0628\u0644\u0647" }), txt(" \u00a0=\u00a0 \u0634\u0639\u0628\u0647 \u00a0(Branch)"), el("br"),
-        el("b", { text: "\u062e\u06cc\u0631" }), txt(" \u00a0=\u00a0 ATM"), el("br"),
-        el("b", { text: "\u0644\u063a\u0648" }), txt(" \u00a0=\u00a0 \u0627\u0646\u0635\u0631\u0627\u0641"),
         el("div", { class: "section-pick" },
           el("button", { class: "br", "data-p": "branch", text: "\u0634\u0639\u0628\u0647" }),
           el("button", { class: "atm", "data-p": "atm", text: "\u062e\u0648\u062f\u067e\u0631\u062f\u0627\u0632" }),
@@ -4865,6 +4860,7 @@ const modImport = {
    ================================================================ */
 const modExportAllModules = {
   async ExportAllModules() {
+    if (!Access.require("source")) return false;
     const names = Object.keys(VBA_MODULES || {});
     if (!names.length) { await ShowMsg("منبع VBA در دسترس نیست.", vbExclamation, "خروجی"); return; }
     let bundle = "' VBA Reference — password values redacted; not a runnable backup\r\n' " + new Date().toISOString() + "\r\n\r\n";
@@ -4882,6 +4878,7 @@ const modExportAllModules = {
       vbInformation, "خروجی همه ماژول‌ها");
   },
   DownloadModule(name) {
+    if (!Access.require("source")) return false;
     if (!VBA_MODULES || !VBA_MODULES[name]) return;
     const ext = name.endsWith(".frm") ? ".frm" : name.endsWith(".cls") ? ".cls" : ".bas";
     DownloadFile(name.endsWith(".bas") || name.endsWith(".cls") || name.endsWith(".frm") ? name : name + ext,
@@ -5278,6 +5275,7 @@ function renderMacrosView() {
   clear(body);
   const byMod = {};
   MACRO_REGISTRY.forEach(([mod, name, desc]) => {
+    if (!Access.macroAllowed(mod + "." + name)) return;
     (byMod[mod] = byMod[mod] || []).push({ name, desc });
   });
   Object.keys(byMod).forEach(mod => {
@@ -5295,6 +5293,8 @@ function renderMacrosView() {
     });
     body.appendChild(modDiv);
   });
+  // This hides only in-app source tools; the distributed HTML remains readable.
+  if (!Access.can("source")) { Access.hideOperations(); return; }
   const vbaDiv = el("div", { class: "macro-mod fade-in" },
     el("div", { class: "mh" },
       sEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "#c4b5fd", "stroke-width": "2", style: { width: "15px", height: "15px" } },
@@ -5445,6 +5445,7 @@ function renderFeed() {
 }
 
 function showVbaSource(name) {
+  if (!Access.require("source")) return false;
   const src = "منبع مرجع VBA — مقادیر رمز عمداً حذف شده‌اند.\n\n" + ((VBA_MODULES || {})[name] || "(missing)");
   ModalBox({ title: name, cls: "info", text: src, buttons: [{ id: IDOK, label: "بستن", cls: "ok" }] });
 }
@@ -7775,7 +7776,7 @@ const Access = (() => {
   }
   function can(operation,sheet){
     const u=current();if(!u)return false;
-    if(operation==='users')return u.role===1;
+    if(['users','source'].includes(operation))return u.role===1;
     if(operation==='own-password')return true;
     if(operation==='read'){
       if(!SheetExists(sheet))return false;
@@ -7795,6 +7796,7 @@ const Access = (() => {
     Toast('این عملیات برای سطح دسترسی شما مجاز نیست.','warn');return false;
   }
   function macroAllowed(path){
+    if(path==='modExportAllModules.ExportAllModules')return can('source');
     if(can('admin'))return true;
     if(!can('workspace'))return false;
     return ['modSearchEngine.SearchRecords','modSearchEngine.OpenSearchResults','modSearchEngine.ClearSearchResults',
@@ -7805,6 +7807,7 @@ const Access = (() => {
     const a=node.dataset.act;
     if(['edit-user','logout'].includes(a))return !!current();
     if(a==='manage-users')return can('users');
+    if(['show-vba','download-module'].includes(a))return can('source');
     if(a==='run-macro')return macroAllowed(node.dataset.arg);
     if(a==='run-macro-index')return macroAllowed(node.dataset.mod+'.'+node.dataset.name);
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);

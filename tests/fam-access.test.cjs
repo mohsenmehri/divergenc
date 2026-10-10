@@ -601,3 +601,57 @@ test('UI-14 level 1 fully edits another administrator and its own profile',async
   await page.waitForFunction(()=>Access.current().name==='مدیر اصلی');await page.locator('#users-done').click();
   await logout();await login('renamedadmin','changed-admin-password');assert.equal(await page.evaluate(()=>Access.can('users')),true);
 });
+
+test('UI-15 add section picker contains only choices, without the legacy explanation',async()=>{
+  await setup();await provincialFixture();
+  await page.locator('#cp-c16').selectOption('استان تهران');
+  await page.locator('#fold-ops [data-arg="modAddRecord.StartAddWizard"]').click();
+  const before=await page.evaluate(()=>JSON.stringify(WB.sheets));
+  const content=page.locator('#modal-overlay.show .c');
+  assert.deepEqual(await content.locator('button').allTextContents(),['شعبه','خودپرداز','انصراف']);
+  assert.equal(await content.evaluate(e=>e.textContent),'شعبهخودپردازانصراف');
+  assert.equal(await content.locator('br,b').count(),0);
+  fs.mkdirSync(path.join(root,'test-results'),{recursive:true});
+  await page.locator('#modal-overlay .mbox').screenshot({path:path.join(root,'test-results/section-picker-ui15.png')});
+  await page.locator('[data-p="cancel"]').click();
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets)),before);
+});
+
+for(const role of [1,2,3,4])test(`UI-15 in-app source viewing and downloads are ${role===1?'allowed':'denied'} for level ${role}`,async()=>{
+  await setup();
+  if(role!==1){await createUser(role);await logout();await login('user'+role);}
+  assert.equal(await page.evaluate(()=>Access.can('source')),role===1);
+  assert.equal(await page.evaluate(()=>Access.macroAllowed('modExportAllModules.ExportAllModules')),role===1);
+  const actions=await page.evaluate(()=>['show-vba','download-module'].map(act=>Access.actionAllowed({dataset:{act}})));
+  assert.deepEqual(actions,[role===1,role===1]);
+  await page.evaluate(()=>{window.originalDownload=DownloadFile;window.sourceDownloads=[];DownloadFile=(name,text)=>sourceDownloads.push({name,text});});
+  if(role===1){
+    await page.evaluate(()=>switchView('macros'));
+    await page.locator('[data-act="show-vba"][data-name="modConstants.bas"]').click();
+    assert.match(await page.locator('#modal-overlay.show').innerText(),/\[REDACTED\]/);await modal(1).click();
+    await page.locator('[data-act="download-module"][data-name="modConstants.bas"]').click();
+    await page.locator('#view-macros [data-act="run-macro"][data-arg="modExportAllModules.ExportAllModules"]').click();
+    await modal(1).click();
+    const downloads=await page.evaluate(()=>sourceDownloads);
+    assert.equal(downloads.length,2);assert.equal(downloads[0].name,'modConstants.bas');assert.match(downloads[1].name,/^VBA_Export_/);
+    downloads.forEach(d=>assert.doesNotMatch(d.text,/\b(?:1109|1234|12346)\b/));
+  }else{
+    // Direct handlers and registry dispatch are gated too, not just hidden buttons.
+    await page.evaluate(async()=>{
+      switchView('macros');showVbaSource('modConstants.bas');modExportAllModules.DownloadModule('modConstants.bas');
+      await modExportAllModules.ExportAllModules();RunMacro('modExportAllModules.ExportAllModules');
+      RunMacroIndex('modExportAllModules','ExportAllModules');
+      await MACRO_REGISTRY.find(m=>m[0]==='modExportAllModules'&&m[1]==='ExportAllModules')[3]();
+    });
+    assert.equal(await page.locator('#modal-overlay.show').count(),0);
+    assert.deepEqual(await page.evaluate(()=>sourceDownloads),[]);
+    assert.equal(await page.locator('[data-act="show-vba"], [data-act="download-module"]').count(),0);
+    assert.equal(await page.locator('#view-macros [data-arg="modExportAllModules.ExportAllModules"]').isVisible(),false);
+    if(role===2){
+      assert.equal(await page.locator('#view-macros').isVisible(),true);
+      assert.ok(await page.locator('#macros-body [data-act="run-macro-index"]').count()>0);
+      assert.deepEqual(await page.evaluate(()=>['admin','manual','export'].map(p=>Access.can(p))),[true,true,true]);
+    }
+  }
+  await page.evaluate(()=>{DownloadFile=originalDownload;delete window.originalDownload;delete window.sourceDownloads;});
+});

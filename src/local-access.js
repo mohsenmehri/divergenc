@@ -54,7 +54,7 @@ const Access = (() => {
   }
   function can(operation,sheet){
     const u=current();if(!u)return false;
-    if(operation==='users')return u.role===1;
+    if(['users','source'].includes(operation))return u.role===1;
     if(operation==='own-password')return true;
     if(operation==='read'){
       if(!SheetExists(sheet))return false;
@@ -74,6 +74,7 @@ const Access = (() => {
     Toast('این عملیات برای سطح دسترسی شما مجاز نیست.','warn');return false;
   }
   function macroAllowed(path){
+    if(path==='modExportAllModules.ExportAllModules')return can('source');
     if(can('admin'))return true;
     if(!can('workspace'))return false;
     return ['modSearchEngine.SearchRecords','modSearchEngine.OpenSearchResults','modSearchEngine.ClearSearchResults',
@@ -84,6 +85,7 @@ const Access = (() => {
     const a=node.dataset.act;
     if(['edit-user','logout'].includes(a))return !!current();
     if(a==='manage-users')return can('users');
+    if(['show-vba','download-module'].includes(a))return can('source');
     if(a==='run-macro')return macroAllowed(node.dataset.arg);
     if(a==='run-macro-index')return macroAllowed(node.dataset.mod+'.'+node.dataset.name);
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);
