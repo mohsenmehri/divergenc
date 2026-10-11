@@ -45,6 +45,16 @@ class OfflineKitChecks(unittest.TestCase):
         s=(WINDOWS/'prepare-offline.ps1').read_text()
         self.assertNotIn('pip download',s);self.assertNotIn('py -3',s)
         self.assertIn('offline-wheels.json',s);self.assertIn('Assert-FamOfflinePayload',s)
+        self.assertIn('Get-FamInstaller $Manifest.$Name $Payload $Payload | Out-Null',s) # preparation is strict, no Offline switch
         self.assertTrue((ROOT/'PREPARE-OFFLINE.cmd').is_file())
+    def test_offline_signature_chain_exception_is_narrow_and_hash_stays_required(self):
+        s=(WINDOWS/'setup-common.psm1').read_text()
+        self.assertLess(s.index('Get-FileHash -LiteralPath $File'),s.index('Get-AuthenticodeSignature -LiteralPath $File'))
+        self.assertIn("$Signature.Status -eq 'Valid'",s)
+        self.assertIn("-in @('UnknownError','NotTrusted')",s)
+        self.assertIn('$Offline -and',s)
+        self.assertIn('$Signature.SignerCertificate.Subject -match $ExpectedPublisher',s)
+        self.assertIn('unsigned file, altered signature, wrong signer, or wrong hash',s)
+        self.assertIn('Internet-connected preparation remains strictly Valid.',s)
 
 if __name__=='__main__':unittest.main()

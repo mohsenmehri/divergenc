@@ -12,7 +12,7 @@
 |---|---|---|
 | wheelهای آفلاین | 11 فایل، SHA-256 هر فایل با metadata رسمی PyPI تطبیق داده شد | موفق |
 | سازگاری wheelhouse | `pip download --no-index --only-binary=:all: --platform win_amd64` برای CPython 3.12، 3.13 و 3.14 | موفق برای هر سه ABI |
-| برنامهٔ نصب آفلاین | آزمون‌های Python ثابت: manifest، نام امن فایل، hash، سه ABI، نبود pip دانلود در آماده‌ساز، `--no-index` و `--only-binary` در نصب | 8 آزمون موفق |
+| برنامهٔ نصب آفلاین | آزمون‌های Python ثابت: manifest، نام امن فایل، hash، سه ABI، نبود pip دانلود در آماده‌ساز، `--no-index` و `--only-binary` در نصب، و استثنای محدود زنجیرهٔ امضای آفلاین | 9 آزمون موفق |
 | API و backup قبلی | `server.tests.test_installer` و `server.tests.test_api` | 29 آزمون موفق |
 | CSS/ساخت مرکزی | تست‌های ساخت و سالم‌ماندن XLSM | 4 آزمون موفق |
 | مرورگر واقعی | Chromium برای نسخهٔ مستقل و نسخهٔ مرکزی با Flask و SQLite آزمایشی جدا، دسکتاپ 1440×1000 و موبایل 390×844 | 4 آزمون موفق |
@@ -32,7 +32,7 @@ node --test tests/sidebar-theme.test.cjs tests/shared-build.test.cjs
 ## محدودیت‌های شفاف
 
 - Windows Server 2019، IIS/ARR واقعی، certificate store، DISM، اعتبارسنجی Authenticode در محیط کاملاً آفلاین و نصب روی `10.16.243.18` در این محیط اجرا نشده‌اند. این گزارش ادعای موفقیت نصب تولیدی یا تست پنج کامپیوتر فیزیکی ندارد.
-- فایل‌های رسمی Python/ARR/Rewrite در این محیط دریافت یا اجرا نشدند. نام، URL، hash و ناشر از `dependencies.json` گرفته می‌شود و ابزار آماده‌سازی/نصب قبل از اجرا SHA-256 و امضا را بررسی می‌کند.
+- فایل‌های رسمی Python/ARR/Rewrite در این محیط دریافت یا اجرا نشدند. نام، URL، hash و ناشر از `dependencies.json` گرفته می‌شود. آماده‌ساز اینترنت‌دار status=`Valid` امضا را الزام می‌کند؛ روی سرور ایزوله فقط `UnknownError`/`NotTrusted` ناشی از زنجیرهٔ غیرقابل‌دسترسی، پس از SHA-256 پین‌شده و تطبیق ناشر embedded، قابل ادامه است. این مسیر روی Windows واقعی اجرا نشده است.
 - برای وجودنداشتن payload قابلیت‌های IIS، رسانهٔ معتبر Windows Server 2019 مطابق همان سرور لازم است. نصب‌کننده با `-LimitAccess` سراغ Windows Update نمی‌رود؛ اگر منبع مناسب نباشد متوقف می‌شود.
 - اعتماد گواهی self-signed، DNS داخلی برای `ertebatat-fam` و سیاست فایروال/GPO سازمان هنوز اقدام مدیر شبکه است. این انتشار خودسرانه آنها را تغییر نمی‌دهد.
 

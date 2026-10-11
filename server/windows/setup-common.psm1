@@ -61,12 +61,23 @@ function Get-FamInstaller($Spec, [string]$Payload, [string]$Cache, [switch]$Offl
             Move-Item -LiteralPath ($File+'.partial') -Destination $File -Force
         }
     }
+    # The hash is the non-network integrity anchor for this exact release. It
+    # is checked before Authenticode, on every machine, before any execution.
     if ((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ine $Spec.sha256) { throw "SHA256 mismatch: $File. Nothing from this file will be executed." }
     $Signature = Get-AuthenticodeSignature -LiteralPath $File
-    if ($Signature.Status -ne 'Valid' -or $Signature.SignerCertificate.Subject -notmatch [regex]::Escape($Spec.publisher)) {
-        throw "Publisher signature verification failed for $File. Fix the Windows trust chain; verification is not bypassed."
+    $ExpectedPublisher=[regex]::Escape($Spec.publisher)
+    if ($Signature.Status -eq 'Valid' -and $Signature.SignerCertificate -and $Signature.SignerCertificate.Subject -match $ExpectedPublisher) { return $File }
+
+    # Isolated servers often cannot contact the Microsoft/public CA revocation
+    # endpoints, so Windows reports UnknownError or NotTrusted despite an intact
+    # embedded signature. Only this narrow chain-availability case may proceed
+    # offline: an unsigned file, altered signature, wrong signer, or wrong hash
+    # still always stops. Internet-connected preparation remains strictly Valid.
+    if ($Offline -and (([string]$Signature.Status) -in @('UnknownError','NotTrusted')) -and $Signature.SignerCertificate -and $Signature.SignerCertificate.Subject -match $ExpectedPublisher) {
+        Write-Warning "Offline certificate-chain validation unavailable for $File ($($Signature.Status)). The pinned SHA256 matched and the embedded signer is $($Signature.SignerCertificate.Subject); proceeding under the isolated-server policy."
+        return $File
     }
-    return $File
+    throw "Publisher signature verification failed for $File (status: $($Signature.Status); signer: $($Signature.SignerCertificate.Subject)). Exact SHA256 matching is required and the only offline exception is UnknownError/NotTrusted with the expected embedded publisher."
 }
 
 function Assert-FamWheels([string]$ManifestPath,[string]$Wheelhouse) {
