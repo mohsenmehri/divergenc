@@ -29,7 +29,7 @@ $UnrelatedBefore=Get-Website -Name FAM-CI-Unrelated | Select-Object -Property @(
 Add-Content "$env:SystemRoot\System32\drivers\etc\hosts" "`n127.0.0.1 ertebatat-fam"
 $PSExe="$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
 $Setup=(Resolve-Path .\server\windows\setup-ertebatat.ps1).Path
-$Arguments='-NoProfile -ExecutionPolicy Bypass -File "'+$Setup+'" -ServerAddress 127.0.0.1 -InstallRoot C:\FAM-CI -DataDir C:\FAM-CIData -CreateCertificate -Unattended'
+$Arguments='-NoProfile -ExecutionPolicy Bypass -File "'+$Setup+'" -ServerAddress 127.0.0.1 -InstallRoot C:\FAM-CI -DataDir C:\FAM-CIData -CreateCertificate -Unattended -Online'
 $P=Start-Process $PSExe -ArgumentList $Arguments -Wait -PassThru -NoNewWindow
 if ($P.ExitCode -ne 0) { throw "First installation failed: $($P.ExitCode)" }
 $First=Get-Content -Raw C:\FAM-CI\deployment.json | ConvertFrom-Json

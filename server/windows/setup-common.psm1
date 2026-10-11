@@ -69,6 +69,32 @@ function Get-FamInstaller($Spec, [string]$Payload, [string]$Cache, [switch]$Offl
     return $File
 }
 
+function Assert-FamWheels([string]$ManifestPath,[string]$Wheelhouse) {
+    $Manifest=Get-Content -Raw -LiteralPath $ManifestPath | ConvertFrom-Json
+    $Names=@($Manifest.files | ForEach-Object { $_.file })
+    $Problems=@(foreach ($Spec in $Manifest.files) {
+        if ([IO.Path]::GetFileName($Spec.file) -cne $Spec.file) { throw 'Invalid wheel manifest filename.' }
+        $File=Join-Path $Wheelhouse $Spec.file
+        if (!(Test-Path -LiteralPath $File -PathType Leaf)) { "Missing wheel: $($Spec.file)" }
+        elseif ((Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash -ine $Spec.sha256) { "Damaged/modified wheel: $($Spec.file)" }
+    })
+    if (Test-Path -LiteralPath $Wheelhouse) {
+        $Problems+=@(Get-ChildItem -LiteralPath $Wheelhouse -Filter '*.whl' -File | Where-Object Name -notin $Names | ForEach-Object { "Unverified extra wheel: $($_.Name)" })
+    }
+    if ($Problems.Count) { throw ($Problems -join "`n") }
+}
+
+function Assert-FamOfflinePayload([string]$Directory) {
+    $Payload=Join-Path $Directory 'payload'
+    $Deps=Get-Content -Raw (Join-Path $Directory 'dependencies.json') | ConvertFrom-Json
+    $Missing=@(foreach ($Name in @('python','rewrite','arr')) {
+        if (!(Test-Path -LiteralPath (Join-Path $Payload $Deps.$Name.file) -PathType Leaf)) { $Deps.$Name.file }
+    })
+    if ($Missing.Count) { throw ('Offline files missing: '+($Missing -join ', ')+'. On the INTERNET PC run PREPARE-OFFLINE.cmd, or copy the three official installers into server\windows\payload. No server download will be attempted.') }
+    Assert-FamWheels (Join-Path $Directory 'offline-wheels.json') (Join-Path $Payload 'wheels')
+    foreach ($Name in @('python','rewrite','arr')) { Get-FamInstaller $Deps.$Name $Payload $Payload -Offline | Out-Null }
+}
+
 function Invoke-FamInstaller([string]$File, [string]$Arguments) {
     $Process = Start-Process -FilePath $File -ArgumentList $Arguments -Wait -PassThru
     if ($Process.ExitCode -in @(3010,1641)) { throw 'Windows reports that a reboot is required. Restart in your maintenance window, then run this installer again. No automatic reboot is performed.' }

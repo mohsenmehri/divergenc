@@ -1,11 +1,27 @@
 """Reproducible deployment ZIP; explicit allowlist excludes real DBs/credentials."""
 from pathlib import Path
 import hashlib
+import json
 from zipfile import ZipFile,ZipInfo,ZIP_DEFLATED
 root=Path(__file__).resolve().parents[1]
-files=[*root.glob('server/*.py'),*root.glob('server/windows/*.ps1'),*root.glob('server/windows/*.psm1'),*root.glob('server/windows/*.py'),*root.glob('server/tests/*.py'),root/'server/windows/dependencies.json',root/'INSTALL-FAM.cmd',root/'server/requirements.txt',root/'server/www/FAM.html',root/'server/www/web.config',root/'docs/SHARED_IIS_FA.md',root/'docs/SHARED_TEST_REPORT.md',root/'docs/AUTO_INSTALL_FAM_FA.md',root/'docs/AUTO_INSTALL_TEST_REPORT.md']
+files=[*root.glob('server/*.py'),*root.glob('server/windows/*.ps1'),*root.glob('server/windows/*.psm1'),*root.glob('server/windows/*.py'),*root.glob('server/tests/*.py'),root/'server/windows/dependencies.json',root/'server/windows/offline-wheels.json',root/'INSTALL-FAM.cmd',root/'PREPARE-OFFLINE.cmd',root/'server/requirements.txt',root/'server/www/FAM.html',root/'server/www/web.config',root/'docs/SHARED_IIS_FA.md',root/'docs/SHARED_TEST_REPORT.md',root/'docs/AUTO_INSTALL_FAM_FA.md',root/'docs/AUTO_INSTALL_TEST_REPORT.md',root/'docs/OFFLINE_SERVER_2019_FA.md',root/'docs/OFFLINE_UPDATE_TEST_REPORT.md']
 entries={p.relative_to(root).as_posix():p.read_bytes() for p in files}
-entries['START_HERE.txt']=('فام مرکزی — نصب خودکار سرور 10.16.243.18\n\nآدرس موردنظر کاربران: https://ertebatat-fam\n\n۱. کل ZIP را روی خود سرور استخراج کنید.\n۲. INSTALL-FAM.cmd را اجرا و Administrator/UAC را تأیید کنید.\n۳. گواهی مناسب موجود استفاده می‌شود؛ ساخت گواهی جدید یا تغییر سایت قبلی فقط با تأیید شماست.\n۴. تا اعلام موفقیت واقعی HTTPS/API، نصب کامل محسوب نمی‌شود.\n\nراهنمای کامل/آفلاین/گواهی کاربران: docs/AUTO_INSTALL_FAM_FA.md\nگزارش دقیق آزمون‌ها: docs/AUTO_INSTALL_TEST_REPORT.md\nWindows/IIS واقعی و پنج کامپیوتر فیزیکی هنوز در این محیط آزمایش نشده‌اند.\n\nپیش‌نیازهای Microsoft/Python داخل این ZIP نیستند؛ اینترنت سرور یا آماده‌سازی آفلاین لازم است.\nداده‌ها و حساب‌های موجود حذف/بازنشانی نمی‌شوند؛ فقط دادهٔ نصب شناخته‌شدهٔ سرور حفظ می‌شود، نه انتقال خودکار مرورگر محلی.\nاین بسته دادهٔ واقعی، رمز صادراتی، کلید خصوصی یا دیتابیس آماده ندارد.\nریشهٔ عمومی IIS فقط server/www است. پوشهٔ FAMData را Share نکنید.\n\nSource: https://github.com/mohsenmehri/divergenc/tree/arena/a50077cc-divergenc\n').encode('utf8')
+# Wheels are required in this release, exactly pinned by filename + SHA256.
+# Installer EXE/MSIs can be added by the operator; never bundle arbitrary payload.
+wheel_manifest=json.loads((root/'server/windows/offline-wheels.json').read_text())
+for spec in wheel_manifest['files']:
+    path=root/'server/windows/payload/wheels'/spec['file']
+    if not path.is_file():raise SystemExit('Run python scripts/fetch_offline_wheels.py first: '+spec['file'])
+    data=path.read_bytes()
+    assert hashlib.sha256(data).hexdigest()==spec['sha256'],spec['file']
+    entries[path.relative_to(root).as_posix()]=data
+prerequisites=json.loads((root/'server/windows/dependencies.json').read_text())
+for name in ('python','rewrite','arr'):
+    spec=prerequisites[name];path=root/'server/windows/payload'/spec['file']
+    if path.is_file():
+        data=path.read_bytes();assert hashlib.sha256(data).hexdigest().upper()==spec['sha256'].upper(),spec['file']
+        entries[path.relative_to(root).as_posix()]=data
+entries['START_HERE.txt']=('فام — Windows Server 2019 آفلاین — 10.16.243.18\n\nراهنمای اصلی این انتشار: docs/OFFLINE_SERVER_2019_FA.md\n\n۱. روی کامپیوتر ویندوزی اینترنت‌دار، بسته را استخراج و PREPARE-OFFLINE.cmd را اجرا کنید. Python یا Administrator لازم نیست.\n۲. پس از OFFLINE KIT READY، کل پوشهٔ استخراج‌شده را به سرور منتقل کنید؛ نه ZIP اولیه را.\n۳. روی سرور 10.16.243.18 فایل INSTALL-FAM.cmd را با تأیید Administrator اجرا کنید.\n\nتمام wheelهای لازم داخل این ZIP هستند. سه نصب‌کنندهٔ Python/Rewrite/ARR باید قبل از انتقال طبق راهنما اضافه شوند؛ آدرس رسمی و نام دقیقشان در راهنماست.\nدر حالت پیش‌فرض روی سرور دانلود نصب‌کننده، pip اینترنتی یا Windows Update انجام نمی‌شود. فایل منبع Windows Server 2019 ممکن است برای قابلیت‌های ناقص IIS لازم شود.\n\nآدرس کاربران: https://ertebatat-fam — نام داخلی و اعتماد گواهی همچنان باید صحیح باشند.\nاصلاح تم ۲ و سفیدماندن فیلدها هنگام کلیک در HTML همین بسته موجود است.\nآزمون واقعی Windows/IIS در این محیط اجرا نشده؛ گزارش دقیق: docs/OFFLINE_UPDATE_TEST_REPORT.md\n\nSource: https://github.com/mohsenmehri/divergenc/tree/arena/a50077cc-divergenc\n').encode('utf8')
 entries['SHA256SUMS.txt']=''.join(hashlib.sha256(data).hexdigest()+'  '+name+'\n' for name,data in sorted(entries.items())).encode()
 output=root/'releases/FAM-Central-IIS.zip';output.parent.mkdir(exist_ok=True)
 with ZipFile(output,'w',ZIP_DEFLATED,compresslevel=9) as z:

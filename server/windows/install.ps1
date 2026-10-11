@@ -35,13 +35,30 @@ if (!(Test-Path $Python)) {
 }
 $VenvBase=& $Python -c "import sys;print(sys.base_prefix)"
 if ($LASTEXITCODE -ne 0 -or $VenvBase -match '\\Users\\') { throw 'Existing virtual environment is broken or uses a private Python. Preserve the DB/settings and repair only .venv before retrying.' }
-$PipArgs=@('-m','pip','install','--disable-pip-version-check','--no-input','-r',(Join-Path $Root 'requirements.txt'))
+$PipArgs=@('-I','-m','pip','install','--disable-pip-version-check','--no-input','-r',(Join-Path $Root 'requirements.txt'))
 if ($Wheelhouse) {
   if (!(Test-Path -LiteralPath $Wheelhouse -PathType Container)) { throw 'Offline wheelhouse directory is missing.' }
-  $PipArgs+=@('--no-index','--find-links',$Wheelhouse)
+  Assert-FamWheels (Join-Path $PSScriptRoot 'offline-wheels.json') $Wheelhouse
+  $PipArgs+=@('--no-index','--only-binary=:all:','--find-links',$Wheelhouse)
 }
-& $Python @PipArgs
-if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed; check network/proxy or the offline wheelhouse.' }
+$SavedPip=@{}
+try {
+  if ($Wheelhouse) {
+    # A machine/user pip config or PIP_FIND_LINKS must not add an Internet URL.
+    foreach ($Entry in @(Get-ChildItem Env: | Where-Object Name -like 'PIP_*')) {
+      $SavedPip[$Entry.Name]=$Entry.Value;Remove-Item ('Env:'+ $Entry.Name)
+    }
+    $env:PIP_CONFIG_FILE='NUL'
+    $PipArgs+=@('--no-cache-dir')
+  }
+  & $Python @PipArgs
+  if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed; inspect the verified offline wheelhouse or explicit online configuration.' }
+} finally {
+  if ($Wheelhouse) {
+    foreach ($Entry in @(Get-ChildItem Env: | Where-Object Name -like 'PIP_*')) { Remove-Item ('Env:'+ $Entry.Name) }
+    foreach ($Name in $SavedPip.Keys) { Set-Item ('Env:'+ $Name) $SavedPip[$Name] }
+  }
+}
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 # This must be a directory dedicated to FAM. No database is deleted or reseeded.
 $Acl=New-Object System.Security.AccessControl.DirectorySecurity

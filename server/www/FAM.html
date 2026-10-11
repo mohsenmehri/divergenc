@@ -1508,6 +1508,28 @@ table.xl thead th{background-color:#edf3f7;color:#536d82;}
 .hero{background-color:#f3f8fa;border-color:#d6e5e9;}
 .hero::before,.hero::after{background-image:radial-gradient(circle,rgba(8,127,131,.06),transparent 65%);}
 .hero-tag{border-color:#c5dedf;background-color:#edf6f5;}
+
+/* Interactive states must not fall back to the original dark input fill. */
+.inp:focus,.inp:active,.field input:focus,.field select:focus,.field textarea:focus,
+.quick-panel .inp:focus,.quick-panel .inp:active,
+.access-field input:focus,.access-login input:focus,#user-form select:focus,
+.own-password-dialog .access-field input:focus,.mbox input.m-in:focus,.wf input:focus{
+  background-color:#fff;color:#203c52;border-color:#299a96;box-shadow:0 0 0 3px #087f8320;
+}
+.inp::placeholder,.field input::placeholder,.field textarea::placeholder,.mbox input.m-in::placeholder{color:#687f91;}
+.btn:focus-visible,.icon-btn:focus-visible,.nav-item:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.cat-pill:focus-visible,.sheet-card:focus-visible{outline-color:#087f83;}
+.top-search:focus-within{background-color:#fff;border-color:#299a96;box-shadow:0 0 0 3px #087f8320;}
+.icon-btn:hover,.icon-btn:active,.icon-btn.accent:hover,.icon-btn.accent:active{background-color:#e7f4f1;color:#076e70;border-color:#9dccbf;}
+.btn-ghost:active{background-color:#e7f4f1;color:#076e70;}
+.category-choice.active,.region-choice.active,.province-card.active,.province-sections [aria-pressed="true"]{background-color:#e7f4f1;color:#076e70;border-color:#9dccbf;}
+.sheet-chip.active,.cat-pill.active,.region-tab.active{background-image:none;box-shadow:0 6px 16px -10px #087f8340;}
+.empty-state:hover{background-color:#f3f8fa;border-color:#bcd9d5;}
+.hero-chips span:hover{background-color:#e7f4f1;color:#076e70;}
+.macro-run,.macro-run:hover{background-color:#edf6f5;color:#076e70;border-color:#c5dedf;}
+.sheet-card:hover,.cat-tile:hover,.nav-card:hover{box-shadow:0 14px 32px -18px #23384e30;}
+table.xl td[contenteditable]:focus,.block-table td .cell-in:focus{background-color:#eff9f6;box-shadow:inset 0 0 0 1.5px #299a96;}
+[data-tip]::after{background-color:#fff;color:#203c52;border-color:#cfdee9;box-shadow:0 10px 24px -10px #23384e30;}
+select.inp:focus,select.inp:active{background-image:linear-gradient(45deg,transparent 50%,#6c889a 50%),linear-gradient(135deg,#6c889a 50%,transparent 50%);}
 </style>
 <style id="fam-ui-theme-css">
 /* Shared switch controls; light-only nodes never change the original theme. */

@@ -12,7 +12,9 @@ param(
     [switch]$UseExistingSite,
     [switch]$UseFamAuthentication,
     [switch]$AddFirewallRule,
-    [switch]$Offline,
+    [switch]$Offline=$true,
+    [switch]$Online,
+    [string]$WindowsFeatureSource='',
     [switch]$Unattended,
     [switch]$PauseAtEnd
 )
@@ -30,6 +32,10 @@ $Mutex=[Threading.Mutex]::new($false,'Global\FAM-Central-Installer')
 $Locked=$Mutex.WaitOne(0)
 try {
     if (!$Locked) { throw 'Another FAM installer is already running.' }
+    if ($Online) {
+        if ($PSBoundParameters.ContainsKey('Offline')) { throw 'Choose only one of Offline or Online.' }
+        $Offline=$false
+    }
     if ($PSVersionTable.PSEdition -ne 'Desktop' -or ![Environment]::Is64BitProcess -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'Use 64-bit Windows PowerShell 5.1 on x64 Windows (INSTALL-FAM.cmd).' }
     if ([Environment]::OSVersion.Version.Major -lt 10) { throw 'This automatic installer targets the Windows Server 2016 generation or later.' }
     $ParsedIP=[Net.IPAddress]::Parse($ServerAddress)
@@ -37,6 +43,15 @@ try {
     if (!(Get-NetIPAddress -AddressFamily IPv4 | Where-Object IPAddress -eq $ServerAddress)) { throw "Run this ON the server $ServerAddress, not on a user workstation." }
     foreach ($Key in @('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending','HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired')) {
         if (Test-Path $Key) { throw 'Windows has a pending reboot. Restart in a maintenance window, then rerun setup.' }
+    }
+    # Fail BEFORE any ACL, feature, IIS, certificate or backend changes if the
+    # carried kit is incomplete. No Python is needed to check its contents.
+    if ($Offline) {
+        Write-Host 'Checking the offline kit before changing this server...'
+        Assert-FamOfflinePayload $PSScriptRoot
+    }
+    if (!$WindowsFeatureSource -and (Test-Path (Join-Path $PackageRoot 'WINDOWS-FEATURE-SOURCE.txt'))) {
+        $WindowsFeatureSource=(Get-Content -Raw (Join-Path $PackageRoot 'WINDOWS-FEATURE-SOURCE.txt')).Trim()
     }
     $HostName=$HostName.ToLowerInvariant()
     $Origin='https://'+$HostName
@@ -87,7 +102,19 @@ try {
     Write-Host "FAM automatic installation: $Origin -> $ServerAddress"
     Write-Host 'No database, existing account, or other website is deleted. Shared IIS prerequisites may require a maintenance window.'
 
-    if (Get-Command Get-WindowsFeature -ErrorAction SilentlyContinue) {
+    if ($Offline) {
+        # DISM /LimitAccess prohibits Windows Update fallback. 'Online' means
+        # the running OS, NOT the Internet. Local WinSxS is tried first.
+        $Names=@('IIS-WebServerRole','IIS-WebServer','IIS-CommonHttpFeatures','IIS-StaticContent','IIS-DefaultDocument','IIS-HttpErrors','IIS-ManagementConsole','IIS-ManagementScriptingTools')
+        $Needed=@($Names | Where-Object { (Get-WindowsOptionalFeature -Online -FeatureName $_).State -ne 'Enabled' })
+        if ($Needed.Count) {
+            $FeatureArgs=@{Online=$true;FeatureName=$Needed;All=$true;NoRestart=$true;LimitAccess=$true;ErrorAction='Stop'}
+            if ($WindowsFeatureSource) { $FeatureArgs.Source=@($WindowsFeatureSource) }
+            try { $Result=Enable-WindowsOptionalFeature @FeatureArgs }
+            catch { throw ('Offline IIS features need a matching Windows Server 2019 component source. Mount the matching ISO and set WINDOWS-FEATURE-SOURCE.txt; see OFFLINE_SERVER_2019_FA.md. Windows Update was not used. Details: '+$_.Exception.Message) }
+            if (@($Result | Where-Object { $_.RestartNeeded -eq $true }).Count) { throw 'IIS requires a reboot. Restart in your maintenance window, then rerun.' }
+        }
+    } elseif (Get-Command Get-WindowsFeature -ErrorAction SilentlyContinue) {
         $Needed=@(Get-WindowsFeature -Name @('Web-Server','Web-Static-Content','Web-Default-Doc','Web-Http-Errors','Web-Mgmt-Console','Web-Scripting-Tools') | Where-Object { !$_.Installed } | Select-Object -ExpandProperty Name)
         if ($Needed.Count) {
             $Result=Install-WindowsFeature -Name $Needed -IncludeManagementTools
@@ -187,7 +214,6 @@ try {
     $Certificate=$Chosen.Cert
     $Dependencies=Get-Content -Raw (Join-Path $PSScriptRoot 'dependencies.json') | ConvertFrom-Json
     $Payload=Join-Path $PSScriptRoot 'payload'
-    if ((Test-Path (Join-Path $Payload 'OFFLINE-READY.txt')) -and !$PSBoundParameters.ContainsKey('Offline')) { $Offline=$true }
     if ($Offline) { Write-Host 'OFFLINE MODE: runtime installers and Python wheels must be pre-staged.' }
     $IISModules=@(Get-WebGlobalModule | Select-Object -ExpandProperty Name)
     if ('RewriteModule' -notin $IISModules) {
@@ -239,7 +265,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Cannot protect application files from non-administrator modification.' }
     }
     # Whitelist deployment files: never copy/delete settings.json, .venv or live data.
-    $Files=@(Get-ChildItem $SourceServer -File -Filter '*.py')+@(Get-Item (Join-Path $SourceServer 'requirements.txt'))+@(Get-Item (Join-Path $SourceServer 'www\FAM.html'))+@(Get-Item (Join-Path $SourceServer 'www\web.config'))+@(Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Extension -in @('.ps1','.psm1','.py') -or $_.Name -eq 'dependencies.json' })
+    $Files=@(Get-ChildItem $SourceServer -File -Filter '*.py')+@(Get-Item (Join-Path $SourceServer 'requirements.txt'))+@(Get-Item (Join-Path $SourceServer 'www\FAM.html'))+@(Get-Item (Join-Path $SourceServer 'www\web.config'))+@(Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Extension -in @('.ps1','.psm1','.py') -or $_.Name -in @('dependencies.json','offline-wheels.json') })
     foreach ($File in $Files) {
         $Relative=$File.FullName.Substring($SourceServer.Length).TrimStart('\')
         $Destination=Join-Path $TargetServer $Relative

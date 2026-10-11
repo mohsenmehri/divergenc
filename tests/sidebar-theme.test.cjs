@@ -91,3 +91,65 @@ for(const edition of ['local','central'])test(`${edition}: light sidebar and the
     assert.deepEqual(errors,[]);
   } finally {await context.close();}
 });
+
+for(const edition of ['local','central'])test(`${edition}: light focus/pressed states in login, quick panels, forms and cells`,{timeout:90000},async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
+  async function lightField(field){
+    await field.focus();
+    const styles=await field.evaluate(e=>{
+      for(const a of e.getAnimations())if(Number.isFinite(a.effect.getComputedTiming().endTime))a.finish();
+      const s=getComputedStyle(e);return {background:s.backgroundColor,color:s.color,image:s.backgroundImage,id:e.id};
+    });
+    assert.equal(styles.background,'rgb(255, 255, 255)',JSON.stringify(styles));
+    assert.equal(styles.color,'rgb(32, 60, 82)',JSON.stringify(styles));
+  }
+  try{
+    await page.goto(edition==='central'?centralURL:localURL);
+    await page.evaluate(()=>FamTheme.set('light'));
+    await lightField(page.locator('#auth-username'));await lightField(page.locator('#auth-password'));
+    await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();
+    await page.waitForFunction(()=>Access.current()&&!document.querySelector('#auth-screen')&&document.querySelector('#cp-c9 option')&&!document.querySelector('#shared-block'));
+    await page.evaluate(async()=>{
+      importValidatedSheets(['Focus Test'],{'Focus Test':{rows:[['ID','Name'],['1','FOCUS']],merges:[]}},'focus-test.xlsx',true);
+      await flushDeepSave();if(typeof FamShared!=='undefined')await FamShared.flush();
+    });
+    await lightField(page.locator('#cp-c11'));
+    await page.locator('#topbar [data-act="toggle-sidebar"]').click();
+    for(const id of ['quick-search','quick-add','quick-remove']){
+      const trigger=page.locator(`[aria-controls="${id}"]`);await trigger.click();
+      const fields=page.locator(`#${id} .inp`);assert.ok(await fields.count()>0);
+      for(const field of await fields.all())if(await field.isVisible())await lightField(field);
+      if(id==='quick-search'){
+        const text=page.locator('#quick-search input.inp').first();await text.click();
+        await page.mouse.down();await lightField(text);await page.mouse.up();
+        await page.locator('#sidebar').screenshot({path:path.join(root,`.cache/sidebar-screens/${edition}-light-focused.png`),animations:'disabled'});
+      }
+      await trigger.click();
+    }
+    await page.locator('#topbar [data-act="toggle-sidebar"]').click();
+    await page.locator('#stat-line').click();await page.locator('#account-manage').click();await page.locator('#user-new').click();
+    for(const id of ['user-username','user-name','user-password','user-role'])await lightField(page.locator('#'+id));
+    await page.locator('#users-done').click();
+    await page.evaluate(()=>{state.cp.C16='Focus Test';document.getElementById('cp-c16').value='Focus Test';RunMacro('modAddRecord.StartAddWizard');});
+    await page.locator('.wizard-fields').waitFor();
+    for(const field of await page.locator('.wizard-fields input').all())await lightField(field);
+    await page.locator('[data-a="cancel"]').click();
+    await page.evaluate(()=>{state.lockedSheets['Focus Test']=false;switchView('sheet');renderSheetView('Focus Test');});
+    const cell=page.locator('#sheet-body td[contenteditable][data-r="2"][data-c="2"]');await cell.focus();
+    const cellStyle=await cell.evaluate(e=>{for(const a of e.getAnimations())if(Number.isFinite(a.effect.getComputedTiming().endTime))a.finish();return {bg:getComputedStyle(e).backgroundColor,focus:e.matches(':focus'),active:document.activeElement.outerHTML.slice(0,400),html:e.outerHTML.slice(0,300)};});
+    assert.equal(cellStyle.bg,'rgb(239, 249, 246)',JSON.stringify(cellStyle));
+    // Less frequently used field templates, using their production selectors.
+    await page.evaluate(()=>{
+      const box=document.createElement('div');box.id='focus-fixture';box.innerHTML='<div class="field"><textarea class="inp"></textarea></div><div class="mbox"><input class="m-in"></div>';
+      document.body.appendChild(box);
+    });
+    for(const field of await page.locator('#focus-fixture input,#focus-fixture textarea').all())await lightField(field);
+    await page.locator('#focus-fixture').evaluate(e=>e.remove());
+    await page.evaluate(()=>{switchView('panel');FamTheme.set('original');});
+    await page.locator('#cp-c11').focus();
+    const original=await page.locator('#cp-c11').evaluate(e=>{for(const a of e.getAnimations())a.finish();return getComputedStyle(e).backgroundColor;});
+    assert.equal(original,'rgba(2, 10, 27, 0.8)'); // Original theme deliberately unchanged.
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});
