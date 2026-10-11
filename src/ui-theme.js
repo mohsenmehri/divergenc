@@ -21,7 +21,6 @@
   function set(value,persist=true){
     const next=normalize(value),changed=next!==current;
     current=next;paint();
-    window.FamOperationsLayout?.(current==='light');
     updateButtons();
     if(persist){try{localStorage.setItem(key,current);}catch(e){/* Theme still works for this visit. */}}
     if(changed){
@@ -50,6 +49,5 @@
     // Observe only roots, not workbook rows/cells or typing.
     observer.observe(document.body,{childList:true});
     mount();
-    window.FamOperationsLayout?.(current==='light');
   });
 })();

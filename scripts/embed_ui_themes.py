@@ -8,10 +8,9 @@ for name, ext, tag, marker, attrs in [
     ('operations-ui', 'css', 'style', '</head>', ' media="not all"'),
     ('ui-theme', 'css', 'style', '</head>', ''),
     ('ui-theme', 'js', 'script', '</head>', ''),
-    ('operations-ui', 'js', 'script', '</body>', ''),
 ]:
     block_id = 'fam-operations-' + ext if name == 'operations-ui' else 'fam-ui-theme-' + ext
-    content = (root / f'src/{name}.{ext}').read_text()
+    content = (root / ('src/light-palette.css' if name == 'operations-ui' else f'src/{name}.{ext}')).read_text()
     block = f'<{tag} id="{block_id}"{attrs}>\n{content}</{tag}>'
     pattern = rf'<{tag} id="{block_id}"[^>]*>.*?</{tag}>'
     if re.search(pattern, s, re.S):
@@ -19,5 +18,6 @@ for name, ext, tag, marker, attrs in [
     else:
         assert s.count('\n' + marker) == 1
         s = s.replace('\n' + marker, '\n' + block + '\n' + marker, 1)
+s = re.sub(r'<script id="fam-operations-js"[^>]*>.*?</script>\n?', '', s, flags=re.S)
 p.write_text(s)
 print('Embedded original + light theme in FAM.html')

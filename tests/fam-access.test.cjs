@@ -770,7 +770,7 @@ test('UI-16 drafts survive IndexedDB-only saves even when the UI save timestamp 
   }
 });
 
-if(process.env.FAM_FILE==='FAM-Operations.html'||process.env.FAM_THEME==='light')test('UI B demo requires admin data rights even when invoked directly, never overwrites data',async()=>{
+if(process.env.FAM_FILE==='FAM-Operations.html')test('UI B demo requires admin data rights even when invoked directly, never overwrites data',async()=>{
   await setup();await createUser(2);await createUser(3);await createUser(4);
   for(const role of [3,4]){
     await logout();await login('user'+role);
@@ -797,8 +797,8 @@ if(!process.env.FAM_THEME && !process.env.FAM_FILE)test('two themes switch in pl
   assert.equal(await page.evaluate(()=>FamTheme.current()),'light');
   assert.equal(await page.locator('#cp-c11').inputValue(),'پیش‌نویس تم');
   assert.deepEqual(await page.evaluate(()=>({data:JSON.stringify(WB),accounts:localStorage.getItem('fam.accounts.v1'),menu:document.getElementById('sidebar').className})),before);
-  assert.equal(await page.locator('.operations-heading').isVisible(),true);
-  assert.equal(await page.evaluate(()=>!!(document.getElementById('fold-ops').compareDocumentPosition(document.getElementById('fold-cats'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
+  assert.equal(await page.locator('.operations-heading').count(),0);
+  assert.equal(await page.evaluate(()=>!!(document.getElementById('fold-cats').compareDocumentPosition(document.getElementById('fold-ops'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
   await page.locator('#cp-c16').selectOption('Network Test');
   await page.locator('#fold-ops [data-arg="modAddRecord.StartAddWizard"]').click();
   await page.locator('.wizard-fields input').first().fill('UNSAVED');

@@ -1,0 +1,165 @@
+import copy
+import json
+from pathlib import Path
+import sqlite3
+import tempfile
+import threading
+import unittest
+import uuid
+from server.app import create_app, REGIONS
+
+ORIGIN='http://localhost'
+class CentralTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.path=str(Path(self.tmp.name)/'fam.sqlite3')
+        self.config={'DB_PATH':self.path,'PUBLIC_ORIGIN':ORIGIN,'TESTING':True,'COOKIE_SECURE':False}
+        self.app=create_app(self.config);self.a=self.login('admin');self.seed()
+    def tearDown(self):self.tmp.cleanup()
+    def login(self,name,password='1109'):
+        c=self.app.test_client();r=c.post('/api/login',json={'username':name,'password':password},headers={'Origin':ORIGIN});self.assertEqual(r.status_code,200,r.json);c.csrf=r.json['csrf'];return c
+    def post(self,c,path,body):return c.post('/api/'+path,json=body,headers={'Origin':ORIGIN,'X-FAM-CSRF':c.csrf})
+    def state(self,c=None):return (c or self.a).get('/api/state').json
+    def save(self,c,p,**kw):return self.post(c,'state',{'state':p['state'],'revision':p['revision'],'epoch':p['epoch'],'requestId':str(uuid.uuid4()),**kw})
+    def seed(self):
+        p=self.state();p['state']['order']=['Network','تهران','فارس']
+        p['state']['sheets']={n:{'rows':[['ID','Name'],[1,n+' A']],'merges':[]} for n in p['state']['order']}
+        self.assertEqual(self.save(self.a,p).status_code,200)
+    def user(self,role,name=None,regions=None,sheets=None):
+        p=self.a.get('/api/users').json
+        p['users'].append({'id':str(uuid.uuid4()),'username':name or 'user'+str(role),'name':'User '+str(role),'role':role,'enabled':True,'regions':regions or [],'sheets':sheets or [],'password':'1109'})
+        r=self.post(self.a,'users',p);self.assertEqual(r.status_code,200,r.json)
+        return self.login(name or 'user'+str(role))
+    def test_two_clients_and_restart(self):
+        b=self.login('admin');p=self.state();p['state']['sheets']['Network']['rows'][1][1]='CENTRAL'
+        self.assertEqual(self.save(self.a,p).status_code,200)
+        self.assertEqual(self.state(b)['state']['sheets']['Network']['rows'][1][1],'CENTRAL')
+        self.app=create_app(self.config);c=self.login('admin')
+        self.assertEqual(self.state(c)['state']['sheets']['Network']['rows'][1][1],'CENTRAL')
+    def test_stale_and_epoch_conflicts_no_overwrite(self):
+        stale=self.state();p=copy.deepcopy(stale);p['state']['sheets']['Network']['rows'][1][1]='FIRST'
+        self.assertEqual(self.save(self.a,p).status_code,200)
+        stale['state']['sheets']['Network']['rows'][1][1]='STALE'
+        self.assertEqual(self.save(self.a,stale).status_code,409)
+        p=self.state();p['epoch']='wrong';self.assertEqual(self.save(self.a,p).status_code,409)
+        self.assertEqual(self.state()['state']['sheets']['Network']['rows'][1][1],'FIRST')
+    def test_idempotent_lost_ack_and_altered_replay(self):
+        p=self.state();p['state']['sheets']['Network']['rows'].append([2,'ONCE']);rid=str(uuid.uuid4())
+        first=self.save(self.a,p,requestId=rid);again=self.save(self.a,p,requestId=rid)
+        self.assertEqual(first.status_code,200);self.assertEqual(first.json,again.json)
+        p['state']['sheets']['Network']['rows'].append([3,'BAD']);self.assertEqual(self.save(self.a,p,requestId=rid).status_code,409)
+        self.assertEqual(len(self.state()['state']['sheets']['Network']['rows']),3)
+    def test_server_role3_rules(self):
+        c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['rows'][1][1]='DENIED'
+        self.assertEqual(self.save(c,p).status_code,403)
+        p=self.state(c);p['state']['sheets']['Network']['rows'].append([2,'ADDED'])
+        self.assertEqual(self.save(c,p).status_code,200)
+        p=self.state(c);p['state']['sheets']['Network']['rows'].pop();self.assertEqual(self.save(c,p).status_code,200)
+        p=self.state(c);p['state']['regionConfig']={'invalid':True};self.assertIn(self.save(c,p).status_code,[400,403])
+        p=self.state(c);p['state']['sheets']['Network']['rows'][0][0]='HEADER';self.assertEqual(self.save(c,p).status_code,403)
+        self.assertEqual(c.get('/api/users').status_code,403)
+    def test_role3_atm_template_creation(self):
+        c=self.user(3);p=self.state(c);p['state']['order'].append('خودپرداز تهران');p['state']['sheets']['خودپرداز تهران']={'rows':[['ID','Name'],[2,'ATM']],'merges':[]}
+        self.assertEqual(self.save(c,p).status_code,200)
+        p=self.state(c);p['state']['order'].append('Arbitrary');p['state']['sheets']['Arbitrary']={'rows':[['ID','Name'],[2,'BAD']],'merges':[]}
+        self.assertEqual(self.save(c,p).status_code,403)
+    def test_role4_redaction_and_region_moves(self):
+        c=self.user(4,regions=['2'],sheets=['تهران','Network']);p=self.state(c)
+        self.assertEqual(set(p['state']['order']),{'تهران','Network'});self.assertNotIn('فارس',p['state']['sheets']);self.assertNotIn('CHANGE_LOG',p['state']['sheets'])
+        self.assertEqual(self.save(c,p).status_code,403)
+        p=self.state();p['state']['regionConfig']={'version':1,'regions':[{'id':str(i),'name':str(i)} for i in range(1,5)],'assignments':[[f'{r}-{i}','4' if (r,i)==(2,1) else str(r)] for r,ns in enumerate(REGIONS,1) for i,_ in enumerate(ns,1)]}
+        self.assertEqual(self.save(self.a,p).status_code,200)
+        self.assertEqual(self.state(c)['state']['order'],['Network'])
+    def test_role2_cannot_administer_accounts(self):
+        c=self.user(2);self.assertEqual(c.get('/api/users').status_code,403);self.assertEqual(self.post(c,'users',{'users':[]}).status_code,403)
+        p=self.state(c);p['state']['sheets']['Network']['rows'][1][1]='LEVEL2';self.assertEqual(self.save(c,p).status_code,200)
+    def test_disable_revokes_session_and_preserves_last_admin(self):
+        c=self.user(3);p=self.a.get('/api/users').json
+        next(x for x in p['users'] if x['role']==3)['enabled']=False
+        self.assertEqual(self.post(self.a,'users',p).status_code,200);self.assertEqual(c.get('/api/state').status_code,401)
+        p=self.a.get('/api/users').json;next(x for x in p['users'] if x['role']==1)['enabled']=False
+        self.assertEqual(self.post(self.a,'users',p).status_code,400)
+    def test_password_owner_only_and_other_sessions_revoked(self):
+        c=self.user(3);other=self.login('user3');before=self.state(c)['user']
+        bad={'currentPassword':'1109','newPassword':'new-pass','role':1}
+        self.assertEqual(self.post(c,'password',bad).status_code,400)
+        self.assertEqual(self.post(c,'password',{'currentPassword':'1109','newPassword':'new-pass'}).status_code,200)
+        self.assertEqual(other.get('/api/state').status_code,401)
+        after=self.state(c)['user'];self.assertEqual(before['role'],after['role']);self.assertEqual(before['name'],after['name'])
+        self.login('user3','new-pass')
+    def test_users_revision_and_no_credential_disclosure(self):
+        p=self.a.get('/api/users').json;stale=copy.deepcopy(p)
+        p['users'][0]['name']='Changed';self.assertEqual(self.post(self.a,'users',p).status_code,200)
+        self.assertEqual(self.post(self.a,'users',stale).status_code,409)
+        result=json.dumps(self.a.get('/api/users').json);self.assertNotIn('hash',result);self.assertNotIn('salt',result);self.assertNotIn('password',result)
+    def test_csrf_origin_and_unauthenticated_access(self):
+        self.assertEqual(self.app.test_client().get('/api/state').status_code,401)
+        self.assertEqual(self.a.post('/api/state',json={},headers={'Origin':ORIGIN}).status_code,403)
+        self.assertEqual(self.a.post('/api/state',json={},headers={'Origin':'https://evil.invalid','X-FAM-CSRF':self.a.csrf}).status_code,403)
+        self.assertEqual(self.a.get('/private/fam.sqlite3').status_code,404)
+    def test_rate_limit(self):
+        c=self.app.test_client()
+        for _ in range(10):self.assertEqual(c.post('/api/login',json={'username':'absent','password':'xxxx'},headers={'Origin':ORIGIN}).status_code,401)
+        self.assertEqual(c.post('/api/login',json={'username':'absent','password':'xxxx'},headers={'Origin':ORIGIN}).status_code,429)
+    def test_invalid_state_and_locked_sheet(self):
+        before=self.state();p=copy.deepcopy(before);p['state']['__proto__']={}
+        self.assertEqual(self.save(self.a,p).status_code,400)
+        p=self.state();p['state']['lockedSheets']={'Network':True};self.assertEqual(self.save(self.a,p).status_code,200)
+        p=self.state();p['state']['sheets']['Network']['rows'][1][1]='LOCKED';self.assertEqual(self.save(self.a,p).status_code,403)
+        p['state']['lockedSheets']['Network']=False;self.assertEqual(self.save(self.a,p).status_code,200)
+    def test_racing_commits_only_one_wins(self):
+        # Independent clients, same revision; database transaction serialises CAS.
+        clients=[self.login('admin') for _ in range(5)];p=self.state();barrier=threading.Barrier(5);codes=[]
+        def worker(i):
+            body=copy.deepcopy(p);body['state']['sheets']['Network']['rows'][1][1]=str(i);barrier.wait();codes.append(self.save(clients[i],body).status_code)
+        threads=[threading.Thread(target=worker,args=(i,)) for i in range(5)]
+        for t in threads:t.start()
+        for t in threads:t.join()
+        self.assertEqual(sorted(codes),[200,409,409,409,409])
+
+    def test_bad_types_and_nonfinite_numbers(self):
+        p=self.state();p['state']['order']=[[]];self.assertEqual(self.save(self.a,p).status_code,400)
+        p=self.state();p['state']['regionConfig']={'version':1,'regions':[],'assignments':[[[],[]]]};self.assertEqual(self.save(self.a,p).status_code,400)
+        p=self.state();p['state']['sheets']['Network']['rows'][1][1]=float('nan');self.assertEqual(self.save(self.a,p).status_code,400)
+    def test_merges_cannot_be_edited_but_shift_with_deleted_rows(self):
+        p=self.state();p['state']['sheets']['Network']={'rows':[['ID','Name'],[1,'A'],[None,'B'],[3,'C']],'merges':[{'r1':2,'r2':3,'c1':1,'c2':1}]}
+        self.assertEqual(self.save(self.a,p).status_code,200)
+        c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['merges']=[]
+        self.assertEqual(self.save(c,p).status_code,403)
+        p=self.state(c);sh=p['state']['sheets']['Network'];del sh['rows'][1:3];sh['merges']=[{'r1':2,'r2':2,'c1':1,'c2':1}]
+        self.assertEqual(self.save(c,p).status_code,200)
+    def test_trusted_global_undo_and_stale_undo_protection(self):
+        before=self.state();c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['rows'].pop()
+        # Forged client Undo buffers are NEVER trusted or returned to an admin.
+        self.assertEqual(self.save(c,p,undo={'valid':True,'blocks':[{'forged':'bad'}]}).status_code,200)
+        self.assertEqual(c.get('/api/undo-state').status_code,403)
+        undo=self.a.get('/api/undo-state').json
+        self.assertEqual(undo['state']['sheets']['Network'],before['state']['sheets']['Network'])
+        self.assertTrue(self.state()['state']['undo']['valid'])
+        self.assertEqual(self.save(self.a,undo).status_code,200)
+        self.assertEqual(self.save(self.a,undo).status_code,409)
+    def test_backup_restore_rotates_epoch_revokes_sessions_and_keeps_safety_copy(self):
+        from server.manage import backup,restore
+        snapshot=self.state();out=Path(self.tmp.name)/'backup.sqlite3';backup(self.path,out)
+        p=self.state();p['state']['sheets']['Network']['rows'][1][1]='AFTER BACKUP';self.assertEqual(self.save(self.a,p).status_code,200)
+        with self.assertRaises(ValueError):restore(out,self.path)
+        safety=restore(out,self.path,server_stopped=True);self.assertTrue(safety.is_file())
+        self.assertEqual(self.a.get('/api/state').status_code,401)
+        self.a=self.login('admin');now=self.state();self.assertNotEqual(now['epoch'],snapshot['epoch'])
+        self.assertEqual(now['state']['sheets']['Network'],snapshot['state']['sheets']['Network'])
+        with self.assertRaises(ValueError):backup(self.path,out)
+
+    def test_damaged_existing_database_never_reseeds_accounts(self):
+        with sqlite3.connect(self.path) as db:db.execute('DELETE FROM state')
+        with self.assertRaises(RuntimeError):create_app(self.config)
+        with sqlite3.connect(self.path) as db:self.assertEqual(db.execute('SELECT count(*) FROM users').fetchone()[0],1)
+    def test_production_requires_https_and_private_database(self):
+        with self.assertRaises(RuntimeError):create_app({'PUBLIC_ORIGIN':'http://localhost','DB_PATH':self.path})
+        with self.assertRaises(RuntimeError):create_app({'PUBLIC_ORIGIN':'https://fam.example','DB_PATH':str(Path(__file__).resolve().parents[1]/'www'/'bad.sqlite3')})
+
+    def test_level3_cannot_change_numeric_types_or_create_empty_atm(self):
+        c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['rows'][1][0]=True
+        self.assertEqual(self.save(c,p).status_code,403)
+        p=self.state(c);p['state']['order'].append('خودپرداز تهران');p['state']['sheets']['خودپرداز تهران']={'rows':[['ID','Name'],['','  ']],'merges':[]}
+        self.assertEqual(self.save(c,p).status_code,403)
+
+if __name__=='__main__':unittest.main()
