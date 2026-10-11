@@ -113,12 +113,42 @@ function Invoke-FamInstaller([string]$File, [string]$Arguments) {
 }
 
 function Get-FamCertificateNames($Certificate) {
-    if (!@($Certificate.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.17' }).Count) { return @() } # Modern browsers require SAN, not CN only.
-    $Names = @()
+    # Modern browsers require SAN, not CN only. The PKI module exposes
+    # DnsNameList on Server 2019; the formatted-extension fallback keeps the
+    # check useful if that adapter property is unavailable.
+    if (!@($Certificate.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.17' }).Count) { return @() }
+    $Names=@()
     if ($Certificate.PSObject.Properties['DnsNameList']) {
-        $Names = @($Certificate.DnsNameList | ForEach-Object { $_.Unicode.ToLowerInvariant() })
+        $Names=@($Certificate.DnsNameList | ForEach-Object { $_.Unicode.ToLowerInvariant() })
     }
-    return $Names
+    if (!$Names.Count) {
+        foreach ($Line in @((($Certificate.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.17' } | Select-Object -First 1).Format($true) -split "`r?`n"))) {
+            if ($Line -match '(?i)DNS Name\s*=\s*(?<name>[^,\r\n]+)') { $Names+= $Matches.name.Trim().ToLowerInvariant() }
+        }
+    }
+    return @($Names | Select-Object -Unique)
+}
+
+function Set-FamSniCertificate([string]$SiteName,[string]$ServerAddress,[string]$HostName,$Certificate,[string]$Store) {
+    # The WebAdministration object method alone can leave an old IP-only SSL
+    # mapping active on some IIS builds. Bind the exact IP:port:SNI tuple in
+    # the IIS SSL provider and then read it back before HTTPS verification.
+    $Binding=@(Get-WebBinding -Name $SiteName -Protocol https | Where-Object {
+        $P=Convert-FamBinding $_;$P -and $P.IP -eq $ServerAddress -and $P.Port -eq '443' -and $P.HostName -eq $HostName
+    } | Select-Object -First 1)
+    if (!$Binding.Count) {
+        New-WebBinding -Name $SiteName -Protocol https -IPAddress $ServerAddress -Port 443 -HostHeader $HostName -SslFlags 1
+        $Binding=@(Get-WebBinding -Name $SiteName -Protocol https | Where-Object {
+            $P=Convert-FamBinding $_;$P -and $P.IP -eq $ServerAddress -and $P.Port -eq '443' -and $P.HostName -eq $HostName
+        } | Select-Object -First 1)
+    }
+    if (!$Binding.Count) { throw "Cannot create the exact HTTPS binding for $ServerAddress`:443 / $HostName." }
+    Set-WebBinding -Name $SiteName -BindingInformation $Binding[0].bindingInformation -PropertyName sslFlags -Value 1
+    $SslPath='IIS:\SslBindings\'+$ServerAddress+'!443!'+$HostName
+    if (Test-Path -LiteralPath $SslPath) { Remove-Item -LiteralPath $SslPath -Force }
+    New-Item -Path $SslPath -Thumbprint $Certificate.Thumbprint -SSLFlags 1 | Out-Null
+    $Installed=Get-Item -LiteralPath $SslPath
+    if ($Installed.Thumbprint -ine $Certificate.Thumbprint) { throw "IIS did not retain the selected certificate on SNI binding $ServerAddress`:443 / $HostName." }
 }
 
 function Test-FamCertificate($Certificate, [string]$HostName) {

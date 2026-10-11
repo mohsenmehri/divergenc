@@ -17,6 +17,7 @@
 | CSS/ساخت مرکزی | تست‌های ساخت و سالم‌ماندن XLSM | 4 آزمون موفق |
 | مرورگر واقعی | Chromium برای نسخهٔ مستقل و نسخهٔ مرکزی با Flask و SQLite آزمایشی جدا، دسکتاپ 1440×1000 و موبایل 390×844 | 4 آزمون موفق |
 | حالت فوکوس/کلیک تم ۲ | ورود، پنل سریع، افزودن/حذف، فرم کاربر، wizard، سلول spreadsheet و input/textarea modal؛ کنترل تم ۱ نیز دوباره بررسی شد | 2 آزمون مرورگر موفق |
+| certificate/SNI hardening | SAN گواهی تولیدی پیش از bind کنترل و binding دقیق `10.16.243.18:443:ertebatat-fam` در IIS SSL provider دوباره‌خوانی می‌شود | guard ثابت موفق |
 | parse PowerShell | 8 فایل PowerShell با tree-sitter | بدون خطای syntax |
 | ساخت ZIP | allowlist، hash wheelها و عدم حضور دادهٔ واقعی/تنظیمات/کلید خصوصی | در مرحلهٔ انتشار اجرا می‌شود |
 

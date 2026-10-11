@@ -209,9 +209,11 @@ try {
     if (!$Chosen) {
         if (!$CreateCertificate -and !(Read-FamYes "No usable certificate covers '$HostName'. Create a NEW self-signed certificate for FAM only, leaving other certificates unchanged?" -Unattended:$Unattended)) { throw 'A hostname-valid certificate is required. Existing IP-only certificates do not cover ertebatat-fam.' }
         $Cert=New-SelfSignedCertificate -DnsName $HostName -CertStoreLocation Cert:\LocalMachine\My -Type SSLServerAuthentication -KeyAlgorithm RSA -KeyLength 3072 -HashAlgorithm SHA256 -KeyExportPolicy NonExportable -NotAfter (Get-Date).AddYears(2) -FriendlyName ('FAM '+$HostName)
+        if (!(Test-FamCertificate $Cert $HostName)) { throw "The generated certificate does not contain DNS SAN $HostName; it will not be bound." }
         $Chosen=[pscustomobject]@{ Cert=$Cert; Store='My' }
     }
     $Certificate=$Chosen.Cert
+    if (!(Test-FamCertificate $Certificate $HostName)) { throw "Selected certificate has no usable DNS SAN for $HostName." }
     $Dependencies=Get-Content -Raw (Join-Path $PSScriptRoot 'dependencies.json') | ConvertFrom-Json
     $Payload=Join-Path $PSScriptRoot 'payload'
     if ($Offline) { Write-Host 'OFFLINE MODE: runtime installers and Python wheels must be pre-staged.' }
@@ -295,12 +297,7 @@ try {
         Set-ItemProperty ('IIS:\Sites\'+$SiteName) -Name physicalPath -Value $WebRoot
         Set-ItemProperty ('IIS:\Sites\'+$SiteName) -Name applicationPool -Value $Pool
     }
-    $Binding=@(Get-WebBinding -Name $SiteName -Protocol https | Where-Object { $P=Convert-FamBinding $_; $P -and $P.HostName -eq $HostName -and $P.Port -eq '443' })
-    if (!$Binding.Count) { New-WebBinding -Name $SiteName -Protocol https -IPAddress $ServerAddress -Port 443 -HostHeader $HostName -SslFlags 1 }
-    $Binding=Get-WebBinding -Name $SiteName -Protocol https | Where-Object { $P=Convert-FamBinding $_; $P -and $P.HostName -eq $HostName -and $P.Port -eq '443' } | Select-Object -First 1
-    Set-WebBinding -Name $SiteName -BindingInformation $Binding.bindingInformation -PropertyName sslFlags -Value 1
-    $Binding=Get-WebBinding -Name $SiteName -Protocol https | Where-Object { $_.bindingInformation -eq $Binding.bindingInformation } | Select-Object -First 1
-    $Binding.AddSslCertificate($Certificate.Thumbprint,$Chosen.Store)
+    Set-FamSniCertificate $SiteName $ServerAddress $HostName $Certificate $Chosen.Store
     Set-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Location $SiteName -Filter 'system.webServer/security/authentication/anonymousAuthentication' -Name enabled -Value $true
     Set-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Location $SiteName -Filter 'system.webServer/security/authentication/anonymousAuthentication' -Name userName -Value ''
     foreach ($Auth in @(@('WindowsAuthenticationModule','windowsAuthentication'),@('BasicAuthenticationModule','basicAuthentication'))) {
