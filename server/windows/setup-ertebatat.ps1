@@ -10,6 +10,8 @@ param(
     [string]$CertificateThumbprint='',
     [switch]$CreateCertificate,
     [switch]$UseExistingSite,
+    [switch]$UseFamAuthentication,
+    [switch]$AddFirewallRule,
     [switch]$Offline,
     [switch]$Unattended,
     [switch]$PauseAtEnd
@@ -132,6 +134,21 @@ try {
             if (!$UseExistingSite -and !(Read-FamYes "Repoint ONLY existing dedicated site '$SiteName' from '$($TargetSite.physicalPath)' to FAM?" -Unattended:$Unattended)) { throw 'Existing site was not changed. Rerun with explicit approval if it is dedicated to FAM.' }
         }
         $OldSitePath=$TargetSite.physicalPath;$OldPool=$TargetSite.applicationPool
+    }
+
+    # Never silently remove an organisation's IIS authentication gate. A new
+    # site can inherit one too. Network permissions were arranged separately.
+    $AuthModules=@(Get-WebGlobalModule | Select-Object -ExpandProperty Name)
+    $AuthParams=@{PSPath='MACHINE/WEBROOT/APPHOST';Name='enabled'}
+    if ($TargetSite) { $AuthParams.Location=$SiteName }
+    $ExistingGate=!(Get-WebConfigurationProperty @AuthParams -Filter 'system.webServer/security/authentication/anonymousAuthentication').Value
+    foreach ($Auth in @(@('WindowsAuthenticationModule','windowsAuthentication'),@('BasicAuthenticationModule','basicAuthentication'))) {
+        if ($Auth[0] -in $AuthModules) {
+            if ((Get-WebConfigurationProperty @AuthParams -Filter ('system.webServer/security/authentication/'+$Auth[1])).Value) { $ExistingGate=$true }
+        }
+    }
+    if ($ExistingGate -and !$UseFamAuthentication -and !(Read-FamYes 'This site has/inherits an IIS authentication gate. Replace it ONLY for FAM with anonymous IIS access + FAM application login? Confirm with your network administrator first.' -Unattended:$Unattended)) {
+        throw 'Existing IIS authentication policy preserved. Obtain approval or configure integrated authentication manually.'
     }
 
     # Reuse an existing hostname-valid certificate; private keys are never exported.
@@ -269,7 +286,8 @@ try {
     $Rule='FAM-Ertebatat-HTTPS'
     $ExistingRule=Get-NetFirewallRule -Name $Rule -ErrorAction SilentlyContinue
     if ($ExistingRule) { Write-Host 'Existing FAM firewall rule retained without changing administrator-defined scopes.' }
-    else { New-NetFirewallRule -Name $Rule -DisplayName 'FAM HTTPS (ertebatat-fam)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 -LocalAddress $ServerAddress -Profile @('Domain','Private') -RemoteAddress LocalSubnet | Out-Null }
+    elseif ($AddFirewallRule) { New-NetFirewallRule -Name $Rule -DisplayName 'FAM HTTPS (ertebatat-fam)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 -LocalAddress $ServerAddress -Profile @('Domain','Private') -RemoteAddress LocalSubnet | Out-Null }
+    else { Write-Host 'Firewall/GPO access left unchanged as arranged by the network administrator.' }
     Start-WebAppPool -Name $Pool -ErrorAction SilentlyContinue
     Start-Website -Name $SiteName
 
