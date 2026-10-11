@@ -59,9 +59,11 @@ class OfflineKitChecks(unittest.TestCase):
     def test_self_signed_certificate_requires_san_and_exact_sni_binding(self):
         common=(WINDOWS/'setup-common.psm1').read_text();setup=(WINDOWS/'setup-ertebatat.ps1').read_text()
         self.assertIn('function Set-FamSniCertificate',common)
-        self.assertIn("IIS:\\SslBindings\\'+$ServerAddress+'!443!'+$HostName",common)
+        self.assertIn("IIS:\\SslBindings\\'+($Binding[0].bindingInformation -replace ':','!')",common)
+        self.assertIn('Remove-Item -Path $SslPath -Force -ErrorAction Stop',common)
+        self.assertIn("PathNotFound|ItemNotFound",common)
         self.assertIn('New-Item -Path $SslPath -Thumbprint $Certificate.Thumbprint -SSLFlags 1',common)
-        self.assertIn('Get-Item -LiteralPath $SslPath',common)
+        self.assertIn('Get-Item -Path $SslPath -ErrorAction Stop',common)
         self.assertIn('does not contain DNS SAN',setup)
         self.assertIn('Set-FamSniCertificate $SiteName $ServerAddress $HostName $Certificate $Chosen.Store',setup)
 

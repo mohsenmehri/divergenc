@@ -144,10 +144,16 @@ function Set-FamSniCertificate([string]$SiteName,[string]$ServerAddress,[string]
     }
     if (!$Binding.Count) { throw "Cannot create the exact HTTPS binding for $ServerAddress`:443 / $HostName." }
     Set-WebBinding -Name $SiteName -BindingInformation $Binding[0].bindingInformation -PropertyName sslFlags -Value 1
-    $SslPath='IIS:\SslBindings\'+$ServerAddress+'!443!'+$HostName
-    if (Test-Path -LiteralPath $SslPath) { Remove-Item -LiteralPath $SslPath -Force }
+    $SslPath='IIS:\SslBindings\'+($Binding[0].bindingInformation -replace ':','!')
+    # Test-Path can falsely report absent for an existing IIS SslBindings item
+    # containing !. Ask the provider to remove the exact mapping instead; only
+    # PathNotFound is benign. This affects FAM's precise host header only.
+    try { Remove-Item -Path $SslPath -Force -ErrorAction Stop }
+    catch {
+        if ($_.FullyQualifiedErrorId -notmatch '(?i)PathNotFound|ItemNotFound') { throw }
+    }
     New-Item -Path $SslPath -Thumbprint $Certificate.Thumbprint -SSLFlags 1 | Out-Null
-    $Installed=Get-Item -LiteralPath $SslPath
+    $Installed=Get-Item -Path $SslPath -ErrorAction Stop
     if ($Installed.Thumbprint -ine $Certificate.Thumbprint) { throw "IIS did not retain the selected certificate on SNI binding $ServerAddress`:443 / $HostName." }
 }
 
