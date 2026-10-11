@@ -27,6 +27,7 @@ def probe(host,address,cert_path,port=443):
     context.load_verify_locations(cadata=ssl.DER_cert_to_PEM_cert(der))
     # Trust exactly the operator-selected certificate as a possible chain anchor.
     context.verify_flags |= ssl.VERIFY_X509_PARTIAL_CHAIN
+    context.hostname_checks_common_name=False
     context.minimum_version=ssl.TLSVersion.TLSv1_2
     assert context.check_hostname and context.verify_mode==ssl.CERT_REQUIRED
     checks=[]
@@ -35,6 +36,8 @@ def probe(host,address,cert_path,port=443):
         headers={'Host':host,'Connection':'close'}
         if body is not None:headers.update({'Content-Type':'application/json','Origin':'https://'+host})
         try:
+            conn.connect()
+            if conn.sock.getpeercert(binary_form=True)!=der:raise RuntimeError('IIS served a different certificate than the selected one')
             conn.request(method,path,body=json.dumps(body) if body is not None else None,headers=headers)
             response=conn.getresponse();data=response.read(5*1024*1024)
             if response.status!=expected:raise RuntimeError(f'{method} {path}: expected {expected}, received {response.status}')

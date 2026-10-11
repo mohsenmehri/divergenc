@@ -29,6 +29,7 @@ $Locked=$Mutex.WaitOne(0)
 try {
     if (!$Locked) { throw 'Another FAM installer is already running.' }
     if ($PSVersionTable.PSEdition -ne 'Desktop' -or ![Environment]::Is64BitProcess -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'Use 64-bit Windows PowerShell 5.1 on x64 Windows (INSTALL-FAM.cmd).' }
+    if ([Environment]::OSVersion.Version.Major -lt 10) { throw 'This automatic installer targets the Windows Server 2016 generation or later.' }
     $ParsedIP=[Net.IPAddress]::Parse($ServerAddress)
     if ($ParsedIP.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork) { throw 'IPv4 is required.' }
     if (!(Get-NetIPAddress -AddressFamily IPv4 | Where-Object IPAddress -eq $ServerAddress)) { throw "Run this ON the server $ServerAddress, not on a user workstation." }
@@ -41,28 +42,41 @@ try {
     $DataDir=Assert-FamDirectory $DataDir
     $TargetServer=Join-Path $InstallRoot 'server'
     $WebRoot=Join-Path $TargetServer 'www'
+    Assert-FamTask 'FAM-Central' (Join-Path $TargetServer 'windows\start.ps1')
+    Assert-FamTask 'FAM-Central-Backup' (Join-Path $TargetServer 'windows\backup-daily.ps1')
     $SettingsPath=Join-Path $TargetServer 'windows\settings.json'
     if (Test-Path -LiteralPath $SettingsPath) {
         $Existing=Get-Content -Raw -LiteralPath $SettingsPath | ConvertFrom-Json
         $ExistingDB=[IO.Path]::GetFullPath($Existing.DB)
         if ([IO.Path]::GetFileName($ExistingDB) -ine 'fam.sqlite3') { throw 'Existing database has a custom filename. Do not create a second database; use the manual upgrade instructions.' }
         if ($PSBoundParameters.ContainsKey('DataDir') -and $ExistingDB -ine (Join-Path $DataDir 'fam.sqlite3')) { throw 'DataDir disagrees with the existing database. Refusing to start an empty replacement.' }
-        $DataDir=Split-Path -Parent $ExistingDB
+        $DataDir=Assert-FamDirectory (Split-Path -Parent $ExistingDB)
+        if (!(Test-Path -LiteralPath $ExistingDB -PathType Leaf)) { throw 'Existing settings refer to a missing database. Restore/locate it first; setup will not silently initialize an empty replacement.' }
     }
     if ($DataDir -ieq $InstallRoot -or $DataDir.StartsWith($InstallRoot+'\',[StringComparison]::OrdinalIgnoreCase) -or $InstallRoot.StartsWith($DataDir+'\',[StringComparison]::OrdinalIgnoreCase)) { throw 'Application and data must be separate dedicated directories.' }
     $Drive=[IO.DriveInfo]::new([IO.Path]::GetPathRoot($DataDir))
+    $CodeDrive=[IO.DriveInfo]::new([IO.Path]::GetPathRoot($InstallRoot))
+    if ($CodeDrive.DriveType -ne [IO.DriveType]::Fixed) { throw 'Application files must be on a local fixed disk.' }
     if ($Drive.DriveType -ne [IO.DriveType]::Fixed) { throw 'SQLite requires a local fixed disk, not a mapped network drive.' }
     if (Test-Path -LiteralPath $InstallRoot) {
         $Contents=@(Get-ChildItem -LiteralPath $InstallRoot -Force)
         if ($Contents.Count -and !(Test-Path (Join-Path $InstallRoot 'server\app.py'))) { throw "Nonempty unrelated installation directory: $InstallRoot" }
     }
     # Dedicated data folder only. Preserve existing DB, backups, and settings.
-    if ((Test-Path -LiteralPath $DataDir) -and !(Test-Path (Join-Path $DataDir 'fam.sqlite3'))) {
-        $Unexpected=@(Get-ChildItem -LiteralPath $DataDir -Force | Where-Object Name -notin @('logs','backups','setup-cache','client-setup'))
+    if (Test-Path -LiteralPath $DataDir) {
+        $Unexpected=@(Get-ChildItem -LiteralPath $DataDir -Force | Where-Object { $_.Name -notin @('fam.sqlite3','fam.sqlite3-wal','fam.sqlite3-shm','logs','backups','setup-cache','client-setup') -and $_.Name -notlike 'fam.before-restore.*.sqlite3' })
         if ($Unexpected.Count) { throw "Unrecognised data directory: $DataDir. Choose a dedicated FAM directory." }
     }
+    Assert-FamNoLinks $DataDir
+    Assert-FamNoLinks $InstallRoot
     New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
     Set-FamPrivateAcl $DataDir 'Modify'
+    # Normalize existing descendants too: protected/explicit old file ACLs must
+    # not leave private data readable by ordinary workstation/RDP users.
+    foreach ($Child in @(Get-ChildItem -LiteralPath $DataDir -Force)) {
+        & icacls $Child.FullName /reset /T /Q | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot secure an existing FAM data file. Review its ACL before retrying.' }
+    }
     $LogDir=Join-Path $DataDir 'logs';$BackupDir=Join-Path $DataDir 'backups';$Cache=Join-Path $DataDir 'setup-cache'
     New-Item -ItemType Directory -Force -Path $LogDir,$BackupDir,$Cache | Out-Null
     $Stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
@@ -72,7 +86,7 @@ try {
     Write-Host 'No database, existing account, or other website is deleted. Shared IIS prerequisites may require a maintenance window.'
 
     if (Get-Command Get-WindowsFeature -ErrorAction SilentlyContinue) {
-        $Needed=@(Get-WindowsFeature Web-Server, Web-Static-Content, Web-Default-Doc, Web-Http-Errors, Web-Mgmt-Console, Web-Scripting-Tools | Where-Object { !$_.Installed } | Select-Object -ExpandProperty Name)
+        $Needed=@(Get-WindowsFeature -Name @('Web-Server','Web-Static-Content','Web-Default-Doc','Web-Http-Errors','Web-Mgmt-Console','Web-Scripting-Tools') | Where-Object { !$_.Installed } | Select-Object -ExpandProperty Name)
         if ($Needed.Count) {
             $Result=Install-WindowsFeature -Name $Needed -IncludeManagementTools
             if (!$Result.Success) { throw 'IIS Windows feature installation failed.' }
@@ -83,7 +97,7 @@ try {
         $Needed=@($Names | Where-Object { (Get-WindowsOptionalFeature -Online -FeatureName $_).State -ne 'Enabled' })
         if ($Needed.Count) {
             $Result=Enable-WindowsOptionalFeature -Online -FeatureName $Needed -All -NoRestart
-            if ($Result.RestartNeeded) { throw 'IIS requires a reboot. Restart and rerun.' }
+            if (@($Result | Where-Object { $_.RestartNeeded -eq $true }).Count) { throw 'IIS requires a reboot. Restart and rerun.' }
         }
     }
     Import-Module WebAdministration
@@ -91,16 +105,16 @@ try {
     Backup-WebConfiguration -Name $IISBackup
     Write-Host "IIS configuration backup: $IISBackup"
     $Sites=@(Get-Website)
-    $Matches=@(foreach ($Site in $Sites) {
+    $MatchingSites=@(foreach ($Site in $Sites) {
         foreach ($Binding in @(Get-WebBinding -Name $Site.Name -Protocol https)) {
             $Parts=Convert-FamBinding $Binding
             if ($Parts -and $Parts.Port -eq '443' -and $Parts.HostName -eq $HostName) { $Site }
         }
     })
-    $Matches=@($Matches | Sort-Object Name -Unique)
-    if ($Matches.Count -gt 1) { throw "Several websites already own $HostName. Resolve the conflict before installation." }
-    if ($Matches.Count -eq 1) {
-        $SiteName=$Matches[0].Name
+    $MatchingSites=@($MatchingSites | Sort-Object Name -Unique)
+    if ($MatchingSites.Count -gt 1) { throw "Several websites already own $HostName. Resolve the conflict before installation." }
+    if ($MatchingSites.Count -eq 1) {
+        $SiteName=$MatchingSites[0].Name
         foreach ($B in @(Get-WebBinding -Name $SiteName -Protocol https)) {
             $P=Convert-FamBinding $B
             if ($P -and $P.HostName -eq $HostName -and $P.IP -notin @('*','0.0.0.0',$ServerAddress)) { throw 'The existing hostname binding belongs to a different IP address.' }
@@ -113,7 +127,7 @@ try {
         if (!$AlreadyOurs) {
             $Bindings=@(Get-WebBinding -Name $SiteName)
             $Applications=@(Get-WebApplication -Site $SiteName)
-            $VirtualDirectories=@(Get-WebVirtualDirectory -Site $SiteName)
+            $VirtualDirectories=@(Get-WebVirtualDirectory -Site $SiteName | Where-Object path -ne '/')
             if (!$Bindings.Count -or $Applications.Count -or $VirtualDirectories.Count -or @($Bindings | Where-Object { $P=Convert-FamBinding $_; !$P -or $P.HostName -ne $HostName -or $P.IP -notin @('*','0.0.0.0',$ServerAddress) -or !(($_.protocol -eq 'https' -and $P.Port -eq '443') -or ($_.protocol -eq 'http' -and $P.Port -eq '80')) }).Count) { throw "Existing site '$SiteName' has other bindings/apps/directories. Refusing to repoint a shared site automatically." }
             if (!$UseExistingSite -and !(Read-FamYes "Repoint ONLY existing dedicated site '$SiteName' from '$($TargetSite.physicalPath)' to FAM?" -Unattended:$Unattended)) { throw 'Existing site was not changed. Rerun with explicit approval if it is dedicated to FAM.' }
         }
@@ -122,7 +136,7 @@ try {
 
     # Reuse an existing hostname-valid certificate; private keys are never exported.
     $ForeignSSL=@(Get-ChildItem IIS:\SslBindings | Where-Object { $_.PSObject.Properties['Host'] -and $_.Host -ieq $HostName -and $_.Port -eq 443 })
-    if (!$Matches.Count -and $ForeignSSL.Count) { throw 'An HTTPS hostname binding already exists outside the selected IIS site. It will not be overwritten.' }
+    if (!$MatchingSites.Count -and $ForeignSSL.Count) { throw 'An HTTPS hostname binding already exists outside the selected IIS site. It will not be overwritten.' }
     $Candidates=@(foreach ($Store in @('My','WebHosting')) {
         foreach ($Cert in @(Get-ChildItem ('Cert:\LocalMachine\'+$Store) -ErrorAction SilentlyContinue)) {
             if (Test-FamCertificate $Cert $HostName) { [pscustomobject]@{ Cert=$Cert; Store=$Store } }
@@ -156,6 +170,8 @@ try {
     $Certificate=$Chosen.Cert
     $Dependencies=Get-Content -Raw (Join-Path $PSScriptRoot 'dependencies.json') | ConvertFrom-Json
     $Payload=Join-Path $PSScriptRoot 'payload'
+    if ((Test-Path (Join-Path $Payload 'OFFLINE-READY.txt')) -and !$PSBoundParameters.ContainsKey('Offline')) { $Offline=$true }
+    if ($Offline) { Write-Host 'OFFLINE MODE: runtime installers and Python wheels must be pre-staged.' }
     $IISModules=@(Get-WebGlobalModule | Select-Object -ExpandProperty Name)
     if ('RewriteModule' -notin $IISModules) {
         $File=Get-FamInstaller $Dependencies.rewrite $Payload $Cache -Offline:$Offline
@@ -165,7 +181,7 @@ try {
         $File=Get-FamInstaller $Dependencies.arr $Payload $Cache -Offline:$Offline
         Invoke-FamInstaller "$env:SystemRoot\System32\msiexec.exe" ('/i "'+$File+'" /qn /norestart /L*v "'+(Join-Path $LogDir ('arr-'+$Stamp+'.log'))+'"')
     }
-    # Reload the provider after module installation; never use iisreset (other sites stay running).
+    # No explicit iisreset. Shared IIS MSI prerequisites can still affect service availability.
     Remove-Module WebAdministration;Import-Module WebAdministration
     $Modules=@(Get-WebGlobalModule | Select-Object -ExpandProperty Name)
     if ('RewriteModule' -notin $Modules -or 'ApplicationRequestRouting' -notin $Modules) { throw 'IIS Rewrite/ARR modules did not register successfully.' }
@@ -175,14 +191,15 @@ try {
     foreach ($Version in @('3.14','3.13','3.12')) {
         $Key='HKLM:\SOFTWARE\Python\PythonCore\'+$Version+'\InstallPath'
         if (Test-Path $Key) {
-            $Candidate=Join-Path (Get-Item $Key).GetValue('') 'python.exe'
+            $Base=(Get-Item -LiteralPath $Key).GetValue('')
+            $Candidate=Join-Path $Base 'python.exe'
             if (Test-Path $Candidate) { $Python=$Candidate;break }
         }
     }
     if (!$Python) {
         $File=Get-FamInstaller $Dependencies.python $Payload $Cache -Offline:$Offline
         $PythonDir=Join-Path $env:ProgramFiles 'FAM-Python314'
-        Invoke-FamInstaller $File ('/quiet InstallAllUsers=1 TargetDir="'+$PythonDir+'" PrependPath=0 Include_launcher=0 Include_test=0 Include_pip=1 /log "'+(Join-Path $LogDir ('python-'+$Stamp+'.log'))+'"')
+        Invoke-FamInstaller $File ('/quiet /norestart InstallAllUsers=1 TargetDir="'+$PythonDir+'" PrependPath=0 Include_launcher=0 Include_test=0 Include_pip=1 /log "'+(Join-Path $LogDir ('python-'+$Stamp+'.log'))+'"')
         $Python=Join-Path $PythonDir 'python.exe'
     }
     & $Python -c "import struct,sys; assert struct.calcsize('P')==8 and sys.version_info>=(3,12)"
@@ -193,19 +210,25 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Pre-install database backup failed. Existing data will not be overwritten.' }
     }
     # Stop only this FAM task, not IIS or unrelated services, before copying code.
+    Assert-FamTask 'FAM-Central' (Join-Path $TargetServer 'windows\start.ps1')
     if (Get-ScheduledTask -TaskName FAM-Central -ErrorAction SilentlyContinue) { Stop-ScheduledTask -TaskName FAM-Central }
     $Until=(Get-Date).AddSeconds(30)
     while ((Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) -and (Get-Date) -lt $Until) { Start-Sleep -Milliseconds 500 }
     if (Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) { throw 'Port 8765 is occupied. No unknown process will be killed.' }
     New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
     Set-FamPrivateAcl $InstallRoot
+    foreach ($Child in @(Get-ChildItem -LiteralPath $InstallRoot -Force)) {
+        & icacls $Child.FullName /reset /T /Q | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot protect application files from non-administrator modification.' }
+    }
     # Whitelist deployment files: never copy/delete settings.json, .venv or live data.
-    $Files=@(Get-ChildItem $SourceServer -File -Filter '*.py')+@(Get-Item (Join-Path $SourceServer 'requirements.txt'))+@(Get-ChildItem (Join-Path $SourceServer 'www') -File)+@(Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Extension -in @('.ps1','.psm1','.py') -or $_.Name -eq 'dependencies.json' })
+    $Files=@(Get-ChildItem $SourceServer -File -Filter '*.py')+@(Get-Item (Join-Path $SourceServer 'requirements.txt'))+@(Get-Item (Join-Path $SourceServer 'www\FAM.html'))+@(Get-Item (Join-Path $SourceServer 'www\web.config'))+@(Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Extension -in @('.ps1','.psm1','.py') -or $_.Name -eq 'dependencies.json' })
     foreach ($File in $Files) {
         $Relative=$File.FullName.Substring($SourceServer.Length).TrimStart('\')
         $Destination=Join-Path $TargetServer $Relative
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Destination) | Out-Null
         if ($File.FullName -ine $Destination) { Copy-Item -LiteralPath $File.FullName -Destination $Destination -Force }
+        if ($Relative.StartsWith('www\',[StringComparison]::OrdinalIgnoreCase)) { [IO.File]::SetLastWriteTimeUtc($Destination,[DateTime]::UtcNow) }
     }
     $Wheelhouse=Join-Path $Payload 'wheels'
     $BackendArgs=@{ PublicOrigin=$Origin; DataDir=$DataDir; PythonExecutable=$Python }
@@ -233,16 +256,20 @@ try {
     if (!$Binding.Count) { New-WebBinding -Name $SiteName -Protocol https -IPAddress $ServerAddress -Port 443 -HostHeader $HostName -SslFlags 1 }
     $Binding=Get-WebBinding -Name $SiteName -Protocol https | Where-Object { $P=Convert-FamBinding $_; $P -and $P.HostName -eq $HostName -and $P.Port -eq '443' } | Select-Object -First 1
     Set-WebBinding -Name $SiteName -BindingInformation $Binding.bindingInformation -PropertyName sslFlags -Value 1
+    $Binding=Get-WebBinding -Name $SiteName -Protocol https | Where-Object { $_.bindingInformation -eq $Binding.bindingInformation } | Select-Object -First 1
     $Binding.AddSslCertificate($Certificate.Thumbprint,$Chosen.Store)
     Set-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Location $SiteName -Filter 'system.webServer/security/authentication/anonymousAuthentication' -Name enabled -Value $true
     Set-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Location $SiteName -Filter 'system.webServer/security/authentication/anonymousAuthentication' -Name userName -Value ''
+    foreach ($Auth in @(@('WindowsAuthenticationModule','windowsAuthentication'),@('BasicAuthenticationModule','basicAuthentication'))) {
+        if ($Auth[0] -in $Modules) { Set-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Location $SiteName -Filter ('system.webServer/security/authentication/'+$Auth[1]) -Name enabled -Value $false }
+    }
     & icacls $WebRoot /grant ('IIS AppPool\'+$Pool+':(OI)(CI)RX') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Failed to grant the FAM pool read-only access to www.' }
     # No IIS identity is given access to the database directory.
     $Rule='FAM-Ertebatat-HTTPS'
     $ExistingRule=Get-NetFirewallRule -Name $Rule -ErrorAction SilentlyContinue
     if ($ExistingRule) { Write-Host 'Existing FAM firewall rule retained without changing administrator-defined scopes.' }
-    else { New-NetFirewallRule -Name $Rule -DisplayName 'FAM HTTPS (ertebatat-fam)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 -LocalAddress $ServerAddress -Profile Domain, Private -RemoteAddress LocalSubnet | Out-Null }
+    else { New-NetFirewallRule -Name $Rule -DisplayName 'FAM HTTPS (ertebatat-fam)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 -LocalAddress $ServerAddress -Profile @('Domain','Private') -RemoteAddress LocalSubnet | Out-Null }
     Start-WebAppPool -Name $Pool -ErrorAction SilentlyContinue
     Start-Website -Name $SiteName
 

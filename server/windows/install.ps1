@@ -15,8 +15,12 @@ $DataDir=[IO.Path]::GetFullPath($DataDir)
 if ($DataDir.TrimEnd('\') -eq [IO.Path]::GetPathRoot($DataDir).TrimEnd('\') -or $DataDir.StartsWith((Join-Path $Root 'www'),[StringComparison]::OrdinalIgnoreCase)) { throw 'Use a dedicated private directory, not a drive root or www.' }
 $Drive=[IO.DriveInfo]::new([IO.Path]::GetPathRoot($DataDir))
 if ($Drive.DriveType -ne [IO.DriveType]::Fixed) { throw 'The database must be on a local fixed disk, not SMB/mapped network storage.' }
+Import-Module (Join-Path $PSScriptRoot 'setup-common.psm1') -Force
+Assert-FamTask 'FAM-Central' (Join-Path $PSScriptRoot 'start.ps1')
 $Task=Get-ScheduledTask -TaskName 'FAM-Central' -ErrorAction SilentlyContinue
 if ($Task) { Stop-ScheduledTask -TaskName 'FAM-Central' }
+$Until=(Get-Date).AddSeconds(30)
+while ((Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) -and (Get-Date) -lt $Until) { Start-Sleep -Milliseconds 500 }
 if (Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) { throw 'Port 8765 is still in use. Stop the previous FAM backend and rerun.' }
 if (!$PythonExecutable) {
   $PythonExecutable=& py -3.12 -c "import sys;print(sys.executable)"
@@ -31,7 +35,7 @@ if (!(Test-Path $Python)) {
 }
 $VenvBase=& $Python -c "import sys;print(sys.base_prefix)"
 if ($LASTEXITCODE -ne 0 -or $VenvBase -match '\\Users\\') { throw 'Existing virtual environment is broken or uses a private Python. Preserve the DB/settings and repair only .venv before retrying.' }
-$PipArgs=@('-m','pip','install','-r',(Join-Path $Root 'requirements.txt'))
+$PipArgs=@('-m','pip','install','--disable-pip-version-check','--no-input','-r',(Join-Path $Root 'requirements.txt'))
 if ($Wheelhouse) {
   if (!(Test-Path -LiteralPath $Wheelhouse -PathType Container)) { throw 'Offline wheelhouse directory is missing.' }
   $PipArgs+=@('--no-index','--find-links',$Wheelhouse)

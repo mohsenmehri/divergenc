@@ -6,7 +6,37 @@ function Assert-FamDirectory([string]$Path) {
     foreach ($Reserved in @($env:SystemRoot, $env:ProgramFiles, $env:ProgramData, ($env:SystemDrive+'\Users'))) {
         if ($Reserved -and $Full -ieq $Reserved.TrimEnd('\')) { throw "Do not use a shared system directory: $Full" }
     }
+    foreach ($Reserved in @($env:SystemRoot, ($env:SystemDrive+'\Users'))) {
+        if ($Reserved -and $Full.StartsWith($Reserved.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)) { throw 'Do not install application/data beneath Windows or user profiles.' }
+    }
+    $Cursor=$Full
+    while ($Cursor) {
+        if ((Test-Path -LiteralPath $Cursor) -and ((Get-Item -LiteralPath $Cursor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Reparse-point directory is not allowed: $Cursor" }
+        $Cursor=Split-Path -Parent $Cursor
+    }
     return $Full
+}
+
+function Assert-FamTask([string]$Name,[string]$Script) {
+    $Task=Get-ScheduledTask -TaskName $Name -ErrorAction SilentlyContinue
+    if (!$Task) { return }
+    $Actions=@($Task.Actions)
+    if ($Actions.Count -ne 1 -or [IO.Path]::GetFileName($Actions[0].Execute) -notin @('powershell.exe','pwsh.exe') -or $Actions[0].Arguments -notmatch '(?i)-File\s+(?:"(?<file>[^"]+)"|(?<file>\S+))' -or [IO.Path]::GetFullPath($Matches.file) -ine [IO.Path]::GetFullPath($Script)) {
+        throw "Existing task $Name belongs to another installation. Use the original InstallRoot / manual migration; no task will be stopped or replaced."
+    }
+}
+
+function Assert-FamNoLinks([string]$Path) {
+    if (!(Test-Path -LiteralPath $Path)) { return }
+    $Pending=[Collections.Generic.Stack[string]]::new()
+    $Pending.Push($Path)
+    while ($Pending.Count) {
+        $Current=$Pending.Pop()
+        foreach ($Item in @(Get-ChildItem -LiteralPath $Current -Force)) {
+            if ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "No symlinks/junctions allowed in FAM code/data: $($Item.FullName)" }
+            if ($Item.PSIsContainer) { $Pending.Push($Item.FullName) }
+        }
+    }
 }
 
 function Set-FamPrivateAcl([string]$Path, [string]$ServiceRights='ReadAndExecute') {
@@ -46,11 +76,11 @@ function Invoke-FamInstaller([string]$File, [string]$Arguments) {
 }
 
 function Get-FamCertificateNames($Certificate) {
+    if (!@($Certificate.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.17' }).Count) { return @() } # Modern browsers require SAN, not CN only.
     $Names = @()
     if ($Certificate.PSObject.Properties['DnsNameList']) {
         $Names = @($Certificate.DnsNameList | ForEach-Object { $_.Unicode.ToLowerInvariant() })
     }
-    if (!$Names.Count) { $Names = @($Certificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::DnsName,$false).ToLowerInvariant()) }
     return $Names
 }
 

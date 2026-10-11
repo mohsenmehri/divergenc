@@ -3,6 +3,7 @@ Uses the SQLite backup API, never a file copy over an active WAL. No credentials
 are printed. It does not reset, migrate or write the source database.
 """
 from pathlib import Path
+import json
 import sqlite3
 import sys
 
@@ -18,7 +19,12 @@ def backup(source,destination):
     try:
         src.backup(dst)
         if dst.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise ValueError('Backup integrity check failed')
-        if not dst.execute('SELECT 1 FROM state WHERE id=1').fetchone():raise ValueError('Not an initialized FAM database')
+        tables={r[0] for r in dst.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if not {'state','users','settings','sessions','receipts','audit','undo','attempts'}<=tables:raise ValueError('Not a FAM database')
+        row=dst.execute('SELECT payload FROM state WHERE id=1').fetchone()
+        payload=json.loads(row[0]) if row else None
+        if not isinstance(payload,dict) or not isinstance(payload.get('order'),list) or not isinstance(payload.get('sheets'),dict):raise ValueError('Not an initialized FAM workbook')
+        if not dst.execute('SELECT 1 FROM users WHERE role=1 AND enabled=1').fetchone():raise ValueError('No active administrator')
     finally:src.close();dst.close()
     partial.replace(destination)
     print('Verified pre-install database backup:',destination)
