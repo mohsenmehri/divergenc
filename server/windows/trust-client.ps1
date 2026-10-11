@@ -19,11 +19,23 @@ $Addresses=@([Net.Dns]::GetHostAddresses($Config.hostName) | ForEach-Object { $_
 if ($Config.address -notin $Addresses) { throw "DNS/hosts must map $($Config.hostName) to $($Config.address). Ask the network administrator; this script does not modify DNS or hosts." }
 [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
 $URL='https://'+$Config.hostName
-$Page=Invoke-WebRequest -UseBasicParsing -Uri ($URL+'/FAM.html') -TimeoutSec 20
-if ($Page.StatusCode -ne 200 -or $Page.Content -notmatch 'fam-shared-js') { throw 'The central FAM page was not served.' }
+function Invoke-FamDirect([string]$Uri) {
+    # A corporate proxy may return its own 502 page for an internal single-label
+    # hostname. The health check must test the actual intranet server instead.
+    $Request=[Net.HttpWebRequest]::Create($Uri)
+    $Request.Proxy=$null
+    $Request.Timeout=20000
+    return $Request.GetResponse()
+}
+$Page=Invoke-FamDirect ($URL+'/FAM.html')
 try {
-    Invoke-WebRequest -UseBasicParsing -Uri ($URL+'/api/session') -TimeoutSec 20 | Out-Null
-    throw 'API did not return the expected authentication gate.'
+    $Reader=[IO.StreamReader]::new($Page.GetResponseStream())
+    try { $Content=$Reader.ReadToEnd() } finally { $Reader.Dispose() }
+    if ([int]$Page.StatusCode -ne 200 -or $Content -notmatch 'fam-shared-js') { throw 'The central FAM page was not served.' }
+} finally { $Page.Close() }
+try {
+    $Response=Invoke-FamDirect ($URL+'/api/session')
+    try { throw 'API did not return the expected authentication gate.' } finally { $Response.Close() }
 } catch [Net.WebException] {
     if (!$_.Exception.Response) { throw }
     $Response=$_.Exception.Response
@@ -31,5 +43,6 @@ try {
         if ([int]$Response.StatusCode -ne 401 -or $Response.ContentType -notlike 'application/json*') { throw 'API is not reachable through IIS.' }
     } finally { $Response.Close() }
 }
-Write-Host 'HTTPS trust, name resolution and central API checked for THIS Windows user.' -ForegroundColor Green
+Write-Host 'HTTPS trust, name resolution and central API checked directly for THIS Windows user.' -ForegroundColor Green
+Write-Host ('For normal browser use, the organisation proxy/PAC must bypass this internal hostname: '+$Config.hostName)
 Start-Process $URL

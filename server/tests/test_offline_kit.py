@@ -66,5 +66,12 @@ class OfflineKitChecks(unittest.TestCase):
         self.assertIn('never another site\'s IP-only cert',common)
         self.assertIn('does not contain DNS SAN',setup)
         self.assertIn('Set-FamSniCertificate $SiteName $ServerAddress $HostName $Certificate $Chosen.Store',setup)
+    def test_client_health_check_bypasses_corporate_proxy_only_for_its_probe(self):
+        s=(WINDOWS/'trust-client.ps1').read_text()
+        self.assertIn('function Invoke-FamDirect',s)
+        self.assertIn('$Request.Proxy=$null',s)
+        self.assertIn("Invoke-FamDirect ($URL+'/FAM.html')",s)
+        self.assertIn("Invoke-FamDirect ($URL+'/api/session')",s)
+        self.assertIn('proxy/PAC must bypass this internal hostname',s)
 
 if __name__=='__main__':unittest.main()
