@@ -832,7 +832,7 @@ if(!process.env.FAM_THEME && !process.env.FAM_FILE)test('theme selection works o
   await logout();assert.equal(await page.locator('.access-login .fam-theme-toggle').count(),1);
 });
 
-if(['FAM-Grid.html','FAM-Workspace.html'].includes(process.env.FAM_FILE)){
+if(['FAM-Grid.html','FAM-Workspace.html','FAM-Nexus.html'].includes(process.env.FAM_FILE)){
   test('Grid record drawer preserves numeric and whitespace values, rejects stale and locked writes, rolls back failures',async()=>{
     await setup();await fixture();
     await page.evaluate(()=>{WB.sheets['Network Test'].rows[1]=[42,'  ALPHA  '];renderSheetView('Network Test');});
@@ -879,7 +879,7 @@ if(['FAM-Grid.html','FAM-Workspace.html'].includes(process.env.FAM_FILE)){
   });
 }
 
-if(['FAM-Grid.html','FAM-Workspace.html'].includes(process.env.FAM_FILE))test('Grid gallery loads more rows and reapplies active filter without changing workbook order',async()=>{
+if(['FAM-Grid.html','FAM-Workspace.html','FAM-Nexus.html'].includes(process.env.FAM_FILE))test('Grid gallery loads more rows and reapplies active filter without changing workbook order',async()=>{
   await setup();
   await page.evaluate(()=>{
     const rows=[['ID','Name'],...Array.from({length:500},(_,i)=>[i+1,'R'+(i+1)])];
@@ -894,4 +894,29 @@ if(['FAM-Grid.html','FAM-Workspace.html'].includes(process.env.FAM_FILE))test('G
   assert.equal(await page.locator('.grid-record-card').count(),1);
   assert.match(await page.locator('.grid-record-card').innerText(),/R499/);
   assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets['Grid Long'])),before);
+});
+
+if(process.env.FAM_FILE==='FAM-Nexus.html')test('Nexus summaries use visible data, count zero/false correctly, suppress merge statistics and protect viewer scope',async()=>{
+  await setup();
+  await page.evaluate(()=>{
+    const sheets={'Quality':{rows:[['ID','Name','Value'],[1,'ALPHA',0],[2,'  ',null],[3,'GAMMA',false]],merges:[]}};
+    importValidatedSheets(['Quality'],sheets,'quality-test.xlsx',true);
+  });
+  const snapshot=await page.evaluate(()=>JSON.stringify(WB.sheets));
+  assert.deepEqual(await page.evaluate(()=>{const m=FamNexus.metrics();return [m.rows,m.fields,m.filled,m.missing,m.coverage,m.tables];}),[3,3,7,2,78,1]);
+  await page.waitForFunction(()=>document.getElementById('nx-quality-value').textContent==='۷۸٪');
+  await page.locator('#sheet-filter').fill('ALPHA');await page.locator('.grid-filter [data-act="filter-rows"]').click();
+  await page.waitForFunction(()=>document.getElementById('nx-metric-rows').textContent==='۱');
+  assert.equal(await page.evaluate(()=>FamNexus.metrics().coverage),100);
+  await page.locator('#sheet-filter').fill('NO-SUCH-RECORD');await page.locator('.grid-filter [data-act="filter-rows"]').click();
+  assert.equal(await page.evaluate(()=>FamNexus.metrics().coverage),null);
+  assert.equal(await page.evaluate(()=>JSON.stringify(WB.sheets)),snapshot);
+  await page.locator('#sheet-filter').fill('');await page.locator('.grid-filter [data-act="filter-rows"]').click();
+  await page.evaluate(()=>{WB.sheets.Quality.merges=[{r1:2,c1:2,r2:3,c2:2}];renderSheetView('Quality');});
+  await page.waitForFunction(()=>document.getElementById('nx-metric-missing').textContent==='—');
+  assert.equal(await page.evaluate(()=>FamNexus.metrics().coverage),null);
+  assert.match(await page.locator('#nx-quality-scope').innerText(),/ادغام/);
+  await createUser(4,'user4',[],['Quality']);await logout();await login('user4');
+  assert.equal(await page.evaluate(()=>FamNexus.metrics()),null);
+  assert.equal(await page.locator('#layout').isVisible(),false);
 });
