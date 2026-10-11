@@ -144,17 +144,17 @@ function Set-FamSniCertificate([string]$SiteName,[string]$ServerAddress,[string]
     }
     if (!$Binding.Count) { throw "Cannot create the exact HTTPS binding for $ServerAddress`:443 / $HostName." }
     Set-WebBinding -Name $SiteName -BindingInformation $Binding[0].bindingInformation -PropertyName sslFlags -Value 1
-    $SslPath='IIS:\SslBindings\'+($Binding[0].bindingInformation -replace ':','!')
-    # Test-Path can falsely report absent for an existing IIS SslBindings item
-    # containing !. Ask the provider to remove the exact mapping instead; only
-    # PathNotFound is benign. This affects FAM's precise host header only.
-    try { Remove-Item -Path $SslPath -Force -ErrorAction Stop }
-    catch {
-        if ($_.FullyQualifiedErrorId -notmatch '(?i)PathNotFound|ItemNotFound') { throw }
-    }
-    New-Item -Path $SslPath -Thumbprint $Certificate.Thumbprint -SSLFlags 1 | Out-Null
-    $Installed=Get-Item -Path $SslPath -ErrorAction Stop
-    if ($Installed.Thumbprint -ine $Certificate.Thumbprint) { throw "IIS did not retain the selected certificate on SNI binding $ServerAddress`:443 / $HostName." }
+    # Register the host-specific TLS mapping directly in HTTP.SYS. IIS's
+    # SslBindings provider may report an existing !-path as absent, while a
+    # subsequent New-Item fails with "file already exists". hostnameport
+    # changes only this exact FAM SNI name, never another site's IP-only cert.
+    $HostPort=$HostName+':443'
+    & netsh http delete sslcert ('hostnameport='+$HostPort) | Out-Null
+    $AppId='{A44D7FDD-8774-4A96-A408-41139ACB4C6B}'
+    & netsh http add sslcert ('hostnameport='+$HostPort) ('certhash='+$Certificate.Thumbprint) ('appid='+$AppId) ('certstorename='+$Store) | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "HTTP.SYS could not register the selected certificate for $HostPort." }
+    $Shown=@(& netsh http show sslcert ('hostnameport='+$HostPort))
+    if ($LASTEXITCODE -ne 0 -or (($Shown -join "`n") -notmatch [regex]::Escape($Certificate.Thumbprint))) { throw "HTTP.SYS did not retain the selected certificate for $HostPort." }
 }
 
 function Test-FamCertificate($Certificate, [string]$HostName) {
