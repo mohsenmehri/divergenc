@@ -20,6 +20,17 @@ test('light theme only paints: no DOM relocation, box geometry or background sho
  assert.doesNotMatch(html,/id="fam-operations-js"/);
  assert.match(css,/#fx-stage[^}]*opacity:0!important/);
 });
+test('light sidebar clears the dark gradient and hides only theme-1 background controls',()=>{
+ const palette=read('src/light-palette.css'),shared=read('src/ui-theme.css');
+ assert.match(palette,/#sidebar\{[^}]*background-image:none/);
+ assert.match(shared,/html\[data-ui-theme="light"\] #sidebar \.side-foot > \.fx-bar\{display:none!important;\}/);
+ for(const file of ['FAM.html','server/www/FAM.html']){
+  const html=read(file);
+  assert.ok(html.includes(palette));assert.ok(html.includes(shared));
+  assert.equal((html.match(/id="fx-strength"/g)||[]).length,1);
+  assert.equal((html.match(/id="fx-theme"/g)||[]).length,1);
+ }
+});
 test('original XLSM bytes remain untouched',()=>{
  const sha=crypto.createHash('sha256').update(fs.readFileSync('Mohsen_FINAL_v5.xlsm')).digest('hex');
  assert.equal(sha,'bf1d5519e8e47b79212ef7bfbb7f0a6585faf6ae8604fd1f73a3af2a3b89ed66');

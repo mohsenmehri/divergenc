@@ -1,15 +1,20 @@
 /* Palette only. No box geometry, typography or DOM changes. FX opacity is paint-only. */
 :root{color-scheme:light;--bg-0:#f3f6fa;--bg-1:#fff;--bg-2:#edf3f7;--glass:#f7f9fc;--glass-2:#eaf3f3;--stroke:#dce4ec;--stroke-2:#a5b9c8;--txt-0:#192d42;--txt-1:#465d73;--txt-2:#667b8e;--cyan:#087f83;--blue:#276bb7;--green:#167750;--red:#bf3548;--amber:#916315;--violet:#6a56a4;--grad-main:linear-gradient(135deg,#087f83,#075e67);--grad-btn:linear-gradient(135deg,#087f83,#075e67);--grad-green:linear-gradient(135deg,#168060,#11664d);--grad-red:linear-gradient(135deg,#c74454,#ac3040);--grad-amber:linear-gradient(135deg,#93691e,#785416);--shadow-1:0 10px 30px -12px #182c400d;--shadow-2:0 22px 50px -18px #182c401f;}
 body{background-color:var(--bg-0);color:var(--txt-0);}
-#sidebar{background-color:#fff;}
-.brand{background-color:#fff;}
+/* Clear the original dark gradient too; a white color alone sits underneath it. */
+#sidebar{background-color:#fff;background-image:none;border-color:#dce4ec;box-shadow:0 18px 48px -20px #23384e30,0 0 0 1px #dce4ec40;}
+#sidebar-scroll{scrollbar-color:#bccbd5 transparent;}
+#sidebar-scroll::-webkit-scrollbar-thumb{background-color:#bccbd5;}
+#sidebar-scroll::-webkit-scrollbar-thumb:hover{background-color:#91a8b8;}
+.brand{background-color:#fff;border-bottom-color:#e1e8ef;}
 .brand-logo{background-color:#edf4f8;border-color:#dbe7ef;}
 .brand-name{color:#1c3448;}
 .brand-name span{background-image:none;color:var(--cyan);}
-.side-sect{color:#7a8c9c;}
-.nav-item{color:#52667a;}
-.nav-item:hover,.nav-item.active{background-color:#eaf5f3;color:#066d70;border-color:#d8ece8;}
-.nav-item.active::before{background-color:#087f83;}
+.side-sect{color:#61778b;}
+.nav-item{color:#465d73;}
+.nav-item:hover,.nav-item.active{background-color:#eaf5f3;background-image:none;color:#066d70;border-color:#d8ece8;}
+.nav-item.active{box-shadow:inset 0 0 0 1px #d8ece840;}
+.nav-item.active::before{background-color:#087f83;background-image:none;box-shadow:0 0 8px #087f8320;}
 .nav-badge{background-color:#e9eff4;color:#496479;}
 .side-status{color:var(--txt-2);}
 .quick-panel .fold-inner>*{background-color:#f5f8fa;border-color:var(--stroke);}
