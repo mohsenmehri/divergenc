@@ -832,7 +832,7 @@ if(!process.env.FAM_THEME && !process.env.FAM_FILE)test('theme selection works o
   await logout();assert.equal(await page.locator('.access-login .fam-theme-toggle').count(),1);
 });
 
-if(process.env.FAM_FILE==='FAM-Grid.html'){
+if(['FAM-Grid.html','FAM-Workspace.html'].includes(process.env.FAM_FILE)){
   test('Grid record drawer preserves numeric and whitespace values, rejects stale and locked writes, rolls back failures',async()=>{
     await setup();await fixture();
     await page.evaluate(()=>{WB.sheets['Network Test'].rows[1]=[42,'  ALPHA  '];renderSheetView('Network Test');});
@@ -879,7 +879,7 @@ if(process.env.FAM_FILE==='FAM-Grid.html'){
   });
 }
 
-if(process.env.FAM_FILE==='FAM-Grid.html')test('Grid gallery loads more rows and reapplies active filter without changing workbook order',async()=>{
+if(['FAM-Grid.html','FAM-Workspace.html'].includes(process.env.FAM_FILE))test('Grid gallery loads more rows and reapplies active filter without changing workbook order',async()=>{
   await setup();
   await page.evaluate(()=>{
     const rows=[['ID','Name'],...Array.from({length:500},(_,i)=>[i+1,'R'+(i+1)])];
