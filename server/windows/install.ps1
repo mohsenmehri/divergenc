@@ -2,7 +2,9 @@
 #Requires -RunAsAdministrator
 param(
   [Parameter(Mandatory=$true)][string]$PublicOrigin,
-  [string]$DataDir='C:\FAMData'
+  [string]$DataDir='C:\FAMData',
+  [string]$PythonExecutable='',
+  [string]$Wheelhouse=''
 )
 $ErrorActionPreference='Stop'
 $Root=Split-Path -Parent $PSScriptRoot
@@ -16,16 +18,26 @@ if ($Drive.DriveType -ne [IO.DriveType]::Fixed) { throw 'The database must be on
 $Task=Get-ScheduledTask -TaskName 'FAM-Central' -ErrorAction SilentlyContinue
 if ($Task) { Stop-ScheduledTask -TaskName 'FAM-Central' }
 if (Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) { throw 'Port 8765 is still in use. Stop the previous FAM backend and rerun.' }
-$BasePython=& py -3.12 -c "import sys;print(sys.base_prefix)"
-if ($LASTEXITCODE -ne 0) { throw 'Install Python 3.12 x64 with the py launcher first.' }
-if ($BasePython -match '\\Users\\') { throw 'Install Python for ALL users in a protected system-wide directory, not a private user profile, then rerun.' }
+if (!$PythonExecutable) {
+  $PythonExecutable=& py -3.12 -c "import sys;print(sys.executable)"
+  if ($LASTEXITCODE -ne 0) { throw 'Install machine-wide Python or supply -PythonExecutable.' }
+}
+$BasePython=& $PythonExecutable -c "import sys;print(sys.base_prefix)"
+if ($LASTEXITCODE -ne 0 -or $BasePython -match '\\Users\\') { throw 'Use machine-wide Python accessible by LOCAL SERVICE, not a private user installation.' }
 $Python=Join-Path $Root '.venv\Scripts\python.exe'
 if (!(Test-Path $Python)) {
-  & py -3.12 -m venv (Join-Path $Root '.venv')
-  if ($LASTEXITCODE -ne 0) { throw 'Install Python 3.12 x64 with the py launcher first.' }
+  & $PythonExecutable -m venv (Join-Path $Root '.venv')
+  if ($LASTEXITCODE -ne 0) { throw 'Python virtual environment creation failed.' }
 }
-& $Python -m pip install -r (Join-Path $Root 'requirements.txt')
-if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
+$VenvBase=& $Python -c "import sys;print(sys.base_prefix)"
+if ($LASTEXITCODE -ne 0 -or $VenvBase -match '\\Users\\') { throw 'Existing virtual environment is broken or uses a private Python. Preserve the DB/settings and repair only .venv before retrying.' }
+$PipArgs=@('-m','pip','install','-r',(Join-Path $Root 'requirements.txt'))
+if ($Wheelhouse) {
+  if (!(Test-Path -LiteralPath $Wheelhouse -PathType Container)) { throw 'Offline wheelhouse directory is missing.' }
+  $PipArgs+=@('--no-index','--find-links',$Wheelhouse)
+}
+& $Python @PipArgs
+if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed; check network/proxy or the offline wheelhouse.' }
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 # This must be a directory dedicated to FAM. No database is deleted or reseeded.
 $Acl=New-Object System.Security.AccessControl.DirectorySecurity

@@ -9,3 +9,4 @@ server/private/
 *.sqlite3-shm
 server/windows/settings.json
 __pycache__/
+server/windows/payload/
