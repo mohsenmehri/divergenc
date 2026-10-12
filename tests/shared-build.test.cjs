@@ -25,6 +25,9 @@ test('central client announces remote server revisions without overwriting local
  assert.match(sync,/live-update-notice/);assert.match(sync,/دریافت نسخهٔ جدید/);
  assert.match(sync,/function hasUnsavedWork\(\)/);assert.match(sync,/if\(signature\(\)!==clean\)/);
  assert.match(sync,/change\?\.actor/);assert.match(html,/id:'live-update-notice'/);
+ assert.doesNotMatch(html,/data-act="run-macro" data-arg="modExport\.ExportSearchResults"/);
+ assert.doesNotMatch(html,/data-act="run-macro" data-arg="modExport\.ExportChangeLog"/);
+ assert.doesNotMatch(html,/data-act="run-macro" data-arg="modFixUnlock\.UnlockDataSheets"/);
 });
 test('central manual backup requests a verified private server snapshot',()=>{
  const html=read('server/www/FAM.html'),sync=read('src/shared-sync.js');

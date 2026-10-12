@@ -1489,8 +1489,10 @@ html[data-ui-theme="light"],html[data-ui-theme="light"] select,html[data-ui-them
 .btn-primary{background-color:#087f83;color:#fff;}
 .btn-green{background-color:#147b5b;color:#fff;}
 .btn-red{background-color:#bd4050;color:#fff;}
-.btn-amber{background-color:#fff4d6;color:#6e4800;border-color:#e1b951;}
-.btn-amber:hover,.btn-amber:focus-visible{background-color:#f7df9c;color:#563900;}
+/* «برگشت» must be a true yellow surface in Theme 2. The dark-theme gradient
+   is an image, so explicitly remove it rather than merely changing its colour. */
+.btn-amber{background-color:#facc15!important;background-image:none!important;color:#be123c!important;border-color:#d7a70b;}
+.btn-amber:hover,.btn-amber:focus-visible{background-color:#eab308!important;background-image:none!important;color:#9f1239!important;}
 .btn-amber svg{stroke:currentColor;}
 .btn-ghost{background-color:#fff;color:#536c80;}
 .btn-ghost:hover{background-color:#f3f8fa;color:#087f83;}
@@ -1533,9 +1535,14 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .block-table tr:hover td{background-color:#eff9f6;}
 .block-table td .cell-in{color:#263f54;}
 .block-sep{background-color:#f2f6f8;}
-.mbox{background-color:#fff;color:#233d52;border-color:#d5e2ec;}
-.mbox .t{background-color:#f1f6f9;color:#2c4f65;border-color:#e0e9f0;}
-.mbox .c{color:#344e62;}
+/* ModalBox starts life with a navy gradient. In Theme 2, clearing only its
+   background colour leaves that gradient visible underneath, so clear every
+   background image and make all message copy explicitly dark-on-white. */
+.mbox{background-color:#fff!important;background-image:none!important;color:#203c52!important;border-color:#d5e2ec;}
+.mbox .t{background-color:#f6f9fb!important;background-image:none!important;color:#203c52!important;border-color:#e0e9f0;}
+.mbox .t .x,.mbox .c,.mbox .c p,.mbox .c label,.mbox .c .hint{color:#2b465a!important;}
+.shared-box{background-color:#fff!important;background-image:none!important;color:#203c52!important;}
+.shared-box h3,.shared-box p,.shared-box .hint{color:#2b465a!important;}
 .remove-choice-intro{color:#203d52;}
 .remove-choice-help{color:#5e7486;}
 .remove-choice-meta{color:#687f91;}
@@ -1555,10 +1562,10 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .access-login{background-color:#fff;color:#233f54;border-color:#d8e4ed;}
 .access-login h2{color:#176e72;}
 .access-login .hint{color:#768b9d;}
-/* Notifications intentionally retain the strong navy treatment in Theme 2.
-   A light page must not make a transient success/error announcement disappear. */
-.toast,#live-update-notice{background-color:#132043!important;color:#f7fbff!important;border-color:#4d638a!important;}
-.toast *,#live-update-notice .live-update-message{color:#f7fbff!important;}
+/* Every Theme-2 announcement is light as well: transient toast, central
+   update notice and blocking shared-server message all use black-on-white. */
+.toast,#live-update-notice{background-color:#fff!important;background-image:none!important;color:#203c52!important;border-color:#c9d9e4!important;}
+.toast *,#live-update-notice .live-update-message{color:#203c52!important;}
 #live-update-notice .btn-ghost{background-color:#f8fafc;color:#1e3850;}
 #live-update-notice .btn-ghost:hover,#live-update-notice .btn-ghost:focus-visible{background-color:#dcebf0;color:#102c43;}
 .act-badge{color:#466274;}
@@ -1697,11 +1704,116 @@ html[data-ui-theme="light"] #sidebar .side-foot > .fx-bar{display:none!important
   });
 })();
 </script>
+<style id="fam-theme-select-css">
+/* Theme 2 uses a controlled select surface rather than the Windows native
+   popup, whose active row can ignore CSS and return to navy. The original
+   select remains the source of truth and returns unchanged in Theme 1. */
+.fam-light-select{display:none;position:relative;width:100%;min-width:0;direction:rtl;}
+html[data-ui-theme="light"] select.fam-select-native{display:none!important;}
+html[data-ui-theme="light"] .fam-light-select{display:block;}
+.fam-light-select-toggle{width:100%;min-height:42px;padding:0 14px;border:1px solid #b7cad8;border-radius:11px;background-color:#fff;color:#203c52;font:inherit;font-size:12.5px;text-align:right;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;box-shadow:none;}
+.fam-light-select-toggle::after{content:"";width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid #668399;flex:0 0 auto;}
+.fam-light-select.open .fam-light-select-toggle{border-color:#299a96;box-shadow:0 0 0 3px #087f8320;background-color:#fff;color:#203c52;}
+.fam-light-select.open .fam-light-select-toggle::after{transform:rotate(180deg);}
+.fam-light-select-menu{position:absolute;z-index:4200;top:calc(100% + 5px);inset-inline:0;max-height:min(300px,45vh);overflow:auto;padding:5px;border:1px solid #b7cad8;border-radius:11px;background-color:#fff;color:#203c52;box-shadow:0 16px 36px -18px #13204380;}
+.fam-light-select-menu[hidden]{display:none!important;}
+.fam-light-select-group{display:block;padding:7px 10px 4px;color:#537188;font-size:10px;font-weight:900;}
+.fam-light-select-option{display:block;width:100%;border:0;border-radius:7px;padding:8px 10px;background-color:#fff;color:#203c52;font:inherit;font-size:12px;line-height:1.45;text-align:right;cursor:pointer;}
+.fam-light-select-option:hover,.fam-light-select-option:focus-visible,.fam-light-select-option[aria-selected="true"]{background-color:#edf7f5;color:#075f61;outline:none;}
+.fam-light-select-option:disabled{opacity:.52;cursor:not-allowed;}
+</style>
+<script id="fam-theme-select-js">
+/* Theme-2 select facade. Native <select> popup highlight colours are controlled
+   by Windows/Chromium and may ignore option CSS; this keeps the native element
+   authoritative while rendering a fully white, keyboard-accessible menu. */
+(function(){
+  const selector='select.inp,#user-form select';
+  let openShell=null;
+  const isLight=()=>document.documentElement.dataset.uiTheme==='light';
+  const text=value=>String(value||'').replace(/\s+/g,' ').trim();
+  function close(shell=openShell){
+    if(!shell)return;
+    shell.classList.remove('open');
+    shell.querySelector('.fam-light-select-toggle')?.setAttribute('aria-expanded','false');
+    shell.querySelector('.fam-light-select-menu').hidden=true;
+    if(openShell===shell)openShell=null;
+  }
+  function selectedOption(select){return [...select.options].find(option=>option.selected)||select.options[0]||null;}
+  function render(select){
+    const shell=select._famLightSelect;if(!shell)return;
+    const toggle=shell.querySelector('.fam-light-select-toggle'),menu=shell.querySelector('.fam-light-select-menu');
+    const current=selectedOption(select);
+    toggle.textContent=current?text(current.textContent):'انتخاب کنید';
+    menu.replaceChildren();
+    const addOption=option=>{
+      const item=document.createElement('button');
+      item.type='button';item.className='fam-light-select-option';item.textContent=text(option.textContent);
+      item.disabled=option.disabled;item.dataset.value=option.value;item.setAttribute('role','option');item.setAttribute('aria-selected',String(option.selected));
+      item.addEventListener('click',()=>{
+        if(option.disabled)return;
+        select.value=option.value;
+        select.dispatchEvent(new Event('input',{bubbles:true}));
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+        render(select);close(shell);toggle.focus();
+      });
+      menu.append(item);
+    };
+    [...select.children].forEach(child=>{
+      if(child.tagName==='OPTGROUP'){
+        const group=document.createElement('span');group.className='fam-light-select-group';group.textContent=text(child.label);menu.append(group);
+        [...child.children].forEach(addOption);
+      }else if(child.tagName==='OPTION')addOption(child);
+    });
+  }
+  function build(select){
+    if(select._famLightSelect){render(select);return;}
+    const shell=document.createElement('div');shell.className='fam-light-select';shell.dataset.for=select.id||'';
+    const toggle=document.createElement('button');toggle.type='button';toggle.className='fam-light-select-toggle';toggle.setAttribute('aria-haspopup','listbox');toggle.setAttribute('aria-expanded','false');
+    toggle.setAttribute('aria-label',select.getAttribute('aria-label')||select.labels?.[0]?.textContent||'انتخاب');
+    const menu=document.createElement('div');menu.className='fam-light-select-menu';menu.hidden=true;menu.setAttribute('role','listbox');
+    toggle.addEventListener('click',event=>{
+      event.preventDefault();
+      if(!isLight())return;
+      if(openShell&&openShell!==shell)close(openShell);
+      const opening=!shell.classList.contains('open');
+      if(opening){render(select);shell.classList.add('open');toggle.setAttribute('aria-expanded','true');menu.hidden=false;openShell=shell;}
+      else close(shell);
+    });
+    toggle.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){close(shell);return;}
+      if(['ArrowDown','Enter',' '].includes(event.key)&&!shell.classList.contains('open')){event.preventDefault();toggle.click();menu.querySelector('[aria-selected="true"]')?.focus();}
+    });
+    menu.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close(shell);toggle.focus();}});
+    shell.append(toggle,menu);select.after(shell);select.classList.add('fam-select-native');select._famLightSelect=shell;
+    select.addEventListener('change',()=>render(select));select.addEventListener('input',()=>render(select));
+    new MutationObserver(()=>render(select)).observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['selected','disabled','label']});
+    render(select);
+  }
+  function scan(root=document){
+    if(root.matches?.(selector))build(root);
+    root.querySelectorAll?.(selector).forEach(build);
+  }
+  document.addEventListener('pointerdown',event=>{if(openShell&&!openShell.contains(event.target))close(openShell);});
+  window.addEventListener('fam:theme-change',()=>{if(!isLight())close(openShell);scan();});
+  document.addEventListener('DOMContentLoaded',()=>{
+    // The dashboard creates its mirrored quick forms in its own DOM-ready
+    // handler. Wait one task so the mirrors are built before any select shell
+    // is added, otherwise a cloned shell would be duplicated.
+    setTimeout(()=>{
+      scan();
+      new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1)scan(node);}))).observe(document.body,{childList:true,subtree:true});
+    },0);
+  });
+})();
+</script>
 <style id="fam-shared-css">
 /* Central status is the only new chrome; both themes share the same layout. */
 #shared-status{position:fixed;bottom:12px;left:16px;z-index:800;padding:8px 13px;border:1px solid var(--stroke-2);border-radius:8px;background:var(--bg-1);color:var(--green);font:11px var(--font);max-width:min(510px,calc(100vw - 32px));box-shadow:0 3px 18px #0002;}
 #shared-status.sync-error{color:var(--red);border-color:var(--red);}
 .auth-pending #shared-status{display:none;}
+/* The central revision is already visible in the header. Hide its duplicate
+   fixed message, “مرکزی · نسخهٔ … سرور”, at the bottom of the interface. */
+html[data-fam-variant="shared"] #shared-status{display:none!important;}
 #shared-block{position:fixed;inset:0;background:#101b35a6;z-index:50000;display:grid;place-items:center;padding:18px;}
 .shared-box{width:min(530px,100%);max-height:90vh;overflow:auto;background:var(--bg-1);color:var(--txt-0);border:1px solid var(--stroke-2);border-radius:14px;padding:26px;box-shadow:0 18px 70px #0004;}
 .shared-box h3{font-size:18px;margin:0 0 16px;}.shared-box p{font-size:12px;line-height:2;}.shared-box .btn{margin:10px 0 0 8px;}
@@ -1864,9 +1976,7 @@ html[data-ui-theme="light"] #sidebar .side-foot > .fx-bar{display:none!important
       <button class="icon-btn" title="بازسازی ایندکس" data-act="run-macro" data-arg="modSearchEngine.RefreshSearchIndexCore">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
       </button>
-      <button class="icon-btn" title="خروجی‌ها" data-act="run-macro" data-arg="modExport.ExportSearchResults">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
-      </button>
+
       </div>
     </header>
 
@@ -2135,38 +2245,6 @@ html[data-ui-theme="light"] #sidebar .side-foot > .fx-bar{display:none!important
                   <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
                   <span>REFRESH INDEX</span>
                 </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportSearchResults">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
-                  <span>خروجی نتایج</span>
-                </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportCurrentData">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8M8 16h5M8 8h8"/></svg>
-                  <span>خروجی داده جاری</span>
-                </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modExport.ExportChangeLog">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
-                  <span>خروجی تاریخچه</span>
-                </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modFixUnlock.UnlockDataSheets">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
-                  <span>رفع قفل بخش‌ها</span>
-                </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modUI.ProtectControlPanel">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-                  <span>قفل پنل</span>
-                </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modUI.UnprotectControlPanel">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
-                  <span>باز کردن قفل</span>
-                </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modConstants.HideSystemSheets">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M2 12s3.5-7 10-7c2 0 3.8.7 5.3 1.7M22 12s-3.5 7-10 7c-2 0-3.8-.7-5.3-1.7"/><path d="M3 3l18 18"/></svg>
-                  <span>مخفی سازی سیستم</span>
-                </div>
-                <div class="tool-tile" data-act="run-macro" data-arg="modConstants.UnhideSystemSheets">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <span>نمایش سیستم</span>
-                </div>
                 <div class="tool-tile wide" data-act="open-file">
                   <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M12 15V3m0 0 4 4m-4-4-4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                   <span>IMPORT FILE</span>
@@ -2303,7 +2381,7 @@ html[data-ui-theme="light"] #sidebar .side-foot > .fx-bar{display:none!important
         <div class="head-actions">
           <button class="btn btn-green btn-sm" data-act="run-macro" data-arg="modSearchEngine.SaveChanges">SAVE CHANGES</button>
           <button class="btn btn-red btn-sm" data-act="run-macro" data-arg="modSearchEngine.ClearSearchResults">CLEAR</button>
-          <button class="btn btn-ghost btn-sm" data-act="run-macro" data-arg="modExport.ExportSearchResults">خروجی CSV</button>
+
           <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
       </div>
@@ -2372,7 +2450,7 @@ html[data-ui-theme="light"] #sidebar .side-foot > .fx-bar{display:none!important
           <div class="sub">CHANGE_LOG — ثبت کامل همه عملیات‌ها</div>
         </div>
         <div class="head-actions">
-          <button class="btn btn-ghost btn-sm" data-act="run-macro" data-arg="modExport.ExportChangeLog">⬇ خروجی</button>
+
           <button class="btn btn-red btn-sm" data-act="clear-log">پاک‌سازی لاگ</button>
           <button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button>
         </div>
