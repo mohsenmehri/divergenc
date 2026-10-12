@@ -1582,6 +1582,10 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 /* The account-form cancel action must remain visibly filled in Theme 2. */
 #user-cancel{background-color:#dce8ef!important;background-image:none!important;color:#29485f!important;border-color:#b7cad7!important;}
 #user-cancel:hover,#user-cancel:focus-visible{background-color:#cbdde7!important;background-image:none!important;color:#1d3d55!important;}
+/* Footer buttons inherit white text from the dark modal rule. Give the user
+   manager's close action its own light filled surface and dark readable copy. */
+#users-done{background-color:#dce8ef!important;background-image:none!important;color:#29485f!important;border-color:#b7cad7!important;}
+#users-done:hover,#users-done:focus-visible{background-color:#cbdde7!important;background-image:none!important;color:#1d3d55!important;}
 #user-delete{background-color:#e55c66!important;background-image:none!important;color:#111!important;border-color:#cf3d49!important;}
 #user-error,#auth-error,#password-error{color:#b42f44;}
 #auth-screen{background-color:#eef3f7;background-image:none;}
@@ -3307,6 +3311,10 @@ function sheetToCSV(name) {
 }
 
 /* ---------- change log view ---------- */
+function canViewLogEntry(row) {
+  const sheet = String((row || [])[2] || '');
+  return IsDataSheet(sheet) ? Access.can("view-history", sheet) : Access.can("global-history");
+}
 function renderLogView() {
   if (!Access.require("view-history")) return false;
   const sh = WB.sheets[LOG_SHEET];
@@ -3324,10 +3332,7 @@ function renderLogView() {
   const tbody = el("tbody");
   for (let r = sh.rows.length - 1; r >= 1; r--) {
     const row = sh.rows[r] || [];
-    const dataSheet = String(row[2] || '');
-    if (IsDataSheet(dataSheet) && !Access.can("view-history", dataSheet)) continue;
-    // Non-data/system entries are not shown to a scoped history account.
-    if (!IsDataSheet(dataSheet) && !Access.can("admin")) continue;
+    if (!canViewLogEntry(row)) continue;
     const isErr = (row[1] === "ERROR" || row[5] === "ARCHIVE_FAIL");
     const tr = el("tr", { class: isErr ? "err" : "" });
     for (let c = 0; c < 7; c++) {
@@ -5945,7 +5950,7 @@ function renderFeed() {
   const host = document.getElementById("dash-feed");
   if (!host) return;
   const log = WB.sheets[LOG_SHEET];
-  const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ""));
+  const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== "") && canViewLogEntry(r));
   const colors = { ADD: "#22c55e", REMOVE: "#ef4444", UNDO: "#f59e0b", EDIT: "#3b82f6", ERROR: "#ef4444", ARCHIVE_FAIL: "#ef4444" };
   clear(host);
   if (!rows.length) {
@@ -8367,6 +8372,10 @@ const Access = (() => {
     if(operation==='read')return has(u,'view-sheets');
     if(operation==='search-read')return has(u,'search');
     if(operation==='data-access')return dataPermission(u);
+    // Change-log records such as IMPORT/RESET have no data-sheet name. Show
+    // those global records only to a history user whose selected scope covers
+    // every current category and province region.
+    if(operation==='global-history')return has(u,'view-history')&&hasFullDataScope(u);
     const capability={
       users:'manage-users',admin:'manage-system',source:'source-code',manual:'edit-cells',export:'export-xlsx',backup:'backup-server',
       'view-sheets':'view-sheets','refresh-index':'refresh-index',search:'search',workspace:'view-sheets',add:'add-record',remove:'remove-record',undo:'undo-remove',

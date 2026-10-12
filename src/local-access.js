@@ -119,6 +119,10 @@ const Access = (() => {
     if(operation==='read')return has(u,'view-sheets');
     if(operation==='search-read')return has(u,'search');
     if(operation==='data-access')return dataPermission(u);
+    // Change-log records such as IMPORT/RESET have no data-sheet name. Show
+    // those global records only to a history user whose selected scope covers
+    // every current category and province region.
+    if(operation==='global-history')return has(u,'view-history')&&hasFullDataScope(u);
     const capability={
       users:'manage-users',admin:'manage-system',source:'source-code',manual:'edit-cells',export:'export-xlsx',backup:'backup-server',
       'view-sheets':'view-sheets','refresh-index':'refresh-index',search:'search',workspace:'view-sheets',add:'add-record',remove:'remove-record',undo:'undo-remove',

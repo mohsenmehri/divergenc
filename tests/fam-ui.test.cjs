@@ -24,6 +24,7 @@ after(async()=>{await browser?.close();await new Promise(resolve=>server.close(r
 
 test('dynamic user form stores IDs, enforces scope, tracks category changes, and paints requested controls',async()=>{
   await page.goto(url);await page.locator('#auth-password').waitFor();await login();
+  assert.equal(await page.evaluate(()=>Access.can('global-history')),true);
   await page.evaluate(()=>importValidatedSheets(['شبکه آزمایشی','تهران','فارس'],{
     'شبکه آزمایشی':{rows:[['ID','Name'],['N1','NETWORK']],merges:[]},
     'تهران':{rows:[['ID','Name'],['T1','TEHRAN']],merges:[]},
@@ -45,8 +46,8 @@ test('dynamic user form stores IDs, enforces scope, tracks category changes, and
   const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.find(u=>u.username==='scoped-user'));
   assert.deepEqual(stored.categories.sort(),['provinces','services']);assert.deepEqual(stored.permissions.sort(),['edit-cells','search','view-sheets']);assert.deepEqual(stored.regions,[tehranRegion]);
   await page.locator('#user-'+stored.id).click();
-  const themeControls=await page.evaluate(()=>{FamTheme.set('light');const c=getComputedStyle(document.getElementById('user-cancel')),d=getComputedStyle(document.getElementById('user-delete'));const b=document.getElementById('user-delete').getBoundingClientRect(),p=document.querySelector('.category-editor').getBoundingClientRect();return {cancel:c.backgroundColor,deleteBg:d.backgroundColor,deleteColor:d.color,compact:b.width<p.width};});
-  assert.notEqual(themeControls.cancel,'rgba(0, 0, 0, 0)');assert.equal(themeControls.deleteColor,'rgb(17, 17, 17)');assert.equal(themeControls.compact,true);
+  const themeControls=await page.evaluate(()=>{FamTheme.set('light');const c=getComputedStyle(document.getElementById('user-cancel')),d=getComputedStyle(document.getElementById('user-delete')),done=getComputedStyle(document.getElementById('users-done'));const b=document.getElementById('user-delete').getBoundingClientRect(),p=document.querySelector('.category-editor').getBoundingClientRect();return {cancel:c.backgroundColor,done:done.backgroundColor,deleteBg:d.backgroundColor,deleteColor:d.color,compact:b.width<p.width};});
+  assert.notEqual(themeControls.cancel,'rgba(0, 0, 0, 0)');assert.notEqual(themeControls.done,'rgba(0, 0, 0, 0)');assert.equal(themeControls.deleteColor,'rgb(17, 17, 17)');assert.equal(themeControls.compact,true);
   await page.locator('#users-done').click();await page.locator('#stat-line').click();await page.locator('#account-logout').click();await page.locator('#auth-password').waitFor();
   await login('scoped-user');
   assert.deepEqual(await page.evaluate(()=>[Access.can('read','شبکه آزمایشی'),Access.can('manual','شبکه آزمایشی'),Access.can('read','تهران'),Access.can('read','فارس')]),[true,true,true,false]);
