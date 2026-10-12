@@ -73,6 +73,11 @@ test('role policy scopes levels 3 and 4 while keeping level 4 search-only',()=>{
  assert.match(access,/text:'همهٔ مناطق'/);
  assert.match(access,/if\(path==='modAddRecord\.StartAddWizard'\)return can\('add'\)/);
  assert.match(access,/if\(path==='modRemoveRecord\.StartRemoveWizard'\)return can\('remove'\)/);
+ assert.match(access,/id:'user-save'.*text:'ثبت'/);
+ assert.match(access,/id:'user-cancel'.*text:'لغو'/);
+ assert.match(access,/id:'user-save-new'.*text:'ثبت و ایجاد کاربر جدید'/);
+ assert.match(access,/\[\[1,'سطح ۱'\],\[2,'سطح ۲'\],\[3,'سطح ۳'\],\[4,'سطح ۴'\]\]/);
+ assert.doesNotMatch(access,/سطح ۱ —|سطح ۲ —|سطح ۳ —|سطح ۴ —/);
  assert.match(server,/def can_access_data\(user, name, state\):/);
  assert.match(server,/افزودن یا حذف رکورد برای سطح ۳ مجاز نیست/);
  assert.match(shared,/Access\.require\('save-results'\)/);

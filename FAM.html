@@ -8476,7 +8476,7 @@ const Access = (() => {
     const summary=el('p',{id:'users-summary',class:'hint'});
     const status=el('p',{id:'users-status',role:'status','aria-live':'polite'});
     // Creation is the default and remains separate from an explicitly selected
-    // account. Saving one new user must never turn the next draft into an edit.
+    // account. The submitter decides whether to keep editing or start another.
     let selected=null, saving=false;
     const close=()=>{if(saving)return;ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
     const button=(text,id,fn)=>el('button',{type:'button',id,class:'btn btn-ghost btn-sm',text,onclick:fn});
@@ -8505,10 +8505,7 @@ const Access = (() => {
       const pw=field(original?'رمز جدید (خالی = بدون تغییر)':'رمز عبور','user-password','password');pw.input.required=!original;
       un.input.maxLength=40;name.input.maxLength=60;pw.input.maxLength=128;
       const role=el('select',{id:'user-role',class:'inp'});
-      [[1,'سطح ۱ — مدیر کامل و مدیریت کاربران'],
-       [2,'سطح ۲ — همهٔ امکانات، به‌جز SAVE CHANGES، بازسازی پنل، ورود فایل، خالی‌کردن داده، بازیابی و بازنشانی'],
-       [3,'سطح ۳ — امکانات مجاز در مناطق انتخابی، بدون SAVE CHANGES، بازسازی پنل، ورود/پاک‌سازی/بازیابی/بازنشانی و افزودن/حذف رکورد'],
-       [4,'سطح ۴ — فقط مشاهدهٔ شیت‌ها و جست‌وجو در مناطق انتخابی']]
+      [[1,'سطح ۱'],[2,'سطح ۲'],[3,'سطح ۳'],[4,'سطح ۴']]
         .forEach(([v,t])=>role.appendChild(el('option',{value:String(v),text:t})));
       role.value=String(draft.role);
       const enabled=el('input',{type:'checkbox',id:'user-enabled',checked:draft.enabled});
@@ -8526,11 +8523,16 @@ const Access = (() => {
       regionOptions.forEach(r=>regions.appendChild(el('label',{},el('input',{type:'checkbox','data-user-region':r.id,checked:rs.has(r.id),onchange:e=>{e.target.checked?rs.add(r.id):rs.delete(r.id);}}),txt(r.name))));
       if(!regionOptions.length)regions.appendChild(el('p',{class:'hint',text:'منطقه‌ای تعریف نشده است.'}));
       const showScopes=()=>{scopes.hidden=!['3','4'].includes(role.value);};role.addEventListener('change',showScopes);showScopes();
-      const save=el('button',{type:'submit',id:'user-save',class:'btn btn-primary',text:original?'ذخیره تغییرات همین کاربر':'ایجاد کاربر جدید'});
+      const save=el('button',{type:'submit',id:'user-save',class:'btn btn-primary',text:'ثبت'});
+      const saveAndNew=el('button',{type:'submit',id:'user-save-new',class:'btn btn-cyan',text:'ثبت و ایجاد کاربر جدید'});
+      const cancel=el('button',{type:'button',id:'user-cancel',class:'btn btn-ghost',text:'لغو',onclick:close});
+      const formActions=el('div',{class:'f user-form-actions'},save,cancel,saveAndNew);
       form.append(mode,un.node,name.node,pw.node,el('label',{for:'user-role',text:'سطح دسترسی'}),role,
-        el('label',{class:'access-check'},enabled,txt('حساب فعال است')),scopes,error,save);
+        el('label',{class:'access-check'},enabled,txt('حساب فعال است')),scopes,error,formActions);
       form.addEventListener('submit',async e=>{
-        e.preventDefault();if(saving || !requirePermission('users'))return;saving=true;save.disabled=true;error.textContent='';
+        e.preventDefault();if(saving || !requirePermission('users'))return;
+        const createAnother=e.submitter?.id==='user-save-new';
+        saving=true;save.disabled=true;saveAndNew.disabled=true;cancel.disabled=true;error.textContent='';
         try{
           const scoped=['3','4'].includes(role.value);
           const changed={...draft,username:username(un.input.value),name:name.input.value.trim(),role:Number(role.value),enabled:enabled.checked,
@@ -8544,10 +8546,14 @@ const Access = (() => {
           if(original && !next.users.some(u=>u.enabled&&u.role===1))throw Error('حداقل یک مدیر فعال سطح ۱ لازم است. شما در حال ویرایش حساب «'+original.username+'» هستید، نه افزودن کاربر جدید. برای ساخت حساب جداگانه، «کاربر جدید» را بزنید.');
           persist(next);pw.input.value='';
           if(changed.id===activeId){if(!changed.enabled || changed.role!==1){await logout();return;}establish(changed);}
-          selected=original?changed.id:null;
-          status.textContent=original?'تغییرات کاربر «'+changed.username+'» ذخیره شد.':'کاربر «'+changed.username+'» با سطح '+changed.role+' ساخته شد. فرم خالی برای کاربر بعدی آماده است.';
-          drawList();drawEditor();updateStatLine();if(!original)area.querySelector('#user-username').focus();Toast(original?'تغییرات کاربر ذخیره شد.':'کاربر جدید ساخته شد.','ok');
-        }catch(e){error.textContent=e.message;}finally{saving=false;save.disabled=false;}
+          selected=createAnother?null:changed.id;
+          status.textContent=createAnother
+            ? 'کاربر «'+changed.username+'» ذخیره شد. فرم کاربر جدید آماده است.'
+            : (original?'تغییرات کاربر «'+changed.username+'» ذخیره شد.':'کاربر «'+changed.username+'» ساخته شد.');
+          drawList();drawEditor();updateStatLine();
+          if(createAnother)area.querySelector('#user-username').focus();
+          Toast(original?'تغییرات کاربر ذخیره شد.':'کاربر جدید ساخته شد.','ok');
+        }catch(e){error.textContent=e.message;}finally{saving=false;save.disabled=false;saveAndNew.disabled=false;cancel.disabled=false;}
       });
       area.appendChild(form);
       if(original)area.appendChild(button('حذف کاربر','user-delete',async()=>{
