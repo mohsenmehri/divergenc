@@ -165,8 +165,10 @@ test('each ordinary category has region-like section management without deleting
     state.categoryConfig=defaultCategoryConfig();state.catFilter='datacenters';switchView('sheet');renderSheetCatalog();
   });
   const manager=page.locator('[data-act="manage-category-sections"][data-category="datacenters"]');
-  await manager.click();await page.locator('#section-new').click();await page.locator('#section-name').fill('مرکزهای اصلی');
-  await page.locator('[data-section-sheet="مرکز داده تهران"]').check();await page.locator('#section-save').click();
+  await manager.click();
+  await page.locator('[data-section-id="__unassigned__"]').click();
+  await page.locator('.category-sheet').filter({hasText:'مرکز داده تهران'}).getByText('ساخت بخش از این شیت').click();
+  await page.locator('#section-name').fill('مرکزهای اصلی');await page.locator('#section-save').click();
   let saved=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,rows:WB.sheets['مرکز داده تهران'].rows}));
   assert.equal(saved.sections.length,1);assert.deepEqual(saved.sections[0],{id:saved.sections[0].id,category:'datacenters',name:'مرکزهای اصلی'});assert.deepEqual(saved.assignments,[['مرکز داده تهران',saved.sections[0].id]]);assert.deepEqual(saved.rows,[['ID','Name'],['DC-1','تهران']]);
   assert.equal(await page.locator('.category-subsection h4').first().textContent(),'مرکزهای اصلی');

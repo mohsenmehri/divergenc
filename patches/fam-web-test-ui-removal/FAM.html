@@ -8061,7 +8061,10 @@ function manageCategorySections(categoryId) {
   if (!category) { Toast('دستهٔ انتخاب‌شده دیگر وجود ندارد.','warn'); return false; }
   draft.sections = Array.isArray(draft.sections) ? draft.sections : [];
   draft.sectionAssignments = Array.isArray(draft.sectionAssignments) ? draft.sectionAssignments : [];
-  let selected=draft.sections.find(section=>section.category===categoryId)?.id || '', pendingDelete='', query='';
+  // Existing worksheets start in the visible «بدون بخش» collection. This lets
+  // the administrator turn any current worksheet into an editable section
+  // instead of facing an empty manager after opening an older workbook.
+  let selected=draft.sections.find(section=>section.category===categoryId)?.id || '__unassigned__', pendingDelete='', query='';
   const previousFocus=document.activeElement,overlay=document.getElementById('modal-overlay');
   const box=el('div',{class:'mbox category-manager',role:'dialog','aria-modal':'true','aria-labelledby':'section-manager-title'});
   const error=el('p',{id:'section-error',role:'alert',class:'category-error'}),list=el('div',{class:'category-list','aria-label':'بخش‌های دسته'}),editor=el('div',{class:'category-editor'});
@@ -8081,10 +8084,29 @@ function manageCategorySections(categoryId) {
     clear(list);
     for(const section of sections())list.appendChild(el('button',{type:'button',class:'category-choice'+(section.id===selected?' active':''),'data-section-id':section.id,'aria-pressed':String(section.id===selected),onclick:()=>{selected=section.id;pendingDelete='';renderList();renderEditor();}},
       el('span',{text:section.name}),el('b',{text:String(categorySheets().filter(name=>sectionOf(name)?.id===section.id).length)})));
-    if(!sections().length)list.appendChild(el('p',{class:'hint',text:'هنوز بخشی برای این دسته ثبت نشده است. با «افزودن بخش» شروع کنید.'}));
+    const unassigned=categorySheets().filter(name=>!sectionOf(name));
+    list.appendChild(el('button',{type:'button',class:'category-choice category-unassigned'+(selected==='__unassigned__'?' active':''),'data-section-id':'__unassigned__','aria-pressed':String(selected==='__unassigned__'),onclick:()=>{selected='__unassigned__';pendingDelete='';renderList();renderEditor();}},
+      el('span',{text:'شیت‌های بدون بخش'}),el('b',{text:String(unassigned.length)})));
+    if(!sections().length&&!unassigned.length)list.appendChild(el('p',{class:'hint',text:'هنوز شیت یا بخشی برای این دسته ثبت نشده است. با «افزودن بخش» شروع کنید.'}));
   };
   const renderEditor=()=>{
     clear(editor);
+    if(selected==='__unassigned__'){
+      const rows=el('div',{class:'category-sheet-list'}),matches=()=>categorySheets().filter(name=>!sectionOf(name)&&NormalizeText(name).includes(NormalizeText(query)));
+      const promote=name=>{
+        let title=name,number=2;
+        while(sections().some(item=>NormalizeText(item.name)===NormalizeText(title)))title=name+' '+number++;
+        const id='section-'+crypto.randomUUID();draft.sections.push({id,category:categoryId,name:title});setAssignment(name,id);selected=id;query='';renderList();renderEditor();
+      };
+      const renderRows=()=>{
+        clear(rows);const names=matches();
+        names.forEach(name=>rows.appendChild(el('div',{class:'category-sheet'},el('span',{text:name}),action('ساخت بخش از این شیت','section-promote-'+name,()=>promote(name),'btn btn-ghost btn-sm'))));
+        if(!names.length)rows.appendChild(el('p',{class:'hint',text:'شیت بدون بخشی با این نام یافت نشد.'}));
+      };
+      editor.append(el('p',{class:'hint',text:'شیت‌های فعلی این دسته در اینجا دیده می‌شوند. برای هر مورد، «ساخت بخش از این شیت» را بزنید؛ سپس نام بخش و شیت‌های آن را مانند مناطق ویرایش کنید. خود شیت و داده‌هایش تغییر نمی‌کنند.'}),
+        el('label',{for:'unassigned-sheet-search',text:'جستجوی شیت‌های فعلی'}),el('input',{id:'unassigned-sheet-search',class:'inp',placeholder:'نام شیت…',value:query,oninput:event=>{query=event.target.value;renderRows();}}),rows);
+      renderRows();return;
+    }
     const section=sections().find(item=>item.id===selected);
     if(!section){editor.appendChild(el('p',{class:'hint',text:'برای تخصیص شیت‌ها، یک بخش را انتخاب یا ایجاد کنید. شیت‌ها و داده‌هایشان حذف نمی‌شوند.'}));return;}
     const rows=el('div',{class:'category-sheet-list'}),count=el('p',{class:'hint','aria-live':'polite'});
