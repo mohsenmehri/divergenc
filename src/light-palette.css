@@ -57,9 +57,10 @@ html[data-ui-theme="light"],html[data-ui-theme="light"] select,html[data-ui-them
 .btn-primary{background-color:#087f83;color:#fff;}
 .btn-green{background-color:#147b5b;color:#fff;}
 .btn-red{background-color:#bd4050;color:#fff;}
-/* «برگشت» and every amber action must read as yellow, not washed-out cream. */
-.btn-amber{background-color:#f5c542;color:#241703!important;border-color:#d69f11;}
-.btn-amber:hover,.btn-amber:focus-visible{background-color:#e7b52d;color:#241703!important;}
+/* «برگشت» must be a true yellow surface in Theme 2. The dark-theme gradient
+   is an image, so explicitly remove it rather than merely changing its colour. */
+.btn-amber{background-color:#facc15!important;background-image:none!important;color:#be123c!important;border-color:#d7a70b;}
+.btn-amber:hover,.btn-amber:focus-visible{background-color:#eab308!important;background-image:none!important;color:#9f1239!important;}
 .btn-amber svg{stroke:currentColor;}
 .btn-ghost{background-color:#fff;color:#536c80;}
 .btn-ghost:hover{background-color:#f3f8fa;color:#087f83;}
