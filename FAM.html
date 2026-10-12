@@ -721,11 +721,27 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .remove-service-detail{display:block;margin-top:7px;font-size:9.5px;line-height:1.7;opacity:.92;}
 /* Theme 1 modal copy must stay bright on the navy surface. The light theme
    supplies its own dark-on-white palette later in the document. */
-html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .c,
-html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-intro,
-html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-help,
-html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-meta,
-html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-match-field{color:#f7fbff;}
+/* Every dark modal uses explicit high-contrast copy, not only the removal
+   wizard. The light palette below remains dark-on-white. */
+html:not([data-ui-theme="light"]) .mbox,
+html:not([data-ui-theme="light"]) .mbox .t,
+html:not([data-ui-theme="light"]) .mbox .t .x{color:#fff;}
+html:not([data-ui-theme="light"]) .mbox .c,
+html:not([data-ui-theme="light"]) .mbox .c p,
+html:not([data-ui-theme="light"]) .mbox .c label,
+html:not([data-ui-theme="light"]) .mbox .c .hint{color:#edf4ff;}
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-intro{color:#fff;}
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-help{color:#e0eafb;}
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-meta{color:#c7d6ee;}
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-match-field{color:#f1f6ff;}
+/* Primary/OK actions are gold in theme 1, so their text is deliberately ink
+   coloured. Modal footer defaults otherwise force white text. */
+html:not([data-ui-theme="light"]) .mbox .f .ok,
+html:not([data-ui-theme="light"]) .mbox .f .no,
+html:not([data-ui-theme="light"]) .section-pick .atm{color:#241703;}
+html:not([data-ui-theme="light"]) .mbox .f .ok svg,
+html:not([data-ui-theme="light"]) .mbox .f .no svg,
+html:not([data-ui-theme="light"]) .section-pick .atm svg{stroke:currentColor;}
 @media(max-width:520px){.remove-service-grid{grid-template-columns:1fr;}.remove-service-button{min-height:0;}.mbox .f{flex-wrap:wrap;}.mbox .f button{flex:1 1 130px;padding-inline:12px;}}
 
 /* ============ TOASTS ============ */
