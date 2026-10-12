@@ -725,20 +725,25 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
    wizard. The light palette below remains dark-on-white. */
 html:not([data-ui-theme="light"]) .mbox,
 html:not([data-ui-theme="light"]) .mbox .t,
-html:not([data-ui-theme="light"]) .mbox .t .x{color:#fff;}
+html:not([data-ui-theme="light"]) .mbox .t *,
+html:not([data-ui-theme="light"]) .mbox .t .x{color:#fff!important;}
 html:not([data-ui-theme="light"]) .mbox .c,
+html:not([data-ui-theme="light"]) .mbox .c *,
 html:not([data-ui-theme="light"]) .mbox .c p,
 html:not([data-ui-theme="light"]) .mbox .c label,
-html:not([data-ui-theme="light"]) .mbox .c .hint{color:#edf4ff;}
+html:not([data-ui-theme="light"]) .mbox .c .hint{color:#edf4ff!important;}
 html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-intro{color:#fff;}
 html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-help{color:#e0eafb;}
 html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-meta{color:#c7d6ee;}
 html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-match-field{color:#f1f6ff;}
 /* Primary/OK actions are gold in theme 1, so their text is deliberately ink
    coloured. Modal footer defaults otherwise force white text. */
+html:not([data-ui-theme="light"]) .btn-primary,
+html:not([data-ui-theme="light"]) .btn-amber,
+html:not([data-ui-theme="light"]) .cat-pill.active,
 html:not([data-ui-theme="light"]) .mbox .f .ok,
 html:not([data-ui-theme="light"]) .mbox .f .no,
-html:not([data-ui-theme="light"]) .section-pick .atm{color:#241703;}
+html:not([data-ui-theme="light"]) .section-pick .atm{color:#241703!important;}
 html:not([data-ui-theme="light"]) .mbox .f .ok svg,
 html:not([data-ui-theme="light"]) .mbox .f .no svg,
 html:not([data-ui-theme="light"]) .section-pick .atm svg{stroke:currentColor;}
@@ -1550,7 +1555,12 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .access-login{background-color:#fff;color:#233f54;border-color:#d8e4ed;}
 .access-login h2{color:#176e72;}
 .access-login .hint{color:#768b9d;}
-.toast{background-color:#fff;color:#2f5166;border-color:#ccdedf;}
+/* Notifications intentionally retain the strong navy treatment in Theme 2.
+   A light page must not make a transient success/error announcement disappear. */
+.toast,#live-update-notice{background-color:#132043!important;color:#f7fbff!important;border-color:#4d638a!important;}
+.toast *,#live-update-notice .live-update-message{color:#f7fbff!important;}
+#live-update-notice .btn-ghost{background-color:#f8fafc;color:#1e3850;}
+#live-update-notice .btn-ghost:hover,#live-update-notice .btn-ghost:focus-visible{background-color:#dcebf0;color:#102c43;}
 .act-badge{color:#466274;}
 .act-ADD{color:#147d50;}
 .act-REMOVE,.act-ERROR{color:#b03545;}
@@ -1605,6 +1615,22 @@ table.xl thead th{background-color:#edf3f7;color:#536d82;}
 table.xl td[contenteditable]:focus,.block-table td .cell-in:focus{background-color:#eff9f6;box-shadow:inset 0 0 0 1.5px #299a96;}
 [data-tip]::after{background-color:#fff;color:#203c52;border-color:#cfdee9;box-shadow:0 10px 24px -10px #23384e30;}
 select.inp:focus,select.inp:active{background-image:linear-gradient(45deg,transparent 50%,#6c889a 50%),linear-gradient(135deg,#6c889a 50%,transparent 50%);}
+
+/* Apply this to every native select, including dynamically-created account
+   selectors. Windows paints its popup separately, so the scheme, field and
+   every selected/hovered option must all be declared light. */
+html[data-ui-theme="light"] select,
+html[data-ui-theme="light"] select:focus,
+html[data-ui-theme="light"] select:active{
+  color-scheme:light!important;background-color:#fff!important;color:#203c52!important;
+}
+html[data-ui-theme="light"] select option,
+html[data-ui-theme="light"] select optgroup,
+html[data-ui-theme="light"] select option:checked,
+html[data-ui-theme="light"] select option:hover,
+html[data-ui-theme="light"] select option:focus{
+  color-scheme:light!important;background-color:#fff!important;color:#203c52!important;
+}
 </style>
 <style id="fam-ui-theme-css">
 /* Shared switch controls; light-only nodes never change the original theme. */
