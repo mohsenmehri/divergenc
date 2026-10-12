@@ -61,3 +61,22 @@ test('dynamic user form stores IDs, enforces scope, tracks category changes, and
   assert.deepEqual(dynamic,{renamed:['نام جدید سرویس‌ها',true],moved:false});
   assert.deepEqual(errors,[]);
 });
+
+test('add/remove-only user receives scoped operation lists without Search permission',async()=>{
+  // A new browser-local account must not inherit previous account selections.
+  await page.evaluate(async()=>{try{await flushDeepSave();await idbDelete();}catch(e){}localStorage.clear();sessionStorage.clear();});
+  await page.goto(url);await page.locator('#auth-password').waitFor();await login();
+  await page.evaluate(()=>{importValidatedSheets(['شبکه آزمایشی'],{'شبکه آزمایشی':{rows:[['ID','Name'],['N1','TEST RECORD']],merges:[]}},'ops.csv',true);modMapping.RefreshSearchIndex(false);});
+  await manager();await page.locator('#user-new').click();
+  await page.locator('#user-username').fill('ops-only');await page.locator('#user-name').fill('فقط عملیات');await page.locator('#user-password').fill('1109');
+  await page.locator('[data-user-category="services"]').check();
+  await page.locator('[data-user-permission="add-record"]').check();await page.locator('[data-user-permission="remove-record"]').check();
+  await page.locator('#user-save').click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('fam.accounts.v1')).users.some(u=>u.username==='ops-only'));
+  await page.locator('#users-done').click();await page.locator('#stat-line').click();await page.locator('#account-logout').click();await page.locator('#auth-username').waitFor();await login('ops-only');
+  const lists=await page.evaluate(()=>({add:[...document.querySelector('#cp-c16').options].map(o=>o.value),remove:[...document.querySelector('#cp-c23').options].map(o=>o.value),search:[...document.querySelector('#cp-c7').options].map(o=>o.value)}));
+  assert.deepEqual(lists.add,['شبکه آزمایشی']);assert.deepEqual(lists.remove,['ALL','شبکه آزمایشی']);assert.deepEqual(lists.search,['ALL']);
+  await page.locator('#cp-c16').selectOption('شبکه آزمایشی');await page.evaluate(()=>void modAddRecord.StartAddWizard());await page.locator('.wizard-fields').waitFor();await page.locator('[data-a="cancel"]').click();
+  await page.locator('#cp-c23').selectOption('شبکه آزمایشی');await page.locator('#cp-c25').selectOption({index:0});await page.locator('#cp-c27').fill('N1');await page.evaluate(()=>void modRemoveRecord.StartRemoveWizard());await page.locator('#remove-match-number').waitFor();
+  await page.locator('#modal-overlay button[data-id="2"]').click();
+  assert.deepEqual(errors,[]);
+});

@@ -33,7 +33,10 @@ test('category identifiers and regions are persisted and missing categories fail
 
 test('standalone entry points check the capability and selected sheet scope',()=>{
   const html=read('FAM.html');
-  assert.match(html,/Access\.can\(\"search-read\", n\)/);
+  assert.match(html,/BuildSheetList\(includeAll, operation = "search-read"\)/);
+  assert.match(html,/BuildSheetList\(false, "add"\)/);
+  assert.match(html,/BuildSheetList\(true, "remove"\)/);
+  assert.match(html,/Access\.can\(\"remove\", TrimText\(String\(idx\[0\]/);
   assert.match(html,/Access\.require\(\"manual\", name\)/);
   assert.match(html,/Access\.require\(\"save-results\", blk\.sheet\)/);
   assert.match(html,/Access\.require\(\"add\", sheetName\)/);

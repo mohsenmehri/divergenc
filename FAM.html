@@ -4482,7 +4482,10 @@ const modRemoveRecord = {
       await ShowMsg("مقدار جستجو را وارد کنید.", vbExclamation, "Remove");
       return;
     }
-    const matches = modMapping.GetMatchRows(searchKey, searchValue, sheetFilter);
+    const matches = modMapping.GetMatchRows(searchKey, searchValue, sheetFilter).filter(idxRowExcel => {
+      const idx = WB.sheets[IDX_SHEET].rows[idxRowExcel - 1] || [];
+      return Access.can("remove", TrimText(String(idx[0] ?? "")));
+    });
     if (matches.length === 0) {
       await ShowMsg("نتیجه‌ای برای '" + searchValue + "' یافت نشد.\nREFRESH INDEX بزنید.", vbInformation, "Remove");
       return;
@@ -4808,20 +4811,29 @@ const modUI = {
     return result;
   },
 
-  BuildSheetList(includeAll) {
+  // Each operation receives its own scoped sheet list. In particular, Add/Remove
+  // must not silently depend on the separate Search permission.
+  BuildSheetList(includeAll, operation = "search-read") {
     const list = [];
     if (includeAll) list.push("ALL");
-    WB.order.forEach(n => { if (IsDataSheet(n) && Access.can("search-read", n)) list.push(n); });
+    WB.order.forEach(n => { if (IsDataSheet(n) && Access.can(operation, n)) list.push(n); });
     return list;
   },
 
   SetupSheetDropdown() {
-    const sheets = this.BuildSheetList(true);
-    fillSelect("cp-c7", sheets, state.cp.C7, true, true);
-    fillSelect("cp-c23", sheets, state.cp.C23, true, true);
+    fillSelect("cp-c7", this.BuildSheetList(true, "search-read"), state.cp.C7, true, true);
+    state.cp.C7 = document.getElementById("cp-c7").value;
+    fillSelect("cp-c23", this.BuildSheetList(true, "remove"), state.cp.C23, true, true);
+    state.cp.C23 = document.getElementById("cp-c23").value;
   },
-  SetupAddSheetDropdown() { fillSelect("cp-c16", this.BuildSheetList(false), state.cp.C16, true, true); },
-  SetupNavSheetDropdown() { fillSelect("cp-c41", this.BuildSheetList(false), state.cp.C41, true, true); },
+  SetupAddSheetDropdown() {
+    fillSelect("cp-c16", this.BuildSheetList(false, "add"), state.cp.C16, true, true);
+    state.cp.C16 = document.getElementById("cp-c16").value;
+  },
+  SetupNavSheetDropdown() {
+    fillSelect("cp-c41", this.BuildSheetList(false, "read"), state.cp.C41, true, true);
+    state.cp.C41 = document.getElementById("cp-c41").value;
+  },
   SetupKeyDropdown() {
     const selSheet = TrimText(state.cp.C7) || "ALL";
     const keys = this.BuildKeyArray(selSheet);
@@ -4939,11 +4951,8 @@ function fillSelect(id, options, selected, keepOptionalBlank, grouped) {
   } else {
     options.forEach(o => addOpt(sel, o));
   }
-  if (selected && options.indexOf(selected) < 0) {
-    const opt = document.createElement("option");
-    opt.value = selected; opt.textContent = (selected === "FULLTEXT") ? "تمامی ستون ها" : selected; opt.selected = true;
-    sel.appendChild(opt);
-  }
+  // Never reinsert a remembered value that is absent from this operation's
+  // scoped list. Doing so would disclose a sheet name from a prior account.
   syncQuickForms();
 }
 function renderExactToggle() {
