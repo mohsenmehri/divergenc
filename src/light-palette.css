@@ -52,7 +52,9 @@ body{background-color:var(--bg-0);color:var(--txt-0);}
 .btn-primary{background-color:#087f83;color:#fff;}
 .btn-green{background-color:#147b5b;color:#fff;}
 .btn-red{background-color:#bd4050;color:#fff;}
-.btn-amber{background-color:#f9f1e1;color:#866423;}
+.btn-amber{background-color:#fff4d6;color:#6e4800;border-color:#e1b951;}
+.btn-amber:hover,.btn-amber:focus-visible{background-color:#f7df9c;color:#563900;}
+.btn-amber svg{stroke:currentColor;}
 .btn-ghost{background-color:#fff;color:#536c80;}
 .btn-ghost:hover{background-color:#f3f8fa;color:#087f83;}
 .switch.on{background-color:#11857e;border-color:#11857e;}
@@ -60,7 +62,10 @@ body{background-color:var(--bg-0);color:var(--txt-0);}
 .switch .txt{color:#fff!important;}
 #dash-cats .cat-tile{background-color:#fff;border-color:#e0e8ef;}
 #dash-cats .cat-tile:hover{background-color:#f5faf9;border-color:#99c8be;}
-#dash-cats .ct-val{color:#8396a7;}
+.cat-tile .ct-val{color:#284960;}
+.nav-card{background-color:#fff;border-color:#dce5ed;color:#284960;}
+.nav-card::before{box-shadow:0 0 12px -2px var(--category-color,#087f83);}
+#dash-cats .ct-val{color:#526b7c;}
 .empty-state{color:var(--txt-2);background-color:#fafcfd;}
 .empty-state h3{color:#29485f;}
 .empty-state p{color:#73889b;}
@@ -84,10 +89,24 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .logtable th{background-color:#eaf1f6;color:#3a5e77;}
 .logtable td{border-color:#e4ebf1;}
 .match-title{background-color:#e8f3f1;color:#176d67;}
+.remove-results-banner .match-title{background-color:#a8253a;background-image:none;border-color:#8e1d31;color:#fff;}
+.remove-results-key{background-color:#fff2f4;border-color:#efc3cb;color:#7d2634;}
+.block-scroll{background-color:#fff;border-color:#dbe5ed;}
+.block-table td{background-color:#fff;color:#263f54;}
+.block-table tr:hover td{background-color:#eff9f6;}
+.block-table td .cell-in{color:#263f54;}
 .block-sep{background-color:#f2f6f8;}
 .mbox{background-color:#fff;color:#233d52;border-color:#d5e2ec;}
 .mbox .t{background-color:#f1f6f9;color:#2c4f65;border-color:#e0e9f0;}
 .mbox .c{color:#344e62;}
+.remove-choice-intro{color:#203d52;}
+.remove-choice-help{color:#5e7486;}
+.remove-choice-meta{color:#687f91;}
+.remove-match-field{color:#405f76;}
+.remove-service-button.telecom{background-color:#17699d;background-image:none;border-color:#0e5b8d;color:#fff;}
+.remove-service-button.mabinnet{background-color:#147b5b;background-image:none;border-color:#0e674a;color:#fff;}
+.remove-service-button.asiatek{background-color:#76509a;background-image:none;border-color:#5f3e82;color:#fff;}
+.remove-service-button:hover,.remove-service-button:focus-visible{color:#fff;}
 #modal-overlay{background-color:#23384965;}
 .category-choice,.access-scopes{background-color:#f7fafb;border-color:#dbe5ec;color:#3e5b70;}
 .access-field input,.access-login input,#user-form select,.own-password-dialog .access-field input{background-color:#fff;color:#203c52;border-color:#cfdee9;}

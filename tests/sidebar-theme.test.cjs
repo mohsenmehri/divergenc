@@ -153,3 +153,65 @@ for(const edition of ['local','central'])test(`${edition}: light focus/pressed s
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });
+
+/* The removal preview is rendered before the user chooses a record.  It must use
+   palette classes rather than hard-coded white cells, in both generated editions. */
+for(const edition of ['local','central'])test(`${edition}: removal preview and choices remain readable in both themes`,{timeout:90000},async()=>{
+  const context=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
+  try{
+    await page.goto(edition==='central'?centralURL:localURL);
+    await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();
+    await page.waitForFunction(()=>Access.current()&&!document.querySelector('#auth-screen')&&!document.querySelector('#shared-block'));
+    for(const theme of ['original','light']){
+      await page.evaluate(theme=>{
+        FamTheme.set(theme);
+        state.resultsMode='remove';state.removeSearchValue='TEST-REMOVE';
+        state.results=[{matchIdx:1,sheet:'Theme Test',srcRow:2,srcRowTo:2,headers:['ID','Name'],dataRows:[{srcRow:2,cells:['1','VISIBLE TEXT']}]}];
+        renderResultsView();switchView('results');
+      },theme);
+      const styles=await page.locator('#results-body .cell-readonly').first().evaluate(cell=>{
+        const td=cell.closest('td'),banner=document.querySelector('.remove-results-banner .match-title'),key=document.querySelector('.remove-results-key');
+        return {
+          cellBackground:getComputedStyle(td).backgroundColor,cellColor:getComputedStyle(cell).color,
+          bannerBackground:getComputedStyle(banner).backgroundColor,bannerImage:getComputedStyle(banner).backgroundImage,bannerColor:getComputedStyle(banner).color,
+          keyBackground:getComputedStyle(key).backgroundColor,keyColor:getComputedStyle(key).color,
+          inlineBackgrounds:[...document.querySelectorAll('#results-body [style]')].map(e=>e.getAttribute('style'))
+        };
+      });
+      assert.deepEqual(styles.inlineBackgrounds,[],JSON.stringify(styles));
+      if(theme==='light'){
+        assert.equal(styles.cellBackground,'rgb(255, 255, 255)',JSON.stringify(styles));
+        assert.equal(styles.cellColor,'rgb(38, 63, 84)',JSON.stringify(styles));
+        assert.equal(styles.bannerBackground,'rgb(168, 37, 58)',JSON.stringify(styles));
+        assert.equal(styles.bannerImage,'none',JSON.stringify(styles));
+        assert.equal(styles.bannerColor,'rgb(255, 255, 255)',JSON.stringify(styles));
+      }else{
+        assert.equal(styles.cellBackground,'rgba(5, 13, 29, 0.46)',JSON.stringify(styles));
+        assert.equal(styles.cellColor,'rgb(244, 238, 225)',JSON.stringify(styles));
+        assert.equal(styles.bannerColor,'rgb(255, 241, 242)',JSON.stringify(styles));
+        assert.notEqual(styles.bannerImage,'none',JSON.stringify(styles));
+      }
+      await page.evaluate(()=>{window.__matchChoice=ChooseRemoveMatch(3,'TEST-REMOVE','FULLTEXT');});
+      const match=page.locator('#modal-overlay .mbox');await match.waitFor();
+      assert.equal(await page.locator('#modal-overlay #modal-input').count(),0);
+      assert.equal(await page.locator('#modal-overlay #remove-match-number').getAttribute('type'),'number');
+      assert.equal(await page.locator('#modal-overlay button[data-id="10"]').count(),1);
+      if(theme==='light'){
+        assert.equal(await match.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 255, 255)');
+        assert.equal(await page.locator('#remove-match-number').evaluate(e=>getComputedStyle(e).color),'rgb(38, 63, 84)');
+      }
+      await page.locator('#modal-overlay button[data-id="2"]').click();await page.evaluate(()=>window.__matchChoice);
+      await page.evaluate(()=>{window.__serviceChoice=ChooseRemoveService();});
+      await page.locator('#modal-overlay .remove-service-button').first().waitFor();
+      assert.equal(await page.locator('#modal-overlay .remove-service-button').count(),3);
+      assert.equal(await page.locator('#modal-overlay #modal-input').count(),0);
+      const serviceStyles=await page.locator('#modal-overlay .remove-service-button').first().evaluate(e=>({color:getComputedStyle(e).color,background:getComputedStyle(e).backgroundColor,image:getComputedStyle(e).backgroundImage}));
+      assert.equal(serviceStyles.color,'rgb(255, 255, 255)',JSON.stringify(serviceStyles));
+      if(theme==='light')assert.equal(serviceStyles.background,'rgb(23, 105, 157)',JSON.stringify(serviceStyles));
+      await page.locator('#modal-overlay button[data-id="101"]').click();
+      assert.equal(await page.evaluate(()=>window.__serviceChoice),'1');
+    }
+    assert.deepEqual(errors,[]);
+  }finally{await context.close();}
+});

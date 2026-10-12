@@ -101,7 +101,7 @@ const root=path.resolve(__dirname,'..'),url=process.env.FAM_URL||'http://127.0.0
     await page.locator('.grid-global-nav [data-view="panel"]').click();
     await page.locator('#cp-c23').selectOption('تهران');await page.locator('#cp-c25').selectOption('FULLTEXT');await page.locator('#cp-c27').fill('GRID-NEW');
     await page.locator('#fold-ops [data-arg="modRemoveRecord.StartRemoveWizard"]').click();
-    await page.locator('#modal-input').fill('ALL');await modal(1).click();await page.locator('#modal-input').fill('1');await modal(1).click();await modal(1).click();
+    await page.locator('#modal-overlay button[data-id="10"]').click();await page.locator('#modal-overlay button[data-id="101"]').click();await modal(1).click();
     assert.equal(await page.evaluate(()=>WB.sheets['تهران'].rows.some(row=>row[0]==='GRID-NEW')),false);
     await page.locator('.grid-global-nav [data-view="panel"]').click();await page.locator('#fold-ops [data-arg="modUndo.UndoLastRemove"]').click();await modal(6).click();await modal(1).click();
     assert.equal(await page.evaluate(()=>WB.sheets['تهران'].rows.some(row=>row[0]==='GRID-NEW')),true);

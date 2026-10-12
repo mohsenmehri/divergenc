@@ -72,7 +72,7 @@ const root=path.resolve(__dirname,'..'),url=process.env.FAM_URL||'http://127.0.0
     assert.equal(await page.evaluate(()=>WB.sheets['تجهیزات شبکه'].rows.some(r=>r[0]==='STUDIO-NEW')),true);
     await home();await page.locator('#studio-tab-remove').click();await page.locator('#cp-c23').selectOption('تجهیزات شبکه');await page.locator('#cp-c25').selectOption('FULLTEXT');await page.locator('#cp-c27').fill('STUDIO-NEW');
     await page.locator('#studio-panel-remove [data-arg="modRemoveRecord.StartRemoveWizard"]').click();
-    await page.locator('#modal-input').fill('ALL');await modal(1).click();await page.locator('#modal-input').fill('1');await modal(1).click();await modal(1).click();
+    await page.locator('#modal-overlay button[data-id="10"]').click();await page.locator('#modal-overlay button[data-id="101"]').click();await modal(1).click();
     assert.equal(await page.evaluate(()=>WB.sheets['تجهیزات شبکه'].rows.some(r=>r[0]==='STUDIO-NEW')),false);
     await home();await page.locator('#studio-tab-remove').click();await page.locator('#studio-panel-remove [data-arg="modUndo.UndoLastRemove"]').click();await modal(6).click();await modal(1).click();
     assert.equal(await page.evaluate(()=>WB.sheets['تجهیزات شبکه'].rows.some(r=>r[0]==='STUDIO-NEW')),true);

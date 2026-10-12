@@ -144,7 +144,13 @@ test('level 3 can search, insert and delete records but cannot manually edit or 
   await page.locator('[data-a="ok"]').click();await modal(6).click();await modal(1).click();
   assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows.some(r=>r[1]==='BETA')),true);
   await page.evaluate(()=>{state.cp.C23='Network Test';state.cp.C25='FULLTEXT';state.cp.C27='BETA';void modRemoveRecord.StartRemoveWizard();});
-  await page.locator('#modal-input').fill('ALL');await modal(1).click();await page.locator('#modal-input').fill('1');await modal(1).click();await modal(1).click();
+  await page.locator('#remove-match-number').waitFor();
+  assert.equal(await page.locator('#modal-overlay #modal-input').count(), 0);
+  assert.equal(await page.locator('#modal-overlay button[data-id="10"]').count(), 1);
+  await page.locator('#remove-match-number').fill('1');await modal(1).click();
+  assert.equal(await page.locator('#modal-overlay .remove-service-button').count(), 3);
+  assert.equal(await page.locator('#modal-overlay #modal-input').count(), 0);
+  await page.locator('#modal-overlay button[data-id="101"]').click();await modal(1).click();
   assert.equal(await page.evaluate(()=>WB.sheets['Network Test'].rows.some(r=>r[1]==='BETA')),false);
   assert.equal(await page.evaluate(()=>WB.sheets[ARCHIVE_MAIN].rows.some(r=>r[1]==='BETA')),true);
   const persisted=await page.evaluate(async()=>{await flushDeepSave();return JSON.stringify(WB.sheets['Network Test']);});

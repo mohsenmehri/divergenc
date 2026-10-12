@@ -239,7 +239,7 @@ test('CSV import, direct navigation, search and add/remove launch still work', a
   await page.locator('#cp-c25').selectOption('شاخص');
   await page.locator('#cp-c27').fill('101');
   await page.locator('#fold-ops [data-arg="modRemoveRecord.StartRemoveWizard"]').click();
-  await page.locator('#modal-input').waitFor();
+  await page.locator('#remove-match-number').waitFor();
   await modal(2).click();
   assert.equal(await page.evaluate(() => WB.sheets['شبکه آزمایشی'].rows.length), 3);
   await assertMenu(true);
@@ -439,7 +439,7 @@ test('quick actions expand inline without executing and stay synchronized with d
   await page.locator('#quick-cp-c25').selectOption('شاخص');
   await page.locator('#quick-cp-c27').fill('101');
   await page.locator('#quick-remove [data-arg="modRemoveRecord.StartRemoveWizard"]').click();
-  await page.locator('#modal-input').waitFor();await modal(2).click();
+  await page.locator('#remove-match-number').waitFor();await modal(2).click();
   await page.locator('[aria-controls="quick-nav"]').click();
   await page.locator('#quick-cp-c41').selectOption('شبکه آزمایشی');
   await page.locator('#quick-nav [data-arg="modUI.NavigateToSheet"]').click();

@@ -513,15 +513,20 @@ select.inp option{background:#0d1730;color:#f4eee1;}
   background:linear-gradient(120deg,rgba(239,68,68,.26),rgba(244,63,94,.12));
   border-color:rgba(239,68,68,.4);color:#fecdd3;
 }
-.block-scroll{overflow-x:auto;border:1px solid var(--stroke);border-top:0;border-radius:0 0 var(--r-md) var(--r-md);}
+/* Removal results used to inject #c00000, #eaeaea and #fff as inline styles.
+   Those fixed colours made the dark palette show white text on white cells. */
+.remove-results-banner{margin-bottom:16px;}
+.remove-results-banner .match-title{background:linear-gradient(120deg,rgba(190,35,52,.7),rgba(128,20,42,.62));border-color:rgba(252,165,165,.48);color:#fff1f2;}
+.remove-results-key{padding:7px 11px;background:rgba(127,29,29,.19);border:1px solid rgba(239,68,68,.3);border-top:0;border-radius:0 0 var(--r-sm) var(--r-sm);color:#fecdd3;font-size:11px;font-style:italic;}
+.block-scroll{overflow-x:auto;border:1px solid var(--stroke);border-top:0;border-radius:0 0 var(--r-md) var(--r-md);background:rgba(5,13,29,.5);}
 table.block-table{border-collapse:collapse;width:100%;min-width:640px;}
 .block-table th{
   background:rgba(30,58,110,.45);font-size:9.5px;font-weight:800;padding:8px 10px;
   border-bottom:1px solid var(--stroke);white-space:nowrap;text-align:center;color:#b9cdf0;
   letter-spacing:.4px;position:sticky;top:0;
 }
-.block-table td{border-bottom:1px solid rgba(200,176,126,.08);padding:0;}
-.block-table tr:hover td{background:rgba(47,212,196,.06);}
+.block-table td{border-bottom:1px solid rgba(200,176,126,.08);padding:0;background:rgba(5,13,29,.46);color:var(--txt-0);}
+.block-table tr:hover td{background:rgba(47,212,196,.11);}
 .block-table td .cell-in{
   width:100%;border:0;outline:none;padding:8px 10px;font-size:11px;background:transparent;
   color:var(--txt-0);min-width:84px;
@@ -589,8 +594,9 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .nav-card{
   border-radius:12px;padding:13px 14px;cursor:pointer;font-size:11.5px;font-weight:700;
   display:flex;align-items:center;gap:10px;transition:.17s;position:relative;overflow:hidden;
-  border:1px solid rgba(255,255,255,.08);
+  background:var(--glass);border:1px solid var(--stroke);color:var(--txt-0);
 }
+.nav-card::before{content:"";width:4px;align-self:stretch;border-radius:99px;background:var(--category-color,var(--cyan));box-shadow:0 0 12px -2px var(--category-color,var(--cyan));}
 .nav-card::after{
   content:"";position:absolute;inset:0;
   background:linear-gradient(120deg,rgba(255,255,255,.14),transparent 45%);opacity:0;transition:.2s;
@@ -694,6 +700,26 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 }
 .mbox input.m-in:focus{border-color:rgba(217,178,107,.6);box-shadow:0 0 0 3.5px rgba(217,178,107,.13);}
 
+/* ============ REMOVE WIZARD CHOICES ============ */
+.remove-choice-content{white-space:normal;}
+.remove-choice-content p{margin:0;}
+.remove-choice-intro{font-size:13px;font-weight:800;color:var(--txt-0);}
+.remove-choice-help{margin-top:5px!important;color:var(--txt-1);font-size:11.5px;line-height:1.9;}
+.remove-choice-meta{margin-top:10px!important;color:var(--txt-2);font-size:10.5px;direction:rtl;}
+.remove-match-field{display:block;margin-top:14px;font-size:11px;font-weight:800;color:#b9cae6;}
+.remove-match-field .remove-match-number{margin-top:6px;direction:ltr;text-align:center;font-family:var(--mono);font-weight:800;}
+.mbox .f .all{background:var(--grad-green);}
+.remove-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:15px;}
+.remove-service-button{min-height:94px;border:1px solid rgba(212,175,106,.25);border-radius:12px;padding:12px 9px;color:#fff;text-align:center;transition:.17s;box-shadow:0 10px 22px -13px rgba(0,0,0,.65);}
+.remove-service-button:hover,.remove-service-button:focus-visible{transform:translateY(-2px);filter:brightness(1.12);}
+.remove-service-button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+.remove-service-button.telecom{background:linear-gradient(135deg,#2374b4,#185280);}
+.remove-service-button.mabinnet{background:var(--grad-green);}
+.remove-service-button.asiatek{background:linear-gradient(135deg,#8e5db5,#65407f);}
+.remove-service-name{display:block;font-size:13px;font-weight:900;}
+.remove-service-detail{display:block;margin-top:7px;font-size:9.5px;line-height:1.7;opacity:.92;}
+@media(max-width:520px){.remove-service-grid{grid-template-columns:1fr;}.remove-service-button{min-height:0;}.mbox .f{flex-wrap:wrap;}.mbox .f button{flex:1 1 130px;padding-inline:12px;}}
+
 /* ============ TOASTS ============ */
 #toasts{position:fixed;bottom:22px;left:22px;z-index:3000;display:flex;flex-direction:column;gap:9px;}
 .toast{
@@ -749,6 +775,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .cat-tile{
   position:relative;overflow:hidden;cursor:pointer;border-radius:14px;padding:15px 15px 13px;
   border:1px solid var(--stroke);transition:.2s;background:var(--glass);
+  color:var(--category-color,var(--cyan));
 }
 .cat-tile:hover{transform:translateY(-3px);border-color:var(--stroke-2);box-shadow:var(--shadow-1);}
 .cat-tile .ct-ico{
@@ -758,7 +785,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .cat-tile .ct-ico svg{width:19px;height:19px;}
 .cat-tile .ct-name{font-size:12px;font-weight:800;line-height:1.7;}
 .cat-tile .ct-meta{font-size:9.5px;color:var(--txt-2);margin-top:3px;}
-.cat-tile .ct-val{position:absolute;left:13px;top:13px;font-size:21px;font-weight:900;opacity:.9;font-family:var(--mono);}
+.cat-tile .ct-val{position:absolute;left:13px;top:13px;font-size:21px;font-weight:900;opacity:.9;font-family:var(--mono);color:var(--txt-0);}
 .cat-tile .ct-ring{
   position:absolute;left:-26px;bottom:-26px;width:86px;height:86px;border-radius:50%;
   border:12px solid currentColor;opacity:.12;
@@ -770,7 +797,7 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
   padding:8px 15px;font-size:11px;font-weight:700;color:var(--txt-1);position:relative;overflow:hidden;
 }
 .cat-pill:hover{transform:translateY(-2px);color:var(--txt-0);border-color:var(--stroke-2);}
-.cat-pill.active{color:#fff;border-color:transparent;box-shadow:0 8px 20px -8px rgba(5,8,14,.7);}
+.cat-pill.active{background:var(--grad-btn);color:#241703;border-color:transparent;box-shadow:0 8px 20px -8px rgba(5,8,14,.7);}
 .cat-pill .cp-ico{width:15px;height:15px;display:flex;align-items:center;}
 .cat-pill .cp-ico svg{width:15px;height:15px;}
 .cat-pill .cp-n{
@@ -1428,7 +1455,9 @@ body{background-color:var(--bg-0);color:var(--txt-0);}
 .btn-primary{background-color:#087f83;color:#fff;}
 .btn-green{background-color:#147b5b;color:#fff;}
 .btn-red{background-color:#bd4050;color:#fff;}
-.btn-amber{background-color:#f9f1e1;color:#866423;}
+.btn-amber{background-color:#fff4d6;color:#6e4800;border-color:#e1b951;}
+.btn-amber:hover,.btn-amber:focus-visible{background-color:#f7df9c;color:#563900;}
+.btn-amber svg{stroke:currentColor;}
 .btn-ghost{background-color:#fff;color:#536c80;}
 .btn-ghost:hover{background-color:#f3f8fa;color:#087f83;}
 .switch.on{background-color:#11857e;border-color:#11857e;}
@@ -1436,7 +1465,10 @@ body{background-color:var(--bg-0);color:var(--txt-0);}
 .switch .txt{color:#fff!important;}
 #dash-cats .cat-tile{background-color:#fff;border-color:#e0e8ef;}
 #dash-cats .cat-tile:hover{background-color:#f5faf9;border-color:#99c8be;}
-#dash-cats .ct-val{color:#8396a7;}
+.cat-tile .ct-val{color:#284960;}
+.nav-card{background-color:#fff;border-color:#dce5ed;color:#284960;}
+.nav-card::before{box-shadow:0 0 12px -2px var(--category-color,#087f83);}
+#dash-cats .ct-val{color:#526b7c;}
 .empty-state{color:var(--txt-2);background-color:#fafcfd;}
 .empty-state h3{color:#29485f;}
 .empty-state p{color:#73889b;}
@@ -1460,10 +1492,24 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .logtable th{background-color:#eaf1f6;color:#3a5e77;}
 .logtable td{border-color:#e4ebf1;}
 .match-title{background-color:#e8f3f1;color:#176d67;}
+.remove-results-banner .match-title{background-color:#a8253a;background-image:none;border-color:#8e1d31;color:#fff;}
+.remove-results-key{background-color:#fff2f4;border-color:#efc3cb;color:#7d2634;}
+.block-scroll{background-color:#fff;border-color:#dbe5ed;}
+.block-table td{background-color:#fff;color:#263f54;}
+.block-table tr:hover td{background-color:#eff9f6;}
+.block-table td .cell-in{color:#263f54;}
 .block-sep{background-color:#f2f6f8;}
 .mbox{background-color:#fff;color:#233d52;border-color:#d5e2ec;}
 .mbox .t{background-color:#f1f6f9;color:#2c4f65;border-color:#e0e9f0;}
 .mbox .c{color:#344e62;}
+.remove-choice-intro{color:#203d52;}
+.remove-choice-help{color:#5e7486;}
+.remove-choice-meta{color:#687f91;}
+.remove-match-field{color:#405f76;}
+.remove-service-button.telecom{background-color:#17699d;background-image:none;border-color:#0e5b8d;color:#fff;}
+.remove-service-button.mabinnet{background-color:#147b5b;background-image:none;border-color:#0e674a;color:#fff;}
+.remove-service-button.asiatek{background-color:#76509a;background-image:none;border-color:#5f3e82;color:#fff;}
+.remove-service-button:hover,.remove-service-button:focus-visible{color:#fff;}
 #modal-overlay{background-color:#23384965;}
 .category-choice,.access-scopes{background-color:#f7fafb;border-color:#dbe5ec;color:#3e5b70;}
 .access-field input,.access-login input,#user-form select,.own-password-dialog .access-field input{background-color:#fff;color:#203c52;border-color:#cfdee9;}
@@ -2663,6 +2709,8 @@ function ModalBox(opts) {
       inp.addEventListener("keydown", e => {
         if (e.key === "Enter") { box.querySelector(".f button[data-id='1'], .f button[data-id='6']").click(); }
       });
+    } else if (opts.initialFocus?.isConnected) {
+      opts.initialFocus.focus();
     } else {
       fbar.querySelector("button")?.focus();
     }
@@ -3162,14 +3210,14 @@ function renderResultsView() {
   }
   const fragRoot = document.createDocumentFragment();
   if (state.resultsMode === "remove") {
-    fragRoot.appendChild(el("div", { class: "match-block" },
+    fragRoot.appendChild(el("div", { class: "remove-results-banner" },
       el("div", {
-        class: "match-title", style: { background: "#c00000" },
+        class: "match-title",
         text: "REMOVE  -  \u062c\u0633\u062a\u062c\u0648: " + (state.removeSearchValue || "")
       }),
       el("div", {
-        style: { background: "#eaeaea", fontStyle: "italic", padding: "6px 10px", fontSize: "11px" },
-        text: "\u0642\u0631\u0645\u0632 = Match  |  \u0633\u0641\u06cc\u062f = \u062f\u0627\u062f\u0647"
+        class: "remove-results-key",
+        text: "\u0642\u0631\u0645\u0632 = Match  |  \u062f\u0627\u062f\u0647 = \u0631\u062f\u06cc\u0641 \u0628\u0627 \u0631\u0646\u06af \u062a\u0645 \u0641\u0639\u0627\u0644"
       })));
   }
   state.results.forEach(blk => {
@@ -3193,7 +3241,7 @@ function renderResultsView() {
         const cellValTxt = (v === null || v === undefined ? "" : v);
         const inner = state.resultsMode === "search" && Access.can("manual")
           ? el("input", { class: "cell-in", "data-ri": ri, "data-ci": ci, value: cellValTxt })
-          : el("div", { class: "cell-in", style: { background: "#fff" }, text: v === null ? "" : v });
+          : el("div", { class: "cell-in cell-readonly", text: v === null ? "" : v });
         tr.appendChild(el("td", {}, inner));
       });
       tbody.appendChild(tr);
@@ -4179,6 +4227,72 @@ function insertRowAtSafe(sheetName, excelRow) {
 }
 
 /* ================================================================
+   modRemoveRecord — removal choices
+   ================================================================ */
+async function ChooseRemoveMatch(matchCount, searchValue, searchKey) {
+  // Keep the selection open until a valid single result number is supplied.  The old
+  // free-text parser allowed values such as ALL and 1,2; the workflow is intentionally
+  // explicit now: one numbered result or the separate All button.
+  while (true) {
+    const numberInput = el("input", {
+      id: "remove-match-number", class: "m-in remove-match-number", type: "number",
+      value: "1", min: "1", max: String(matchCount), step: "1", inputmode: "numeric",
+      autocomplete: "off", "aria-label": "شماره مورد یافت‌شده"
+    });
+    const content = el("div", { class: "remove-choice-content" },
+      el("p", { class: "remove-choice-intro", text: matchCount + " مورد برای '" + searchValue + "' یافت شد." }),
+      el("p", { class: "remove-choice-help", text: "برای حذف یک مورد، شمارهٔ آن را وارد و «انتخاب شماره» را بزنید؛ یا دکمهٔ All را برای همهٔ موارد بزنید." }),
+      el("label", { class: "remove-match-field", for: "remove-match-number" },
+        el("span", { text: "شمارهٔ مورد (۱ تا " + matchCount + ")" }), numberInput),
+      el("p", { class: "remove-choice-meta", text: "کلید جستجو: " + searchKey }));
+    const choice = await ModalBox({
+      title: "حذف — انتخاب مورد", cls: "q remove-choice-modal", contentNode: content,
+      initialFocus: numberInput,
+      buttons: [
+        { id: IDOK, label: "انتخاب شماره", cls: "ok" },
+        { id: 10, label: "All — همهٔ موارد", cls: "all" },
+        { id: IDCANCEL, label: "انصراف", cls: "cancel" }
+      ]
+    });
+    if (choice === IDCANCEL) return null;
+    if (choice === 10) return { deleteAll: true, selNums: [] };
+
+    const raw = TrimText(numberInput.value);
+    const selected = /^\d+$/.test(raw) ? parseInt(raw, 10) : 0;
+    if (selected >= 1 && selected <= matchCount) {
+      return { deleteAll: false, selNums: [selected] };
+    }
+    await ShowMsg("شمارهٔ مورد باید عددی بین ۱ و " + matchCount + " باشد.", vbExclamation, "انتخاب مورد");
+  }
+}
+
+async function ChooseRemoveService() {
+  const services = [
+    { id: 101, value: "1", className: "telecom", name: "مخابرات", detail: "بایگانی اصلی" },
+    { id: 102, value: "2", className: "mabinnet", name: "مبین نت", detail: "بایگانی اصلی + بایگانی مبین نت" },
+    { id: 103, value: "3", className: "asiatek", name: "آسیاتک", detail: "بایگانی اصلی + بایگانی آسیاتک" }
+  ];
+  const buttons = services.map(service => el("button", {
+    type: "button", "data-id": service.id,
+    class: "remove-service-button " + service.className,
+    "aria-label": "انتخاب " + service.name + "؛ " + service.detail
+  },
+    el("span", { class: "remove-service-name", text: service.name }),
+    el("span", { class: "remove-service-detail", text: service.detail })));
+  const content = el("div", { class: "remove-choice-content" },
+    el("p", { class: "remove-choice-intro", text: "نوع سرویس و محل بایگانی را انتخاب کنید." }),
+    el("p", { class: "remove-choice-help", text: "با انتخاب هر گزینه، رکوردهای حذف‌شده در بایگانی نشان‌داده‌شده ثبت می‌شوند." }),
+    el("div", { class: "remove-service-grid", role: "group", "aria-label": "انتخاب نوع سرویس" }, buttons));
+  const choice = await ModalBox({
+    title: "حذف — نوع سرویس", cls: "q remove-choice-modal", contentNode: content,
+    initialFocus: buttons[0],
+    buttons: [{ id: IDCANCEL, label: "انصراف", cls: "cancel" }]
+  });
+  const service = services.find(item => item.id === choice);
+  return service ? service.value : null;
+}
+
+/* ================================================================
    modRemoveRecord — StartRemoveWizard
    ================================================================ */
 const modRemoveRecord = {
@@ -4246,39 +4360,15 @@ const modRemoveRecord = {
     renderResultsView();
     switchView("results");
 
-    // select matches
-    const selStr = await ShowInput(
-      matches.length + " مورد برای '" + searchValue + "' یافت شد.\n\n" +
-      "شماره Match را وارد کنید (1-" + matches.length + ")\n" +
-      "یا ALL برای حذف همه:\n\n[کلید جستجو: " + searchKey + "]",
-      "Remove - انتخاب Match", "ALL");
-    if (selStr === null || TrimText(selStr) === "") return;
-    const deleteAll = TrimText(selStr).toUpperCase() === "ALL";
-    const selNums = [];
-    if (!deleteAll) {
-      const parts = selStr.split(",");
-      for (const p of parts) {
-        const pTrim = TrimText(p);
-        if (/^\d+$/.test(pTrim)) {
-          const n = parseInt(pTrim, 10);
-          if (n >= 1 && n <= matches.length) selNums.push(n);
-        }
-      }
-      if (!selNums.length) {
-        await ShowMsg("عدد نامعتبر است.", vbExclamation, "Remove");
-        return;
-      }
-    }
+    // Select one result by its number or use the separate All button. This deliberately
+    // does not accept free text such as "ALL" or comma-separated match expressions.
+    const matchSelection = await ChooseRemoveMatch(matches.length, searchValue, searchKey);
+    if (!matchSelection) return;
+    const { deleteAll, selNums } = matchSelection;
 
-    // service type
-    let svcStr = "";
-    do {
-      svcStr = await ShowInput(
-        "1 = مخابرات\n2 = مبین نت\n3 = آسیاتک",
-        "نوع سرویس", "1");
-      if (svcStr === null || TrimText(svcStr) === "") return;
-      svcStr = TrimText(svcStr);
-    } while (svcStr !== "1" && svcStr !== "2" && svcStr !== "3");
+    // The archive/service destination is a visual button choice, not a numeric entry.
+    const svcStr = await ChooseRemoveService();
+    if (!svcStr) return;
     const svcName = svcStr === "1" ? "مخابرات" : svcStr === "2" ? "مبین نت" : "آسیاتک";
 
     // collect deletions
@@ -7806,7 +7896,7 @@ function renderDashCats() {
   cats.forEach(c => {
     const st = {count: sheetsOfCategory(c.id).length};
     host.appendChild(el("button", {
-      type: "button", class: "cat-tile", style: { color: c.color },
+      type: "button", class: "cat-tile", style: { "--category-color": c.color },
       title: c.name + ' — ' + st.count + ' شیت',
       'aria-label': c.name + '، ' + st.count + ' بخش',
       "data-act": "open-category", "data-cat": c.id
@@ -7841,10 +7931,9 @@ function renderCatBar() {
       class: "cat-pill" + (active ? " active" : ""),
       "data-act": "set-filter", "data-cat": c.id
     },
-      el("span", { class: "cp-ico", style: { color: active ? "#fff" : c.color } }, catSvgNode(c)),
+      el("span", { class: "cp-ico", style: { color: active ? "currentColor" : c.color } }, catSvgNode(c)),
       txt(c.name),
       el("span", { class: "cp-n", text: String(st.count) }));
-    if (active) pill.style.background = "linear-gradient(135deg," + c.color + "cc," + c.color + "88)";
     host.appendChild(pill);
   });
 }
@@ -7953,7 +8042,7 @@ function renderGroupedNavigator() {
       idx++;
       root.appendChild(el("div", {
         class: "nav-card",
-        style: { background: "linear-gradient(135deg," + c.color + "dd," + c.color + "88)" },
+        style: { "--category-color": c.color },
         "data-act": "nav-sheet", "data-name": n
       },
         el("div", { class: "num", text: String(idx) }),

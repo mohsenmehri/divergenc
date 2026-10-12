@@ -1,0 +1,167 @@
+# راهنمای کوتاه و قطعی استقرار فام — سرور اصلی و کاربران
+
+**آدرس مجاز و واحد کاربران:** `https://ertebatat-fam`
+
+**IP داخلی سرور:** `10.16.243.18`
+
+این راهنما دو مسیر دارد. اگر سرور فعلی کار می‌کند و فقط اصلاح رابط/تم را می‌خواهید، فقط بخش **A** را انجام دهید. نصب کامل را فقط برای سرور تازه یا تعمیر اساسی انجام دهید.
+
+---
+
+## A) به‌روزرسانی همین اصلاح رابط روی سرورِ در حال کار
+
+### فایل موردنیاز
+
+فقط این یک فایل را از بستهٔ همین انتشار بردارید:
+
+```text
+server\www\FAM.html
+```
+
+> این روش به دیتابیس، حساب‌ها، رمزها، گواهی، DNS، IIS، backend و تنظیمات موجود دست نمی‌زند.
+
+### مراحل روی خود سرور `10.16.243.18` (با Administrator)
+
+1. فایل جدید را مثلاً در `C:\Temp\FAM.html` قرار دهید.
+2. PowerShell را با **Run as administrator** باز کنید و دقیقاً این دستورها را اجرا کنید:
+
+```powershell
+$source = 'C:\Temp\FAM.html'
+$target = 'C:\FAM\server\www\FAM.html'
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+
+if (-not (Test-Path $source)) { throw "فایل جدید پیدا نشد: $source" }
+if (-not (Test-Path $target)) { throw "فایل نصب‌شده پیدا نشد: $target" }
+Copy-Item $target "$target.bak-$stamp" -Force
+Copy-Item $source $target -Force
+Get-FileHash $target -Algorithm SHA256
+```
+
+3. **هیچ فایل دیگری را کپی نکنید.** به‌خصوص به این موارد دست نزنید:
+
+```text
+C:\FAMData\fam.sqlite3
+C:\FAMData\backups\
+C:\FAM\server\windows\settings.json
+C:\FAMData\client-setup\
+```
+
+4. از خود سرور یا یک کلاینتی که تنظیمات شبکهٔ نهایی را دارد، بررسی کنید:
+
+```powershell
+curl.exe --noproxy "*" -I https://ertebatat-fam/FAM.html
+```
+
+باید `HTTP/1.1 200 OK` ببینید. `iisreset` برای جایگزینی فایل HTML لازم نیست.
+
+5. کاربران صفحه‌های باز را با **Ctrl+F5** تازه‌سازی کنند و با هر دو تم، یک جستجو و یک فرآیند حذف را بررسی کنند.
+
+---
+
+## B) نصب کامل آفلاین — فقط برای سرور تازه یا بازسازی کامل
+
+### فایل‌ها و محل اجرای هر فایل
+
+| فایل | کجا اجرا/کپی می‌شود | کار |
+|---|---|---|
+| `FAM-Central-IIS.zip` | رایانهٔ ویندوزی دارای اینترنت | بستهٔ اولیه |
+| `PREPARE-OFFLINE.cmd` | همان رایانهٔ دارای اینترنت | دریافت و کنترل پیش‌نیازهای رسمی؛ چیزی نصب نمی‌کند |
+| `python-3.14.7-amd64.exe` | داخل `server\windows\payload\` در پوشهٔ انتقال | توسط آماده‌ساز اضافه می‌شود |
+| `rewrite_amd64_en-US.msi` | همان مسیر | توسط آماده‌ساز اضافه می‌شود |
+| `requestRouter_amd64.msi` | همان مسیر | توسط آماده‌ساز اضافه می‌شود |
+| `INSTALL-FAM.cmd` | فقط سرور `10.16.243.18` با Administrator | نصب/ارتقای کامل آفلاین |
+
+### گام 1 — رایانهٔ دارای اینترنت
+
+1. ZIP را مثلاً در `C:\FAM-Setup` **کامل Extract** کنید.
+2. روی `PREPARE-OFFLINE.cmd` دابل‌کلیک کنید.
+3. فقط وقتی پیام **`OFFLINE KIT READY`** آمد، کل پوشهٔ استخراج‌شدهٔ `C:\FAM-Setup` را منتقل کنید. ZIP اولیه به‌تنهایی کافی نیست.
+
+### گام 2 — سرور اصلی بدون اینترنت
+
+1. کل پوشهٔ آماده‌شده را مثلاً در `C:\FAM-Setup` قرار دهید.
+2. روی `INSTALL-FAM.cmd` راست‌کلیک کنید و **Run as administrator** را انتخاب کنید.
+3. UAC را تأیید کنید. نصب‌کنندهٔ آفلاین، IIS/ARR/Python/backend را کنترل می‌کند و قبل از ارتقا بکاپ می‌گیرد.
+4. اگر نصب‌کننده reboot خواست، سرور را در زمان نگهداری reboot کنید و همان `INSTALL-FAM.cmd` را دوباره اجرا کنید.
+5. فقط نتیجه‌ای که HTTPS/API را موفق اعلام می‌کند معتبر است. گزارش خصوصی در این مسیر است:
+
+```text
+C:\FAMData\logs\
+```
+
+### گام 3 — بررسی سرور
+
+روی سرور با Administrator اجرا کنید:
+
+```powershell
+curl.exe --noproxy "*" -I https://ertebatat-fam/FAM.html
+Get-ScheduledTask -TaskName FAM-Central
+Get-ScheduledTask -TaskName FAM-Central-Backup
+Get-Content C:\FAMData\logs\service.log -Tail 60
+```
+
+انتظار: پاسخ `200 OK`، وجود هر دو Task و نبود خطای اجرا در انتهای لاگ.
+
+---
+
+## C) کارهای لازم مسئول شبکه
+
+این سه مورد باید در شبکهٔ سازمان اعمال شوند؛ نصب‌کننده جای آن‌ها را نمی‌گیرد:
+
+1. DNS داخلی:
+
+```text
+ertebatat-fam  ->  10.16.243.18
+```
+
+2. استثنای Proxy/PAC:
+
+```text
+ertebatat-fam
+```
+
+در صورت سیاست سازمان می‌توان `10.16.243.18` را نیز افزود. بدون این استثنا، مرورگر ممکن است درخواست داخلی را به پراکسی بفرستد و خطای Gateway بدهد.
+
+3. زمان/NTP هماهنگ روی سرور و کلاینت‌ها. اگر ساعت کلاینت خارج از بازهٔ اعتبار گواهی باشد، TLS معتبر هم رد می‌شود.
+
+---
+
+## D) راه‌اندازی هر کلاینت
+
+1. کاربر فقط این آدرس را در مرورگر باز کند:
+
+```text
+https://ertebatat-fam
+```
+
+از IP، `http://`، خاموش‌کردن TLS یا گزینهٔ عبور از خطای گواهی استفاده نکنید.
+
+2. اگر گواهی سازمانی/GPO از قبل مورد اعتماد است، فایل دیگری لازم نیست.
+
+3. اگر گواهی self-signed است و هنوز مورد اعتماد نیست، مدیر فقط این فایل را از سرور و از مسیر مورد اعتماد در اختیار کاربر/GPO قرار دهد:
+
+```text
+C:\FAMData\client-setup\ertebatat-fam.cer
+```
+
+روش ترجیحی: انتشار آن از طریق **GPO** در Trusted Root Certification Authorities. برای آزمون دستی همان کاربر: فایل `.cer` را باز کند → **Install Certificate** → **Current User** → **Place all certificates in the following store** → **Trusted Root Certification Authorities**. پیش از تأیید، اثرانگشت گواهی را با مقدار اعلام‌شده از منبع معتبر سرور مقایسه کند.
+
+4. بررسی فنی کلاینت در Command Prompt:
+
+```bat
+ping ertebatat-fam
+curl.exe --noproxy "*" --connect-timeout 15 -I https://ertebatat-fam/FAM.html
+```
+
+انتظار: نام به `10.16.243.18` resolve شود و `HTTP/1.1 200 OK` برگردد.
+
+5. در مرورگر عادی صفحه را با **Ctrl+F5** باز کند؛ برای اصلاح رابط جدید یک جستجو و پنجرهٔ حذف را در تم ۱ و تم ۲ آزمایش کند.
+
+---
+
+## نکات قطعی
+
+- برای **به‌روزرسانی این رابط** فقط `FAM.html` را جایگزین کنید؛ نصب کامل، reset دیتابیس یا تغییر رمز لازم نیست.
+- `C:\FAMData` دادهٔ خصوصی دارد؛ هرگز کل آن را Share یا به کاربر کپی نکنید.
+- فرمان مستقیم Chrome با `--proxy-server="direct://"` فقط یک تشخیص موقت بوده است؛ راه‌حل تولیدی، DNS و Proxy/PAC صحیح توسط تیم شبکه است.
+- راهنمای کامل نصب آفلاین در [OFFLINE_SERVER_2019_FA.md](OFFLINE_SERVER_2019_FA.md) و جزئیات IIS در [SHARED_IIS_FA.md](SHARED_IIS_FA.md) است.
