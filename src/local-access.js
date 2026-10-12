@@ -163,7 +163,7 @@ const Access = (() => {
     if(a==='reset-empty')return can('empty-data');
     if(a==='reset-all')return can('reset');
     if(a==='manage-regions')return can('manage-regions');
-    if(a==='manage-categories')return can('manage-categories');
+    if(['manage-categories','manage-category-sections'].includes(a))return can('manage-categories');
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);
     // Folding/navigation chrome is harmless. It must stay available so a user
     // can read the explicit access notice in a card instead of seeing a blank UI.

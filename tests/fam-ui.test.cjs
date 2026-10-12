@@ -152,3 +152,29 @@ test('full custom permission matrix exposes only each granted dashboard capabili
   }
   assert.deepEqual(errors,[]);
 });
+
+test('each ordinary category has region-like section management without deleting worksheet data',async()=>{
+  await page.evaluate(async()=>{try{await flushDeepSave();await idbDelete();}catch(_){}localStorage.clear();sessionStorage.clear();});
+  await page.goto(url);await page.locator('#auth-password').waitFor();await login();
+  await page.evaluate(()=>{
+    importValidatedSheets(['مرکز داده تهران','ساختمان مرکزی','شبکه اصلی'],{
+      'مرکز داده تهران':{rows:[['ID','Name'],['DC-1','تهران']],merges:[]},
+      'ساختمان مرکزی':{rows:[['ID','Name'],['HQ-1','مرکزی']],merges:[]},
+      'شبکه اصلی':{rows:[['ID','Name'],['NET-1','شبکه']],merges:[]}
+    },'sections.xlsx',true);
+    state.categoryConfig=defaultCategoryConfig();state.catFilter='datacenters';switchView('sheet');renderSheetCatalog();
+  });
+  const manager=page.locator('[data-act="manage-category-sections"][data-category="datacenters"]');
+  await manager.click();await page.locator('#section-new').click();await page.locator('#section-name').fill('مرکزهای اصلی');
+  await page.locator('[data-section-sheet="مرکز داده تهران"]').check();await page.locator('#section-save').click();
+  let saved=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,rows:WB.sheets['مرکز داده تهران'].rows}));
+  assert.equal(saved.sections.length,1);assert.deepEqual(saved.sections[0],{id:saved.sections[0].id,category:'datacenters',name:'مرکزهای اصلی'});assert.deepEqual(saved.assignments,[['مرکز داده تهران',saved.sections[0].id]]);assert.deepEqual(saved.rows,[['ID','Name'],['DC-1','تهران']]);
+  assert.equal(await page.locator('.category-subsection h4').first().textContent(),'مرکزهای اصلی');
+  await manager.click();await page.locator('#section-name').fill('مرکز داده اصلی');await page.locator('#section-save').click();
+  saved=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,rows:WB.sheets['مرکز داده تهران'].rows}));
+  assert.equal(saved.sections[0].name,'مرکز داده اصلی');assert.deepEqual(saved.rows,[['ID','Name'],['DC-1','تهران']]);
+  await manager.click();await page.locator('#section-delete').click();await page.locator('#section-delete').click();await page.locator('#section-save').click();
+  const deleted=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,rows:WB.sheets['مرکز داده تهران'].rows}));
+  assert.deepEqual(deleted.sections,[]);assert.deepEqual(deleted.assignments,[]);assert.deepEqual(deleted.rows,[['ID','Name'],['DC-1','تهران']]);
+  assert.deepEqual(errors,[]);
+});

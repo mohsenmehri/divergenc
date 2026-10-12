@@ -61,6 +61,18 @@ test('user-form buttons and requested theme-two/destructive styling are explicit
   assert.match(light,/#user-delete\{background-color:#e55c66!important;background-image:none!important;color:#111!important/);
 });
 
+test('ordinary categories have region-like editable sections without deleting their worksheets',()=>{
+  const html=read('FAM.html'),access=read('src/local-access.js');
+  assert.match(html,/sections: \[\], sectionAssignments: \[\]/);
+  assert.match(html,/function managedCategorySections\(categoryId/);
+  assert.match(html,/function categorySectionOf\(name/);
+  assert.match(html,/function manageCategorySections\(categoryId\)/);
+  assert.match(html,/مدیریت بخش‌های «/);
+  assert.match(html,/حذف بخش، شیت یا سلول‌های داده را حذف نمی‌کند/);
+  assert.match(html,/data-act':'manage-category-sections'/);
+  assert.match(access,/\['manage-categories','manage-category-sections'\]/);
+});
+
 test('denied dashboard sections retain their heading but reveal only the explicit access notice',()=>{
   const access=read('src/local-access.js'),css=read('src/local-access.css'),html=read('FAM.html');
   assert.match(access,/const DENIED_TEXT='شما دسترسی به این بخش ندارید\.'/);
