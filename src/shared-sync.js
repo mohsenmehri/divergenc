@@ -33,7 +33,7 @@ window.FamShared=(()=>{
   }
   function unfreeze(){
     document.getElementById('shared-block')?.remove();
-    document.getElementById('layout').inert=Access.current()?.role===4;
+    document.getElementById('layout').inert=false;
     document.getElementById('modal-overlay').inert=false;
   }
   async function api(path,body){
@@ -59,13 +59,10 @@ window.FamShared=(()=>{
       revision=envelope.revision;epoch=envelope.epoch;serverUserRevision=envelope.user.revision;
       state.results=[];
       if(repaint){
-        if(Access.current().role===4){Access.renderViewer();}
-        else{
-          modMapping.RefreshSearchIndex(false);initUIFromState();renderResultsView();
-          if(name&&WB.sheets[name]&&Access.can('read',name)){state.currentSheet=name;renderSheetView(name);}else{state.currentSheet=null;clear(document.getElementById('sheet-body'));}
-          if(Access.viewAllowed(view))switchView(view);
-          Access.hideOperations();
-        }
+        modMapping.RefreshSearchIndex(false);initUIFromState();renderResultsView();
+        if(name&&WB.sheets[name]&&Access.can('read',name)){state.currentSheet=name;renderSheetView(name);}else{state.currentSheet=null;clear(document.getElementById('sheet-body'));}
+        if(Access.viewAllowed(view))switchView(view);
+        Access.hideOperations();
       }
       clean=signature();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');
     }finally{applying=false;}
@@ -183,13 +180,13 @@ window.FamShared=(()=>{
   updateSaveIndicator=()=>{const n=document.getElementById('save-indicator');if(n){n.textContent=failure?'ثبت نشده':pending()?'در انتظار سرور…':'نسخهٔ مرکزی '+revision.toLocaleString('fa-IR');n.title='ذخیره‌سازی مرکزی روی سرور؛ نه حافظهٔ این مرورگر';}};
   const nativeEmpty=resetToEmptyData;
   resetToEmptyData=skipConfirm=>{
-    if(!Access.require('admin'))return false;
+    if(!Access.require('empty-data'))return false;
     const perform=()=>withTransactionSync(()=>{state.lockedSheets={};return nativeEmpty(true);});
     if(skipConfirm===true)return perform();
     ConfirmBox('پاک‌سازی داده‌های مشترک','تمام داده‌های مشترک روی سرور برای همهٔ کاربران پاک می‌شود. حساب‌ها باقی می‌مانند. ابتدا پشتیبان بگیرید. ادامه می‌دهید؟',perform);return true;
   };
   resetAll=()=>{
-    if(!Access.require('admin'))return false;
+    if(!Access.require('reset'))return false;
     ConfirmBox('بازنشانی مرکزی','همهٔ داده‌ها و پیکربندی دسته‌ها/مناطق روی سرور برای همهٔ کاربران بازنشانی می‌شود؛ حساب‌ها و فایل Excel اصلی تغییر نمی‌کنند. قبل از ادامه پشتیبان بگیرید. مطمئنید؟',()=>withTransactionSync(()=>{
       state.categoryConfig=null;state.regionConfig=null;state.panelProtected=true;state.cp.C11='';state.cp.C27='';resetToEmptyData(true);
     }));return true;
@@ -199,7 +196,7 @@ window.FamShared=(()=>{
   // workstation browser. Flush first, so the requested snapshot includes this
   // administrator's just-finished work as well.
   backupAll=async()=>{
-    if(!Access.require('admin'))return false;
+    if(!Access.require('backup'))return false;
     try{
       if(pending()||signature()!==clean){
         originalToast('ابتدا تغییرات این صفحه روی سرور ثبت می‌شود…','warn');
@@ -210,7 +207,7 @@ window.FamShared=(()=>{
       return true;
     }catch(err){originalToast(err.message||'پشتیبان‌گیری روی سرور ناموفق بود.','err');return false;}
   };
-  saveNow=async()=>{if(!Access.require('admin'))return false;try{queue();if(!await flush())return false;originalToast('نسخهٔ '+revision+' روی سرور تأیید شده است.','ok');return true;}catch(_){return false;}};
+  saveNow=async()=>{if(!Access.require('save-results'))return false;try{queue();if(!await flush())return false;originalToast('نسخهٔ '+revision+' روی سرور تأیید شده است.','ok');return true;}catch(_){return false;}};
   verifyLocalPassword=async password=>{try{await api('reauth',{password});return true;}catch(_){return false;}};
   Toast=(message,type)=>{if(type==='ok'&&ready&&(pending()||signature()!==clean))return;originalToast(message,type);};
   ShowMsg=async(...args)=>{if(transactionDepth&&signature()!==clean&&!(Number(args[1])&vbCritical)&&!(Number(args[1])&15)){deferred.push(args);return IDOK;}if(ready&&!applying&&(pending()||signature()!==clean)&&!(Number(args[1])&vbCritical)){try{await flush();}catch(_){return IDCANCEL;}}return originalMessage(...args);};

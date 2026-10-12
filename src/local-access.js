@@ -52,6 +52,13 @@ const Access = (() => {
     const salt=hex(crypto.getRandomValues(new Uint8Array(16)));
     return {salt,hash:await hashPassword(password,salt)};
   }
+  // Roles 3 and 4 are intentionally fail-closed: a provincial sheet is available
+  // only when its configured region is selected for that account. A non-regional
+  // data sheet needs an explicit legacy sheet grant (kept for compatibility).
+  function scopeAllowsSheet(u,sheet){
+    const p=provinceOf(sheet);
+    return p ? u.regions.includes(p.region) : u.sheets.includes(sheet);
+  }
   function can(operation,sheet){
     const u=current();if(!u)return false;
     if(['users','source'].includes(operation))return u.role===1;
@@ -60,13 +67,18 @@ const Access = (() => {
       if(!SheetExists(sheet))return false;
       if(u.role<=2)return true;
       if(IsSystemSheet(sheet))return false;
-      if(u.role===3)return true;
-      if(!u.sheets.includes(sheet))return false;
-      const p=provinceOf(sheet);
-      return !p || u.regions.includes(p.region);
+      return scopeAllowsSheet(u,sheet);
     }
-    if(['admin','manual','export'].includes(operation))return u.role<=2;
-    if(['search','add','remove','workspace'].includes(operation))return u.role<=3;
+    // "admin" keeps the existing configuration screens available to level 2;
+    // destructive data actions have their own, narrower capabilities below.
+    if(['admin','undo'].includes(operation))return u.role<=2;
+    if(operation==='manual')return u.role<=3;
+    if(operation==='export')return u.role<=3;
+    if(operation==='backup')return u.role<=3;
+    if(operation==='refresh-index')return u.role<=3;
+    if(['search','workspace'].includes(operation))return u.role<=4;
+    if(['add','remove'].includes(operation))return u.role<=2;
+    if(['save-results','refresh-panel','import','empty-data','restore','reset'].includes(operation))return u.role===1;
     return false;
   }
   function requirePermission(operation,sheet){
@@ -75,11 +87,16 @@ const Access = (() => {
   }
   function macroAllowed(path){
     if(path==='modExportAllModules.ExportAllModules')return can('source');
-    if(can('admin'))return true;
-    if(!can('workspace'))return false;
-    return ['modSearchEngine.SearchRecords','modSearchEngine.OpenSearchResults','modSearchEngine.ClearSearchResults',
-      'modAddRecord.StartAddWizard','modRemoveRecord.StartRemoveWizard','modUI.ToggleExactMatch',
-      'modUI.NavigateToSheet','modNavigator.ShowSheetNavigator','modNavigator.CloseNavigator'].includes(path);
+    const common=['modSearchEngine.SearchRecords','modSearchEngine.OpenSearchResults','modSearchEngine.ClearSearchResults',
+      'modUI.ToggleExactMatch','modUI.NavigateToSheet','modNavigator.ShowSheetNavigator','modNavigator.CloseNavigator'];
+    if(common.includes(path))return can('search');
+    if(path==='modSearchEngine.RefreshSearchIndexCore')return can('refresh-index');
+    if(path==='modSearchEngine.SaveChanges')return can('save-results');
+    if(path==='modUI.RefreshPanel')return can('refresh-panel');
+    if(path==='modAddRecord.StartAddWizard')return can('add');
+    if(path==='modRemoveRecord.StartRemoveWizard')return can('remove');
+    if(path==='modUndo.UndoLastRemove')return can('undo');
+    return current()?.role===1;
   }
   function actionAllowed(node){
     const a=node.dataset.act;
@@ -88,10 +105,16 @@ const Access = (() => {
     if(['show-vba','download-module'].includes(a))return can('source');
     if(a==='run-macro')return macroAllowed(node.dataset.arg);
     if(a==='run-macro-index')return macroAllowed(node.dataset.mod+'.'+node.dataset.name);
+    if(a==='open-file')return can('import');
+    if(a==='save-now')return can('save-results');
+    if(a==='export-xlsx')return can('export');
+    if(a==='backup')return can('backup');
+    if(a==='restore')return can('restore');
+    if(['reset-empty','reset-all'].includes(a))return can('reset');
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);
     if(['go-cp','toggle-sidebar','toggle-fold','province-region','province-section','open-category','set-filter','filter-rows','quick-exact'].includes(a))return can('workspace');
     if(a==='switch-view')return viewAllowed(node.dataset.view);
-    if(a==='toggle-quick')return can('workspace') && (node.getAttribute('aria-controls')!=='quick-undo' || can('admin'));
+    if(a==='toggle-quick')return can('workspace') && (node.getAttribute('aria-controls')!=='quick-undo' || can('undo'));
     return can('admin'); // unknown future operations are admin-only, never implicitly granted
   }
   function viewAllowed(view){return can('workspace') && (can('admin') || ['panel','sheet','results'].includes(view));}
@@ -103,6 +126,12 @@ const Access = (() => {
       if(node.matches('button'))node.setAttribute('aria-disabled',String(!permitted));
     });
     document.querySelectorAll('.tab-btn[data-view]').forEach(node=>node.classList.toggle('access-hidden',!viewAllowed(node.dataset.view)));
+    // Do not leave empty add/remove cards behind for accounts that cannot use
+    // their only action. The card remains present for permitted roles.
+    ['modAddRecord.StartAddWizard','modRemoveRecord.StartRemoveWizard'].forEach(path=>{
+      const action=document.querySelector('[data-act="run-macro"][data-arg="'+path+'"]');
+      action?.closest('.card')?.classList.toggle('access-hidden',!macroAllowed(path));
+    });
   }
   function field(label,id,type='text',value=''){
     const input=el('input',{id,type,class:'inp',value,required:true,autocomplete:type==='password'?'new-password':'off'});
@@ -266,25 +295,36 @@ const Access = (() => {
       const pw=field(original?'رمز جدید (خالی = بدون تغییر)':'رمز عبور','user-password','password');pw.input.required=!original;
       un.input.maxLength=40;name.input.maxLength=60;pw.input.maxLength=128;
       const role=el('select',{id:'user-role',class:'inp'});
-      [[1,'سطح ۱ — مدیر کامل و مدیریت کاربران'],[2,'سطح ۲ — همه امکانات به‌جز مدیریت کاربران'],[3,'سطح ۳ — مشاهده، جستجو، درج و حذف'],[4,'سطح ۴ — فقط مشاهده محدوده مجاز']].forEach(([v,t])=>role.appendChild(el('option',{value:String(v),text:t})));
+      [[1,'سطح ۱ — مدیر کامل و مدیریت کاربران'],
+       [2,'سطح ۲ — همهٔ امکانات، به‌جز SAVE CHANGES، بازسازی پنل، ورود فایل، خالی‌کردن داده، بازیابی و بازنشانی'],
+       [3,'سطح ۳ — امکانات مجاز در مناطق انتخابی، بدون SAVE CHANGES، بازسازی پنل، ورود/پاک‌سازی/بازیابی/بازنشانی و افزودن/حذف رکورد'],
+       [4,'سطح ۴ — فقط مشاهدهٔ شیت‌ها و جست‌وجو در مناطق انتخابی']]
+        .forEach(([v,t])=>role.appendChild(el('option',{value:String(v),text:t})));
       role.value=String(draft.role);
       const enabled=el('input',{type:'checkbox',id:'user-enabled',checked:draft.enabled});
-      const scopes=el('div',{id:'user-scopes'}),rs=new Set(draft.regions),ss=new Set(draft.sheets);
-      scopes.append(el('p',{class:'hint',text:'سطح ۴: فقط شیت‌های انتخاب‌شده مجازند. شیت‌های استانی علاوه بر انتخاب شیت، به انتخاب منطقهٔ جاری آن استان هم نیاز دارند. انتخاب خالی یعنی بدون دسترسی؛ انتقال استان به منطقه دیگر ممکن است دسترسی را قطع کند.'}));
-      const regions=el('div',{class:'access-scopes','aria-label':'مناطق مجاز'}),sheets=el('div',{class:'access-scopes','aria-label':'بخش‌های مجاز'});
-      managedRegions().forEach(r=>regions.appendChild(el('label',{},el('input',{type:'checkbox','data-user-region':r.id,checked:rs.has(r.id),onchange:e=>{e.target.checked?rs.add(r.id):rs.delete(r.id);}}),txt(r.name))));
-      WB.order.filter(IsDataSheet).forEach(s=>sheets.appendChild(el('label',{},el('input',{type:'checkbox','data-user-sheet':s,checked:ss.has(s),onchange:e=>{e.target.checked?ss.add(s):ss.delete(s);}}),txt(s))));
-      if(!sheets.childElementCount)sheets.appendChild(el('p',{class:'hint',text:'برای انتخاب بخش‌ها، ابتدا دادهٔ اکسل وارد کنید.'}));
-      scopes.append(el('h4',{text:'مناطق مجاز'}),regions,el('h4',{text:'بخش‌های مجاز'}),sheets);
-      const showScopes=()=>{scopes.hidden=role.value!=='4';};role.addEventListener('change',showScopes);showScopes();
+      const scopes=el('div',{id:'user-scopes'}),rs=new Set(draft.regions);
+      const regionOptions=managedRegions().filter(r=>r.id!=='unassigned');
+      const regions=el('div',{class:'access-scopes','aria-label':'مناطق مجاز'});
+      const syncRegionChecks=()=>regions.querySelectorAll('input[data-user-region]').forEach(input=>{input.checked=rs.has(input.dataset.userRegion);});
+      const setAllRegions=selected=>{regionOptions.forEach(r=>selected?rs.add(r.id):rs.delete(r.id));syncRegionChecks();};
+      scopes.append(
+        el('p',{class:'hint',text:'برای سطح ۳ و ۴، فقط داده‌های منطقه‌های تیک‌خورده قابل مشاهده و جست‌وجو هستند. انتخاب خالی یعنی هیچ منطقه‌ای مجاز نیست؛ «همهٔ مناطق» چهار منطقه را انتخاب می‌کند.'}),
+        el('div',{class:'category-edit-actions'},
+          el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'همهٔ مناطق',onclick:()=>setAllRegions(true)}),
+          el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'پاک‌کردن انتخاب',onclick:()=>setAllRegions(false)})),
+        el('h4',{text:'مناطق مجاز'}),regions);
+      regionOptions.forEach(r=>regions.appendChild(el('label',{},el('input',{type:'checkbox','data-user-region':r.id,checked:rs.has(r.id),onchange:e=>{e.target.checked?rs.add(r.id):rs.delete(r.id);}}),txt(r.name))));
+      if(!regionOptions.length)regions.appendChild(el('p',{class:'hint',text:'منطقه‌ای تعریف نشده است.'}));
+      const showScopes=()=>{scopes.hidden=!['3','4'].includes(role.value);};role.addEventListener('change',showScopes);showScopes();
       const save=el('button',{type:'submit',id:'user-save',class:'btn btn-primary',text:original?'ذخیره تغییرات همین کاربر':'ایجاد کاربر جدید'});
       form.append(mode,un.node,name.node,pw.node,el('label',{for:'user-role',text:'سطح دسترسی'}),role,
         el('label',{class:'access-check'},enabled,txt('حساب فعال است')),scopes,error,save);
       form.addEventListener('submit',async e=>{
         e.preventDefault();if(saving || !requirePermission('users'))return;saving=true;save.disabled=true;error.textContent='';
         try{
+          const scoped=['3','4'].includes(role.value);
           const changed={...draft,username:username(un.input.value),name:name.input.value.trim(),role:Number(role.value),enabled:enabled.checked,
-            regions:[...rs],sheets:[...ss],revision:crypto.randomUUID()};
+            regions:scoped?[...rs]:[],sheets:scoped?[]:[],revision:crypto.randomUUID()};
           if(!/^[a-z0-9_.-]{3,40}$/.test(changed.username))throw Error('نام کاربری باید ۳ تا ۴۰ نویسه انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.');
           if(!changed.name || changed.name.length>60)throw Error('نام نمایشی باید بین ۱ تا ۶۰ نویسه باشد.');
           if(db.users.some(u=>u.id!==changed.id && u.username===changed.username))throw Error('این نام کاربری قبلاً ثبت شده است.');

@@ -9,7 +9,7 @@ test('central HTML contains server auth and sync, never restores a local workboo
  assert.match(access,/FamShared.api\('users'/);assert.match(access,/FamShared.api\('password'/);
  assert.match(html,/idbDelete=async\(\)=>true/);
  assert.match(html,/await Access.start\(\);\s+await FamShared.load\(\);/);
- assert.equal((html.match(/FamShared.ready\(\)/g)||[]).length,2);
+ assert.equal((html.match(/FamShared.ready\(\)/g)||[]).length,1);
  assert.ok(!html.includes('restore saved session (previously imported data), if any'));
  for(const [,js] of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(js);
 });
@@ -64,6 +64,19 @@ test('service selection buttons contain only the carrier name',()=>{
  assert.match(html,/name: "مخابرات" \}/);
  assert.match(html,/name: "مبین نت" \}/);
  assert.match(html,/name: "آسیاتک" \}/);
+});
+test('role policy scopes levels 3 and 4 while keeping level 4 search-only',()=>{
+ const access=read('src/local-access.js'),server=read('server/app.py'),shared=read('src/shared-sync.js');
+ assert.match(access,/if\(operation==='manual'\)return u\.role<=3/);
+ assert.match(access,/\['save-results','refresh-panel','import','empty-data','restore','reset'\]/);
+ assert.match(access,/\['3','4'\]\.includes\(role\.value\)/);
+ assert.match(access,/text:'همهٔ مناطق'/);
+ assert.match(access,/if\(path==='modAddRecord\.StartAddWizard'\)return can\('add'\)/);
+ assert.match(access,/if\(path==='modRemoveRecord\.StartRemoveWizard'\)return can\('remove'\)/);
+ assert.match(server,/def can_access_data\(user, name, state\):/);
+ assert.match(server,/افزودن یا حذف رکورد برای سطح ۳ مجاز نیست/);
+ assert.match(shared,/Access\.require\('save-results'\)/);
+ assert.doesNotMatch(read('src/local-access.css'),/data-role="4"\] #layout/);
 });
 test('original XLSM bytes remain untouched',()=>{
  const sha=crypto.createHash('sha256').update(fs.readFileSync('Mohsen_FINAL_v5.xlsm')).digest('hex');

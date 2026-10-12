@@ -55,17 +55,27 @@ def province(name):
             if key in [province_key(a) for a in [n]+ALIASES.get(n,[])]:return (f'{r}-{i}',str(r))
     return None
 
+def assigned_region(name, state):
+    """Return the current managed-region ID for a provincial sheet, if any."""
+    p=province(name)
+    if not p:return None
+    assignments=dict((state.get('regionConfig') or {}).get('assignments',[]))
+    return assignments.get(p[0],p[1] if not state.get('regionConfig') else 'unassigned')
+
+def can_access_data(user, name, state):
+    """Fail-closed regional scope used by both reads and level-3 writes.
+    Region selections automatically cover all provincial sheets in those regions.
+    A non-regional data sheet remains unavailable unless it has an explicit legacy
+    sheet grant, so choosing a region can never expose unrelated national data.
+    """
+    if name in SYSTEM:return False
+    region=assigned_region(name,state)
+    return region in user['regions'] if region is not None else name in user['sheets']
+
 def can_read(user, name, state):
     if name not in state['sheets']:return False
     if user['role']<=2:return True
-    if name in SYSTEM:return False
-    if user['role']==3:return True
-    if name not in user['sheets']:return False
-    p=province(name)
-    if not p:return True
-    assignments=dict((state.get('regionConfig') or {}).get('assignments',[]))
-    region=assignments.get(p[0],p[1] if not state.get('regionConfig') else 'unassigned')
-    return region in user['regions']
+    return can_access_data(user,name,state)
 
 class Problem(Exception):
     def __init__(self,status,message):self.status=status;self.message=message
@@ -162,33 +172,44 @@ def valid_merge_shift(before,after,archive=False):
     return False
 
 def authorise_change(user,old,new):
-    for n,locked in old['lockedSheets'].items():
-        if locked and new['lockedSheets'].get(n) and packed(old['sheets'].get(n))!=packed(new['sheets'].get(n)):fail(403,'بخش قفل است؛ ابتدا قفل را باز کنید.')
-    if user['role']<=2:return
+    if user['role']<=2:
+        for n,locked in old['lockedSheets'].items():
+            if locked and new['lockedSheets'].get(n) and packed(old['sheets'].get(n))!=packed(new['sheets'].get(n)):fail(403,'بخش قفل است؛ ابتدا قفل را باز کنید.')
+        return
     if user['role']!=3:fail(403,'این حساب فقط اجازهٔ مشاهده دارد.')
     for key in ('lockedSheets','categoryConfig','regionConfig','panelProtected'):
         if packed(old.get(key))!=packed(new.get(key)):fail(403,'تغییر تنظیمات برای سطح ۳ مجاز نیست.')
+
+    # A scoped account receives only its own data sheets. Reject a crafted
+    # request that names another region, then merge untouched server-side data
+    # back before persisting so an ordinary scoped save never deletes it.
     old_names=[n for n in old['order'] if n not in SYSTEM]
+    permitted_old=[n for n in old_names if can_access_data(user,n,old)]
     new_names=[n for n in new['order'] if n not in SYSTEM]
-    if [n for n in new_names if n in old_names]!=old_names:fail(403,'حذف یا جابه‌جایی بخش مجاز نیست.')
+    if any(not can_access_data(user,n,old) for n in new_names):fail(403,'این بخش خارج از محدودهٔ مناطق مجاز شما است.')
+    if [n for n in new_names if n in old_names]!=permitted_old:fail(403,'حذف یا جابه‌جایی بخش مجاز نیست.')
+
     for name in new_names:
         after=new['sheets'][name];before=old['sheets'].get(name)
-        if before is None:
-            p=province(name)
-            sources=[s for n,s in old['sheets'].items() if n not in SYSTEM and province(n)==p and not n.startswith('خودپرداز ')]
-            template=next((s for s in sources if s['rows'] and packed(s['rows'][0])==packed((after['rows'] or [None])[0]) and [m for m in s['merges'] if m['r1']==m['r2']==1]==after['merges']),None)
-            if not name.startswith('خودپرداز ') or not p or template is None or len(trim_rows(after['rows']))<2:fail(403,'ایجاد این بخش برای سطح ۳ مجاز نیست.')
-            continue
+        if before is None:fail(403,'افزودن بخش یا رکورد برای سطح ۳ مجاز نیست.')
         if packed(before)==packed(after):continue
         if old['lockedSheets'].get(name):fail(403,'بخش قفل است.')
         if not before['rows'] or not after['rows'] or packed(before['rows'][0])!=packed(after['rows'][0]):fail(403,'ویرایش عنوان ستون برای سطح ۳ مجاز نیست.')
-        if not sequence_delta(trim_rows(before['rows'])[1:],trim_rows(after['rows'])[1:]):fail(403,'سطح ۳ فقط اجازهٔ درج یا حذف ردیف دارد؛ ویرایش مستقیم مجاز نیست.')
-        if not valid_merge_shift(before,after,name in ARCHIVES):fail(403,'تغییر ساختار ادغام مجاز نیست.')
+        # Level 3 may edit cells in an authorised region, but cannot add or
+        # remove records, create sheets, or alter merge/layout structure.
+        if len(trim_rows(before['rows']))!=len(trim_rows(after['rows'])):fail(403,'افزودن یا حذف رکورد برای سطح ۳ مجاز نیست.')
+        if before['merges']!=after['merges']:fail(403,'تغییر ساختار ادغام برای سطح ۳ مجاز نیست.')
+
+    # Keep every inaccessible data sheet byte-for-byte as it is on the server.
+    for name in old_names:
+        if name not in permitted_old:new['sheets'][name]=old['sheets'][name]
+    additions=[n for n in new_names if n not in old_names]
+    new['order']=old_names+additions
+
     # Mapping/key metadata is server-owned for level 3; local reindexing is derived.
     for n in META:
         if n in old['sheets']:new['sheets'][n]=old['sheets'][n]
         else:new['sheets'].pop(n,None)
-    new['order']=[n for n in new['order'] if n in new['sheets']]
     for n in old['order']:
         if n in META and n not in new['order']:new['order'].append(n)
 
@@ -300,6 +321,8 @@ def create_app(config=None):
         safe_tree(value);return value
     def admin(user):
         if user['role']!=1:fail(403,'این عملیات فقط برای مدیر سطح ۱ است.')
+    def backup_allowed(user):
+        if user['role']>3:fail(403,'این عملیات برای این سطح دسترسی مجاز نیست.')
     def undo_summary(db,revision):
         row=db.execute('SELECT at FROM audit WHERE revision=? AND snapshot!=?',(revision,'')).fetchone()
         return {'valid':True,'serverRevision':revision,'blockCount':1,'blocks':[],'ts':row['at']} if row else None
@@ -315,7 +338,7 @@ def create_app(config=None):
             return jsonify(state=json.loads(old['snapshot']),revision=current['revision'],epoch=current['epoch'],user=u,actor=old['actor'],sheets=old['names'])
     def envelope(db,user,session=None):
         row=db.execute('SELECT * FROM state WHERE id=1').fetchone();p=json.loads(row['payload'])
-        allowed=[n for n in p['order'] if can_read(user,n,p) or (user['role']==3 and n in META)]
+        allowed=[n for n in p['order'] if can_read(user,n,p)]
         p['order']=allowed;p['sheets']={n:p['sheets'][n] for n in allowed}
         if user['role']==4:p['categoryConfig']=None;p['lockedSheets']={n:True for n in allowed}
         p['undo']=undo_summary(db,row['revision']) if user['role']<=2 else None
@@ -382,8 +405,8 @@ def create_app(config=None):
     @app.post('/api/backups')
     def create_manual_backup():
         # A browser may request a backup, but it never receives database bytes
-        # or a filesystem path. Only the level-1 administrator can create one.
-        data();admin(g.user)
+        # or a filesystem path. Levels 1–3 may create it; the result stays private.
+        data();backup_allowed(g.user)
         now=datetime.now().astimezone()
         stamp=now.strftime('%Y-%m-%d_%H-%M-%S-')+f'{now.microsecond//1000:03d}'
         filename=f'FAM-manual-{stamp}-{uuid.uuid4().hex[:6]}.sqlite3'

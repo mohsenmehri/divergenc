@@ -1,5 +1,5 @@
 /* Local account views; hidden before first paint, not merely disabled. */
-html.auth-pending #layout, html[data-role="4"] #layout {display:none!important;}
+html.auth-pending #layout {display:none!important;}
 html.auth-pending #access-viewer {display:none!important;}
 .access-hidden {display:none!important;}
 #auth-screen {position:fixed;inset:0;z-index:5000;overflow:auto;display:grid;place-items:center;padding:24px;background:#081321;direction:rtl;}

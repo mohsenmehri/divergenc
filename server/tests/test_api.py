@@ -61,7 +61,11 @@ class CentralTests(unittest.TestCase):
             self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0],'ok')
             self.assertEqual(db.execute('SELECT COUNT(*) FROM users').fetchone()[0],1)
         operator=self.user(2)
-        self.assertEqual(self.post(operator,'backups',{}).status_code,403)
+        self.assertEqual(self.post(operator,'backups',{}).status_code,200)
+        scoped=self.user(3,regions=['2'])
+        self.assertEqual(self.post(scoped,'backups',{}).status_code,200)
+        viewer=self.user(4,regions=['2'])
+        self.assertEqual(self.post(viewer,'backups',{}).status_code,403)
 
     def test_stale_and_epoch_conflicts_no_overwrite(self):
         stale=self.state();p=copy.deepcopy(stale);p['state']['sheets']['Network']['rows'][1][1]='FIRST'
@@ -77,19 +81,28 @@ class CentralTests(unittest.TestCase):
         p['state']['sheets']['Network']['rows'].append([3,'BAD']);self.assertEqual(self.save(self.a,p,requestId=rid).status_code,409)
         self.assertEqual(len(self.state()['state']['sheets']['Network']['rows']),3)
     def test_server_role3_rules(self):
-        c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['rows'][1][1]='DENIED'
-        self.assertEqual(self.save(c,p).status_code,403)
-        p=self.state(c);p['state']['sheets']['Network']['rows'].append([2,'ADDED'])
+        c=self.user(3,regions=['2']);p=self.state(c)
+        self.assertEqual(set(p['state']['order']),{'تهران'})
+        p['state']['sheets']['تهران']['rows'][1][1]='EDITED'
         self.assertEqual(self.save(c,p).status_code,200)
-        p=self.state(c);p['state']['sheets']['Network']['rows'].pop();self.assertEqual(self.save(c,p).status_code,200)
+        p=self.state(c);p['state']['sheets']['تهران']['rows'].append([2,'ADDED'])
+        self.assertEqual(self.save(c,p).status_code,403)
+        p=self.state(c);p['state']['sheets']['تهران']['rows'].pop()
+        self.assertEqual(self.save(c,p).status_code,403)
         p=self.state(c);p['state']['regionConfig']={'invalid':True};self.assertIn(self.save(c,p).status_code,[400,403])
-        p=self.state(c);p['state']['sheets']['Network']['rows'][0][0]='HEADER';self.assertEqual(self.save(c,p).status_code,403)
+        p=self.state(c);p['state']['sheets']['تهران']['rows'][0][0]='HEADER';self.assertEqual(self.save(c,p).status_code,403)
         self.assertEqual(c.get('/api/users').status_code,403)
     def test_role3_atm_template_creation(self):
-        c=self.user(3);p=self.state(c);p['state']['order'].append('خودپرداز تهران');p['state']['sheets']['خودپرداز تهران']={'rows':[['ID','Name'],[2,'ATM']],'merges':[]}
-        self.assertEqual(self.save(c,p).status_code,200)
+        c=self.user(3,regions=['2']);p=self.state(c);p['state']['order'].append('خودپرداز تهران');p['state']['sheets']['خودپرداز تهران']={'rows':[['ID','Name'],[2,'ATM']],'merges':[]}
+        self.assertEqual(self.save(c,p).status_code,403)
         p=self.state(c);p['state']['order'].append('Arbitrary');p['state']['sheets']['Arbitrary']={'rows':[['ID','Name'],[2,'BAD']],'merges':[]}
         self.assertEqual(self.save(c,p).status_code,403)
+    def test_role3_region_scope_hides_other_regions_and_rejects_injection(self):
+        c=self.user(3,regions=['2']);p=self.state(c)
+        self.assertEqual(set(p['state']['order']),{'تهران'})
+        p['state']['order'].append('فارس');p['state']['sheets']['فارس']={'rows':[['ID','Name'],[2,'FORGED']],'merges':[]}
+        self.assertEqual(self.save(c,p).status_code,403)
+        self.assertEqual(self.state()['state']['sheets']['فارس']['rows'][1][1],'فارس A')
     def test_role4_redaction_and_region_moves(self):
         c=self.user(4,regions=['2'],sheets=['تهران','Network']);p=self.state(c)
         self.assertEqual(set(p['state']['order']),{'تهران','Network'});self.assertNotIn('فارس',p['state']['sheets']);self.assertNotIn('CHANGE_LOG',p['state']['sheets'])
@@ -148,18 +161,18 @@ class CentralTests(unittest.TestCase):
         p=self.state();p['state']['order']=[[]];self.assertEqual(self.save(self.a,p).status_code,400)
         p=self.state();p['state']['regionConfig']={'version':1,'regions':[],'assignments':[[[],[]]]};self.assertEqual(self.save(self.a,p).status_code,400)
         p=self.state();p['state']['sheets']['Network']['rows'][1][1]=float('nan');self.assertEqual(self.save(self.a,p).status_code,400)
-    def test_merges_cannot_be_edited_but_shift_with_deleted_rows(self):
-        p=self.state();p['state']['sheets']['Network']={'rows':[['ID','Name'],[1,'A'],[None,'B'],[3,'C']],'merges':[{'r1':2,'r2':3,'c1':1,'c2':1}]}
+    def test_level3_cannot_edit_merges_or_change_record_count(self):
+        p=self.state();p['state']['sheets']['تهران']={'rows':[['ID','Name'],[1,'A'],[None,'B'],[3,'C']],'merges':[{'r1':2,'r2':3,'c1':1,'c2':1}]}
         self.assertEqual(self.save(self.a,p).status_code,200)
-        c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['merges']=[]
+        c=self.user(3,regions=['2']);p=self.state(c);p['state']['sheets']['تهران']['merges']=[]
         self.assertEqual(self.save(c,p).status_code,403)
-        p=self.state(c);sh=p['state']['sheets']['Network'];del sh['rows'][1:3];sh['merges']=[{'r1':2,'r2':2,'c1':1,'c2':1}]
-        self.assertEqual(self.save(c,p).status_code,200)
+        p=self.state(c);sh=p['state']['sheets']['تهران'];del sh['rows'][1:3];sh['merges']=[{'r1':2,'r2':2,'c1':1,'c2':1}]
+        self.assertEqual(self.save(c,p).status_code,403)
     def test_trusted_global_undo_and_stale_undo_protection(self):
-        before=self.state();c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['rows'].pop()
+        before=self.state();c=self.user(2);p=self.state(c);p['state']['sheets']['Network']['rows'].pop()
         # Forged client Undo buffers are NEVER trusted or returned to an admin.
         self.assertEqual(self.save(c,p,undo={'valid':True,'blocks':[{'forged':'bad'}]}).status_code,200)
-        self.assertEqual(c.get('/api/undo-state').status_code,403)
+        self.assertEqual(c.get('/api/undo-state').status_code,200)
         undo=self.a.get('/api/undo-state').json
         self.assertEqual(undo['state']['sheets']['Network'],before['state']['sheets']['Network'])
         self.assertTrue(self.state()['state']['undo']['valid'])
@@ -184,9 +197,9 @@ class CentralTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):create_app({'PUBLIC_ORIGIN':'http://localhost','DB_PATH':self.path})
         with self.assertRaises(RuntimeError):create_app({'PUBLIC_ORIGIN':'https://fam.example','DB_PATH':str(Path(__file__).resolve().parents[1]/'www'/'bad.sqlite3')})
 
-    def test_level3_cannot_change_numeric_types_or_create_empty_atm(self):
-        c=self.user(3);p=self.state(c);p['state']['sheets']['Network']['rows'][1][0]=True
-        self.assertEqual(self.save(c,p).status_code,403)
+    def test_level3_may_edit_cells_but_cannot_create_empty_atm(self):
+        c=self.user(3,regions=['2']);p=self.state(c);p['state']['sheets']['تهران']['rows'][1][0]=True
+        self.assertEqual(self.save(c,p).status_code,200)
         p=self.state(c);p['state']['order'].append('خودپرداز تهران');p['state']['sheets']['خودپرداز تهران']={'rows':[['ID','Name'],['','  ']],'merges':[]}
         self.assertEqual(self.save(c,p).status_code,403)
 

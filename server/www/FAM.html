@@ -1395,7 +1395,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 </script>
 <style id="fam-local-access-css">
 /* Local account views; hidden before first paint, not merely disabled. */
-html.auth-pending #layout, html[data-role="4"] #layout {display:none!important;}
+html.auth-pending #layout {display:none!important;}
 html.auth-pending #access-viewer {display:none!important;}
 .access-hidden {display:none!important;}
 #auth-screen {position:fixed;inset:0;z-index:5000;overflow:auto;display:grid;place-items:center;padding:24px;background:#081321;direction:rtl;}
@@ -3387,7 +3387,7 @@ function renderResultsView() {
       const tr = el("tr", { "data-srcrow": dr.srcRow });
       dr.cells.forEach((v, ci) => {
         const cellValTxt = (v === null || v === undefined ? "" : v);
-        const inner = state.resultsMode === "search" && Access.can("manual")
+        const inner = state.resultsMode === "search" && Access.can("save-results")
           ? el("input", { class: "cell-in", "data-ri": ri, "data-ci": ci, value: cellValTxt })
           : el("div", { class: "cell-in cell-readonly", text: v === null ? "" : v });
         tr.appendChild(el("td", {}, inner));
@@ -3730,7 +3730,7 @@ function updateSaveIndicator() {
 /* explicit Save button: persist everything now, verify the read-back,
    and tell the user exactly what happened. */
 async function saveNow() {
-    if (!Access.require("admin")) return false;
+    if (!Access.require("save-results")) return false;
   const lsOk = saveState();
   const deepOk = await flushDeepSave();
   const t = new Date();
@@ -3768,10 +3768,10 @@ async function saveNow() {
 }
 
 function resetAll() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("reset")) return false;
   ConfirmBox("\u0628\u0627\u0632\u0646\u0634\u0627\u0646\u06cc \u062f\u0627\u062f\u0647\u200c\u0647\u0627", "\u0647\u0645\u0647 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u0630\u062e\u06cc\u0631\u0647\u200c\u0634\u062f\u0647 \u062f\u0631 \u0627\u06cc\u0646 \u0645\u0631\u0648\u0631\u06af\u0631 \u067e\u0627\u06a9 \u0645\u06cc\u200c\u0634\u0648\u062f \u0648 \u062f\u0627\u062f\u0647\u200c\u0647\u0627\u06cc \u0627\u0648\u0644\u06cc\u0647 \u0641\u0627\u06cc\u0644 Excel \u0628\u0627\u0632\u0645\u06cc\u200c\u06af\u0631\u062f\u062f. \u0645\u0637\u0645\u0626\u0646\u06cc\u062f\u061f",
     async () => {
-      if (!Access.require("admin")) return;
+      if (!Access.require("reset")) return;
       try { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY_UI); localStorage.removeItem(LS_KEY_PANEL_DRAFT); } catch (e) {}
       try { if (typeof idbDelete === "function") await idbDelete(); } catch (e) {}
       location.reload();
@@ -3787,7 +3787,7 @@ function backupAll() {
   Toast("پشتیبان‌گیری انجام شد.", "ok");
 }
 function restoreAll() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("restore")) return false;
   const inp = document.createElement("input");
   inp.type = "file"; inp.accept = ".json";
   inp.addEventListener("change", () => {
@@ -3797,7 +3797,7 @@ function restoreAll() {
       try {
         const p = JSON.parse(rd.result);
         if (!p.sheets) throw new Error("bad file");
-        if (!Access.require("admin")) return;
+        if (!Access.require("restore")) return;
         WB.order = p.order; WB.sheets = p.sheets;
         Object.assign(state.cp, p.cp || {});
         state.undo = p.undo || null;
@@ -4056,9 +4056,9 @@ const modSearchEngine = {
 
     const targets = [];
     if (NormalizeText(sheetFilter) === "all") {
-      WB.order.forEach(n => { if (IsDataSheet(n)) targets.push(n); });
+      WB.order.forEach(n => { if (IsDataSheet(n) && Access.can("read", n)) targets.push(n); });
     } else {
-      if (WB.sheets[sheetFilter]) targets.push(sheetFilter);
+      if (WB.sheets[sheetFilter] && Access.can("read", sheetFilter)) targets.push(sheetFilter);
     }
     targets.forEach(scanSheet);
 
@@ -4780,7 +4780,7 @@ const modUI = {
   BuildSheetList(includeAll) {
     const list = [];
     if (includeAll) list.push("ALL");
-    WB.order.forEach(n => { if (IsDataSheet(n)) list.push(n); });
+    WB.order.forEach(n => { if (IsDataSheet(n) && Access.can("read", n)) list.push(n); });
     return list;
   },
 
@@ -5089,7 +5089,7 @@ function finishDataSwap(fileName) {
    on the imported data, not the previous data). System surfaces are kept
    wired so every macro works immediately. */
 function adoptImportedSheets(impOrder, impSheets, fileName) {
-    if (!Access.require("admin")) return false;
+    if (!Access.require("import")) return false;
   const knownByNorm = {};
   WB.order.forEach(n => { knownByNorm[NormalizeText(n)] = n; });
   const newOrder = [], newSheets = {};
@@ -5126,7 +5126,7 @@ function adoptImportedSheets(impOrder, impSheets, fileName) {
 /* Upsert (CSV / single-table): add or replace the imported sheet inside the
    current workbook without touching the other sheets. */
 function upsertImportedSheets(impOrder, impSheets, fileName) {
-    if (!Access.require("admin")) return false;
+    if (!Access.require("import")) return false;
   const knownByNorm = {};
   WB.order.forEach(n => { knownByNorm[NormalizeText(n)] = n; });
   for (const rawName of impOrder) {
@@ -5194,7 +5194,7 @@ function importCsvText(fileName, text) {
 /* Validate + normalize imported sheets BEFORE touching WB. Corrupt or
    partial files are rejected with a clear report; state stays intact. */
 function importValidatedSheets(impOrder, impSheets, fileName, replaceMode) {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("import")) return false;
   const cleanOrder = [], keyed = Object.create(null);
   for (const rawName of impOrder) {
     const name = sanitizeSheetName(rawName);
@@ -5221,7 +5221,7 @@ function importValidatedSheets(impOrder, impSheets, fileName, replaceMode) {
 }
 
 function applyJsonBackup(fileName, p) {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("import")) return false;
   if (!p || !p.sheets || typeof p.sheets !== "object") {
     LogError("Import", "applyJsonBackup", 102, "bad JSON backup structure", fileName);
     ShowMsg("فایل پشتیبان معتبر نیست.", vbCritical, "Import");
@@ -5241,9 +5241,9 @@ function applyJsonBackup(fileName, p) {
 }
 
 function resetToEmptyData(skipConfirm) {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("empty-data")) return false;
   const doIt = () => {
-    if (!Access.require("admin")) return;
+    if (!Access.require("empty-data")) return;
     WB.order = APP_SHELL.order.slice();
     WB.sheets = JSON.parse(JSON.stringify(APP_SHELL.sheets));
     state.results = []; state.resultsMode = "search";
@@ -5298,7 +5298,7 @@ function ExportWorkbookXlsx() {
 
 const modImport = {
   OpenFile() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("import")) return false;
     let inp = document.getElementById("import-file-input");
     if (!inp) {
       inp = document.createElement("input");
@@ -5319,7 +5319,7 @@ const modImport = {
     }
   },
   HandleFile(file) {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("import")) return false;
     if (!file) return false;
     const name = file.name || "data";
     const ext = (name.split(".").pop() || "").toLowerCase();
@@ -7518,13 +7518,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   await FamShared.load();
   restored = true;uiSavedBoot=loadUIState();restorePanelDraft();
   if (!Access.can("admin")) state.showSystem = false;
-  if (Access.current().role === 4) {
-    state.results = [];
-    document.getElementById("layout").inert = true;
-    Access.renderViewer();
-    FamShared.ready();
-    return;
-  }
   bindDelegatedEvents();
   bindPanelEvents();
   buildQuickForms();
@@ -8038,7 +8031,7 @@ function renderDashCats() {
   const cats = allCatsWithOther().filter(c => c.id !== "system" || state.showSystem);
   host.style.setProperty('--cat-columns', String(Math.min(20, Math.max(1, cats.length))));
   cats.forEach(c => {
-    const st = {count: sheetsOfCategory(c.id).length};
+    const st = {count: sheetsOfCategory(c.id).filter(n=>Access.can('read',n)).length};
     host.appendChild(el("button", {
       type: "button", class: "cat-tile", style: { "--category-color": c.color },
       title: c.name + ' — ' + st.count + ' شیت',
@@ -8068,8 +8061,8 @@ function renderCatBar() {
   clear(host);
   cats.forEach(c => {
     const st = c.id === "all"
-      ? { count: WB.order.filter(n => IsDataSheet(n) || state.showSystem).length }
-      : catStats(c.id);
+      ? { count: WB.order.filter(n => (IsDataSheet(n) || state.showSystem) && Access.can('read',n)).length }
+      : { count: sheetsOfCategory(c.id).filter(n=>Access.can('read',n)).length };
     const active = (state.catFilter || "all") === c.id;
     const pill = el("div", {
       class: "cat-pill" + (active ? " active" : ""),
@@ -8104,7 +8097,7 @@ function renderSheetCatalog() {
   const host = document.getElementById("sheet-catalog");
   if (!host) return;
   clear(host);
-  if (!WB.order.some(n => IsDataSheet(n) || (state.showSystem && IsSystemSheet(n)))) {
+  if (!WB.order.some(n => (IsDataSheet(n) || (state.showSystem && IsSystemSheet(n))) && Access.can('read', n))) {
     const provinces = managedCategories().find(c=>c.id==='provinces');
     if (provinces && ['all','provinces'].includes(state.catFilter || 'all')) host.appendChild(renderProvinceHierarchy([], provinces));
     host.appendChild(emptyStateNode("\u0647\u06cc\u0686 \u0628\u062e\u0634 \u062f\u0627\u062f\u0647\u200c\u0627\u06cc \u062f\u0631 \u06a9\u0627\u0631 \u0646\u06cc\u0633\u062a \u2014 \u0627\u0628\u062a\u062f\u0627 \u0641\u0627\u06cc\u0644 \u062f\u0627\u062f\u0647 \u062e\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f."));
@@ -8117,6 +8110,7 @@ function renderSheetCatalog() {
   let rendered = 0;
   cats.forEach(c => {
     const names = WB.order.filter(n => {
+      if (!Access.can('read', n)) return false;
       if (c.id === "system") return IsSystemSheet(n);
       if (c.id === "other") return categoryOf(n).id === "other";
       return categoryOf(n).id === c.id && (!IsSystemSheet(n) || state.showSystem);
@@ -8172,6 +8166,7 @@ function renderGroupedNavigator() {
   let idx = 0;
   cats.forEach(c => {
     const names = WB.order.filter(n => {
+      if (!Access.can('read', n)) return false;
       if (c.id === "system") return IsSystemSheet(n);
       if (c.id === "other") return categoryOf(n).id === "other";
       return categoryOf(n).id === c.id && (!IsSystemSheet(n) || state.showSystem);
@@ -8257,13 +8252,18 @@ const Access = (() => {
       if(!SheetExists(sheet))return false;
       if(u.role<=2)return true;
       if(IsSystemSheet(sheet))return false;
-      if(u.role===3)return true;
-      if(!u.sheets.includes(sheet))return false;
-      const p=provinceOf(sheet);
-      return !p || u.regions.includes(p.region);
+      return scopeAllowsSheet(u,sheet);
     }
-    if(['admin','manual','export'].includes(operation))return u.role<=2;
-    if(['search','add','remove','workspace'].includes(operation))return u.role<=3;
+    // "admin" keeps the existing configuration screens available to level 2;
+    // destructive data actions have their own, narrower capabilities below.
+    if(['admin','undo'].includes(operation))return u.role<=2;
+    if(operation==='manual')return u.role<=3;
+    if(operation==='export')return u.role<=3;
+    if(operation==='backup')return u.role<=3;
+    if(operation==='refresh-index')return u.role<=3;
+    if(['search','workspace'].includes(operation))return u.role<=4;
+    if(['add','remove'].includes(operation))return u.role<=2;
+    if(['save-results','refresh-panel','import','empty-data','restore','reset'].includes(operation))return u.role===1;
     return false;
   }
   function requirePermission(operation,sheet){
@@ -8272,11 +8272,16 @@ const Access = (() => {
   }
   function macroAllowed(path){
     if(path==='modExportAllModules.ExportAllModules')return can('source');
-    if(can('admin'))return true;
-    if(!can('workspace'))return false;
-    return ['modSearchEngine.SearchRecords','modSearchEngine.OpenSearchResults','modSearchEngine.ClearSearchResults',
-      'modAddRecord.StartAddWizard','modRemoveRecord.StartRemoveWizard','modUI.ToggleExactMatch',
-      'modUI.NavigateToSheet','modNavigator.ShowSheetNavigator','modNavigator.CloseNavigator'].includes(path);
+    const common=['modSearchEngine.SearchRecords','modSearchEngine.OpenSearchResults','modSearchEngine.ClearSearchResults',
+      'modUI.ToggleExactMatch','modUI.NavigateToSheet','modNavigator.ShowSheetNavigator','modNavigator.CloseNavigator'];
+    if(common.includes(path))return can('search');
+    if(path==='modSearchEngine.RefreshSearchIndexCore')return can('refresh-index');
+    if(path==='modSearchEngine.SaveChanges')return can('save-results');
+    if(path==='modUI.RefreshPanel')return can('refresh-panel');
+    if(path==='modAddRecord.StartAddWizard')return can('add');
+    if(path==='modRemoveRecord.StartRemoveWizard')return can('remove');
+    if(path==='modUndo.UndoLastRemove')return can('undo');
+    return current()?.role===1;
   }
   function actionAllowed(node){
     const a=node.dataset.act;
@@ -8285,10 +8290,16 @@ const Access = (() => {
     if(['show-vba','download-module'].includes(a))return can('source');
     if(a==='run-macro')return macroAllowed(node.dataset.arg);
     if(a==='run-macro-index')return macroAllowed(node.dataset.mod+'.'+node.dataset.name);
+    if(a==='open-file')return can('import');
+    if(a==='save-now')return can('save-results');
+    if(a==='export-xlsx')return can('export');
+    if(a==='backup')return can('backup');
+    if(a==='restore')return can('restore');
+    if(['reset-empty','reset-all'].includes(a))return can('reset');
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);
     if(['go-cp','toggle-sidebar','toggle-fold','province-region','province-section','open-category','set-filter','filter-rows','quick-exact'].includes(a))return can('workspace');
     if(a==='switch-view')return viewAllowed(node.dataset.view);
-    if(a==='toggle-quick')return can('workspace') && (node.getAttribute('aria-controls')!=='quick-undo' || can('admin'));
+    if(a==='toggle-quick')return can('workspace') && (node.getAttribute('aria-controls')!=='quick-undo' || can('undo'));
     return can('admin'); // unknown future operations are admin-only, never implicitly granted
   }
   function viewAllowed(view){return can('workspace') && (can('admin') || ['panel','sheet','results'].includes(view));}
@@ -8300,6 +8311,12 @@ const Access = (() => {
       if(node.matches('button'))node.setAttribute('aria-disabled',String(!permitted));
     });
     document.querySelectorAll('.tab-btn[data-view]').forEach(node=>node.classList.toggle('access-hidden',!viewAllowed(node.dataset.view)));
+    // Do not leave empty add/remove cards behind for accounts that cannot use
+    // their only action. The card remains present for permitted roles.
+    ['modAddRecord.StartAddWizard','modRemoveRecord.StartRemoveWizard'].forEach(path=>{
+      const action=document.querySelector('[data-act="run-macro"][data-arg="'+path+'"]');
+      action?.closest('.card')?.classList.toggle('access-hidden',!macroAllowed(path));
+    });
   }
   function field(label,id,type='text',value=''){
     const input=el('input',{id,type,class:'inp',value,required:true,autocomplete:type==='password'?'new-password':'off'});
@@ -8399,25 +8416,36 @@ const Access = (() => {
       const pw=field(original?'رمز جدید (خالی = بدون تغییر)':'رمز عبور','user-password','password');pw.input.required=!original;
       un.input.maxLength=40;name.input.maxLength=60;pw.input.maxLength=128;
       const role=el('select',{id:'user-role',class:'inp'});
-      [[1,'سطح ۱ — مدیر کامل و مدیریت کاربران'],[2,'سطح ۲ — همه امکانات به‌جز مدیریت کاربران'],[3,'سطح ۳ — مشاهده، جستجو، درج و حذف'],[4,'سطح ۴ — فقط مشاهده محدوده مجاز']].forEach(([v,t])=>role.appendChild(el('option',{value:String(v),text:t})));
+      [[1,'سطح ۱ — مدیر کامل و مدیریت کاربران'],
+       [2,'سطح ۲ — همهٔ امکانات، به‌جز SAVE CHANGES، بازسازی پنل، ورود فایل، خالی‌کردن داده، بازیابی و بازنشانی'],
+       [3,'سطح ۳ — امکانات مجاز در مناطق انتخابی، بدون SAVE CHANGES، بازسازی پنل، ورود/پاک‌سازی/بازیابی/بازنشانی و افزودن/حذف رکورد'],
+       [4,'سطح ۴ — فقط مشاهدهٔ شیت‌ها و جست‌وجو در مناطق انتخابی']]
+        .forEach(([v,t])=>role.appendChild(el('option',{value:String(v),text:t})));
       role.value=String(draft.role);
       const enabled=el('input',{type:'checkbox',id:'user-enabled',checked:draft.enabled});
-      const scopes=el('div',{id:'user-scopes'}),rs=new Set(draft.regions),ss=new Set(draft.sheets);
-      scopes.append(el('p',{class:'hint',text:'سطح ۴: فقط شیت‌های انتخاب‌شده مجازند. شیت‌های استانی علاوه بر انتخاب شیت، به انتخاب منطقهٔ جاری آن استان هم نیاز دارند. انتخاب خالی یعنی بدون دسترسی؛ انتقال استان به منطقه دیگر ممکن است دسترسی را قطع کند.'}));
-      const regions=el('div',{class:'access-scopes','aria-label':'مناطق مجاز'}),sheets=el('div',{class:'access-scopes','aria-label':'بخش‌های مجاز'});
-      managedRegions().forEach(r=>regions.appendChild(el('label',{},el('input',{type:'checkbox','data-user-region':r.id,checked:rs.has(r.id),onchange:e=>{e.target.checked?rs.add(r.id):rs.delete(r.id);}}),txt(r.name))));
-      WB.order.filter(IsDataSheet).forEach(s=>sheets.appendChild(el('label',{},el('input',{type:'checkbox','data-user-sheet':s,checked:ss.has(s),onchange:e=>{e.target.checked?ss.add(s):ss.delete(s);}}),txt(s))));
-      if(!sheets.childElementCount)sheets.appendChild(el('p',{class:'hint',text:'برای انتخاب بخش‌ها، ابتدا دادهٔ اکسل وارد کنید.'}));
-      scopes.append(el('h4',{text:'مناطق مجاز'}),regions,el('h4',{text:'بخش‌های مجاز'}),sheets);
-      const showScopes=()=>{scopes.hidden=role.value!=='4';};role.addEventListener('change',showScopes);showScopes();
+      const scopes=el('div',{id:'user-scopes'}),rs=new Set(draft.regions);
+      const regionOptions=managedRegions().filter(r=>r.id!=='unassigned');
+      const regions=el('div',{class:'access-scopes','aria-label':'مناطق مجاز'});
+      const syncRegionChecks=()=>regions.querySelectorAll('input[data-user-region]').forEach(input=>{input.checked=rs.has(input.dataset.userRegion);});
+      const setAllRegions=selected=>{regionOptions.forEach(r=>selected?rs.add(r.id):rs.delete(r.id));syncRegionChecks();};
+      scopes.append(
+        el('p',{class:'hint',text:'برای سطح ۳ و ۴، فقط داده‌های منطقه‌های تیک‌خورده قابل مشاهده و جست‌وجو هستند. انتخاب خالی یعنی هیچ منطقه‌ای مجاز نیست؛ «همهٔ مناطق» چهار منطقه را انتخاب می‌کند.'}),
+        el('div',{class:'category-edit-actions'},
+          el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'همهٔ مناطق',onclick:()=>setAllRegions(true)}),
+          el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'پاک‌کردن انتخاب',onclick:()=>setAllRegions(false)})),
+        el('h4',{text:'مناطق مجاز'}),regions);
+      regionOptions.forEach(r=>regions.appendChild(el('label',{},el('input',{type:'checkbox','data-user-region':r.id,checked:rs.has(r.id),onchange:e=>{e.target.checked?rs.add(r.id):rs.delete(r.id);}}),txt(r.name))));
+      if(!regionOptions.length)regions.appendChild(el('p',{class:'hint',text:'منطقه‌ای تعریف نشده است.'}));
+      const showScopes=()=>{scopes.hidden=!['3','4'].includes(role.value);};role.addEventListener('change',showScopes);showScopes();
       const save=el('button',{type:'submit',id:'user-save',class:'btn btn-primary',text:original?'ذخیره تغییرات همین کاربر':'ایجاد کاربر جدید'});
       form.append(mode,un.node,name.node,pw.node,el('label',{for:'user-role',text:'سطح دسترسی'}),role,
         el('label',{class:'access-check'},enabled,txt('حساب فعال است')),scopes,error,save);
       form.addEventListener('submit',async e=>{
         e.preventDefault();if(saving || !requirePermission('users'))return;saving=true;save.disabled=true;error.textContent='';
         try{
+          const scoped=['3','4'].includes(role.value);
           const changed={...draft,username:username(un.input.value),name:name.input.value.trim(),role:Number(role.value),enabled:enabled.checked,
-            regions:[...rs],sheets:[...ss],revision:crypto.randomUUID()};
+            regions:scoped?[...rs]:[],sheets:scoped?[]:[],revision:crypto.randomUUID()};
           if(!/^[a-z0-9_.-]{3,40}$/.test(changed.username))throw Error('نام کاربری باید ۳ تا ۴۰ نویسه انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.');
           if(!changed.name || changed.name.length>60)throw Error('نام نمایشی باید بین ۱ تا ۶۰ نویسه باشد.');
           if(db.users.some(u=>u.id!==changed.id && u.username===changed.username))throw Error('این نام کاربری قبلاً ثبت شده است.');
@@ -8625,7 +8653,7 @@ window.FamShared=(()=>{
   }
   function unfreeze(){
     document.getElementById('shared-block')?.remove();
-    document.getElementById('layout').inert=Access.current()?.role===4;
+    document.getElementById('layout').inert=false;
     document.getElementById('modal-overlay').inert=false;
   }
   async function api(path,body){
@@ -8651,13 +8679,10 @@ window.FamShared=(()=>{
       revision=envelope.revision;epoch=envelope.epoch;serverUserRevision=envelope.user.revision;
       state.results=[];
       if(repaint){
-        if(Access.current().role===4){Access.renderViewer();}
-        else{
-          modMapping.RefreshSearchIndex(false);initUIFromState();renderResultsView();
-          if(name&&WB.sheets[name]&&Access.can('read',name)){state.currentSheet=name;renderSheetView(name);}else{state.currentSheet=null;clear(document.getElementById('sheet-body'));}
-          if(Access.viewAllowed(view))switchView(view);
-          Access.hideOperations();
-        }
+        modMapping.RefreshSearchIndex(false);initUIFromState();renderResultsView();
+        if(name&&WB.sheets[name]&&Access.can('read',name)){state.currentSheet=name;renderSheetView(name);}else{state.currentSheet=null;clear(document.getElementById('sheet-body'));}
+        if(Access.viewAllowed(view))switchView(view);
+        Access.hideOperations();
       }
       clean=signature();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');
     }finally{applying=false;}
@@ -8775,13 +8800,13 @@ window.FamShared=(()=>{
   updateSaveIndicator=()=>{const n=document.getElementById('save-indicator');if(n){n.textContent=failure?'ثبت نشده':pending()?'در انتظار سرور…':'نسخهٔ مرکزی '+revision.toLocaleString('fa-IR');n.title='ذخیره‌سازی مرکزی روی سرور؛ نه حافظهٔ این مرورگر';}};
   const nativeEmpty=resetToEmptyData;
   resetToEmptyData=skipConfirm=>{
-    if(!Access.require('admin'))return false;
+    if(!Access.require('empty-data'))return false;
     const perform=()=>withTransactionSync(()=>{state.lockedSheets={};return nativeEmpty(true);});
     if(skipConfirm===true)return perform();
     ConfirmBox('پاک‌سازی داده‌های مشترک','تمام داده‌های مشترک روی سرور برای همهٔ کاربران پاک می‌شود. حساب‌ها باقی می‌مانند. ابتدا پشتیبان بگیرید. ادامه می‌دهید؟',perform);return true;
   };
   resetAll=()=>{
-    if(!Access.require('admin'))return false;
+    if(!Access.require('reset'))return false;
     ConfirmBox('بازنشانی مرکزی','همهٔ داده‌ها و پیکربندی دسته‌ها/مناطق روی سرور برای همهٔ کاربران بازنشانی می‌شود؛ حساب‌ها و فایل Excel اصلی تغییر نمی‌کنند. قبل از ادامه پشتیبان بگیرید. مطمئنید؟',()=>withTransactionSync(()=>{
       state.categoryConfig=null;state.regionConfig=null;state.panelProtected=true;state.cp.C11='';state.cp.C27='';resetToEmptyData(true);
     }));return true;
@@ -8791,7 +8816,7 @@ window.FamShared=(()=>{
   // workstation browser. Flush first, so the requested snapshot includes this
   // administrator's just-finished work as well.
   backupAll=async()=>{
-    if(!Access.require('admin'))return false;
+    if(!Access.require('backup'))return false;
     try{
       if(pending()||signature()!==clean){
         originalToast('ابتدا تغییرات این صفحه روی سرور ثبت می‌شود…','warn');
@@ -8802,7 +8827,7 @@ window.FamShared=(()=>{
       return true;
     }catch(err){originalToast(err.message||'پشتیبان‌گیری روی سرور ناموفق بود.','err');return false;}
   };
-  saveNow=async()=>{if(!Access.require('admin'))return false;try{queue();if(!await flush())return false;originalToast('نسخهٔ '+revision+' روی سرور تأیید شده است.','ok');return true;}catch(_){return false;}};
+  saveNow=async()=>{if(!Access.require('save-results'))return false;try{queue();if(!await flush())return false;originalToast('نسخهٔ '+revision+' روی سرور تأیید شده است.','ok');return true;}catch(_){return false;}};
   verifyLocalPassword=async password=>{try{await api('reauth',{password});return true;}catch(_){return false;}};
   Toast=(message,type)=>{if(type==='ok'&&ready&&(pending()||signature()!==clean))return;originalToast(message,type);};
   ShowMsg=async(...args)=>{if(transactionDepth&&signature()!==clean&&!(Number(args[1])&vbCritical)&&!(Number(args[1])&15)){deferred.push(args);return IDOK;}if(ready&&!applying&&(pending()||signature()!==clean)&&!(Number(args[1])&vbCritical)){try{await flush();}catch(_){return IDCANCEL;}}return originalMessage(...args);};
