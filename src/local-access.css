@@ -2,6 +2,14 @@
 html.auth-pending #layout {display:none!important;}
 html.auth-pending #access-viewer {display:none!important;}
 .access-hidden {display:none!important;}
+/* A denied feature keeps its heading but never leaves form fields, previous
+   sheet selections or disabled controls on screen. */
+.card.access-denied-card > .card-body > :not(.access-denied-note),
+.fold-inner.access-denied-card > :not(.access-denied-note){display:none!important;}
+.card.access-denied-card > .card-body > .access-denied-note,
+.fold-inner.access-denied-card > .access-denied-note{display:block;margin:0;padding:14px 12px;border:1px dashed rgba(129,157,184,.55);border-radius:9px;background:rgba(31,52,76,.2);color:#d9e7f4;text-align:center;font-weight:700;}
+html[data-ui-theme="light"] .card.access-denied-card > .card-body > .access-denied-note,
+html[data-ui-theme="light"] .fold-inner.access-denied-card > .access-denied-note{background-color:#f2f7fa;color:#29485f;border-color:#b9cdda;}
 #auth-screen {position:fixed;inset:0;z-index:5000;overflow:auto;display:grid;place-items:center;padding:24px;background:#081321;direction:rtl;}
 .access-login {width:min(100%,440px);padding:28px;border:1px solid #284b65;border-radius:20px;background:#101f30;box-shadow:0 25px 90px #0008;color:#eef6ff;}
 .access-login h2{margin:0 0 16px;}

@@ -80,3 +80,75 @@ test('add/remove-only user receives scoped operation lists without Search permis
   await page.locator('#modal-overlay button[data-id="2"]').click();
   assert.deepEqual(errors,[]);
 });
+
+test('each denied dashboard operation hides its fields and displays only the access notice',async()=>{
+  // Remove all capabilities from the active account while retaining the current
+  // revision/session, then reload as that account.
+  await page.evaluate(()=>{const all=JSON.parse(localStorage.getItem('fam.accounts.v1'));const user=all.users.find(u=>u.username==='ops-only');user.permissions=[];user.categories=[];user.regions=[];localStorage.setItem('fam.accounts.v1',JSON.stringify(all));});
+  await page.reload();await page.waitForFunction(()=>Access.current()&&Access.current().username==='ops-only');
+  const denied=await page.evaluate(()=>[...document.querySelectorAll('#fold-ops .grid-add > .card')].map(card=>({title:card.querySelector('h3')?.textContent,note:card.querySelector('.access-denied-note')?.textContent,visibleInputs:[...card.querySelectorAll('.card-body input,.card-body select,.card-body button')].filter(node=>node.getClientRects().length>0).length})));
+  assert.equal(denied.length,3);for(const card of denied){assert.equal(card.note,'شما دسترسی به این بخش ندارید.');assert.equal(card.visibleInputs,0,card.title);}
+  const panels=await page.evaluate(()=>({categories:document.querySelector('#fold-cats .access-denied-note')?.textContent,navigation:document.querySelector('#fold-nav .access-denied-note')?.textContent,tools:document.querySelector('#fold-tools .access-denied-note')?.textContent,events:document.querySelector('#fold-status .grid-2 > .card:first-child .access-denied-note')?.textContent}));
+  assert.deepEqual(panels,{categories:'شما دسترسی به این بخش ندارید.',navigation:'شما دسترسی به این بخش ندارید.',tools:'شما دسترسی به این بخش ندارید.',events:'شما دسترسی به این بخش ندارید.'});
+  assert.deepEqual(errors,[]);
+});
+
+test('full custom permission matrix exposes only each granted dashboard capability',async()=>{
+  const permissions=['view-sheets','search','view-history','edit-cells','save-results','add-record','remove-record','undo-remove','refresh-panel','refresh-index','import-data','export-xlsx','backup-server','restore-data','empty-data','reset-data','manage-regions','manage-categories','manage-users'];
+  const expectedTool={
+    search:['modSearchEngine.OpenSearchResults','modSearchEngine.ClearSearchResults'],
+    'save-results':['modSearchEngine.SaveChanges'],
+    'refresh-panel':['modUI.RefreshPanel'],
+    'refresh-index':['modSearchEngine.RefreshSearchIndexCore'],
+    'import-data':['open-file'],'export-xlsx':['export-xlsx'],'backup-server':['backup'],'restore-data':['restore'],'empty-data':['reset-empty'],'reset-data':['reset-all']
+  };
+  for(const permission of permissions){
+    await page.evaluate(permission=>{
+      const accounts=JSON.parse(localStorage.getItem('fam.accounts.v1'));
+      const user=accounts.users.find(u=>u.username==='ops-only');
+      user.permissions=[permission];
+      // Give every case the complete scope so the matrix tests the capability,
+      // while the scoped-account test above separately proves scope filtering.
+      user.categories=[...new Set([...defaultCategoryConfig().categories.map(category=>category.id),'other'])];
+      user.regions=managedRegions().filter(r=>r.id!=='unassigned').map(r=>r.id);
+      localStorage.setItem('fam.accounts.v1',JSON.stringify(accounts));
+    },permission);
+    await page.reload();await page.waitForFunction(()=>Access.current()?.username==='ops-only');
+    const snapshot=await page.evaluate(()=>({
+      permission:Access.current().permissions[0],
+      cards:[...document.querySelectorAll('#fold-ops .grid-add > .card')].map(card=>!card.classList.contains('access-denied-card')),
+      categories:!document.querySelector('#fold-cats .fold-inner').classList.contains('access-denied-card'),
+      navigation:!document.querySelector('#fold-nav .fold-inner').classList.contains('access-denied-card'),
+      events:!document.querySelector('#fold-status .grid-2 > .card:first-child').classList.contains('access-denied-card'),
+      tools:[...document.querySelectorAll('#fold-tools [data-act]')].filter(node=>node.getClientRects().length).map(node=>node.dataset.act==='run-macro'?node.dataset.arg:node.dataset.act),
+      quickUndo:document.querySelector('[aria-controls="quick-undo"]').getClientRects().length>0,
+      sheetTab:document.querySelector('.tab-btn[data-view="sheet"]').getClientRects().length>0,
+      resultTab:document.querySelector('.tab-btn[data-view="results"]').getClientRects().length>0,
+      logTab:document.querySelector('.tab-btn[data-view="log"]').getClientRects().length>0,
+      categoryManage:[...document.querySelectorAll('[data-act="manage-categories"]')].some(node=>node.getClientRects().length>0),
+      usersManage:document.querySelector('[data-act="manage-users"]').getClientRects().length>0,
+      directChecks:{
+        edit:Access.can('manual','شبکه آزمایشی'),regions:Access.can('manage-regions'),source:Access.can('source'),users:Access.can('users'),
+        import:Access.can('import'),export:Access.can('export','شبکه آزمایشی'),backup:Access.can('backup','شبکه آزمایشی'),restore:Access.can('restore'),empty:Access.can('empty-data'),reset:Access.can('reset')
+      }
+    }));
+    assert.equal(snapshot.permission,permission);
+    assert.deepEqual(snapshot.cards,[permission==='search',permission==='add-record',permission==='remove-record'],permission+' operation cards');
+    assert.equal(snapshot.categories,permission==='view-sheets',permission+' categories');
+    assert.equal(snapshot.navigation,permission==='view-sheets',permission+' direct navigator');
+    assert.equal(snapshot.events,permission==='view-history',permission+' system events');
+    assert.equal(snapshot.quickUndo,permission==='undo-remove',permission+' undo');
+    assert.equal(snapshot.sheetTab,permission==='view-sheets',permission+' sheet tab');
+    assert.equal(snapshot.resultTab,['search','remove-record'].includes(permission),permission+' results tab');
+    assert.equal(snapshot.logTab,permission==='view-history',permission+' history tab');
+    assert.equal(snapshot.categoryManage,permission==='manage-categories',permission+' category management');
+    assert.equal(snapshot.usersManage,permission==='manage-users',permission+' user management');
+    const capabilityKey={
+      'import-data':'import', 'export-xlsx':'export','backup-server':'backup','restore-data':'restore','empty-data':'empty','reset-data':'reset',
+      'edit-cells':'edit','manage-regions':'regions','manage-users':'users','source-code':'source'
+    }[permission];
+    if(capabilityKey)assert.equal(snapshot.directChecks[capabilityKey],true,permission+' direct permission');
+    for(const key of Object.values(expectedTool).flat())assert.equal(snapshot.tools.includes(key),(expectedTool[permission]||[]).includes(key),permission+' tool '+key);
+  }
+  assert.deepEqual(errors,[]);
+});

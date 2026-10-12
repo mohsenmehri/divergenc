@@ -160,13 +160,20 @@ const Access = (() => {
     if(a==='export-xlsx')return can('export');
     if(a==='backup')return can('backup');
     if(a==='restore')return can('restore');
-    if(['reset-empty','reset-all'].includes(a))return can('reset');
+    if(a==='reset-empty')return can('empty-data');
+    if(a==='reset-all')return can('reset');
     if(a==='manage-regions')return can('manage-regions');
     if(a==='manage-categories')return can('manage-categories');
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);
-    if(['go-cp','toggle-sidebar','toggle-fold','province-region','province-section','open-category','set-filter','filter-rows','quick-exact'].includes(a))return can('workspace');
+    // Folding/navigation chrome is harmless. It must stay available so a user
+    // can read the explicit access notice in a card instead of seeing a blank UI.
+    if(['toggle-sidebar','toggle-fold','go-cp'].includes(a))return !!current();
+    if(['province-region','province-section','open-category','set-filter','filter-rows','quick-exact'].includes(a))return can('workspace');
     if(a==='switch-view')return viewAllowed(node.dataset.view);
-    if(a==='toggle-quick')return can('workspace') && (node.getAttribute('aria-controls')!=='quick-undo' || can('undo'));
+    if(a==='toggle-quick'){
+      const panel=node.getAttribute('aria-controls')||'';
+      return ({'quick-search':can('search'),'quick-add':can('add'),'quick-remove':can('remove'),'quick-undo':can('undo'),'quick-nav':can('workspace')})[panel]||false;
+    }
     return can('admin'); // unknown future operations are admin-only, never implicitly granted
   }
   function viewAllowed(view){
@@ -176,6 +183,16 @@ const Access = (() => {
     if(view==='log')return can('view-history');
     return can('admin');
   }
+  const DENIED_TEXT='شما دسترسی به این بخش ندارید.';
+  function setAccessNotice(container,allowed){
+    if(!container)return;
+    container.classList.toggle('access-denied-card',!allowed);
+    container.setAttribute('aria-disabled',String(!allowed));
+    const body=container.querySelector('.card-body')||container;
+    let note=body.querySelector(':scope > .access-denied-note');
+    if(!note){note=el('p',{class:'access-denied-note',role:'status',text:DENIED_TEXT});body.appendChild(note);}
+    note.hidden=allowed;
+  }
   function hideOperations(){
     if(!current())return;
     document.querySelectorAll('[data-act]').forEach(node=>{
@@ -184,12 +201,26 @@ const Access = (() => {
       if(node.matches('button'))node.setAttribute('aria-disabled',String(!permitted));
     });
     document.querySelectorAll('.tab-btn[data-view]').forEach(node=>node.classList.toggle('access-hidden',!viewAllowed(node.dataset.view)));
-    // Do not leave empty add/remove cards behind for accounts that cannot use
-    // their only action. The card remains present for permitted roles.
-    ['modAddRecord.StartAddWizard','modRemoveRecord.StartRemoveWizard'].forEach(path=>{
-      const action=document.querySelector('[data-act="run-macro"][data-arg="'+path+'"]');
-      action?.closest('.card')?.classList.toggle('access-hidden',!macroAllowed(path));
-    });
+
+    // Keep the three operational cards visible. An unavailable card contains
+    // only its title and this explicit notice—never stale inputs, sheet names,
+    // or a disabled action that could suggest access exists.
+    const operationCards=document.querySelectorAll('#fold-ops .grid-add > .card');
+    setAccessNotice(operationCards[0],can('search'));
+    setAccessNotice(operationCards[1],can('add'));
+    setAccessNotice(operationCards[2],can('remove'));
+
+    // The category, navigation and tools areas follow the same rule when none
+    // of their content is usable. Undo stays available from its own quick
+    // action; it never turns the destructive remove form into a permitted one.
+    setAccessNotice(document.querySelector('#fold-cats .fold-inner'),can('view-sheets'));
+    setAccessNotice(document.querySelector('#fold-nav .fold-inner'),can('workspace'));
+    const tools=document.querySelector('#fold-tools .fold-inner');
+    const anyTool=[...document.querySelectorAll('#fold-tools [data-act]')].some(node=>actionAllowed(node));
+    setAccessNotice(tools,anyTool);
+    // Recent-event rows are content, not merely a navigation affordance. Do
+    // not reveal the empty-state or prior system events without log access.
+    setAccessNotice(document.querySelector('#fold-status .grid-2 > .card:first-child'),can('view-history'));
   }
   function field(label,id,type='text',value=''){
     const input=el('input',{id,type,class:'inp',value,required:true,autocomplete:type==='password'?'new-password':'off'});

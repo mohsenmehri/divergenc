@@ -60,3 +60,18 @@ test('user-form buttons and requested theme-two/destructive styling are explicit
   assert.match(light,/#user-cancel\{background-color:#dce8ef!important;background-image:none!important/);
   assert.match(light,/#user-delete\{background-color:#e55c66!important;background-image:none!important;color:#111!important/);
 });
+
+test('denied dashboard sections retain their heading but reveal only the explicit access notice',()=>{
+  const access=read('src/local-access.js'),css=read('src/local-access.css'),html=read('FAM.html');
+  assert.match(access,/const DENIED_TEXT='شما دسترسی به این بخش ندارید\.'/);
+  assert.match(access,/function setAccessNotice\(container,allowed\)/);
+  assert.match(access,/setAccessNotice\(operationCards\[0\],can\('search'\)\)/);
+  assert.match(access,/setAccessNotice\(operationCards\[1\],can\('add'\)\)/);
+  assert.match(access,/setAccessNotice\(operationCards\[2\],can\('remove'\)\)/);
+  assert.match(access,/setAccessNotice\(document\.querySelector\('#fold-cats \.fold-inner'\),can\('view-sheets'\)\)/);
+  assert.match(access,/setAccessNotice\(document\.querySelector\('#fold-nav \.fold-inner'\),can\('workspace'\)\)/);
+  assert.match(access,/setAccessNotice\(document\.querySelector\('#fold-status \.grid-2 > \.card:first-child'\),can\('view-history'\)\)/);
+  assert.match(css,/\.card\.access-denied-card > \.card-body > :not\(\.access-denied-note\)/);
+  assert.match(css,/\.fold-inner\.access-denied-card > :not\(\.access-denied-note\)/);
+  for(const title of ['جستجوی هوشمند','افزودن داده','حذف ردیف','باز کردن مستقیم بخش','آخرین رویدادهای سیستم'])assert.ok(html.includes(`<h3>${title}</h3>`),title);
+});
