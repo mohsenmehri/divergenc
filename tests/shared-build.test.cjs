@@ -46,7 +46,7 @@ test('light sidebar clears the dark gradient and hides only theme-1 background c
  assert.match(palette,/\.toast,#live-update-notice\{background-color:#fff!important;background-image:none!important;color:#203c52!important/);
  assert.match(palette,/\.mbox\{background-color:#fff!important;background-image:none!important;color:#203c52!important/);
  assert.match(shared,/html\[data-ui-theme="light"\] #sidebar \.side-foot > \.fx-bar\{display:none!important;\}/);
- for(const file of ['FAM.html','server/www/FAM.html']){
+ for(const file of ['FAM.html']){
   const html=read(file);
   assert.ok(html.includes(palette));assert.ok(html.includes(shared));
   assert.equal((html.match(/id="fx-strength"/g)||[]).length,1);
@@ -65,24 +65,27 @@ test('service selection buttons contain only the carrier name',()=>{
  assert.match(html,/name: "مبین نت" \}/);
  assert.match(html,/name: "آسیاتک" \}/);
 });
-test('role policy scopes levels 3 and 4 while keeping level 4 search-only',()=>{
- const access=read('src/local-access.js'),server=read('server/app.py'),shared=read('src/shared-sync.js');
- assert.match(access,/if\(operation==='manual'\)return u\.role<=3/);
- assert.match(access,/\['save-results','refresh-panel','import','empty-data','restore','reset'\]/);
- assert.match(access,/\['3','4'\]\.includes\(role\.value\)/);
- assert.match(access,/text:'همهٔ مناطق'/);
- assert.match(access,/if\(path==='modAddRecord\.StartAddWizard'\)return can\('add'\)/);
- assert.match(access,/if\(path==='modRemoveRecord\.StartRemoveWizard'\)return can\('remove'\)/);
+test('local accounts use dynamic category scope and per-user capabilities, not levels',()=>{
+ const access=read('src/local-access.js'),html=read('FAM.html'),css=read('src/local-access.css'),palette=read('src/light-palette.css');
+ assert.match(access,/const PERMISSION_GROUPS=/);
+ for(const label of ['مشاهدهٔ شیت‌ها و داشبورد','جست‌وجو در داده‌ها','ویرایش مستقیم سلول‌ها','ذخیرهٔ تغییرات نتایج جست‌وجو','مدیریت کاربران و دسترسی‌ها'])assert.ok(access.includes(label),label);
+ assert.match(access,/categories:\[\.\.\.new Set/);assert.match(access,/permissions:Array\.isArray/);
+ assert.match(access,/managedCategories\(\),CAT_OTHER/);
+ assert.match(access,/category!==\'provinces\'/);assert.match(access,/scopeAllowsSheet/);
+ assert.match(access,/deleted is deliberately fail-closed/);
  assert.match(access,/id:'user-save'.*text:'ثبت'/);
  assert.match(access,/id:'user-cancel'.*text:'لغو'/);
  assert.match(access,/id:'user-save-new'.*text:'ثبت و ایجاد کاربر جدید'/);
- assert.match(access,/\[\[1,'سطح ۱'\],\[2,'سطح ۲'\],\[3,'سطح ۳'\],\[4,'سطح ۴'\]\]/);
- assert.doesNotMatch(access,/سطح ۱ —|سطح ۲ —|سطح ۳ —|سطح ۴ —/);
- assert.match(server,/def can_access_data\(user, name, state\):/);
- assert.match(server,/افزودن یا حذف رکورد برای سطح ۳ مجاز نیست/);
- assert.match(shared,/Access\.require\('save-results'\)/);
- assert.doesNotMatch(read('src/local-access.css'),/data-role="4"\] #layout/);
+ assert.doesNotMatch(access,/id:'user-role'/);
+ assert.doesNotMatch(access,/text:'سطح [۱-۴]'/);
+ assert.match(html,/Access\.can\("search-read", n\)/);
+ assert.match(html,/Access\.require\("add", sheetName\)/);
+ assert.match(html,/Access\.can\("remove", srcSheetName\)/);
+ assert.match(html,/Access\.can\("export", name\)/);
+ assert.match(css,/#user-delete\{display:inline-flex!important;width:max-content!important/);
+ assert.match(palette,/#user-cancel\{background-color:#dce8ef!important/);
 });
+
 test('original XLSM bytes remain untouched',()=>{
  const sha=crypto.createHash('sha256').update(fs.readFileSync('Mohsen_FINAL_v5.xlsm')).digest('hex');
  assert.equal(sha,'bf1d5519e8e47b79212ef7bfbb7f0a6585faf6ae8604fd1f73a3af2a3b89ed66');

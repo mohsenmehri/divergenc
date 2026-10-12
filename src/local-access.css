@@ -27,6 +27,26 @@ html.auth-pending #access-viewer {display:none!important;}
 [aria-labelledby="users-title"] .category-list .is-selected{border-color:var(--cyan);background:rgba(47,212,196,.12);}
 [aria-labelledby="users-title"] .category-list button{white-space:normal;overflow-wrap:anywhere;text-align:right;}
 
+/* Per-user scope and operation editor. Scope is deliberately rendered before
+   capabilities so there is no visible access-level model. */
+.user-scope-section,.user-permission-section{margin-top:18px;padding-top:12px;border-top:1px solid rgba(116,151,180,.28);}
+.user-scope-section h4,.user-permission-section h4{margin:0 0 8px;}
+.category-scope-tree{display:block;max-height:none;overflow:visible;}
+.category-scope-tree>.category-scope-row{margin:7px 0;padding:4px 0;font-weight:650;}
+.user-region-children{margin:2px 24px 12px 0;padding:4px 12px;border-right:2px solid rgba(47,212,196,.42);}
+.user-region-children .access-scopes{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));max-height:none;}
+.user-region-children .access-check{margin:7px 0;}
+.user-region-scope.is-disabled{opacity:.55;}
+.permission-group{margin:12px 0;padding:10px 12px;border:1px solid rgba(116,151,180,.38);border-radius:8px;}
+.permission-group legend{padding:0 5px;font-weight:700;}
+.permission-group .access-check{margin:8px 0;}
+.user-form-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+#user-cancel{background-color:#31516b;background-image:none;color:#fff;border-color:#52758f;}
+#user-cancel:hover,#user-cancel:focus-visible{background-color:#426982;background-image:none;color:#fff;}
+/* Appended only in edit mode by the script. It must never stretch across the editor. */
+#user-delete{display:inline-flex!important;width:max-content!important;max-width:max-content!important;min-width:0!important;flex:0 0 auto!important;align-self:flex-start!important;margin-top:14px;background-color:#d8444f!important;background-image:none!important;color:#111!important;border-color:#ec737b!important;padding-inline:13px!important;}
+#user-delete:hover,#user-delete:focus-visible{background-color:#ef6069!important;background-image:none!important;color:#111!important;}
+
 .own-password-dialog{min-width:0;max-width:520px;}
 .own-password-dialog .c{white-space:normal;}
 .own-password-dialog .access-field input{text-align:left;}

@@ -7,18 +7,55 @@ const Access = (() => {
   const hex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
   const bytes=s=>new Uint8Array(s.match(/../g).map(v=>parseInt(v,16)));
   const username=s=>String(s||'').trim().toLowerCase();
+  // These are product capabilities, not access levels. A user's selected
+  // capabilities are stored separately from the category data scope.
+  const PERMISSION_GROUPS=[
+    {title:'مشاهده و جست‌وجو',items:[
+      ['view-sheets','مشاهدهٔ شیت‌ها و داشبورد'],['search','جست‌وجو در داده‌ها'],['view-history','مشاهدهٔ تاریخچهٔ تغییرات']]},
+    {title:'کار با داده‌ها',items:[
+      ['edit-cells','ویرایش مستقیم سلول‌ها'],['save-results','ذخیرهٔ تغییرات نتایج جست‌وجو'],['add-record','افزودن رکورد'],['remove-record','حذف رکورد'],['undo-remove','بازگردانی آخرین حذف']]},
+    {title:'ابزارها و عملیات‌ها',items:[
+      ['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
+    {title:'مدیریت',items:[
+      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها']]}
+  ];
+  const PERMISSIONS=new Set(PERMISSION_GROUPS.flatMap(group=>group.items.map(([id])=>id)));
+  const allPermissions=()=>[...PERMISSIONS];
+  const legacyPermissions=role=>{
+    if(role===1)return allPermissions();
+    if(role===2)return allPermissions().filter(p=>!['save-results','refresh-panel','import-data','empty-data','restore-data','reset-data','manage-users'].includes(p));
+    if(role===3)return ['view-sheets','search','view-history','edit-cells','refresh-index','export-xlsx','backup-server'];
+    return ['view-sheets','search'];
+  };
+  const allKnownCategoryIds=()=>[...new Set([...(typeof managedCategories==='function'?managedCategories().map(c=>c.id):[]),'other'])];
+  const normalizeAccessUser=u=>{
+    const sheets=Array.isArray(u?.sheets)?u.sheets.filter(v=>typeof v==='string'):[];
+    const legacy=!Array.isArray(u?.categories)&&!Array.isArray(u?.permissions);
+    const inferred=u?.role<=2?allKnownCategoryIds():[...new Set(sheets.map(s=>typeof categoryOf==='function'?categoryOf(s)?.id:null).filter(Boolean))];
+    if(u?.role>2&&Array.isArray(u?.regions)&&u.regions.length&&!inferred.includes('provinces'))inferred.push('provinces');
+    const supplied=Array.isArray(u?.categories)?u.categories.filter(v=>typeof v==='string'):inferred;
+    const regions=legacy&&u?.role<=2&&typeof managedRegions==='function'
+      ?managedRegions().filter(r=>r.id!=='unassigned').map(r=>r.id)
+      :(Array.isArray(u?.regions)?u.regions.filter(v=>typeof v==='string'):[]);
+    return {...u,sheets,regions:[...new Set(regions)],
+      categories:[...new Set(supplied.includes('*')?allKnownCategoryIds():supplied)],
+      permissions:Array.isArray(u?.permissions)?[...new Set(u.permissions.filter(v=>PERMISSIONS.has(v)))]:legacyPermissions(u?.role)
+    };
+  };
   function validate(value) {
     if(!value || value.version!==1 || !Array.isArray(value.users) ) throw Error('فایل حساب‌ها معتبر نیست.');
-    if(!value.users.length)throw Error('حداقل یک مدیر فعال سطح ۱ لازم است.');
+    value={...value,users:value.users.map(normalizeAccessUser)};
+    if(!value.users.length)throw Error('حداقل یک مدیر فعال مدیریت کاربران لازم است.');
     const ids=new Set(),names=new Set();
     for(const u of value.users){
       if(!u || typeof u.id!=='string' || ids.has(u.id) || typeof u.username!=='string' || !/^[a-z0-9_.-]{3,40}$/.test(u.username) || names.has(u.username)
         || typeof u.name!=='string' || !u.name.trim() || u.name.length>60 || ![1,2,3,4].includes(u.role) || typeof u.enabled!=='boolean'
         || !/^[a-f0-9]{32}$/.test(u.salt) || !/^[a-f0-9]{64}$/.test(u.hash) || typeof u.revision!=='string'
-        || !Array.isArray(u.regions) || !u.regions.every(s=>typeof s==='string') || !Array.isArray(u.sheets) || !u.sheets.every(s=>typeof s==='string')) throw Error('فایل حساب‌ها معتبر نیست.');
+        || !Array.isArray(u.regions) || !u.regions.every(s=>typeof s==='string') || !Array.isArray(u.sheets) || !u.sheets.every(s=>typeof s==='string')
+        || !Array.isArray(u.categories) || !u.categories.every(s=>typeof s==='string') || !Array.isArray(u.permissions) || !u.permissions.every(p=>PERMISSIONS.has(p))) throw Error('فایل حساب‌ها معتبر نیست.');
       ids.add(u.id);names.add(u.username);
     }
-    if(!value.users.some(u=>u.enabled&&u.role===1))throw Error('حداقل یک مدیر فعال سطح ۱ لازم است.');
+    if(!value.users.some(u=>u.enabled&&u.permissions.includes('manage-users')))throw Error('حداقل یک مدیر فعال مدیریت کاربران لازم است.');
     return value;
   }
   function load(){
@@ -27,19 +64,21 @@ const Access = (() => {
   }
   function persist(next){
     next={...next,adminPresetVersion:next.adminPresetVersion || db?.adminPresetVersion || 0};
-    validate(next);
+    next=validate(next);
     localStorage.setItem(KEY,JSON.stringify(next)); // quota errors fail before updating live accounts
     db=next;
   }
   function current(){
     const u=db?.users.find(u=>u.id===activeId && u.enabled);
-    return u ? {id:u.id,username:u.username,name:u.name,role:u.role,enabled:u.enabled,regions:[...u.regions],sheets:[...u.sheets]} : null;
+    return u ? {id:u.id,username:u.username,name:u.name,role:u.role,enabled:u.enabled,regions:[...u.regions],sheets:[...u.sheets],categories:[...u.categories],permissions:[...u.permissions]} : null;
   }
   function establish(user){
-    sessionStorage.setItem(SESSION,JSON.stringify({id:user.id,revision:user.revision}));
-    activeId=user.id;
-    state.user=user.name;
-    document.documentElement.dataset.role=String(user.role);
+    const normalized=normalizeAccessUser(user);
+    const at=db.users.findIndex(u=>u.id===normalized.id);if(at>=0)db.users[at]=normalized;
+    sessionStorage.setItem(SESSION,JSON.stringify({id:normalized.id,revision:normalized.revision}));
+    activeId=normalized.id;
+    state.user=normalized.name;
+    document.documentElement.dataset.role='custom';
     document.documentElement.classList.remove('auth-pending');
   }
   async function hashPassword(password,salt){
@@ -52,38 +91,45 @@ const Access = (() => {
     const salt=hex(crypto.getRandomValues(new Uint8Array(16)));
     return {salt,hash:await hashPassword(password,salt)};
   }
-  // Roles 3 and 4 are intentionally fail-closed: a provincial sheet is available
-  // only when its configured region is selected for that account. A non-regional
-  // data sheet needs an explicit legacy sheet grant (kept for compatibility).
+  const has=(u,permission)=>!!u&&u.permissions.includes(permission);
+  const dataPermission=u=>['view-sheets','search','edit-cells','save-results','add-record','remove-record','undo-remove','export-xlsx'].some(p=>has(u,p));
+  // Category IDs stay stable when the administrator renames or reassigns a
+  // category. Therefore permissions automatically follow the latest category
+  // definition without editing every user record. A category ID which has been
+  // deleted is deliberately fail-closed: it matches no worksheet.
   function scopeAllowsSheet(u,sheet){
+    if(!SheetExists(sheet)||IsSystemSheet(sheet))return false;
+    const category=categoryOf(sheet)?.id||'other';
+    if(!u.categories.includes(category))return false;
+    if(category!=='provinces')return true;
     const p=provinceOf(sheet);
-    return p ? u.regions.includes(p.region) : u.sheets.includes(sheet);
+    return !!p&&u.regions.includes(p.region);
+  }
+  function hasFullDataScope(u){
+    const categories=allKnownCategoryIds();
+    if(!categories.every(id=>u.categories.includes(id)))return false;
+    const regions=managedRegions().filter(r=>r.id!=='unassigned');
+    return regions.every(r=>u.regions.includes(r.id));
   }
   function can(operation,sheet){
     const u=current();if(!u)return false;
-    if(['users','source'].includes(operation))return u.role===1;
     if(operation==='own-password')return true;
-    if(operation==='read'){
-      if(!SheetExists(sheet))return false;
-      if(u.role<=2)return true;
-      if(IsSystemSheet(sheet))return false;
-      return scopeAllowsSheet(u,sheet);
-    }
-    // "admin" keeps the existing configuration screens available to level 2;
-    // destructive data actions have their own, narrower capabilities below.
-    if(['admin','undo'].includes(operation))return u.role<=2;
-    if(operation==='manual')return u.role<=3;
-    if(operation==='export')return u.role<=3;
-    if(operation==='backup')return u.role<=3;
-    if(operation==='refresh-index')return u.role<=3;
-    if(['search','workspace'].includes(operation))return u.role<=4;
-    if(['add','remove'].includes(operation))return u.role<=2;
-    if(['save-results','refresh-panel','import','empty-data','restore','reset'].includes(operation))return u.role===1;
-    return false;
+    const scoped={read:'view-sheets','search-read':'search',manual:'edit-cells','export':'export-xlsx',backup:'backup-server',add:'add-record',remove:'remove-record','save-results':'save-results','view-history':'view-history',undo:'undo-remove'}[operation];
+    if(scoped&&sheet!==undefined)return has(u,scoped)&&scopeAllowsSheet(u,sheet);
+    if(operation==='read')return has(u,'view-sheets');
+    if(operation==='search-read')return has(u,'search');
+    if(operation==='data-access')return dataPermission(u);
+    const capability={
+      users:'manage-users',admin:'manage-system',source:'source-code',manual:'edit-cells',export:'export-xlsx',backup:'backup-server',
+      'view-sheets':'view-sheets','refresh-index':'refresh-index',search:'search',workspace:'view-sheets',add:'add-record',remove:'remove-record',undo:'undo-remove',
+      'save-results':'save-results','refresh-panel':'refresh-panel',import:'import-data','empty-data':'empty-data',restore:'restore-data',reset:'reset-data',
+      'manage-regions':'manage-regions','manage-categories':'manage-categories','view-history':'view-history'}[operation];
+    if(['import','refresh-index','empty-data','restore','reset'].includes(operation))return !!capability&&has(u,capability)&&hasFullDataScope(u);
+    return capability?has(u,capability):false;
   }
   function requirePermission(operation,sheet){
     if(can(operation,sheet))return true;
-    Toast('این عملیات برای سطح دسترسی شما مجاز نیست.','warn');return false;
+    Toast('این عملیات در مجوزهای حساب شما فعال نیست.','warn');return false;
   }
   function macroAllowed(path){
     if(path==='modExportAllModules.ExportAllModules')return can('source');
@@ -96,7 +142,7 @@ const Access = (() => {
     if(path==='modAddRecord.StartAddWizard')return can('add');
     if(path==='modRemoveRecord.StartRemoveWizard')return can('remove');
     if(path==='modUndo.UndoLastRemove')return can('undo');
-    return current()?.role===1;
+    return can('admin');
   }
   function actionAllowed(node){
     const a=node.dataset.act;
@@ -111,13 +157,21 @@ const Access = (() => {
     if(a==='backup')return can('backup');
     if(a==='restore')return can('restore');
     if(['reset-empty','reset-all'].includes(a))return can('reset');
+    if(a==='manage-regions')return can('manage-regions');
+    if(a==='manage-categories')return can('manage-categories');
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);
     if(['go-cp','toggle-sidebar','toggle-fold','province-region','province-section','open-category','set-filter','filter-rows','quick-exact'].includes(a))return can('workspace');
     if(a==='switch-view')return viewAllowed(node.dataset.view);
     if(a==='toggle-quick')return can('workspace') && (node.getAttribute('aria-controls')!=='quick-undo' || can('undo'));
     return can('admin'); // unknown future operations are admin-only, never implicitly granted
   }
-  function viewAllowed(view){return can('workspace') && (can('admin') || ['panel','sheet','results'].includes(view));}
+  function viewAllowed(view){
+    if(view==='panel')return can('data-access');
+    if(view==='sheet')return can('view-sheets');
+    if(view==='results')return can('search')||can('remove');
+    if(view==='log')return can('view-history');
+    return can('admin');
+  }
   function hideOperations(){
     if(!current())return;
     document.querySelectorAll('[data-act]').forEach(node=>{
@@ -191,7 +245,7 @@ const Access = (() => {
   }
   function accountMenu(){
     const u=current();if(!u)return;
-    const content=el('div',{},el('p',{text:u.name+' — '+u.username+' — سطح '+u.role}));
+    const content=el('div',{},el('p',{text:u.name+' — '+u.username+' — دسترسی سفارشی'}));
     if(can('users'))content.appendChild(el('button',{type:'button',class:'btn btn-primary',id:'account-manage',text:'مدیریت کاربران',onclick:()=>{document.querySelector('#modal-overlay button[data-id="1"]')?.click();manageUsers();}}));
     content.appendChild(el('button',{type:'button',class:'btn btn-primary',id:'account-password',text:can('users')?'تغییر رمز عبور من':'ویرایش حساب من (فقط رمز عبور)',onclick:()=>{document.querySelector('#modal-overlay button[data-id="1"]')?.click();editOwnPassword();}}));
     content.appendChild(el('button',{type:'button',class:'btn btn-ghost',id:'account-logout',text:'خروج از حساب',onclick:()=>logout()}));
@@ -219,7 +273,7 @@ const Access = (() => {
     const closeButton=el('button',{type:'button',id:'password-close',class:'btn btn-ghost btn-sm',text:'×','aria-label':'بستن تغییر رمز',onclick:close});
     const cancel=el('button',{type:'button',id:'password-cancel',class:'btn btn-ghost',text:'انصراف',onclick:close});
     form.append(el('div',{class:'c'},el('p',{text:'حساب: '+current().username}),
-      el('p',{class:'hint',text:'فقط رمز عبور حساب خودتان تغییر می‌کند. نام کاربری، نام نمایشی، سطح و محدودهٔ دسترسی بدون تغییر می‌مانند.'}),
+      el('p',{class:'hint',text:'فقط رمز عبور حساب خودتان تغییر می‌کند. نام کاربری، نام نمایشی و مجوزهای این حساب بدون تغییر می‌مانند.'}),
       old.node,fresh.node,repeat.node,error),el('div',{class:'f'},save,cancel));
     form.addEventListener('submit',async e=>{
       e.preventDefault();if(saving || !requirePermission('own-password'))return;
@@ -271,9 +325,9 @@ const Access = (() => {
     const close=()=>{if(saving)return;ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
     const button=(text,id,fn)=>el('button',{type:'button',id,class:'btn btn-ghost btn-sm',text,onclick:fn});
     const drawList=()=>{
-      summary.textContent=db.users.length.toLocaleString('fa-IR')+' کاربر ذخیره‌شده · '+db.users.filter(u=>u.enabled&&u.role===1).length.toLocaleString('fa-IR')+' مدیر فعال سطح ۱';
+      summary.textContent=db.users.length.toLocaleString('fa-IR')+' کاربر ذخیره‌شده · '+db.users.filter(u=>u.enabled&&u.permissions.includes('manage-users')).length.toLocaleString('fa-IR')+' مدیر فعال کاربران';
       clear(list);db.users.forEach(u=>{
-        const item=button('ویرایش: '+u.name+' ('+u.username+') · سطح '+u.role+(u.enabled?'':' · غیرفعال'),'user-'+u.id,()=>{
+        const item=button('ویرایش: '+u.name+' ('+u.username+')'+(u.enabled?'':' · غیرفعال'),'user-'+u.id,()=>{
           if(saving)return;selected=u.id;status.textContent='';drawList();drawEditor();
         });
         item.classList.toggle('is-selected',selected===u.id);
@@ -284,58 +338,89 @@ const Access = (() => {
     const drawEditor=()=>{
       clear(area);
       const original=db.users.find(u=>u.id===selected);
-      const draft=original?JSON.parse(JSON.stringify(original)):{id:crypto.randomUUID(),username:'',name:'',role:3,enabled:true,regions:[],sheets:[]};
+      const draft=normalizeAccessUser(original?JSON.parse(JSON.stringify(original)):{id:crypto.randomUUID(),username:'',name:'',role:4,enabled:true,regions:[],sheets:[],categories:[],permissions:[]});
       const form=el('form',{id:'user-form','data-mode':original?'edit':'create','data-user-id':draft.id}),error=el('p',{id:'user-error',role:'alert',class:'category-error'});
       const mode=el('div',{class:'user-editor-mode'},
         el('h3',{id:'user-mode-title',text:original?'ویرایش کاربر: '+original.username:'افزودن کاربر جدید'}),
         el('p',{class:'hint',text:original
-          ? 'ذخیره، همین حساب را تغییر می‌دهد؛ حتی اگر نام کاربری را عوض کنید. برای ساخت حساب جداگانه، «کاربر جدید» را بزنید.'
-          : 'این فرم یک حساب مستقل می‌سازد؛ هیچ‌یک از کاربران موجود تغییر نمی‌کنند.'}));
+          ? 'محدودهٔ داده را ابتدا انتخاب کنید؛ سپس عملیات مجاز این کاربر را تعیین کنید. تغییرات تا زمان ثبت اعمال نمی‌شوند.'
+          : 'ابتدا محدودهٔ داده و سپس عملیات مجاز را انتخاب کنید. این فرم یک حساب مستقل می‌سازد.'}));
       const un=field('نام کاربری','user-username','text',draft.username),name=field('نام نمایشی','user-name','text',draft.name);
       const pw=field(original?'رمز جدید (خالی = بدون تغییر)':'رمز عبور','user-password','password');pw.input.required=!original;
       un.input.maxLength=40;name.input.maxLength=60;pw.input.maxLength=128;
-      const role=el('select',{id:'user-role',class:'inp'});
-      [[1,'سطح ۱'],[2,'سطح ۲'],[3,'سطح ۳'],[4,'سطح ۴']]
-        .forEach(([v,t])=>role.appendChild(el('option',{value:String(v),text:t})));
-      role.value=String(draft.role);
       const enabled=el('input',{type:'checkbox',id:'user-enabled',checked:draft.enabled});
-      const scopes=el('div',{id:'user-scopes'}),rs=new Set(draft.regions);
+
+      // Scope comes before the operational permissions. Category identifiers—not
+      // labels or worksheet names—are persisted; category edits remain dynamic.
+      const scopes=el('section',{id:'user-scopes',class:'user-scope-section'},
+        el('h4',{text:'۱. محدودهٔ دادهٔ مجاز'}),
+        el('p',{class:'hint',text:'عملیات انتخاب‌شده در مرحلهٔ بعد فقط روی این محدوده اجرا می‌شوند. «استان‌ها و شعب» تنها دسته‌ای است که زیرمحدودهٔ منطقه دارد.'}));
+      const categories=el('div',{class:'access-scopes category-scope-tree','aria-label':'دسته‌های دادهٔ مجاز'});
+      const cs=new Set(draft.categories),rs=new Set(draft.regions);
+      const selectable=[...managedCategories(),CAT_OTHER].filter((c,i,a)=>c.id!=='system'&&a.findIndex(x=>x.id===c.id)===i);
+      const known=new Set(selectable.map(c=>c.id));
+      const stale=[...cs].filter(id=>!known.has(id));
       const regionOptions=managedRegions().filter(r=>r.id!=='unassigned');
-      const regions=el('div',{class:'access-scopes','aria-label':'مناطق مجاز'});
-      const syncRegionChecks=()=>regions.querySelectorAll('input[data-user-region]').forEach(input=>{input.checked=rs.has(input.dataset.userRegion);});
-      const setAllRegions=selected=>{regionOptions.forEach(r=>selected?rs.add(r.id):rs.delete(r.id));syncRegionChecks();};
-      scopes.append(
-        el('p',{class:'hint',text:'برای سطح ۳ و ۴، فقط داده‌های منطقه‌های تیک‌خورده قابل مشاهده و جست‌وجو هستند. انتخاب خالی یعنی هیچ منطقه‌ای مجاز نیست؛ «همهٔ مناطق» چهار منطقه را انتخاب می‌کند.'}),
-        el('div',{class:'category-edit-actions'},
-          el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'همهٔ مناطق',onclick:()=>setAllRegions(true)}),
-          el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'پاک‌کردن انتخاب',onclick:()=>setAllRegions(false)})),
-        el('h4',{text:'مناطق مجاز'}),regions);
-      regionOptions.forEach(r=>regions.appendChild(el('label',{},el('input',{type:'checkbox','data-user-region':r.id,checked:rs.has(r.id),onchange:e=>{e.target.checked?rs.add(r.id):rs.delete(r.id);}}),txt(r.name))));
-      if(!regionOptions.length)regions.appendChild(el('p',{class:'hint',text:'منطقه‌ای تعریف نشده است.'}));
-      const showScopes=()=>{scopes.hidden=!['3','4'].includes(role.value);};role.addEventListener('change',showScopes);showScopes();
+      const regionBox=el('div',{class:'access-scopes user-region-scope','aria-label':'مناطق مجاز'});
+      const allRegions=el('input',{type:'checkbox',id:'user-all-regions'});
+      const syncRegions=()=>{
+        const all=regionOptions.length>0&&regionOptions.every(r=>rs.has(r.id));
+        allRegions.checked=all;allRegions.indeterminate=!all&&regionOptions.some(r=>rs.has(r.id));
+        regionBox.querySelectorAll('input[data-user-region]').forEach(input=>{input.checked=rs.has(input.dataset.userRegion);input.disabled=!cs.has('provinces');});
+        allRegions.disabled=!cs.has('provinces')||!regionOptions.length;
+        regionBox.classList.toggle('is-disabled',!cs.has('provinces'));
+      };
+      allRegions.addEventListener('change',()=>{regionOptions.forEach(r=>allRegions.checked?rs.add(r.id):rs.delete(r.id));syncRegions();});
+      selectable.forEach(c=>{
+        const check=el('input',{type:'checkbox','data-user-category':c.id,checked:cs.has(c.id),onchange:e=>{e.target.checked?cs.add(c.id):cs.delete(c.id);syncRegions();}});
+        const row=el('label',{class:'access-check category-scope-row'},check,txt(c.name));
+        categories.appendChild(row);
+        if(c.id==='provinces'){
+          const regions=el('div',{class:'user-region-children'},
+            el('label',{class:'access-check region-all'},allRegions,txt('همهٔ مناطق')),
+            el('p',{class:'hint',text:'با انتخاب همهٔ مناطق، منطقه‌های فعلی پیکربندی‌شده همگی مجاز می‌شوند.'}),regionBox);
+          categories.appendChild(regions);
+        }
+      });
+      regionOptions.forEach(r=>regionBox.appendChild(el('label',{class:'access-check'},el('input',{type:'checkbox','data-user-region':r.id,checked:rs.has(r.id),onchange:e=>{e.target.checked?rs.add(r.id):rs.delete(r.id);syncRegions();}}),txt(r.name))));
+      if(!regionOptions.length)regionBox.appendChild(el('p',{class:'hint',text:'منطقه‌ای تعریف نشده است.'}));
+      if(stale.length){
+        const staleBox=el('div',{class:'category-error'},el('p',{text:'دسترسی به دستهٔ حذف‌شده مسدود است و تا حذف صریح نگه داشته می‌شود: '+stale.join('، ')}));
+        staleBox.appendChild(el('button',{type:'button',class:'btn btn-ghost btn-sm',text:'حذف دسترسی‌های حذف‌شده',onclick:()=>{stale.forEach(id=>cs.delete(id));staleBox.remove();}}));
+        scopes.appendChild(staleBox);
+      }
+      scopes.appendChild(categories);syncRegions();
+
+      const permissionSection=el('section',{id:'user-permissions',class:'user-permission-section'},
+        el('h4',{text:'۲. عملیات مجاز'}),
+        el('p',{class:'hint',text:'هر عملیات فقط در محدودهٔ دادهٔ انتخاب‌شده در بالا اعمال می‌شود. مجوزهای مدیریتی مستقل از داده هستند.'}));
+      const ps=new Set(draft.permissions);
+      PERMISSION_GROUPS.forEach(group=>{
+        const groupBox=el('fieldset',{class:'permission-group'},el('legend',{text:group.title}));
+        group.items.forEach(([id,label])=>groupBox.appendChild(el('label',{class:'access-check'},el('input',{type:'checkbox','data-user-permission':id,checked:ps.has(id),onchange:e=>{e.target.checked?ps.add(id):ps.delete(id);}}),txt(label))));
+        permissionSection.appendChild(groupBox);
+      });
       const save=el('button',{type:'submit',id:'user-save',class:'btn btn-primary',text:'ثبت'});
       const saveAndNew=el('button',{type:'submit',id:'user-save-new',class:'btn btn-cyan',text:'ثبت و ایجاد کاربر جدید'});
       const cancel=el('button',{type:'button',id:'user-cancel',class:'btn btn-ghost',text:'لغو',onclick:close});
       const formActions=el('div',{class:'f user-form-actions'},save,cancel,saveAndNew);
-      form.append(mode,un.node,name.node,pw.node,el('label',{for:'user-role',text:'سطح دسترسی'}),role,
-        el('label',{class:'access-check'},enabled,txt('حساب فعال است')),scopes,error,formActions);
+      form.append(mode,un.node,name.node,pw.node,el('label',{class:'access-check'},enabled,txt('حساب فعال است')),scopes,permissionSection,error,formActions);
       form.addEventListener('submit',async e=>{
         e.preventDefault();if(saving || !requirePermission('users'))return;
         const createAnother=e.submitter?.id==='user-save-new';
         saving=true;save.disabled=true;saveAndNew.disabled=true;cancel.disabled=true;error.textContent='';
         try{
-          const scoped=['3','4'].includes(role.value);
-          const changed={...draft,username:username(un.input.value),name:name.input.value.trim(),role:Number(role.value),enabled:enabled.checked,
-            regions:scoped?[...rs]:[],sheets:scoped?[]:[],revision:crypto.randomUUID()};
+          const changed={...draft,username:username(un.input.value),name:name.input.value.trim(),enabled:enabled.checked,
+            categories:[...cs],regions:cs.has('provinces')?[...rs]:[],sheets:[],permissions:[...ps],revision:crypto.randomUUID()};
           if(!/^[a-z0-9_.-]{3,40}$/.test(changed.username))throw Error('نام کاربری باید ۳ تا ۴۰ نویسه انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.');
           if(!changed.name || changed.name.length>60)throw Error('نام نمایشی باید بین ۱ تا ۶۰ نویسه باشد.');
           if(db.users.some(u=>u.id!==changed.id && u.username===changed.username))throw Error('این نام کاربری قبلاً ثبت شده است.');
           if(pw.input.value)Object.assign(changed,await credential(pw.input.value));
           if(!can('users'))throw Error('مجوز مدیریت کاربران تغییر کرده است.');
           const next={version:1,users:original?db.users.map(u=>u.id===original.id?changed:u):db.users.concat(changed)};
-          if(original && !next.users.some(u=>u.enabled&&u.role===1))throw Error('حداقل یک مدیر فعال سطح ۱ لازم است. شما در حال ویرایش حساب «'+original.username+'» هستید، نه افزودن کاربر جدید. برای ساخت حساب جداگانه، «کاربر جدید» را بزنید.');
+          if(!next.users.some(u=>u.enabled&&u.permissions.includes('manage-users')))throw Error('حداقل یک مدیر فعال مدیریت کاربران لازم است. برای ساخت حساب جداگانه، «کاربر جدید» را بزنید.');
           persist(next);pw.input.value='';
-          if(changed.id===activeId){if(!changed.enabled || changed.role!==1){await logout();return;}establish(changed);}
+          if(changed.id===activeId){if(!changed.enabled){await logout();return;}establish(changed);}
           selected=createAnother?null:changed.id;
           status.textContent=createAnother
             ? 'کاربر «'+changed.username+'» ذخیره شد. فرم کاربر جدید آماده است.'
@@ -349,13 +434,16 @@ const Access = (() => {
       if(original)area.appendChild(button('حذف کاربر','user-delete',async()=>{
         if(saving || !requirePermission('users'))return;
         if(!confirm('کاربر «'+original.name+'» حذف شود؟ داده‌های شیت‌ها حذف نمی‌شوند.'))return;
-        try{persist({version:1,users:db.users.filter(u=>u.id!==original.id)});
+        try{
+          const next={version:1,users:db.users.filter(u=>u.id!==original.id)};
+          if(!next.users.some(u=>u.enabled&&u.permissions.includes('manage-users')))throw Error('حداقل یک مدیر فعال مدیریت کاربران لازم است.');
+          persist(next);
           if(original.id===activeId){await logout();return;}selected=null;status.textContent='کاربر حذف شد؛ فرم افزودن کاربر جدید آماده است.';drawList();drawEditor();
         }catch(e){error.textContent=e.message;}
       }));
     };
     box.append(el('div',{class:'t'},el('span',{id:'users-title',text:'مدیریت کاربران محلی'}),button('×','users-close',close)),
-      el('div',{class:'c'},el('p',{class:'hint',text:'فقط سطح ۱ کاربران را مدیریت می‌کند. رمزها به صورت متن ذخیره یا نمایش داده نمی‌شوند. تغییرات فرم تا ذخیره اعمال نمی‌شوند. حساب‌ها در پشتیبان دادهٔ اکسل/JSON قرار نمی‌گیرند.'}),
+      el('div',{class:'c'},el('p',{class:'hint',text:'دارندگان مجوز «مدیریت کاربران و دسترسی‌ها» می‌توانند این بخش را باز کنند. رمزها به صورت متن ذخیره یا نمایش داده نمی‌شوند. تغییرات فرم تا ذخیره اعمال نمی‌شوند. حساب‌ها در پشتیبان دادهٔ اکسل/JSON قرار نمی‌گیرند.'}),
         button('+ کاربر جدید','user-new',()=>{if(saving)return;selected=null;status.textContent='';drawList();drawEditor();area.querySelector('#user-username').focus();}),summary,status,el('div',{class:'category-manager-grid'},list,area)),
       el('div',{class:'f'},button('بستن','users-done',close)));
     box.addEventListener('keydown',e=>{
@@ -365,41 +453,14 @@ const Access = (() => {
     });
     clear(ov);ov.appendChild(box);ov.classList.add('show');drawList();drawEditor();box.querySelector('#user-username').focus();
   }
-  function renderViewer(){
-    if(current()?.role!==4)return;
-    let root=document.getElementById('access-viewer');if(!root){root=el('main',{id:'access-viewer'});document.body.appendChild(root);}
-    clear(root);
-    const account=current();
-    root.appendChild(el('header',{class:'access-viewer-head'},el('h2',{text:'بخش‌های مجاز — '+account.name}),el('span',{text:'سطح ۴ · فقط مشاهده'}),
-      el('button',{class:'btn btn-ghost',text:'حساب کاربری / خروج',onclick:accountMenu})));
-    const visible=WB.order.filter(n=>can('read',n));
-    const regions=managedRegions().filter(r=>account.regions.includes(r.id));
-    const nav=el('div',{class:'access-viewer-nav'}),choices=el('div',{class:'sheet-grid'}),body=el('div',{id:'viewer-sheet-body'});
-    const drawChoices=region=>{
-      clear(choices);clear(body);
-      const names=visible.filter(n=>region==='all'||(region==='other'?!provinceOf(n):provinceOf(n)?.region===region));
-      for(const name of names)choices.appendChild(el('button',{class:'btn btn-ghost','data-viewer-sheet':name,text:name,onclick:()=>{
-        if(!can('read',name)){clear(body);return;}
-        clear(body);body.appendChild(el('h3',{text:name}));
-        // Use the existing merge-aware renderer, then move only its read-only table.
-        renderSheetView(name);
-        const grid=document.querySelector('#sheet-body .grid-wrap');if(grid)body.appendChild(grid);
-        const more=document.querySelector('#sheet-body [data-act="show-more-rows"]');
-        if(more)body.appendChild(el('button',{class:'btn btn-ghost',text:'نمایش ردیف‌های بیشتر',onclick:()=>{
-          if(!can('read',name))return;state.pageLimit+=500;choices.querySelector('[data-viewer-sheet="'+CSS.escape(name)+'"]')?.click();
-        }}));
-      }}));
-      if(!names.length)choices.appendChild(el('p',{class:'hint',text:'در این محدوده بخشی برای شما مجاز نشده است.'}));
-    };
-    nav.appendChild(el('button',{class:'btn btn-ghost',text:'همه بخش‌های مجاز',onclick:()=>drawChoices('all')}));
-    regions.forEach(r=>nav.appendChild(el('button',{class:'btn btn-ghost','data-viewer-region':r.id,text:r.name,onclick:()=>drawChoices(r.id)})));
-    if(visible.some(n=>!provinceOf(n)))nav.appendChild(el('button',{class:'btn btn-ghost',text:'بخش‌های غیر استانی',onclick:()=>drawChoices('other')}));
-    root.append(nav,choices,body);drawChoices('all');
-  }
+  // Kept as a harmless compatibility hook for older page shells. The custom
+  // permission model uses the normal application views, never a level-specific viewer.
+  function renderViewer(){ document.getElementById('access-viewer')?.remove(); }
+
   window.addEventListener('storage',e=>{
     if((e.key===KEY || e.key===null) && activeId){document.documentElement.classList.add('auth-pending');document.getElementById('access-viewer')?.remove();sessionStorage.removeItem(SESSION);location.reload();}
     // Data/region changes in another tab may change the allowed region of a sheet.
-    if(e.key===LS_KEY && current()?.role===4){document.documentElement.classList.add('auth-pending');document.getElementById('access-viewer')?.remove();location.reload();}
+    if(e.key===LS_KEY && current()){document.documentElement.classList.add('auth-pending');document.getElementById('access-viewer')?.remove();location.reload();}
   });
   return Object.freeze({start,current,can,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,editOwnPassword,manageUsers,logout,renderViewer});
 })();

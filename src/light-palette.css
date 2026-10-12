@@ -125,6 +125,10 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .user-editor-mode{background-color:#edf7f4;border-color:#c9e6dc;}
 .user-editor-mode h3{color:#186f65;}
 #users-status{color:#157450;}
+/* The account-form cancel action must remain visibly filled in Theme 2. */
+#user-cancel{background-color:#dce8ef!important;background-image:none!important;color:#29485f!important;border-color:#b7cad7!important;}
+#user-cancel:hover,#user-cancel:focus-visible{background-color:#cbdde7!important;background-image:none!important;color:#1d3d55!important;}
+#user-delete{background-color:#e55c66!important;background-image:none!important;color:#111!important;border-color:#cf3d49!important;}
 #user-error,#auth-error,#password-error{color:#b42f44;}
 #auth-screen{background-color:#eef3f7;background-image:none;}
 .access-login{background-color:#fff;color:#233f54;border-color:#d8e4ed;}
