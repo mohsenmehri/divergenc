@@ -8282,7 +8282,9 @@ function renderSheetCatalog() {
       if (c.id === "other") return categoryOf(n).id === "other";
       return categoryOf(n).id === c.id && (!IsSystemSheet(n) || state.showSystem);
     });
-    if (!names.length && c.id !== 'provinces') return;
+    // Managers must be able to create the first section even before this
+    // category has a worksheet. Ordinary viewers still do not see empty areas.
+    if (!names.length && c.id !== 'provinces' && !Access.can('manage-categories')) return;
     rendered++;
     if (c.id === 'provinces') {
       host.appendChild(renderProvinceHierarchy(names, c));
@@ -8309,7 +8311,7 @@ function renderSheetCatalog() {
       return grid;
     };
     const sections = managedCategorySections(c.id);
-    let content = makeGrid(names);
+    let content = names.length ? makeGrid(names) : el('p',{class:'hint category-subsection-empty',text:'هنوز شیتی در این دسته نیست؛ می‌توانید نخستین بخش را ایجاد کنید و بعد شیت‌های موجود را به آن منتسب کنید.'});
     if (sections.length) {
       const grouped = el('div',{class:'category-subsections'});
       const groups = sections.map(section=>({name:section.name,names:names.filter(name=>categorySectionOf(name,c.id)?.id===section.id)}));
