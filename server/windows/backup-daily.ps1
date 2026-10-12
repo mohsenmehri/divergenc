@@ -5,8 +5,11 @@ $Config=Get-Content -Raw (Join-Path $PSScriptRoot 'settings.json') | ConvertFrom
 $Directory=Join-Path (Split-Path -Parent $Config.DB) 'backups'
 $Logs=Join-Path (Split-Path -Parent $Config.DB) 'logs'
 New-Item -ItemType Directory -Force -Path $Directory,$Logs | Out-Null
-$Stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
-$Destination=Join-Path $Directory ('fam-'+$Stamp+'.sqlite3')
+# Use the server's local date/time in Explorer-friendly names. Milliseconds and
+# a random suffix mean every run creates a distinct file; old backups remain.
+$Now=Get-Date
+$Stamp=$Now.ToString('yyyy-MM-dd_HH-mm-ss-fff')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
+$Destination=Join-Path $Directory ('FAM-daily-'+$Stamp+'.sqlite3')
 $Arguments='"'+(Join-Path $Root 'manage.py')+'" backup --db "'+$Config.DB+'" --output "'+$Destination+'"'
 $Process=Start-Process -FilePath (Join-Path $Root '.venv\Scripts\python.exe') -ArgumentList $Arguments -WorkingDirectory $Root -RedirectStandardOutput (Join-Path $Logs ('backup-'+$Stamp+'.log')) -RedirectStandardError (Join-Path $Logs ('backup-'+$Stamp+'-error.log')) -Wait -PassThru -NoNewWindow
 if ($Process.ExitCode -ne 0) { throw "Daily FAM backup failed. Inspect the private backup-$Stamp logs." }

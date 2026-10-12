@@ -8682,6 +8682,22 @@ window.FamShared=(()=>{
       state.categoryConfig=null;state.regionConfig=null;state.panelProtected=true;state.cp.C11='';state.cp.C27='';resetToEmptyData(true);
     }));return true;
   };
+  // In central mode the backup tool creates a verified SQLite snapshot inside
+  // C:\\FAMData\\backups. It does not download sensitive server data into a
+  // workstation browser. Flush first, so the requested snapshot includes this
+  // administrator's just-finished work as well.
+  backupAll=async()=>{
+    if(!Access.require('admin'))return false;
+    try{
+      if(pending()||signature()!==clean){
+        originalToast('ابتدا تغییرات این صفحه روی سرور ثبت می‌شود…','warn');
+        queue();if(!await flush())return false;
+      }
+      const result=await api('backups',{});
+      originalToast('پشتیبان کامل روی سرور ثبت شد: '+result.filename,'ok');
+      return true;
+    }catch(err){originalToast(err.message||'پشتیبان‌گیری روی سرور ناموفق بود.','err');return false;}
+  };
   saveNow=async()=>{if(!Access.require('admin'))return false;try{queue();if(!await flush())return false;originalToast('نسخهٔ '+revision+' روی سرور تأیید شده است.','ok');return true;}catch(_){return false;}};
   verifyLocalPassword=async password=>{try{await api('reauth',{password});return true;}catch(_){return false;}};
   Toast=(message,type)=>{if(type==='ok'&&ready&&(pending()||signature()!==clean))return;originalToast(message,type);};

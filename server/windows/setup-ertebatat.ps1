@@ -330,14 +330,14 @@ try {
     # A daily full database backup, using the same restricted service identity.
     $BackupAction=New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument ('-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+(Join-Path $TargetServer 'windows\backup-daily.ps1')+'"') -WorkingDirectory $TargetServer
     $Principal=New-ScheduledTaskPrincipal -UserId 'S-1-5-19' -LogonType ServiceAccount -RunLevel Limited
-    Register-ScheduledTask -TaskName FAM-Central-Backup -Action $BackupAction -Trigger (New-ScheduledTaskTrigger -Daily -At '02:00') -Principal $Principal -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)) -Force | Out-Null
+    Register-ScheduledTask -TaskName FAM-Central-Backup -Action $BackupAction -Trigger (New-ScheduledTaskTrigger -Daily -At '23:00') -Principal $Principal -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)) -Force | Out-Null
     & (Join-Path $TargetServer 'windows\backup-daily.ps1')
     @{url=$Origin;serverAddress=$ServerAddress;site=$SiteName;db=$DB;certificate=$Certificate.Thumbprint;iisBackup=$IISBackup;dnsOnServer=$DNSGood;httpsApiVerified=$true;clientTrust='Check on each workstation';log=$Log} | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $InstallRoot 'deployment.json')
     Write-Host "SERVER HTTPS + API VERIFIED: $Origin" -ForegroundColor Green
     Write-Host "Initial administrator: admin (existing credentials are NEVER reset). Create individual users inside FAM."
     Write-Host "Client setup/public certificate: $ClientDir"
     Write-Host "Certificate SHA256: $((Get-FileHash $CerPath -Algorithm SHA256).Hash)"
-    Write-Host 'Daily backup: 02:00 server local time. Keep an additional protected copy on another disk/server; monitor free space.'
+    Write-Host 'Daily backup: 23:00 server local time. Every backup has a new date/time name; old copies are retained. Keep an additional protected copy on another disk/server; monitor free space.'
     if (!$DNSGood) {
         Write-Warning "DNS still needs verification: $HostName must resolve to $ServerAddress on user PCs. Organisation DNS was NOT modified. Server-side installation succeeded, but client readiness is not confirmed."
         $ExitCode=2

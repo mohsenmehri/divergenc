@@ -15,7 +15,13 @@ import sqlite3
 import time
 import uuid
 from contextlib import contextmanager
+from datetime import datetime
 from flask import Flask, request, jsonify, g, send_file
+
+try:
+    from .manage import backup as verified_backup
+except ImportError:  # Running directly from C:\FAM\server\app.py.
+    from manage import backup as verified_backup
 
 ROOT = Path(__file__).resolve().parent
 SYSTEM = {'CONTROL_PANEL','SYSTEM_SEARCH_INDEX','SYSTEM_SHEET_CONFIG','SYSTEM_DATA_DICTIONARY','CHANGE_LOG','SEARCH_RESULTS','SYSTEM_KEYS','SYSTEM_UNDO_BUFFER','SYSTEM_NAVIGATOR'}
@@ -211,7 +217,13 @@ def create_app(config=None):
     if not app.config['TESTING'] and not app.config['PUBLIC_ORIGIN'].startswith('https://'):raise RuntimeError('Production requires HTTPS.')
     dbpath=Path(app.config['DB_PATH']).resolve()
     if dbpath.is_relative_to(ROOT/'www'):raise RuntimeError('The database must be outside the public www directory.')
+    # Full SQLite backups are private server files, never browser downloads or
+    # IIS content. The local server timezone is deliberately used in their
+    # visible names so an administrator can find a date quickly in Explorer.
+    backupdir=Path(app.config.get('BACKUP_DIR') or dbpath.parent/'backups').resolve()
+    if backupdir.is_relative_to(ROOT/'www'):raise RuntimeError('The backup directory must be outside the public www directory.')
     dbpath.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+    backupdir.mkdir(parents=True,exist_ok=True,mode=0o700)
     try:
         fd=os.open(dbpath,os.O_CREAT|os.O_EXCL|os.O_RDWR,0o600);os.close(fd)
     except FileExistsError:pass
@@ -367,6 +379,21 @@ def create_app(config=None):
         # name of a colleague who changed data outside their permitted scope.
         if audit and g.user['role']<=3:change['actor']=audit['actor']
         return jsonify(revision=row['revision'],epoch=row['epoch'],userRevision=g.user['revision'],change=change)
+    @app.post('/api/backups')
+    def create_manual_backup():
+        # A browser may request a backup, but it never receives database bytes
+        # or a filesystem path. Only the level-1 administrator can create one.
+        data();admin(g.user)
+        now=datetime.now().astimezone()
+        stamp=now.strftime('%Y-%m-%d_%H-%M-%S-')+f'{now.microsecond//1000:03d}'
+        filename=f'FAM-manual-{stamp}-{uuid.uuid4().hex[:6]}.sqlite3'
+        try:
+            verified_backup(dbpath,backupdir/filename)
+        except (OSError,ValueError,sqlite3.Error):
+            app.logger.exception('Manual FAM backup failed')
+            fail(500,'پشتیبان‌گیری روی سرور ناموفق بود؛ گزارش خصوصی سرور را بررسی کنید.')
+        app.logger.info('Verified manual FAM backup %s created by administrator %s',filename,g.user['username'])
+        return jsonify(filename=filename,createdAt=now.isoformat(timespec='seconds'))
     @app.get('/api/state')
     def state():
         with connect() as db:

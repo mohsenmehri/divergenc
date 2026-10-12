@@ -26,6 +26,14 @@ test('central client announces remote server revisions without overwriting local
  assert.match(sync,/function hasUnsavedWork\(\)/);assert.match(sync,/if\(signature\(\)!==clean\)/);
  assert.match(sync,/change\?\.actor/);assert.match(html,/id:'live-update-notice'/);
 });
+test('central manual backup requests a verified private server snapshot',()=>{
+ const html=read('server/www/FAM.html'),sync=read('src/shared-sync.js');
+ assert.match(sync,/backupAll=async\(\)=>\{/);
+ assert.match(sync,/if\(!Access\.require\('admin'\)\)return false/);
+ assert.match(sync,/api\('backups',\{\}\)/);
+ assert.match(sync,/پشتیبان کامل روی سرور ثبت شد/);
+ assert.match(html,/api\('backups',\{\}\)/);
+});
 test('light sidebar clears the dark gradient and hides only theme-1 background controls',()=>{
  const palette=read('src/light-palette.css'),shared=read('src/ui-theme.css');
  assert.match(palette,/#sidebar\{[^}]*background-image:none/);

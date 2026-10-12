@@ -47,6 +47,22 @@ class CentralTests(unittest.TestCase):
         viewer=self.user(4,regions=['2'],sheets=['Network'])
         self.assertNotIn('actor',viewer.get('/api/status').json['change'])
 
+    def test_manual_server_backups_are_admin_only_timestamped_and_retained(self):
+        first=self.post(self.a,'backups',{})
+        self.assertEqual(first.status_code,200,first.json)
+        self.assertRegex(first.json['filename'],r'^FAM-manual-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3}-[a-f0-9]{6}\.sqlite3$')
+        second=self.post(self.a,'backups',{})
+        self.assertEqual(second.status_code,200,second.json)
+        self.assertNotEqual(first.json['filename'],second.json['filename'])
+        backups=Path(self.tmp.name)/'backups'
+        files=sorted(backups.glob('FAM-manual-*.sqlite3'))
+        self.assertEqual([f.name for f in files],sorted([first.json['filename'],second.json['filename']]))
+        with sqlite3.connect(files[0]) as db:
+            self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0],'ok')
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM users').fetchone()[0],1)
+        operator=self.user(2)
+        self.assertEqual(self.post(operator,'backups',{}).status_code,403)
+
     def test_stale_and_epoch_conflicts_no_overwrite(self):
         stale=self.state();p=copy.deepcopy(stale);p['state']['sheets']['Network']['rows'][1][1]='FIRST'
         self.assertEqual(self.save(self.a,p).status_code,200)
