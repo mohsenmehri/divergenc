@@ -53,6 +53,18 @@ test('light sidebar clears the dark gradient and hides only theme-1 background c
   assert.equal((html.match(/id="fx-theme"/g)||[]).length,1);
  }
 });
+test('the twelve visible tools use a six-column desktop grid',()=>{
+ const css=read('FAM.html');
+ assert.match(css,/\.tools-grid\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\);gap:10px;\}/);
+ assert.match(css,/@media \(max-width:1280px\)\{\s*\.cat-tiles\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);\}\s*\.tools-grid\{grid-template-columns:repeat\(6,minmax\(0,1fr\)\);\}/);
+});
+test('service selection buttons contain only the carrier name',()=>{
+ const html=read('FAM.html');
+ assert.doesNotMatch(html,/remove-service-detail|detail: "بایگانی/);
+ assert.match(html,/name: "مخابرات" \}/);
+ assert.match(html,/name: "مبین نت" \}/);
+ assert.match(html,/name: "آسیاتک" \}/);
+});
 test('original XLSM bytes remain untouched',()=>{
  const sha=crypto.createHash('sha256').update(fs.readFileSync('Mohsen_FINAL_v5.xlsm')).digest('hex');
  assert.equal(sha,'bf1d5519e8e47b79212ef7bfbb7f0a6585faf6ae8604fd1f73a3af2a3b89ed66');

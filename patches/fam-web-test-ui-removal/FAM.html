@@ -433,7 +433,7 @@ select.inp option{background:#0d1730;color:#f4eee1;}
 }
 
 /* ============ TOOLS GRID ============ */
-.tools-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
+.tools-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;}
 .tool-tile{
   background:var(--glass);border:1px solid var(--stroke);border-radius:var(--r-sm);
   padding:11px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;
@@ -711,14 +711,13 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .remove-match-field .remove-match-number{margin-top:6px;direction:ltr;text-align:center;font-family:var(--mono);font-weight:800;}
 .mbox .f .all{background:var(--grad-green);}
 .remove-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:15px;}
-.remove-service-button{min-height:94px;border:1px solid rgba(212,175,106,.25);border-radius:12px;padding:12px 9px;color:#fff;text-align:center;transition:.17s;box-shadow:0 10px 22px -13px rgba(0,0,0,.65);}
+.remove-service-button{min-height:72px;border:1px solid rgba(212,175,106,.25);border-radius:12px;padding:12px 9px;color:#fff;text-align:center;transition:.17s;box-shadow:0 10px 22px -13px rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;}
 .remove-service-button:hover,.remove-service-button:focus-visible{transform:translateY(-2px);filter:brightness(1.12);}
 .remove-service-button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 .remove-service-button.telecom{background:linear-gradient(135deg,#2374b4,#185280);}
 .remove-service-button.mabinnet{background:var(--grad-green);}
 .remove-service-button.asiatek{background:linear-gradient(135deg,#8e5db5,#65407f);}
 .remove-service-name{display:block;font-size:13px;font-weight:900;}
-.remove-service-detail{display:block;margin-top:7px;font-size:9.5px;line-height:1.7;opacity:.92;}
 /* Theme 1 modal copy must stay bright on the navy surface. The light theme
    supplies its own dark-on-white palette later in the document. */
 /* Every dark modal uses explicit high-contrast copy, not only the removal
@@ -1054,7 +1053,7 @@ body.fx-alt #fx-flare,body.fx-alt #fx-ghost,body.fx-alt #fx-leak{display:none;}
 table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 .cat-tiles{grid-template-columns:repeat(6,minmax(0,1fr));}
 .sheet-grid{grid-template-columns:repeat(auto-fill,minmax(min(218px,100%),1fr));}
-.tools-grid{grid-template-columns:repeat(5,minmax(0,1fr));}
+.tools-grid{grid-template-columns:repeat(6,minmax(0,1fr));}
 .page-title{min-width:0;}
 .icon-btn{flex:0 0 auto;}
 .stat-pill{max-width:100%;overflow:hidden;text-overflow:ellipsis;}
@@ -1143,6 +1142,9 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 }
 @media (max-width:1280px){
   .cat-tiles{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .tools-grid{grid-template-columns:repeat(6,minmax(0,1fr));}
+}
+@media (max-width:1000px) and (min-width:761px){
   .tools-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
 }
 @media (max-width:760px){
@@ -4398,17 +4400,15 @@ async function ChooseRemoveMatch(matchCount, searchValue, searchKey) {
 
 async function ChooseRemoveService() {
   const services = [
-    { id: 101, value: "1", className: "telecom", name: "مخابرات", detail: "بایگانی اصلی" },
-    { id: 102, value: "2", className: "mabinnet", name: "مبین نت", detail: "بایگانی اصلی + بایگانی مبین نت" },
-    { id: 103, value: "3", className: "asiatek", name: "آسیاتک", detail: "بایگانی اصلی + بایگانی آسیاتک" }
+    { id: 101, value: "1", className: "telecom", name: "مخابرات" },
+    { id: 102, value: "2", className: "mabinnet", name: "مبین نت" },
+    { id: 103, value: "3", className: "asiatek", name: "آسیاتک" }
   ];
   const buttons = services.map(service => el("button", {
     type: "button", "data-id": service.id,
     class: "remove-service-button " + service.className,
-    "aria-label": "انتخاب " + service.name + "؛ " + service.detail
-  },
-    el("span", { class: "remove-service-name", text: service.name }),
-    el("span", { class: "remove-service-detail", text: service.detail })));
+    "aria-label": "انتخاب " + service.name
+  }, el("span", { class: "remove-service-name", text: service.name })));
   const content = el("div", { class: "remove-choice-content" },
     el("p", { class: "remove-choice-intro", text: "نوع سرویس و محل بایگانی را انتخاب کنید." }),
     el("p", { class: "remove-choice-help", text: "با انتخاب هر گزینه، رکوردهای حذف‌شده در بایگانی نشان‌داده‌شده ثبت می‌شوند." }),
