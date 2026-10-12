@@ -1,11 +1,15 @@
 /* Central persistence adapter. The server, not browser storage, is authoritative.
    Snapshots are immutable per request; stale revisions never auto-rebase. */
 window.FamShared=(()=>{
-  let csrf='',revision=0,epoch='',ready=false,applying=false,clean='',queued=false,job=null,active=null,failure=null,polling=false,serverUserRevision='',transactionDepth=0,deferred=[],draftFailure=false;
+  let csrf='',revision=0,epoch='',ready=false,applying=false,clean='',queued=false,job=null,active=null,failure=null,polling=false,serverUserRevision='',transactionDepth=0,deferred=[],draftFailure=false,dismissedRevision=-1;
   const excluded=new Set([CP_SHEET,RESULTS_SHEET,IDX_SHEET,DD_SHEET,LOG_SHEET,UNDO_BUFFER_SHEET,NAV_SHEET_NAME]);
   const originalToast=Toast,originalMessage=ShowMsg;
   const status=el('div',{id:'shared-status',role:'status','aria-live':'polite',text:'اتصال به سرور…'});
-  document.body.append(status);
+  const liveMessage=el('p',{class:'live-update-message'});
+  const liveRefresh=el('button',{type:'button',class:'btn btn-primary live-update-reload',text:'دریافت نسخهٔ جدید',onclick:()=>receiveLiveUpdate(true).catch(()=>{})});
+  const liveLater=el('button',{type:'button',class:'btn btn-ghost live-update-later',text:'بعداً',onclick:()=>{dismissedRevision=Math.max(dismissedRevision,Number(liveNotice.dataset.revision||-1));hideLiveNotice();}});
+  const liveNotice=el('aside',{id:'live-update-notice',role:'status','aria-live':'assertive',hidden:true},liveMessage,el('div',{class:'live-update-actions'},liveRefresh,liveLater));
+  document.body.append(status,liveNotice);
   function pending(){return !!job||queued;}
   function snapshot(){
     const order=WB.order.filter(n=>!excluded.has(n));
@@ -106,18 +110,51 @@ window.FamShared=(()=>{
     else deferred=[];
     if(signature()!==clean)return flush();return true;
   }
+  function liveSummary(remote){
+    const actor=String(remote?.change?.actor||'').trim();
+    return actor?'کاربر «'+actor+'» تغییر جدیدی ثبت کرده است.':'تغییر جدیدی روی سرور ثبت شده است.';
+  }
+  function hasUnsavedWork(){return pending()||signature()!==clean;}
+  function liveApplyBlocked(){
+    return hasUnsavedWork()||!!document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]');
+  }
+  function hideLiveNotice(){liveNotice.hidden=true;liveNotice.dataset.revision='';}
+  function announceLiveUpdate(remote){
+    if(Number(remote.revision)<=dismissedRevision)return;
+    liveNotice.dataset.revision=String(remote.revision);
+    liveMessage.textContent=liveSummary(remote)+' نسخهٔ '+Number(remote.revision).toLocaleString('fa-IR')+' آمادهٔ دریافت است.';
+    liveNotice.hidden=false;
+  }
+  async function receiveLiveUpdate(force=false,remote=null){
+    if(!remote)remote=await api('status');
+    if(remote.revision===revision&&remote.epoch===epoch){hideLiveNotice();return true;}
+    if(pending()){text('ابتدا ثبت فعلی روی سرور تأیید شود.');return false;}
+    if(signature()!==clean){
+      if(!force){announceLiveUpdate(remote);return false;}
+      if(!confirm('تغییر ثبت‌نشدهٔ این صفحه کنار گذاشته شود و نسخهٔ جدید سرور دریافت شود؟'))return false;
+      queued=false;job=null;
+    }
+    if(!force&&(document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))){announceLiveUpdate(remote);return false;}
+    const data=await api('state');
+    // Never overwrite a mutation that happened while the server snapshot was
+    // in flight. The visible notification remains available instead.
+    if(!force&&liveApplyBlocked()){announceLiveUpdate(remote);return false;}
+    const y=scrollY;apply(data,true);scrollTo({top:y,behavior:'instant'});
+    dismissedRevision=-1;hideLiveNotice();
+    originalToast(liveSummary(remote)+' نسخهٔ جدید دریافت شد.','ok');
+    return true;
+  }
   async function poll(){
     if(!ready||polling||failure||pending()||document.hidden)return;
     polling=true;
     try{
       const remote=await api('status');
       if(remote.userRevision!==serverUserRevision){const e=Error('حساب یا دسترسی شما تغییر کرده است؛ دوباره وارد شوید.');e.status=401;throw e;}
-      if(remote.revision===revision&&remote.epoch===epoch){text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');return;}
-      if(document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]')||signature()!==clean){text('دادهٔ تازه روی سرور موجود است؛ پس از پایان کار فعلی دریافت می‌شود.');return;}
-      const data=await api('state');
-      // A local edit or modal may have opened while the read was in flight.
-      if(pending()||signature()!==clean||document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))return;
-      const y=scrollY;apply(data,true);scrollTo({top:y,behavior:'instant'});
+      if(remote.revision===revision&&remote.epoch===epoch){hideLiveNotice();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');return;}
+      if(liveApplyBlocked()){
+        text(liveSummary(remote)+' پس از پایان کار فعلی دریافت می‌شود.');announceLiveUpdate(remote);return;
+      }
+      await receiveLiveUpdate(false,remote);
     }catch(err){
       text(err.message,true);
       if(err.status===401||err.status===403){failure=err;freeze(err.message,err);}

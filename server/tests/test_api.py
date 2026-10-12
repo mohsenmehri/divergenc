@@ -35,6 +35,18 @@ class CentralTests(unittest.TestCase):
         self.assertEqual(self.state(b)['state']['sheets']['Network']['rows'][1][1],'CENTRAL')
         self.app=create_app(self.config);c=self.login('admin')
         self.assertEqual(self.state(c)['state']['sheets']['Network']['rows'][1][1],'CENTRAL')
+    def test_live_status_reports_new_revision_without_leaking_restricted_actor(self):
+        other=self.login('admin');before=other.get('/api/status').json
+        p=self.state();p['state']['sheets']['Network']['rows'][1][1]='LIVE'
+        self.assertEqual(self.save(self.a,p).status_code,200)
+        notice=other.get('/api/status').json
+        self.assertEqual(notice['revision'],before['revision']+1)
+        self.assertEqual(notice['change']['revision'],notice['revision'])
+        self.assertEqual(notice['change']['actor'],'admin')
+        self.assertIsInstance(notice['change']['at'],int)
+        viewer=self.user(4,regions=['2'],sheets=['Network'])
+        self.assertNotIn('actor',viewer.get('/api/status').json['change'])
+
     def test_stale_and_epoch_conflicts_no_overwrite(self):
         stale=self.state();p=copy.deepcopy(stale);p['state']['sheets']['Network']['rows'][1][1]='FIRST'
         self.assertEqual(self.save(self.a,p).status_code,200)

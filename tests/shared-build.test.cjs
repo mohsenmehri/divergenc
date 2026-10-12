@@ -20,9 +20,17 @@ test('light theme only paints: no DOM relocation, box geometry or background sho
  assert.doesNotMatch(html,/id="fam-operations-js"/);
  assert.match(css,/#fx-stage[^}]*opacity:0!important/);
 });
+test('central client announces remote server revisions without overwriting local work',()=>{
+ const html=read('server/www/FAM.html'),sync=read('src/shared-sync.js');
+ assert.match(sync,/live-update-notice/);assert.match(sync,/دریافت نسخهٔ جدید/);
+ assert.match(sync,/function hasUnsavedWork\(\)/);assert.match(sync,/if\(signature\(\)!==clean\)/);
+ assert.match(sync,/change\?\.actor/);assert.match(html,/id:'live-update-notice'/);
+});
 test('light sidebar clears the dark gradient and hides only theme-1 background controls',()=>{
  const palette=read('src/light-palette.css'),shared=read('src/ui-theme.css');
  assert.match(palette,/#sidebar\{[^}]*background-image:none/);
+ assert.match(palette,/html\[data-ui-theme="light"\] select[^\{]*\{color-scheme:light!important;/);
+ assert.match(palette,/\.inp option,.inp optgroup,#fx-theme option\{background-color:#fff!important;color:#233e53!important;color-scheme:light!important;\}/);
  assert.match(shared,/html\[data-ui-theme="light"\] #sidebar \.side-foot > \.fx-bar\{display:none!important;\}/);
  for(const file of ['FAM.html','server/www/FAM.html']){
   const html=read(file);

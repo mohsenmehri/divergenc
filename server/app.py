@@ -356,8 +356,17 @@ def create_app(config=None):
         return jsonify(ok=True)
     @app.get('/api/status')
     def status():
-        with connect() as db:row=db.execute('SELECT revision,epoch FROM state WHERE id=1').fetchone()
-        return jsonify(revision=row['revision'],epoch=row['epoch'],userRevision=g.user['revision'])
+        # This intentionally exposes only a small, permission-safe change
+        # notice. The browser uses it to announce a new central revision;
+        # business data itself remains available only through /api/state.
+        with connect() as db:
+            row=db.execute('SELECT revision,epoch FROM state WHERE id=1').fetchone()
+            audit=db.execute('SELECT actor,at FROM audit WHERE revision=?',(row['revision'],)).fetchone()
+        change={'revision':row['revision'],'at':audit['at'] if audit else None}
+        # Level 4 accounts may receive redacted state, so do not disclose the
+        # name of a colleague who changed data outside their permitted scope.
+        if audit and g.user['role']<=3:change['actor']=audit['actor']
+        return jsonify(revision=row['revision'],epoch=row['epoch'],userRevision=g.user['revision'],change=change)
     @app.get('/api/state')
     def state():
         with connect() as db:

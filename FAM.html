@@ -334,7 +334,8 @@ html.menu-open #layout{padding-right:calc(var(--sidebar-w) + var(--sidebar-float
 .btn-primary svg{stroke:#241703;}
 .btn-green{background:var(--grad-green);box-shadow:0 10px 24px -10px rgba(5,150,105,.6);}
 .btn-red{background:var(--grad-red);box-shadow:0 10px 24px -10px rgba(225,29,72,.55);}
-.btn-amber{background:var(--grad-amber);box-shadow:0 10px 24px -10px rgba(249,115,22,.55);}
+.btn-amber{background:var(--grad-amber);color:#241703;box-shadow:0 10px 24px -10px rgba(249,115,22,.55);}
+.btn-amber svg{stroke:currentColor;}
 .btn-violet{background:var(--grad-violet);box-shadow:0 10px 24px -10px rgba(124,58,237,.55);}
 .btn-ghost{
   background:var(--glass);border:1px solid var(--stroke-2);color:var(--txt-0);
@@ -718,6 +719,13 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .remove-service-button.asiatek{background:linear-gradient(135deg,#8e5db5,#65407f);}
 .remove-service-name{display:block;font-size:13px;font-weight:900;}
 .remove-service-detail{display:block;margin-top:7px;font-size:9.5px;line-height:1.7;opacity:.92;}
+/* Theme 1 modal copy must stay bright on the navy surface. The light theme
+   supplies its own dark-on-white palette later in the document. */
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .c,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-intro,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-help,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-meta,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-match-field{color:#f7fbff;}
 @media(max-width:520px){.remove-service-grid{grid-template-columns:1fr;}.remove-service-button{min-height:0;}.mbox .f{flex-wrap:wrap;}.mbox .f button{flex:1 1 130px;padding-inline:12px;}}
 
 /* ============ TOASTS ============ */
@@ -1448,9 +1456,14 @@ body{background-color:var(--bg-0);color:var(--txt-0);}
 .fold-btn{background-color:#f8fafc;color:#688294;border-color:#e4ebf2;}
 #fold-ops .grid-add>.card:first-child{background-color:#fbfdfd;}
 .field label,.exact-label{color:#50677d;}
-.inp,input.inp,select.inp,.field input,.field select,.field textarea{background-color:#fff;color:#263f54;}
+/* Native Windows select popups honour color-scheme more reliably than option
+   paint alone. Apply the light scheme directly to every form control so an
+   opened list never falls back to the original navy palette. */
+html[data-ui-theme="light"],html[data-ui-theme="light"] select,html[data-ui-theme="light"] option,html[data-ui-theme="light"] optgroup,html[data-ui-theme="light"] input,html[data-ui-theme="light"] textarea{color-scheme:light!important;}
+.inp,input.inp,select.inp,.field input,.field select,.field textarea,#fx-theme{background-color:#fff!important;color:#263f54!important;}
 .inp:focus,.field input:focus,.field select:focus{border-color:#299a96;}
-.inp option,.inp optgroup{background-color:#fff;color:#233e53;}
+.inp option,.inp optgroup,#fx-theme option{background-color:#fff!important;color:#233e53!important;color-scheme:light!important;}
+.inp option:checked,#fx-theme option:checked{background-color:#e7f4f1!important;color:#163b50!important;}
 .hint,.dash-note{color:#76889a;}
 .btn-primary{background-color:#087f83;color:#fff;}
 .btn-green{background-color:#147b5b;color:#fff;}

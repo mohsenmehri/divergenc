@@ -334,7 +334,8 @@ html.menu-open #layout{padding-right:calc(var(--sidebar-w) + var(--sidebar-float
 .btn-primary svg{stroke:#241703;}
 .btn-green{background:var(--grad-green);box-shadow:0 10px 24px -10px rgba(5,150,105,.6);}
 .btn-red{background:var(--grad-red);box-shadow:0 10px 24px -10px rgba(225,29,72,.55);}
-.btn-amber{background:var(--grad-amber);box-shadow:0 10px 24px -10px rgba(249,115,22,.55);}
+.btn-amber{background:var(--grad-amber);color:#241703;box-shadow:0 10px 24px -10px rgba(249,115,22,.55);}
+.btn-amber svg{stroke:currentColor;}
 .btn-violet{background:var(--grad-violet);box-shadow:0 10px 24px -10px rgba(124,58,237,.55);}
 .btn-ghost{
   background:var(--glass);border:1px solid var(--stroke-2);color:var(--txt-0);
@@ -718,6 +719,13 @@ table.xl td[contenteditable]:focus{outline:none;background:rgba(250,204,21,.12);
 .remove-service-button.asiatek{background:linear-gradient(135deg,#8e5db5,#65407f);}
 .remove-service-name{display:block;font-size:13px;font-weight:900;}
 .remove-service-detail{display:block;margin-top:7px;font-size:9.5px;line-height:1.7;opacity:.92;}
+/* Theme 1 modal copy must stay bright on the navy surface. The light theme
+   supplies its own dark-on-white palette later in the document. */
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .c,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-intro,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-help,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-choice-meta,
+html:not([data-ui-theme="light"]) .mbox.remove-choice-modal .remove-match-field{color:#f7fbff;}
 @media(max-width:520px){.remove-service-grid{grid-template-columns:1fr;}.remove-service-button{min-height:0;}.mbox .f{flex-wrap:wrap;}.mbox .f button{flex:1 1 130px;padding-inline:12px;}}
 
 /* ============ TOASTS ============ */
@@ -1448,9 +1456,14 @@ body{background-color:var(--bg-0);color:var(--txt-0);}
 .fold-btn{background-color:#f8fafc;color:#688294;border-color:#e4ebf2;}
 #fold-ops .grid-add>.card:first-child{background-color:#fbfdfd;}
 .field label,.exact-label{color:#50677d;}
-.inp,input.inp,select.inp,.field input,.field select,.field textarea{background-color:#fff;color:#263f54;}
+/* Native Windows select popups honour color-scheme more reliably than option
+   paint alone. Apply the light scheme directly to every form control so an
+   opened list never falls back to the original navy palette. */
+html[data-ui-theme="light"],html[data-ui-theme="light"] select,html[data-ui-theme="light"] option,html[data-ui-theme="light"] optgroup,html[data-ui-theme="light"] input,html[data-ui-theme="light"] textarea{color-scheme:light!important;}
+.inp,input.inp,select.inp,.field input,.field select,.field textarea,#fx-theme{background-color:#fff!important;color:#263f54!important;}
 .inp:focus,.field input:focus,.field select:focus{border-color:#299a96;}
-.inp option,.inp optgroup{background-color:#fff;color:#233e53;}
+.inp option,.inp optgroup,#fx-theme option{background-color:#fff!important;color:#233e53!important;color-scheme:light!important;}
+.inp option:checked,#fx-theme option:checked{background-color:#e7f4f1!important;color:#163b50!important;}
 .hint,.dash-note{color:#76889a;}
 .btn-primary{background-color:#087f83;color:#fff;}
 .btn-green{background-color:#147b5b;color:#fff;}
@@ -1650,6 +1663,9 @@ html[data-ui-theme="light"] #sidebar .side-foot > .fx-bar{display:none!important
 #shared-block{position:fixed;inset:0;background:#101b35a6;z-index:50000;display:grid;place-items:center;padding:18px;}
 .shared-box{width:min(530px,100%);max-height:90vh;overflow:auto;background:var(--bg-1);color:var(--txt-0);border:1px solid var(--stroke-2);border-radius:14px;padding:26px;box-shadow:0 18px 70px #0004;}
 .shared-box h3{font-size:18px;margin:0 0 16px;}.shared-box p{font-size:12px;line-height:2;}.shared-box .btn{margin:10px 0 0 8px;}
+#live-update-notice{position:fixed;top:18px;inset-inline-start:50%;transform:translateX(-50%);z-index:1800;width:min(560px,calc(100vw - 32px));padding:14px 16px;background:var(--bg-1);color:var(--txt-0);border:1px solid var(--cyan);border-radius:12px;box-shadow:0 16px 42px #0005;font:13px var(--font);text-align:right;direction:rtl;}
+#live-update-notice[hidden]{display:none;}.live-update-message{margin:0;line-height:1.8;}.live-update-actions{display:flex;gap:8px;justify-content:flex-start;margin-top:11px;}.live-update-actions .btn{margin:0;min-height:34px;}
+@media(max-width:560px){#live-update-notice{top:10px;padding:12px;}.live-update-actions{flex-wrap:wrap;}.live-update-actions .btn{flex:1 1 130px;}}
 
 </style>
 </head>
@@ -8457,11 +8473,15 @@ async function startProvinceAdd(selectedName) {
 /* Central persistence adapter. The server, not browser storage, is authoritative.
    Snapshots are immutable per request; stale revisions never auto-rebase. */
 window.FamShared=(()=>{
-  let csrf='',revision=0,epoch='',ready=false,applying=false,clean='',queued=false,job=null,active=null,failure=null,polling=false,serverUserRevision='',transactionDepth=0,deferred=[],draftFailure=false;
+  let csrf='',revision=0,epoch='',ready=false,applying=false,clean='',queued=false,job=null,active=null,failure=null,polling=false,serverUserRevision='',transactionDepth=0,deferred=[],draftFailure=false,dismissedRevision=-1;
   const excluded=new Set([CP_SHEET,RESULTS_SHEET,IDX_SHEET,DD_SHEET,LOG_SHEET,UNDO_BUFFER_SHEET,NAV_SHEET_NAME]);
   const originalToast=Toast,originalMessage=ShowMsg;
   const status=el('div',{id:'shared-status',role:'status','aria-live':'polite',text:'اتصال به سرور…'});
-  document.body.append(status);
+  const liveMessage=el('p',{class:'live-update-message'});
+  const liveRefresh=el('button',{type:'button',class:'btn btn-primary live-update-reload',text:'دریافت نسخهٔ جدید',onclick:()=>receiveLiveUpdate(true).catch(()=>{})});
+  const liveLater=el('button',{type:'button',class:'btn btn-ghost live-update-later',text:'بعداً',onclick:()=>{dismissedRevision=Math.max(dismissedRevision,Number(liveNotice.dataset.revision||-1));hideLiveNotice();}});
+  const liveNotice=el('aside',{id:'live-update-notice',role:'status','aria-live':'assertive',hidden:true},liveMessage,el('div',{class:'live-update-actions'},liveRefresh,liveLater));
+  document.body.append(status,liveNotice);
   function pending(){return !!job||queued;}
   function snapshot(){
     const order=WB.order.filter(n=>!excluded.has(n));
@@ -8562,18 +8582,51 @@ window.FamShared=(()=>{
     else deferred=[];
     if(signature()!==clean)return flush();return true;
   }
+  function liveSummary(remote){
+    const actor=String(remote?.change?.actor||'').trim();
+    return actor?'کاربر «'+actor+'» تغییر جدیدی ثبت کرده است.':'تغییر جدیدی روی سرور ثبت شده است.';
+  }
+  function hasUnsavedWork(){return pending()||signature()!==clean;}
+  function liveApplyBlocked(){
+    return hasUnsavedWork()||!!document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]');
+  }
+  function hideLiveNotice(){liveNotice.hidden=true;liveNotice.dataset.revision='';}
+  function announceLiveUpdate(remote){
+    if(Number(remote.revision)<=dismissedRevision)return;
+    liveNotice.dataset.revision=String(remote.revision);
+    liveMessage.textContent=liveSummary(remote)+' نسخهٔ '+Number(remote.revision).toLocaleString('fa-IR')+' آمادهٔ دریافت است.';
+    liveNotice.hidden=false;
+  }
+  async function receiveLiveUpdate(force=false,remote=null){
+    if(!remote)remote=await api('status');
+    if(remote.revision===revision&&remote.epoch===epoch){hideLiveNotice();return true;}
+    if(pending()){text('ابتدا ثبت فعلی روی سرور تأیید شود.');return false;}
+    if(signature()!==clean){
+      if(!force){announceLiveUpdate(remote);return false;}
+      if(!confirm('تغییر ثبت‌نشدهٔ این صفحه کنار گذاشته شود و نسخهٔ جدید سرور دریافت شود؟'))return false;
+      queued=false;job=null;
+    }
+    if(!force&&(document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))){announceLiveUpdate(remote);return false;}
+    const data=await api('state');
+    // Never overwrite a mutation that happened while the server snapshot was
+    // in flight. The visible notification remains available instead.
+    if(!force&&liveApplyBlocked()){announceLiveUpdate(remote);return false;}
+    const y=scrollY;apply(data,true);scrollTo({top:y,behavior:'instant'});
+    dismissedRevision=-1;hideLiveNotice();
+    originalToast(liveSummary(remote)+' نسخهٔ جدید دریافت شد.','ok');
+    return true;
+  }
   async function poll(){
     if(!ready||polling||failure||pending()||document.hidden)return;
     polling=true;
     try{
       const remote=await api('status');
       if(remote.userRevision!==serverUserRevision){const e=Error('حساب یا دسترسی شما تغییر کرده است؛ دوباره وارد شوید.');e.status=401;throw e;}
-      if(remote.revision===revision&&remote.epoch===epoch){text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');return;}
-      if(document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]')||signature()!==clean){text('دادهٔ تازه روی سرور موجود است؛ پس از پایان کار فعلی دریافت می‌شود.');return;}
-      const data=await api('state');
-      // A local edit or modal may have opened while the read was in flight.
-      if(pending()||signature()!==clean||document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))return;
-      const y=scrollY;apply(data,true);scrollTo({top:y,behavior:'instant'});
+      if(remote.revision===revision&&remote.epoch===epoch){hideLiveNotice();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');return;}
+      if(liveApplyBlocked()){
+        text(liveSummary(remote)+' پس از پایان کار فعلی دریافت می‌شود.');announceLiveUpdate(remote);return;
+      }
+      await receiveLiveUpdate(false,remote);
     }catch(err){
       text(err.message,true);
       if(err.status===401||err.status===403){failure=err;freeze(err.message,err);}
