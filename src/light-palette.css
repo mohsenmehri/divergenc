@@ -57,8 +57,9 @@ html[data-ui-theme="light"],html[data-ui-theme="light"] select,html[data-ui-them
 .btn-primary{background-color:#087f83;color:#fff;}
 .btn-green{background-color:#147b5b;color:#fff;}
 .btn-red{background-color:#bd4050;color:#fff;}
-.btn-amber{background-color:#fff4d6;color:#6e4800;border-color:#e1b951;}
-.btn-amber:hover,.btn-amber:focus-visible{background-color:#f7df9c;color:#563900;}
+/* «برگشت» and every amber action must read as yellow, not washed-out cream. */
+.btn-amber{background-color:#f5c542;color:#241703!important;border-color:#d69f11;}
+.btn-amber:hover,.btn-amber:focus-visible{background-color:#e7b52d;color:#241703!important;}
 .btn-amber svg{stroke:currentColor;}
 .btn-ghost{background-color:#fff;color:#536c80;}
 .btn-ghost:hover{background-color:#f3f8fa;color:#087f83;}
@@ -101,9 +102,14 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .block-table tr:hover td{background-color:#eff9f6;}
 .block-table td .cell-in{color:#263f54;}
 .block-sep{background-color:#f2f6f8;}
-.mbox{background-color:#fff;color:#233d52;border-color:#d5e2ec;}
-.mbox .t{background-color:#f1f6f9;color:#2c4f65;border-color:#e0e9f0;}
-.mbox .c{color:#344e62;}
+/* ModalBox starts life with a navy gradient. In Theme 2, clearing only its
+   background colour leaves that gradient visible underneath, so clear every
+   background image and make all message copy explicitly dark-on-white. */
+.mbox{background-color:#fff!important;background-image:none!important;color:#203c52!important;border-color:#d5e2ec;}
+.mbox .t{background-color:#f6f9fb!important;background-image:none!important;color:#203c52!important;border-color:#e0e9f0;}
+.mbox .t .x,.mbox .c,.mbox .c p,.mbox .c label,.mbox .c .hint{color:#2b465a!important;}
+.shared-box{background-color:#fff!important;background-image:none!important;color:#203c52!important;}
+.shared-box h3,.shared-box p,.shared-box .hint{color:#2b465a!important;}
 .remove-choice-intro{color:#203d52;}
 .remove-choice-help{color:#5e7486;}
 .remove-choice-meta{color:#687f91;}
@@ -123,10 +129,10 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .access-login{background-color:#fff;color:#233f54;border-color:#d8e4ed;}
 .access-login h2{color:#176e72;}
 .access-login .hint{color:#768b9d;}
-/* Notifications intentionally retain the strong navy treatment in Theme 2.
-   A light page must not make a transient success/error announcement disappear. */
-.toast,#live-update-notice{background-color:#132043!important;color:#f7fbff!important;border-color:#4d638a!important;}
-.toast *,#live-update-notice .live-update-message{color:#f7fbff!important;}
+/* Every Theme-2 announcement is light as well: transient toast, central
+   update notice and blocking shared-server message all use black-on-white. */
+.toast,#live-update-notice{background-color:#fff!important;background-image:none!important;color:#203c52!important;border-color:#c9d9e4!important;}
+.toast *,#live-update-notice .live-update-message{color:#203c52!important;}
 #live-update-notice .btn-ghost{background-color:#f8fafc;color:#1e3850;}
 #live-update-notice .btn-ghost:hover,#live-update-notice .btn-ghost:focus-visible{background-color:#dcebf0;color:#102c43;}
 .act-badge{color:#466274;}

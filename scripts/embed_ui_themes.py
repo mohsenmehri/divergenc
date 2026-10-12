@@ -7,9 +7,11 @@ s = p.read_text()
 for name, ext, tag, marker, attrs in [
     ('operations-ui', 'css', 'style', '</head>', ' media="not all"'),
     ('ui-theme', 'css', 'style', '</head>', ''),
+    ('theme-select', 'css', 'style', '</head>', ''),
     ('ui-theme', 'js', 'script', '</head>', ''),
+    ('theme-select', 'js', 'script', '</head>', ''),
 ]:
-    block_id = 'fam-operations-' + ext if name == 'operations-ui' else 'fam-ui-theme-' + ext
+    block_id = 'fam-operations-' + ext if name == 'operations-ui' else 'fam-' + name + '-' + ext
     content = (root / ('src/light-palette.css' if name == 'operations-ui' else f'src/{name}.{ext}')).read_text()
     block = f'<{tag} id="{block_id}"{attrs}>\n{content}</{tag}>'
     pattern = rf'<{tag} id="{block_id}"[^>]*>.*?</{tag}>'

@@ -40,7 +40,8 @@ test('light sidebar clears the dark gradient and hides only theme-1 background c
  assert.match(palette,/html\[data-ui-theme="light"\] select[^\{]*\{color-scheme:light!important;/);
  assert.match(palette,/\.inp option,.inp optgroup,#fx-theme option\{background-color:#fff!important;color:#233e53!important;color-scheme:light!important;\}/);
  assert.match(palette,/html\[data-ui-theme="light"\] select option:hover,/);
- assert.match(palette,/\.toast,#live-update-notice\{background-color:#132043!important;color:#f7fbff!important/);
+ assert.match(palette,/\.toast,#live-update-notice\{background-color:#fff!important;background-image:none!important;color:#203c52!important/);
+ assert.match(palette,/\.mbox\{background-color:#fff!important;background-image:none!important;color:#203c52!important/);
  assert.match(shared,/html\[data-ui-theme="light"\] #sidebar \.side-foot > \.fx-bar\{display:none!important;\}/);
  for(const file of ['FAM.html','server/www/FAM.html']){
   const html=read(file);
