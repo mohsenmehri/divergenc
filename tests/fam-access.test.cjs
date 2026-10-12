@@ -42,6 +42,7 @@ test('standalone entry points check the capability and selected sheet scope',()=
   assert.match(html,/Access\.can\(\"export\", name\)/);
   assert.match(html,/Access\.can\(\"backup\",name\)/);
   assert.match(html,/function canViewLogEntry\(row\)/);
+  assert.match(html,/!!WB\.sheets\[sheet\] && IsDataSheet\(sheet\)/);
   assert.match(html,/Access\.can\(\"global-history\"\)/);
   assert.match(html,/Access\.require\(\"manage-regions\"\)/);
   assert.match(html,/Access\.require\(\"manage-categories\"\)/);

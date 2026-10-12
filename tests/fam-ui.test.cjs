@@ -25,6 +25,7 @@ after(async()=>{await browser?.close();await new Promise(resolve=>server.close(r
 test('dynamic user form stores IDs, enforces scope, tracks category changes, and paints requested controls',async()=>{
   await page.goto(url);await page.locator('#auth-password').waitFor();await login();
   assert.equal(await page.evaluate(()=>Access.can('global-history')),true);
+  assert.equal(await page.evaluate(()=>{WriteChangeLog('IMPORT','-','-','SUCCESS','رویداد سراسری');renderLogView();return document.querySelector('#log-body').innerText.includes('IMPORT');}),true);
   await page.evaluate(()=>importValidatedSheets(['شبکه آزمایشی','تهران','فارس'],{
     'شبکه آزمایشی':{rows:[['ID','Name'],['N1','NETWORK']],merges:[]},
     'تهران':{rows:[['ID','Name'],['T1','TEHRAN']],merges:[]},

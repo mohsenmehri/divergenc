@@ -3313,7 +3313,11 @@ function sheetToCSV(name) {
 /* ---------- change log view ---------- */
 function canViewLogEntry(row) {
   const sheet = String((row || [])[2] || '');
-  return IsDataSheet(sheet) ? Access.can("view-history", sheet) : Access.can("global-history");
+  // A log's Sheet column may be "-" (IMPORT/RESET) or a module name (ERROR).
+  // IsDataSheet alone treats those strings as ordinary names, so require a
+  // real workbook sheet before applying the category/region sheet scope.
+  const isWorkbookDataSheet = !!WB.sheets[sheet] && IsDataSheet(sheet);
+  return isWorkbookDataSheet ? Access.can("view-history", sheet) : Access.can("global-history");
 }
 function renderLogView() {
   if (!Access.require("view-history")) return false;
