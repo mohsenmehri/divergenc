@@ -1117,7 +1117,10 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 .grid-add > .card:nth-child(2)::before{background:linear-gradient(90deg,transparent,#22c55e,transparent);}
 .grid-add > .card:nth-child(3)::before{background:linear-gradient(90deg,transparent,#ef4444,transparent);}
 .grid-add .card-body{flex:1;display:flex;flex-direction:column;gap:12px;}
-.grid-add .card-body > :last-child{margin-top:auto;}
+/* The explicit action row—not a transient access notice—is pinned to the
+   shared baseline. This keeps Search, Add and Remove in one horizontal row
+   in both themes even after Access.hideOperations() appends a hidden notice. */
+.grid-add .card-body > .operation-primary-action{margin-top:auto;}
 .grid-add .search-rows{grid-template-columns:1fr 1fr;}
 .grid-add .exact-wrap{
   margin-top:0;padding:8px 10px;border:1px solid var(--stroke);border-radius:12px;
@@ -2185,7 +2188,7 @@ html[data-fam-variant="shared"] #shared-status{display:none!important;}
                   <div class="hint">روشن = دقیقاً برابر / خاموش = شامل عبارت</div>
                 </div>
               </div>
-              <button class="btn btn-primary btn-block" data-act="run-macro" data-arg="modSearchEngine.SearchRecords">
+              <button class="btn btn-primary btn-block operation-primary-action" data-act="run-macro" data-arg="modSearchEngine.SearchRecords">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                 جستجو
               </button>
@@ -2209,7 +2212,7 @@ html[data-fam-variant="shared"] #shared-status{display:none!important;}
                 <select class="inp" id="cp-c16"></select>
               </div>
               <div class="hint">برای بخش‌های استانی، شعبه یا خودپرداز را انتخاب کنید؛ داده در شیت همان بخش استان ذخیره می‌شود.</div>
-              <button class="btn btn-green btn-block" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
+              <button class="btn btn-green btn-block operation-primary-action" data-act="run-macro" data-arg="modAddRecord.StartAddWizard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
                 اضافه کردن داده
               </button>
@@ -2240,7 +2243,7 @@ html[data-fam-variant="shared"] #shared-status{display:none!important;}
                 <label>مقدار جستجو</label>
                 <input class="inp" type="text" id="cp-c27" placeholder="مقدار مورد حذف…">
               </div>
-              <div style="display:flex;gap:9px">
+              <div class="operation-primary-action" style="display:flex;gap:9px">
                 <button class="btn btn-red" style="flex:1" data-act="run-macro" data-arg="modRemoveRecord.StartRemoveWizard">پاک کردن داده</button>
                 <button class="btn btn-amber" data-act="run-macro" data-arg="modUndo.UndoLastRemove" title="بازگردانی آخرین حذف">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>

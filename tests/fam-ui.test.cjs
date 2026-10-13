@@ -22,6 +22,26 @@ before(async()=>{
 });
 after(async()=>{await browser?.close();await new Promise(resolve=>server.close(resolve));});
 
+function assertOperationActionBaseline(rows,label){
+  assert.equal(rows.length,3,label+' action count');
+  const tops=rows.map(row=>row.top),bottoms=rows.map(row=>row.bottom);
+  assert.ok(Math.max(...tops)-Math.min(...tops)<=1,label+' action top alignment');
+  assert.ok(Math.max(...bottoms)-Math.min(...bottoms)<=1,label+' action bottom alignment');
+}
+
+test('search, add, and remove actions share one horizontal baseline in both themes',async()=>{
+  await page.goto(url);await page.locator('#auth-password').waitFor();await login();
+  const rows=()=>page.evaluate(()=>[...document.querySelectorAll('#fold-ops .grid-add > .card > .card-body > .operation-primary-action')]
+    .map(node=>{const box=node.getBoundingClientRect();return {top:box.top,bottom:box.bottom};}));
+  assertOperationActionBaseline(await rows(),'theme one');
+  await page.evaluate(()=>FamTheme.set('light'));
+  assertOperationActionBaseline(await rows(),'theme two');
+  await page.evaluate(()=>FamTheme.set('original'));
+  assert.deepEqual(errors,[]);
+  // Keep this presentation-only check independent from the account workflow below.
+  await page.evaluate(()=>{localStorage.clear();sessionStorage.clear();});
+});
+
 test('dynamic user form stores IDs, enforces scope, tracks category changes, and paints requested controls',async()=>{
   await page.goto(url);await page.locator('#auth-password').waitFor();await login();
   assert.equal(await page.evaluate(()=>Access.can('global-history')),true);

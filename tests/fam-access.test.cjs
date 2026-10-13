@@ -76,6 +76,14 @@ test('ordinary categories have region-like editable sections without deleting th
   assert.match(access,/\['manage-categories','manage-category-sections'\]/);
 });
 
+test('search, add, and remove controls have an explicit shared action row',()=>{
+  const html=read('FAM.html');
+  const actionRows=html.match(/class="[^"]*operation-primary-action[^"]*"/g)||[];
+  assert.equal(actionRows.length,3);
+  assert.match(html,/\.grid-add \.card-body > \.operation-primary-action\{margin-top:auto;\}/);
+  assert.doesNotMatch(html,/\.grid-add \.card-body > :last-child\{margin-top:auto;\}/);
+});
+
 test('denied dashboard sections retain their heading but reveal only the explicit access notice',()=>{
   const access=read('src/local-access.js'),css=read('src/local-access.css'),html=read('FAM.html');
   assert.match(access,/const DENIED_TEXT='شما دسترسی به این بخش ندارید\.'/);
