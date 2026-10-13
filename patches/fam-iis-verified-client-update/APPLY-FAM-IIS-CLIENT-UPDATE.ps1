@@ -39,6 +39,14 @@ function Assert-Payload([string]$Path,[string]$RelativePath) {
     $actual=(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actual -ne (Get-PayloadHash $RelativePath)) { throw "Patch payload checksum failed: $RelativePath. Extract the ZIP again and do not continue." }
 }
+function Get-IISBindingHost([object]$Binding) {
+    # WebAdministration binding objects on Server 2019 do not consistently
+    # expose HostHeader. bindingInformation is stable: IP:port:host-header.
+    $info=[string]$Binding.bindingInformation
+    $separator=$info.LastIndexOf(':')
+    if ($separator -lt 0) { return '' }
+    return $info.Substring($separator+1).Trim()
+}
 function Get-ConfiguredSite {
     if ($SiteName) {
         $selected=Get-Website -Name $SiteName -ErrorAction SilentlyContinue
@@ -48,7 +56,7 @@ function Get-ConfiguredSite {
     $matches=@()
     foreach ($candidate in @(Get-Website)) {
         $bindings=@(Get-WebBinding -Name $candidate.Name -Protocol https -ErrorAction SilentlyContinue)
-        if (@($bindings | Where-Object { $_.HostHeader -and $_.HostHeader.Trim().ToLowerInvariant() -eq $HostName.Trim().ToLowerInvariant() }).Count) { $matches+=$candidate }
+        if (@($bindings | Where-Object { $bindingHost=Get-IISBindingHost $_; $bindingHost -and $bindingHost.ToLowerInvariant() -eq $HostName.Trim().ToLowerInvariant() }).Count) { $matches+=$candidate }
     }
     if ($matches.Count -eq 1) { return $matches[0] }
     if ($matches.Count -gt 1) { throw "More than one IIS site has the HTTPS host binding '$HostName'. No file was changed." }

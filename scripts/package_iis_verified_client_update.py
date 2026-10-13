@@ -11,7 +11,7 @@ expected=''.join(f'{digest}  {name}\n' for name,digest in manifest.items())
 if (payload/'SHA256SUMS.txt').read_text(encoding='utf8')!=expected:
     raise SystemExit('payload/SHA256SUMS.txt does not match the payload; rebuild or inspect it first.')
 files=sorted(path for path in source.rglob('*') if path.is_file())
-output=root/'releases'/'FAM-IIS-Verified-UI17-Update.zip'
+output=root/'releases'/'FAM-IIS-Verified-UI17.1-Update.zip'
 output.parent.mkdir(exist_ok=True)
 with ZipFile(output,'w',ZIP_DEFLATED,compresslevel=9) as archive:
     for path in files:

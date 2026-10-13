@@ -106,6 +106,8 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertTrue((patch/'APPLY-FAM-IIS-CLIENT-UPDATE.cmd').is_file())
         self.assertIn('Get-Website',script)
         self.assertIn('Get-WebBinding',script)
+        self.assertIn('bindingInformation',script)
+        self.assertNotIn('.HostHeader',script)
         self.assertIn('physicalPath',script)
         self.assertIn('client-update-backups',script)
         self.assertIn('operation-primary-action',script)
