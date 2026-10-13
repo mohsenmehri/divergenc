@@ -7876,7 +7876,7 @@ const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacen
 // Only metadata is customized; no category operation edits/deletes worksheet data.
 function defaultCategoryConfig() {
   return { version: 1, categories: SHEET_CATEGORIES.filter(c => c.id !== 'system')
-    .map(({id, name, sub, color, icon}) => ({id, name, sub, color, icon})), assignments: [], sections: [], sectionAssignments: [] };
+    .map(({id, name, sub, color, icon}) => ({id, name, sub, color, icon})), assignments: [], sections: [], sectionAssignments: [], sectionInitialized: [] };
 }
 function normalizeCategoryConfig(value) {
   if (value == null) return null; // legacy files retain the original automatic categories
@@ -7910,7 +7910,9 @@ function normalizeCategoryConfig(value) {
     if (!name || name.length > 80 || NormalizeText(name)==='بدون بخش' || sectionNames.has(nameKey)) return null;
     sectionIds.add(section.id);sectionNames.add(nameKey);sections.push({id:section.id,category:section.category,name});
   }
-  const draft = {version:1,categories,assignments:Array.from(assignments),sections,sectionAssignments:[]};
+  const sectionInitialized = [...new Set((Array.isArray(value.sectionInitialized) ? value.sectionInitialized : [])
+    .filter(id=>typeof id==='string'&&ids.has(id)))];
+  const draft = {version:1,categories,assignments:Array.from(assignments),sections,sectionAssignments:[],sectionInitialized};
   const sectionAssignments = new Map();
   const rawSectionAssignments = Array.isArray(value.sectionAssignments) ? value.sectionAssignments : [];
   for (const pair of rawSectionAssignments) {
@@ -8061,10 +8063,10 @@ function manageCategorySections(categoryId) {
   if (!category) { Toast('دستهٔ انتخاب‌شده دیگر وجود ندارد.','warn'); return false; }
   draft.sections = Array.isArray(draft.sections) ? draft.sections : [];
   draft.sectionAssignments = Array.isArray(draft.sectionAssignments) ? draft.sectionAssignments : [];
-  // Existing worksheets start in the visible «بدون بخش» collection. This lets
-  // the administrator turn any current worksheet into an editable section
-  // instead of facing an empty manager after opening an older workbook.
-  let selected=draft.sections.find(section=>section.category===categoryId)?.id || '__unassigned__', pendingDelete='', query='';
+  // Titles are independent grouping metadata. Existing worksheets are seeded
+  // once as editable section titles, then future title changes never rename or
+  // delete those worksheets.
+  let selected='', pendingDelete='', query='';
   const previousFocus=document.activeElement,overlay=document.getElementById('modal-overlay');
   const box=el('div',{class:'mbox category-manager',role:'dialog','aria-modal':'true','aria-labelledby':'section-manager-title'});
   const error=el('p',{id:'section-error',role:'alert',class:'category-error'}),list=el('div',{class:'category-list','aria-label':'بخش‌های دسته'}),editor=el('div',{class:'category-editor'});
@@ -8076,6 +8078,18 @@ function manageCategorySections(categoryId) {
     if(id)draft.sectionAssignments.push([sheet,id]);
   };
   const categorySheets=()=>WB.order.filter(name=>IsDataSheet(name)&&categoryOf(name,draft).id===categoryId);
+  draft.sectionInitialized=Array.isArray(draft.sectionInitialized)?draft.sectionInitialized:[];
+  if(!draft.sectionInitialized.includes(categoryId)){
+    // First opening migrates the currently visible titles into independent
+    // section records. The worksheet name/data remains untouched forever.
+    if(!sections().length)categorySheets().forEach(name=>{
+      let title=name,number=2;
+      while(sections().some(item=>NormalizeText(item.name)===NormalizeText(title)))title=name+' '+number++;
+      const id='section-'+crypto.randomUUID();draft.sections.push({id,category:categoryId,name:title});setAssignment(name,id);
+    });
+    draft.sectionInitialized.push(categoryId);
+  }
+  selected=sections()[0]?.id||'';
   const sectionOf=(name)=>{
     const id=draft.sectionAssignments.find(pair=>pair[0]===name)?.[1];
     return sections().find(section=>section.id===id) || null;
@@ -8084,31 +8098,12 @@ function manageCategorySections(categoryId) {
     clear(list);
     for(const section of sections())list.appendChild(el('button',{type:'button',class:'category-choice'+(section.id===selected?' active':''),'data-section-id':section.id,'aria-pressed':String(section.id===selected),onclick:()=>{selected=section.id;pendingDelete='';renderList();renderEditor();}},
       el('span',{text:section.name}),el('b',{text:String(categorySheets().filter(name=>sectionOf(name)?.id===section.id).length)})));
-    const unassigned=categorySheets().filter(name=>!sectionOf(name));
-    list.appendChild(el('button',{type:'button',class:'category-choice category-unassigned'+(selected==='__unassigned__'?' active':''),'data-section-id':'__unassigned__','aria-pressed':String(selected==='__unassigned__'),onclick:()=>{selected='__unassigned__';pendingDelete='';renderList();renderEditor();}},
-      el('span',{text:'شیت‌های بدون بخش'}),el('b',{text:String(unassigned.length)})));
-    if(!sections().length&&!unassigned.length)list.appendChild(el('p',{class:'hint',text:'هنوز شیت یا بخشی برای این دسته ثبت نشده است. با «افزودن بخش» شروع کنید.'}));
+    if(!sections().length)list.appendChild(el('p',{class:'hint',text:'هنوز عنوانی برای این دسته ثبت نشده است. با «افزودن بخش» شروع کنید؛ شیت‌ها بعداً به آن منتسب می‌شوند.'}));
   };
   const renderEditor=()=>{
     clear(editor);
-    if(selected==='__unassigned__'){
-      const rows=el('div',{class:'category-sheet-list'}),matches=()=>categorySheets().filter(name=>!sectionOf(name)&&NormalizeText(name).includes(NormalizeText(query)));
-      const promote=name=>{
-        let title=name,number=2;
-        while(sections().some(item=>NormalizeText(item.name)===NormalizeText(title)))title=name+' '+number++;
-        const id='section-'+crypto.randomUUID();draft.sections.push({id,category:categoryId,name:title});setAssignment(name,id);selected=id;query='';renderList();renderEditor();
-      };
-      const renderRows=()=>{
-        clear(rows);const names=matches();
-        names.forEach(name=>rows.appendChild(el('div',{class:'category-sheet'},el('span',{text:name}),action('ساخت بخش از این شیت','section-promote-'+name,()=>promote(name),'btn btn-ghost btn-sm'))));
-        if(!names.length)rows.appendChild(el('p',{class:'hint',text:'شیت بدون بخشی با این نام یافت نشد.'}));
-      };
-      editor.append(el('p',{class:'hint',text:'شیت‌های فعلی این دسته در اینجا دیده می‌شوند. برای هر مورد، «ساخت بخش از این شیت» را بزنید؛ سپس نام بخش و شیت‌های آن را مانند مناطق ویرایش کنید. خود شیت و داده‌هایش تغییر نمی‌کنند.'}),
-        el('label',{for:'unassigned-sheet-search',text:'جستجوی شیت‌های فعلی'}),el('input',{id:'unassigned-sheet-search',class:'inp',placeholder:'نام شیت…',value:query,oninput:event=>{query=event.target.value;renderRows();}}),rows);
-      renderRows();return;
-    }
     const section=sections().find(item=>item.id===selected);
-    if(!section){editor.appendChild(el('p',{class:'hint',text:'برای تخصیص شیت‌ها، یک بخش را انتخاب یا ایجاد کنید. شیت‌ها و داده‌هایشان حذف نمی‌شوند.'}));return;}
+    if(!section){editor.appendChild(el('p',{class:'hint',text:'برای ویرایش عنوان یا تخصیص شیت‌ها، یک بخش را انتخاب یا ایجاد کنید. خود شیت‌ها و داده‌هایشان حذف نمی‌شوند.'}));return;}
     const rows=el('div',{class:'category-sheet-list'}),count=el('p',{class:'hint','aria-live':'polite'});
     const matches=()=>categorySheets().filter(name=>NormalizeText(name).includes(NormalizeText(query)));
     const renderRows=()=>{
@@ -8135,7 +8130,7 @@ function manageCategorySections(categoryId) {
     renderRows();
   };
   box.append(el('div',{class:'t'},el('span',{id:'section-manager-title',text:'مدیریت بخش‌های «'+category.name+'»'}),action('×','section-close',close)),
-    el('div',{class:'c'},el('p',{class:'hint',text:'مانند مدیریت مناطق، می‌توانید بخش بسازید، نام آن را ویرایش یا آن را حذف کنید و شیت‌های موجود را به آن اضافه یا از آن خارج کنید. حذف بخش، شیت یا سلول‌های داده را حذف نمی‌کند.'}),
+    el('div',{class:'c'},el('p',{class:'hint',text:'مانند مدیریت مناطق، عنوان‌های فعلی این دسته در ستون سمت راست قابل ویرایش و حذف‌اند. همه شیت‌ها مستقل و در «همه بخش‌ها» باقی می‌مانند؛ فقط با تیک‌زدن به این عنوان‌ها منتسب می‌شوند. حذف بخش، شیت یا سلول‌های داده را حذف نمی‌کند.'}),
       action('+ افزودن بخش','section-new',()=>{let number=1;while(sections().some(item=>item.name==='بخش جدید '+number))number++;selected='section-'+crypto.randomUUID();draft.sections.push({id:selected,category:categoryId,name:'بخش جدید '+number});pendingDelete='';error.textContent='';renderList();renderEditor();editor.querySelector('#section-name')?.focus();},'btn btn-cyan btn-sm'),
       el('div',{class:'category-manager-grid'},list,editor),error),
     el('div',{class:'f'},action('ذخیره تغییرات','section-save',()=>{

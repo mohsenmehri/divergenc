@@ -166,17 +166,29 @@ test('each ordinary category has region-like section management without deleting
   });
   const manager=page.locator('[data-act="manage-category-sections"][data-category="datacenters"]');
   await manager.click();
-  await page.locator('[data-section-id="__unassigned__"]').click();
-  await page.locator('.category-sheet').filter({hasText:'مرکز داده تهران'}).getByText('ساخت بخش از این شیت').click();
+  // Existing sheet titles are seeded as editable logical sections, while the
+  // worksheet itself remains a separate data object.
+  await page.locator('.category-choice').filter({hasText:'مرکز داده تهران'}).click();
   await page.locator('#section-name').fill('مرکزهای اصلی');await page.locator('#section-save').click();
   let saved=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,rows:WB.sheets['مرکز داده تهران'].rows}));
-  assert.equal(saved.sections.length,1);assert.deepEqual(saved.sections[0],{id:saved.sections[0].id,category:'datacenters',name:'مرکزهای اصلی'});assert.deepEqual(saved.assignments,[['مرکز داده تهران',saved.sections[0].id]]);assert.deepEqual(saved.rows,[['ID','Name'],['DC-1','تهران']]);
+  const main=saved.sections.find(section=>section.name==='مرکزهای اصلی');
+  assert.ok(main);assert.equal(main.category,'datacenters');assert.ok(saved.assignments.some(([sheet,id])=>sheet==='مرکز داده تهران'&&id===main.id));assert.deepEqual(saved.rows,[['ID','Name'],['DC-1','تهران']]);
   assert.equal(await page.locator('.category-subsection h4').first().textContent(),'مرکزهای اصلی');
-  await manager.click();await page.locator('#section-name').fill('مرکز داده اصلی');await page.locator('#section-save').click();
-  saved=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,rows:WB.sheets['مرکز داده تهران'].rows}));
-  assert.equal(saved.sections[0].name,'مرکز داده اصلی');assert.deepEqual(saved.rows,[['ID','Name'],['DC-1','تهران']]);
-  await manager.click();await page.locator('#section-delete').click();await page.locator('#section-delete').click();await page.locator('#section-save').click();
-  const deleted=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,rows:WB.sheets['مرکز داده تهران'].rows}));
-  assert.deepEqual(deleted.sections,[]);assert.deepEqual(deleted.assignments,[]);assert.deepEqual(deleted.rows,[['ID','Name'],['DC-1','تهران']]);
+  // Adding a title is independent of any worksheet. Assigning by checkbox may
+  // move an existing worksheet between logical titles, but never changes its
+  // actual sheet identity, rows, category or category-scoped access target.
+  await manager.click();await page.locator('#section-new').click();await page.locator('#section-name').fill('مرکز پشتیبان');
+  await page.locator('[data-section-sheet="مرکز داده تهران"]').check();await page.locator('#section-save').click();
+  saved=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,initialized:state.categoryConfig.sectionInitialized,order:WB.order.slice(),category:categoryOf('مرکز داده تهران').id,rows:WB.sheets['مرکز داده تهران'].rows}));
+  const backup=saved.sections.find(section=>section.name==='مرکز پشتیبان');
+  assert.ok(backup);assert.ok(saved.initialized.includes('datacenters'));assert.ok(saved.assignments.some(([sheet,id])=>sheet==='مرکز داده تهران'&&id===backup.id));
+  assert.ok(saved.order.includes('مرکز داده تهران'));assert.equal(saved.category,'datacenters');assert.deepEqual(saved.rows,[['ID','Name'],['DC-1','تهران']]);
+  assert.equal(await page.locator('.category-subsection h4').filter({hasText:'مرکز پشتیبان'}).count(),1);
+  // Removing the logical title releases only its assignment. A later reopen
+  // must not recreate it from the unchanged worksheet name.
+  await manager.click();await page.locator('.category-choice').filter({hasText:'مرکز پشتیبان'}).click();await page.locator('#section-delete').click();await page.locator('#section-delete').click();await page.locator('#section-save').click();
+  const deleted=await page.evaluate(()=>({sections:state.categoryConfig.sections,assignments:state.categoryConfig.sectionAssignments,initialized:state.categoryConfig.sectionInitialized,order:WB.order.slice(),category:categoryOf('مرکز داده تهران').id,rows:WB.sheets['مرکز داده تهران'].rows}));
+  assert.ok(!deleted.sections.some(section=>section.name==='مرکز پشتیبان'));assert.ok(!deleted.assignments.some(([sheet])=>sheet==='مرکز داده تهران'));assert.ok(deleted.initialized.includes('datacenters'));assert.ok(deleted.order.includes('مرکز داده تهران'));assert.equal(deleted.category,'datacenters');assert.deepEqual(deleted.rows,[['ID','Name'],['DC-1','تهران']]);
+  await manager.click();assert.equal(await page.locator('.category-choice').filter({hasText:'مرکز پشتیبان'}).count(),0);await page.locator('#section-close').click();
   assert.deepEqual(errors,[]);
 });

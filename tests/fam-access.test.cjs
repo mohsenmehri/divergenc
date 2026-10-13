@@ -68,8 +68,9 @@ test('ordinary categories have region-like editable sections without deleting th
   assert.match(html,/function categorySectionOf\(name/);
   assert.match(html,/function manageCategorySections\(categoryId\)/);
   assert.match(html,/مدیریت بخش‌های «/);
-  assert.match(html,/شیت‌های بدون بخش/);
-  assert.match(html,/ساخت بخش از این شیت/);
+  assert.match(html,/sectionInitialized/);
+  assert.match(html,/عنوان‌های فعلی این دسته/);
+  assert.doesNotMatch(html,/ساخت بخش از این شیت/);
   assert.match(html,/حذف بخش، شیت یا سلول‌های داده را حذف نمی‌کند/);
   assert.match(html,/data-act':'manage-category-sections'/);
   assert.match(access,/\['manage-categories','manage-category-sections'\]/);
