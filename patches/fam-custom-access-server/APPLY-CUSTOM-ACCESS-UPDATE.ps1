@@ -17,8 +17,10 @@ $Payload=Join-Path $PatchRoot 'payload'
 $Server=Join-Path $InstallRoot 'server'
 $SourceApp=Join-Path $Payload 'app.py'
 $SourceHtml=Join-Path $Payload 'FAM.html'
+$SourceWebConfig=Join-Path $Payload 'web.config'
 $TargetApp=Join-Path $Server 'app.py'
 $TargetHtml=Join-Path $Server 'www\FAM.html'
+$TargetWebConfig=Join-Path $Server 'www\web.config'
 $StartPath=Join-Path $Server 'windows\start.ps1'
 $BackupDir=Join-Path $DataDir 'backups'
 $Stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
@@ -62,30 +64,33 @@ function Restore-Backup {
     try { Wait-Backend $false } catch { }
     Copy-Item -LiteralPath (Join-Path $Backup 'app.py') -Destination $TargetApp -Force
     Copy-Item -LiteralPath (Join-Path $Backup 'FAM.html') -Destination $TargetHtml -Force
+    Copy-Item -LiteralPath (Join-Path $Backup 'web.config') -Destination $TargetWebConfig -Force
 }
 
 try {
     $Manifest=@()
     Get-Content -LiteralPath (Join-Path $Payload 'SHA256SUMS.txt') | Where-Object { $_.Trim() } | ForEach-Object {
-        if ($_ -notmatch '^([a-fA-F0-9]{64})  (app\.py|FAM\.html)$') { throw 'SHA256SUMS.txt is malformed.' }
+        if ($_ -notmatch '^([a-fA-F0-9]{64})  (app\.py|FAM\.html|web\.config)$') { throw 'SHA256SUMS.txt is malformed.' }
         $Manifest+=@{Sha256=$matches[1];Name=$matches[2]}
     }
     foreach ($Entry in @(
-        @($SourceApp,'Patch payload app.py is missing.'),@($SourceHtml,'Patch payload FAM.html is missing.'),
-        @($TargetApp,'Installed FAM app.py is missing.'),@($TargetHtml,'Installed FAM.html is missing.'),
+        @($SourceApp,'Patch payload app.py is missing.'),@($SourceHtml,'Patch payload FAM.html is missing.'),@($SourceWebConfig,'Patch payload web.config is missing.'),
+        @($TargetApp,'Installed FAM app.py is missing.'),@($TargetHtml,'Installed FAM.html is missing.'),@($TargetWebConfig,'Installed FAM web.config is missing.'),
         @($StartPath,'Installed FAM start.ps1 is missing.')
     )) { Assert-File $Entry[0] $Entry[1] }
-    Assert-PayloadHash $SourceApp 'app.py';Assert-PayloadHash $SourceHtml 'FAM.html'
+    Assert-PayloadHash $SourceApp 'app.py';Assert-PayloadHash $SourceHtml 'FAM.html';Assert-PayloadHash $SourceWebConfig 'web.config'
     if (!(Test-Path -LiteralPath $DataDir -PathType Container)) { throw 'C:\FAMData is missing. No file was changed.' }
     New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
     $Backup=Join-Path $BackupDir ('custom-access-'+$Stamp)
     New-Item -ItemType Directory -Force -Path $Backup | Out-Null
     Copy-Item -LiteralPath $TargetApp -Destination (Join-Path $Backup 'app.py') -Force
     Copy-Item -LiteralPath $TargetHtml -Destination (Join-Path $Backup 'FAM.html') -Force
+    Copy-Item -LiteralPath $TargetWebConfig -Destination (Join-Path $Backup 'web.config') -Force
 
     Stop-FamTask
     Copy-Item -LiteralPath $SourceApp -Destination $TargetApp -Force
     Copy-Item -LiteralPath $SourceHtml -Destination $TargetHtml -Force
+    Copy-Item -LiteralPath $SourceWebConfig -Destination $TargetWebConfig -Force
     $Copied=$true
     Start-FamTask
     Write-Host ''
@@ -98,7 +103,7 @@ try {
     $Message=$_.Exception.Message
     if ($Copied -and $Backup) {
         try { Restore-Backup;Start-FamTask;Write-Warning 'The prior FAM application files were restored from the patch backup.' }
-        catch { Write-Warning 'Automatic rollback failed; restore app.py and FAM.html from the backup path shown above.' }
+        catch { Write-Warning 'Automatic rollback failed; restore app.py, FAM.html and web.config from the backup path shown above.' }
     } elseif ($TaskWasRunning) {
         try { Start-FamTask } catch { Write-Warning 'FAM-Central needs administrator review in Task Scheduler.' }
     }

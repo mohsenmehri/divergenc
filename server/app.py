@@ -6,6 +6,7 @@ import copy
 import hashlib
 import hmac
 import json
+import logging
 import math
 import os
 from pathlib import Path
@@ -27,6 +28,9 @@ ROOT = Path(__file__).resolve().parent
 SYSTEM = {'CONTROL_PANEL','SYSTEM_SEARCH_INDEX','SYSTEM_SHEET_CONFIG','SYSTEM_DATA_DICTIONARY','CHANGE_LOG','SEARCH_RESULTS','SYSTEM_KEYS','SYSTEM_UNDO_BUFFER','SYSTEM_NAVIGATOR'}
 EPHEMERAL = SYSTEM - {'SYSTEM_SHEET_CONFIG', 'SYSTEM_KEYS'}
 META = {'SYSTEM_SHEET_CONFIG', 'SYSTEM_KEYS'}
+# `/api/state` may append this display-only log for authorised history users.
+# It is accepted then discarded by validate_state, never persisted from a client.
+CLIENT_TRANSIENT = {'CHANGE_LOG'}
 ARCHIVES = {'لیست جمع آوری سرویس','جمع آوری مبین نت','جمع آوری آسیاتک'}
 FORBIDDEN = {'__proto__','constructor','prototype'}
 REGIONS = [
@@ -225,6 +229,10 @@ def validate_state(raw):
     names=set();clean={}
     for name in order:
         if not isinstance(name,str) or not name.strip() or len(name)>31 or re.search(r'[\x00-\x1f\\/*?:\[\]]',name) or norm(name) in names:fail(400,'نام بخش نامعتبر است.')
+        # Browser snapshots may include persisted metadata plus the display-only
+        # CHANGE_LOG returned by `/api/state`; all other system sheets are
+        # derived/server-owned and never valid input to a state commit.
+        if name in SYSTEM and name not in META and name not in CLIENT_TRANSIENT:fail(400,'نام بخش سیستمی در داده‌های کاربر مجاز نیست.')
         names.add(norm(name));sh=sheets[name]
         if not isinstance(sh,dict) or not isinstance(sh.get('rows'),list) or not isinstance(sh.get('merges'),list):fail(400,'ساختار شیت نامعتبر است.')
         if len(sh['rows'])>250000 or len(sh['merges'])>20000:fail(413,'داده از سقف این نسخه بیشتر است.')
@@ -408,11 +416,25 @@ def authorise_change(user,old,new):
         if n in META and n not in new['order']:new['order'].append(n)
 
 def public_user(row):
-    value={k:row[k] for k in ['id','username','name','role','enabled','revision']} | {'enabled':bool(row['enabled']),'regions':json.loads(row['regions']),'sheets':json.loads(row['sheets'])}
+    """Return only safe, structurally valid account fields.
+
+    These JSON columns are normally written only through validated code. If an
+    operator has manually damaged SQLite, fail closed with an application error
+    rather than leaking a raw parser exception to a browser.
+    """
+    def load_list(column):
+        try:
+            value=json.loads(row[column])
+            if not isinstance(value,list):raise ValueError('expected list')
+            return value
+        except (json.JSONDecodeError,TypeError,ValueError) as error:
+            logging.getLogger(__name__).error('Malformed users.%s for account id=%s: %s',column,row['id'],error)
+            fail(500,'داده‌های حساب کاربری آسیب دیده است؛ لاگ سرور را بررسی کنید.')
+    value={k:row[k] for k in ['id','username','name','role','enabled','revision']} | {'enabled':bool(row['enabled']),'regions':load_list('regions'),'sheets':load_list('sheets')}
     # Omit absent fields so older rows remain legacy-role accounts until their
     # first save through the new custom-access editor.
     if row['categories'] is not None and row['permissions'] is not None:
-        value['categories']=json.loads(row['categories']);value['permissions']=json.loads(row['permissions'])
+        value['categories']=load_list('categories');value['permissions']=load_list('permissions')
     return value
 
 def credentials(password,salt=None):

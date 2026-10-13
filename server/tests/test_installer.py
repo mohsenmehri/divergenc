@@ -129,12 +129,19 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertIn('SHA256SUMS.txt',script)
         self.assertIn('Restore-Backup',script)
         self.assertIn('Wait-Backend $true',script)
+        self.assertIn('$SourceWebConfig',script)
+        self.assertIn("'web.config'",script)
         self.assertIn('categories TEXT', (payload/'app.py').read_text(encoding='utf8'))
         self.assertIn('const PERMISSION_GROUPS=',(payload/'FAM.html').read_text(encoding='utf8'))
         self.assertNotIn("id:'user-role'",(payload/'FAM.html').read_text(encoding='utf8'))
+        self.assertIn('max-age=31536000',(payload/'web.config').read_text(encoding='utf8'))
         import hashlib
         entries={name:digest for digest,name in (line.split('  ',1) for line in (payload/'SHA256SUMS.txt').read_text(encoding='utf8').splitlines())}
-        self.assertEqual(set(entries),{'app.py','FAM.html'})
+        self.assertEqual(set(entries),{'app.py','FAM.html','web.config'})
         for name,digest in entries.items():self.assertEqual(digest,hashlib.sha256((payload/name).read_bytes()).hexdigest())
+        self.assertEqual((payload/'app.py').read_bytes(),(root/'server'/'app.py').read_bytes())
+        self.assertEqual((payload/'FAM.html').read_bytes(),(root/'server'/'www'/'FAM.html').read_bytes())
+        self.assertEqual((payload/'web.config').read_bytes(),(root/'server'/'www'/'web.config').read_bytes())
+        self.assertEqual((root/'patches'/'fam-custom-access-local'/'FAM.html').read_bytes(),(root/'FAM.html').read_bytes())
 
 if __name__=='__main__':unittest.main()

@@ -23,8 +23,13 @@ $Until=(Get-Date).AddSeconds(30)
 while ((Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) -and (Get-Date) -lt $Until) { Start-Sleep -Milliseconds 500 }
 if (Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) { throw 'Port 8765 is still in use. Stop the previous FAM backend and rerun.' }
 if (!$PythonExecutable) {
-  $PythonExecutable=& py -3.12 -c "import sys;print(sys.executable)"
-  if ($LASTEXITCODE -ne 0) { throw 'Install machine-wide Python or supply -PythonExecutable.' }
+  # Match setup-ertebatat.ps1: prefer the newest supported machine-wide Python.
+  foreach ($Version in @('3.14','3.13','3.12')) {
+    $PythonExecutable=& py ("-$Version") -c "import sys;print(sys.executable)" 2>$null
+    if ($LASTEXITCODE -eq 0 -and $PythonExecutable) { break }
+    $PythonExecutable=''
+  }
+  if (!$PythonExecutable) { throw 'Install machine-wide Python (3.12, 3.13, or 3.14) or supply -PythonExecutable.' }
 }
 $BasePython=& $PythonExecutable -c "import sys;print(sys.base_prefix)"
 if ($LASTEXITCODE -ne 0 -or $BasePython -match '\\Users\\') { throw 'Use machine-wide Python accessible by LOCAL SERVICE, not a private user installation.' }

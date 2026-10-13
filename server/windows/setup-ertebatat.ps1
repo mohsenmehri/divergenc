@@ -266,8 +266,18 @@ try {
         & icacls $Child.FullName /reset /T /Q | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'Cannot protect application files from non-administrator modification.' }
     }
-    # Whitelist deployment files: never copy/delete settings.json, .venv or live data.
-    $Files=@(Get-ChildItem $SourceServer -File -Filter '*.py')+@(Get-Item (Join-Path $SourceServer 'requirements.txt'))+@(Get-Item (Join-Path $SourceServer 'www\FAM.html'))+@(Get-Item (Join-Path $SourceServer 'www\web.config'))+@(Get-ChildItem $PSScriptRoot -File | Where-Object { $_.Extension -in @('.ps1','.psm1','.py') -or $_.Name -in @('dependencies.json','offline-wheels.json') })
+    # Explicit deployment allowlist: never copy/delete settings.json, .venv,
+    # live data, or an accidental extra executable/source file in the kit.
+    $ServerFiles=@('app.py','manage.py','requirements.txt')
+    $WindowsFiles=@('install.ps1','start.ps1','backup-daily.ps1','trust-client.ps1',
+        'preflight_backup.py','verify_deployment.py','prepare-offline.ps1',
+        'setup-common.psm1','setup-ertebatat.ps1','dependencies.json','offline-wheels.json')
+    $WwwFiles=@('FAM.html','web.config')
+    $Files=@(
+        @($ServerFiles | ForEach-Object { Get-Item -LiteralPath (Join-Path $SourceServer $_) })
+        @($WindowsFiles | ForEach-Object { Get-Item -LiteralPath (Join-Path $PSScriptRoot $_) })
+        @($WwwFiles | ForEach-Object { Get-Item -LiteralPath (Join-Path $SourceServer "www\$_") })
+    )
     foreach ($File in $Files) {
         $Relative=$File.FullName.Substring($SourceServer.Length).TrimStart('\')
         $Destination=Join-Path $TargetServer $Relative
