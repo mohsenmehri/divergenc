@@ -1276,7 +1276,14 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 .category-sheet small{color:var(--txt-2);max-width:35%;overflow-wrap:anywhere;}
 .category-sheet input{accent-color:var(--cyan);width:17px;height:17px;flex-shrink:0;}
 .category-error{color:#f87171;}
-@media(max-width:600px){.category-manager-grid{grid-template-columns:1fr;}.category-list{max-height:170px;}.category-manager .f{flex-wrap:wrap;}}
+.category-section-manage{white-space:nowrap;}
+.category-subsections{display:grid;gap:14px;}
+.category-subsection{border:1px solid var(--stroke);border-radius:13px;padding:13px;background:rgba(14,32,48,.2);}
+.category-subsection-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 11px;}
+.category-subsection-head h4{margin:0;color:var(--txt-0);font-size:13px;}
+.category-subsection-head span{color:var(--txt-2);font:700 10px var(--mono);}
+.category-subsection-empty{margin:0;padding:10px;border:1px dashed var(--stroke);border-radius:9px;text-align:center;}
+@media(max-width:600px){.category-manager-grid{grid-template-columns:1fr;}.category-list{max-height:170px;}.category-manager .f{flex-wrap:wrap;}.category-section-manage{font-size:10px;padding:7px 9px;}}
 
 /* Category count controls the columns (up to twenty); scrolling is confined
    to the category strip on screens too narrow for readable mini-cards. */
@@ -1398,6 +1405,14 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 html.auth-pending #layout {display:none!important;}
 html.auth-pending #access-viewer {display:none!important;}
 .access-hidden {display:none!important;}
+/* A denied feature keeps its heading but never leaves form fields, previous
+   sheet selections or disabled controls on screen. */
+.card.access-denied-card > .card-body > :not(.access-denied-note),
+.fold-inner.access-denied-card > :not(.access-denied-note){display:none!important;}
+.card.access-denied-card > .card-body > .access-denied-note,
+.fold-inner.access-denied-card > .access-denied-note{display:block;margin:0;padding:14px 12px;border:1px dashed rgba(129,157,184,.55);border-radius:9px;background:rgba(31,52,76,.2);color:#d9e7f4;text-align:center;font-weight:700;}
+html[data-ui-theme="light"] .card.access-denied-card > .card-body > .access-denied-note,
+html[data-ui-theme="light"] .fold-inner.access-denied-card > .access-denied-note{background-color:#f2f7fa;color:#29485f;border-color:#b9cdda;}
 #auth-screen {position:fixed;inset:0;z-index:5000;overflow:auto;display:grid;place-items:center;padding:24px;background:#081321;direction:rtl;}
 .access-login {width:min(100%,440px);padding:28px;border:1px solid #284b65;border-radius:20px;background:#101f30;box-shadow:0 25px 90px #0008;color:#eef6ff;}
 .access-login h2{margin:0 0 16px;}
@@ -1422,6 +1437,26 @@ html.auth-pending #access-viewer {display:none!important;}
 #users-status:empty{display:none;}
 [aria-labelledby="users-title"] .category-list .is-selected{border-color:var(--cyan);background:rgba(47,212,196,.12);}
 [aria-labelledby="users-title"] .category-list button{white-space:normal;overflow-wrap:anywhere;text-align:right;}
+
+/* Per-user scope and operation editor. Scope is deliberately rendered before
+   capabilities so there is no visible access-level model. */
+.user-scope-section,.user-permission-section{margin-top:18px;padding-top:12px;border-top:1px solid rgba(116,151,180,.28);}
+.user-scope-section h4,.user-permission-section h4{margin:0 0 8px;}
+.category-scope-tree{display:block;max-height:none;overflow:visible;}
+.category-scope-tree>.category-scope-row{margin:7px 0;padding:4px 0;font-weight:650;}
+.user-region-children{margin:2px 24px 12px 0;padding:4px 12px;border-right:2px solid rgba(47,212,196,.42);}
+.user-region-children .access-scopes{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));max-height:none;}
+.user-region-children .access-check{margin:7px 0;}
+.user-region-scope.is-disabled{opacity:.55;}
+.permission-group{margin:12px 0;padding:10px 12px;border:1px solid rgba(116,151,180,.38);border-radius:8px;}
+.permission-group legend{padding:0 5px;font-weight:700;}
+.permission-group .access-check{margin:8px 0;}
+.user-form-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+#user-cancel{background-color:#31516b;background-image:none;color:#fff;border-color:#52758f;}
+#user-cancel:hover,#user-cancel:focus-visible{background-color:#426982;background-image:none;color:#fff;}
+/* Appended only in edit mode by the script. It must never stretch across the editor. */
+#user-delete{display:inline-flex!important;width:max-content!important;max-width:max-content!important;min-width:0!important;flex:0 0 auto!important;align-self:flex-start!important;margin-top:14px;background-color:#d8444f!important;background-image:none!important;color:#111!important;border-color:#ec737b!important;padding-inline:13px!important;}
+#user-delete:hover,#user-delete:focus-visible{background-color:#ef6069!important;background-image:none!important;color:#111!important;}
 
 .own-password-dialog{min-width:0;max-width:520px;}
 .own-password-dialog .c{white-space:normal;}
@@ -1559,6 +1594,14 @@ table.xl td[contenteditable]:focus{background-color:#f0faf6;}
 .user-editor-mode{background-color:#edf7f4;border-color:#c9e6dc;}
 .user-editor-mode h3{color:#186f65;}
 #users-status{color:#157450;}
+/* The account-form cancel action must remain visibly filled in Theme 2. */
+#user-cancel{background-color:#dce8ef!important;background-image:none!important;color:#29485f!important;border-color:#b7cad7!important;}
+#user-cancel:hover,#user-cancel:focus-visible{background-color:#cbdde7!important;background-image:none!important;color:#1d3d55!important;}
+/* Footer buttons inherit white text from the dark modal rule. Give the user
+   manager's close action its own light filled surface and dark readable copy. */
+#users-done{background-color:#dce8ef!important;background-image:none!important;color:#29485f!important;border-color:#b7cad7!important;}
+#users-done:hover,#users-done:focus-visible{background-color:#cbdde7!important;background-image:none!important;color:#1d3d55!important;}
+#user-delete{background-color:#e55c66!important;background-image:none!important;color:#111!important;border-color:#cf3d49!important;}
 #user-error,#auth-error,#password-error{color:#b42f44;}
 #auth-screen{background-color:#eef3f7;background-image:none;}
 .access-login{background-color:#fff;color:#233f54;border-color:#d8e4ed;}
@@ -2378,7 +2421,7 @@ html[data-fam-variant="shared"] #shared-status{display:none!important;}
         </div>
         <div>
           <h2>نتایج جستجو</h2>
-          <div class="sub">SEARCH RESULTS — ویرایش مستقیم فقط برای سطح ۱ و ۲</div>
+          <div class="sub">SEARCH RESULTS — ویرایش با مجوز ذخیرهٔ نتایج</div>
         </div>
         <div class="head-actions">
           <button class="btn btn-green btn-sm" data-act="run-macro" data-arg="modSearchEngine.SaveChanges">SAVE CHANGES</button>
@@ -2391,7 +2434,7 @@ html[data-fam-variant="shared"] #shared-status{display:none!important;}
         <div class="legend-strip">
           <span><i style="background:#3b82f6"></i>آبی = اطلاعات Match (فقط‌خواندنی)</span>
           <span><i style="background:rgba(30,58,130,.8)"></i>سرستون‌ها</span>
-          <span><i style="background:#e5e7eb"></i>داده‌ها (ویرایش فقط سطح ۱ و ۲)</span>
+          <span><i style="background:#e5e7eb"></i>داده‌ها (ویرایش با مجوز ذخیرهٔ نتایج)</span>
           <span><i style="background:#fbbf24"></i>زرد = تغییرات ذخیره‌شده</span>
         </div>
         <div id="results-body">
@@ -3182,7 +3225,7 @@ function renderSheetView(name) {
   if (!sh) { body.appendChild(el("div", { class: "empty-state", text: "\u0628\u062e\u0634 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." })); return; }
   const lastCol = Math.max(1, ...sh.rows.map(r => r.length), 1);
   const locked = !!state.lockedSheets[name];
-  const editable = Access.can("manual") && !locked && !IsSystemSheet(name);
+  const editable = Access.can("manual", name) && !locked && !IsSystemSheet(name);
   let lastRow = sh.rows.length;
   while (lastRow > 0 && rowIsEmpty(sh, lastRow)) lastRow--;
 
@@ -3237,7 +3280,7 @@ function renderSheetView(name) {
   if (editable) {
     body.querySelectorAll("td[contenteditable]").forEach(td => {
       td.addEventListener("blur", () => {
-        if (!Access.require("manual")) return;
+        if (!Access.require("manual", name)) return;
         const r = parseInt(td.parentElement.dataset.r, 10);
         const c = parseInt(td.dataset.c, 10);
         const newVal = td.textContent.trim();
@@ -3278,9 +3321,8 @@ async function toggleSheetLock() {
   renderSheetView(name);
 }
 function exportCurrentSheetCSV() {
-  if (!Access.require("export")) return false;
   const name = state.currentSheet;
-  if (!name) return;
+  if (!name || !Access.require("export", name)) return;
   const csv = sheetToCSV(name);
   DownloadFile(name.replace(/[\\/:*?"<>|]/g, "_") + "_" + tsStamp() + ".csv", "\uFEFF" + csv, "text/csv");
   Toast("خروجی CSV بخش «" + name + "» ذخیره شد.", "ok");
@@ -3300,8 +3342,16 @@ function sheetToCSV(name) {
 }
 
 /* ---------- change log view ---------- */
+function canViewLogEntry(row) {
+  const sheet = String((row || [])[2] || '');
+  // A log's Sheet column may be "-" (IMPORT/RESET) or a module name (ERROR).
+  // IsDataSheet alone treats those strings as ordinary names, so require a
+  // real workbook sheet before applying the category/region sheet scope.
+  const isWorkbookDataSheet = !!WB.sheets[sheet] && IsDataSheet(sheet);
+  return isWorkbookDataSheet ? Access.can("view-history", sheet) : Access.can("global-history");
+}
 function renderLogView() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("view-history")) return false;
   const sh = WB.sheets[LOG_SHEET];
   const body = document.getElementById("log-body");
   clear(body);
@@ -3317,6 +3367,7 @@ function renderLogView() {
   const tbody = el("tbody");
   for (let r = sh.rows.length - 1; r >= 1; r--) {
     const row = sh.rows[r] || [];
+    if (!canViewLogEntry(row)) continue;
     const isErr = (row[1] === "ERROR" || row[5] === "ARCHIVE_FAIL");
     const tr = el("tr", { class: isErr ? "err" : "" });
     for (let c = 0; c < 7; c++) {
@@ -3349,10 +3400,12 @@ function clearLog() {
 
 /* ---------- results rendering (WriteMatchBlock look) ---------- */
 function renderResultsView() {
-  if (!Access.can("workspace")) return;
+  if (!Access.can("data-access")) return;
   const body = document.getElementById("results-body");
   clear(body);
-  if (!state.results.length) {
+  const visibleResults=state.results.filter(blk=>state.resultsMode === "remove"
+    ? Access.can("remove",blk.sheet) : Access.can("search-read",blk.sheet));
+  if (!visibleResults.length) {
     body.appendChild(el("div", { class: "empty-state", text: "\u0647\u0646\u0648\u0632 \u0646\u062a\u06cc\u062c\u0647\u200c\u0627\u06cc \u062b\u0628\u062a \u0646\u0634\u062f\u0647 \u0627\u0633\u062a \u2014 \u0627\u0632 \u06a9\u0646\u062a\u0631\u0644 \u067e\u0646\u0644 \u062c\u0633\u062a\u062c\u0648 \u0627\u0646\u062c\u0627\u0645 \u062f\u0647\u06cc\u062f." }));
     return;
   }
@@ -3368,7 +3421,7 @@ function renderResultsView() {
         text: "\u0642\u0631\u0645\u0632 = Match  |  \u062f\u0627\u062f\u0647 = \u0631\u062f\u06cc\u0641 \u0628\u0627 \u0631\u0646\u06af \u062a\u0645 \u0641\u0639\u0627\u0644"
       })));
   }
-  state.results.forEach(blk => {
+  visibleResults.forEach(blk => {
     const block = el("div", {
       class: "match-block " + (state.resultsMode === "remove" ? "remove" : ""),
       "data-match": blk.matchIdx
@@ -3387,7 +3440,7 @@ function renderResultsView() {
       const tr = el("tr", { "data-srcrow": dr.srcRow });
       dr.cells.forEach((v, ci) => {
         const cellValTxt = (v === null || v === undefined ? "" : v);
-        const inner = state.resultsMode === "search" && Access.can("save-results")
+        const inner = state.resultsMode === "search" && Access.can("save-results", blk.sheet)
           ? el("input", { class: "cell-in", "data-ri": ri, "data-ci": ci, value: cellValTxt })
           : el("div", { class: "cell-in cell-readonly", text: v === null ? "" : v });
         tr.appendChild(el("td", {}, inner));
@@ -3778,10 +3831,13 @@ function resetAll() {
     });
 }
 function backupAll() {
-  if (!Access.require("export")) return false;
+  if (!Access.require("backup")) return false;
+  const permitted=WB.order.filter(name=>IsDataSheet(name)&&Access.can("backup",name));
+  const sheets=Object.fromEntries(permitted.map(name=>[name,WB.sheets[name]]));
   const payload = { v: 2, workbook: "Mohsen_FINAL_v5.xlsm", exported: new Date().toISOString(),
-    order: WB.order, sheets: WB.sheets, cp: state.cp, undo: state.undo,
-    lockedSheets: state.lockedSheets, user: state.user, categoryConfig: state.categoryConfig, regionConfig: state.regionConfig };
+    order: permitted, sheets, cp: {}, undo: null, lockedSheets: {}, user: state.user,
+    categoryConfig:Access.can("manage-categories")?state.categoryConfig:null,
+    regionConfig:Access.can("manage-regions")?state.regionConfig:null };
   DownloadFile("Mohsen_FINAL_v5_backup_" + tsStamp() + ".json", JSON.stringify(payload), "application/json");
   WriteChangeLog("BACKUP", "-", "-", "SUCCESS", "JSON backup exported");
   Toast("پشتیبان‌گیری انجام شد.", "ok");
@@ -4056,9 +4112,9 @@ const modSearchEngine = {
 
     const targets = [];
     if (NormalizeText(sheetFilter) === "all") {
-      WB.order.forEach(n => { if (IsDataSheet(n) && Access.can("read", n)) targets.push(n); });
+      WB.order.forEach(n => { if (IsDataSheet(n) && Access.can("search-read", n)) targets.push(n); });
     } else {
-      if (WB.sheets[sheetFilter] && Access.can("read", sheetFilter)) targets.push(sheetFilter);
+      if (WB.sheets[sheetFilter] && Access.can("search-read", sheetFilter)) targets.push(sheetFilter);
     }
     targets.forEach(scanSheet);
 
@@ -4073,7 +4129,7 @@ const modSearchEngine = {
   },
 
   async SaveChanges() {
-  if (!Access.require("manual")) return false;
+  if (!Access.require("save-results")) return false;
     if (!state.results.length || state.resultsMode !== "search") {
       await ShowMsg("نتیجه جستجویی وجود ندارد. ابتدا جستجو کنید.", vbExclamation, "Save Changes");
       return;
@@ -4092,6 +4148,7 @@ const modSearchEngine = {
           const editedVal = inp.value;
           const origVal = dr.cells[ci] === null || dr.cells[ci] === undefined ? "" : String(dr.cells[ci]);
           if (String(editedVal) !== origVal) {
+            if (!Access.require("save-results", blk.sheet)) return;
             setCellVal(blk.sheet, dr.srcRow, ci + 1, editedVal, true);
             dr.cells[ci] = editedVal;
             inp.parentElement.classList.add("saved");
@@ -4178,6 +4235,7 @@ const modAddRecord = {
       await ShowMsg("بخش " + sheetName + " سیستمی است — انتخاب مجاز نیست.", vbExclamation, "افزودن داده");
       return;
     }
+    if (!Access.require("add", sheetName)) return;
 
     if (provinceOf(sheetName)) return startProvinceAdd(sheetName);
     await this._runAddForm(sheetName, "", 0);
@@ -4206,7 +4264,7 @@ const modAddRecord = {
   },
 
   async _runAddForm(sheetName, sectionType, atmSepRow) {
-    if (!Access.require("add")) return false;
+    if (!Access.require("add", sheetName)) return false;
     const target = WB.sheets[sheetName];
     // ---- Header row ----
     let hRow;
@@ -4455,7 +4513,10 @@ const modRemoveRecord = {
       await ShowMsg("مقدار جستجو را وارد کنید.", vbExclamation, "Remove");
       return;
     }
-    const matches = modMapping.GetMatchRows(searchKey, searchValue, sheetFilter);
+    const matches = modMapping.GetMatchRows(searchKey, searchValue, sheetFilter).filter(idxRowExcel => {
+      const idx = WB.sheets[IDX_SHEET].rows[idxRowExcel - 1] || [];
+      return Access.can("remove", TrimText(String(idx[0] ?? "")));
+    });
     if (matches.length === 0) {
       await ShowMsg("نتیجه‌ای برای '" + searchValue + "' یافت نشد.\nREFRESH INDEX بزنید.", vbInformation, "Remove");
       return;
@@ -4472,7 +4533,7 @@ const modRemoveRecord = {
       const srcSheetName = TrimText(String(idx[0] ?? ""));
       const srcRowNum = parseInt(idx[1], 10);
       const src = WB.sheets[srcSheetName];
-      if (!src || !srcRowNum) return;
+      if (!src || !srcRowNum || !Access.can("remove", srcSheetName)) return;
       const hRow = 1;
       let lastCol = Math.max(1, ...src.rows.map(r => r.length), 1);
       if (lastCol < 1) lastCol = 1;
@@ -4536,7 +4597,7 @@ const modRemoveRecord = {
     for (const d of dels) {
       const dSheet = d.sheet, dFrom = d.from, dTo = d.to;
       const dWS = WB.sheets[dSheet];
-      if (!dWS) continue;
+      if (!dWS || !Access.require("remove", dSheet)) continue;
       const hR = 1;
       const lastC = Math.max(1, ...dWS.rows.map(r => r.length), 1);
       const rowCount = dTo - dFrom + 1;
@@ -4593,7 +4654,7 @@ const modRemoveRecord = {
     }
     if (deletedRows > 0) {
       await ShowMsg(deletedRows + " ردیف حذف و آرشیو شد.\nنوع سرویس: " + svcName + "\n\n" +
-        (Access.can("admin") ? "برای بازگرداندن از دکمه برگشت (کنار پاک کردن داده) استفاده کنید." : "بازگردانی فقط توسط مدیر سطح ۱ یا ۲ مجاز است."),
+        (Access.can("admin") ? "برای بازگرداندن از دکمه برگشت (کنار پاک کردن داده) استفاده کنید." : "بازگردانی فقط برای حساب دارای مجوز بازگردانی حذف مجاز است."),
         vbInformation, "Done");
     }
     updateStatLine();
@@ -4688,12 +4749,16 @@ const modUndo = {
   },
 
   async UndoLastRemove() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("undo")) return false;
     if (!this.HasUndoState()) {
       await ShowMsg("هیچ عملیات حذفی برای بازگشت وجود ندارد.", vbExclamation, "برگشت");
       return;
     }
     const u = state.undo;
+    if (!(u.blocks || []).every(block => Access.can("undo", block.sheet))) {
+      Toast("حداقل یکی از داده‌های بازگردانی خارج از محدودهٔ مجاز شماست.", "warn");
+      return false;
+    }
     const blockCount = u.blockCount;
     if (blockCount <= 0) {
       await ShowMsg("Undo buffer خالی است.", vbExclamation, "برگشت");
@@ -4704,7 +4769,7 @@ const modUndo = {
     const yn = await ShowMsg(
       "بازگردانی " + totalRows + " ردیف از " + blockCount + " بلوک\nآیا انجام شود؟",
       vbYesNo | vbQuestion, "برگشت");
-    if (yn !== IDYES || !Access.require("admin")) return;
+    if (yn !== IDYES || !Access.require("undo")) return;
 
     for (let bi = u.blocks.length - 1; bi >= 0; bi--) {
       const b = u.blocks[bi];
@@ -4777,20 +4842,29 @@ const modUI = {
     return result;
   },
 
-  BuildSheetList(includeAll) {
+  // Each operation receives its own scoped sheet list. In particular, Add/Remove
+  // must not silently depend on the separate Search permission.
+  BuildSheetList(includeAll, operation = "search-read") {
     const list = [];
     if (includeAll) list.push("ALL");
-    WB.order.forEach(n => { if (IsDataSheet(n) && Access.can("read", n)) list.push(n); });
+    WB.order.forEach(n => { if (IsDataSheet(n) && Access.can(operation, n)) list.push(n); });
     return list;
   },
 
   SetupSheetDropdown() {
-    const sheets = this.BuildSheetList(true);
-    fillSelect("cp-c7", sheets, state.cp.C7, true, true);
-    fillSelect("cp-c23", sheets, state.cp.C23, true, true);
+    fillSelect("cp-c7", this.BuildSheetList(true, "search-read"), state.cp.C7, true, true);
+    state.cp.C7 = document.getElementById("cp-c7").value;
+    fillSelect("cp-c23", this.BuildSheetList(true, "remove"), state.cp.C23, true, true);
+    state.cp.C23 = document.getElementById("cp-c23").value;
   },
-  SetupAddSheetDropdown() { fillSelect("cp-c16", this.BuildSheetList(false), state.cp.C16, true, true); },
-  SetupNavSheetDropdown() { fillSelect("cp-c41", this.BuildSheetList(false), state.cp.C41, true, true); },
+  SetupAddSheetDropdown() {
+    fillSelect("cp-c16", this.BuildSheetList(false, "add"), state.cp.C16, true, true);
+    state.cp.C16 = document.getElementById("cp-c16").value;
+  },
+  SetupNavSheetDropdown() {
+    fillSelect("cp-c41", this.BuildSheetList(false, "read"), state.cp.C41, true, true);
+    state.cp.C41 = document.getElementById("cp-c41").value;
+  },
   SetupKeyDropdown() {
     const selSheet = TrimText(state.cp.C7) || "ALL";
     const keys = this.BuildKeyArray(selSheet);
@@ -4908,11 +4982,8 @@ function fillSelect(id, options, selected, keepOptionalBlank, grouped) {
   } else {
     options.forEach(o => addOpt(sel, o));
   }
-  if (selected && options.indexOf(selected) < 0) {
-    const opt = document.createElement("option");
-    opt.value = selected; opt.textContent = (selected === "FULLTEXT") ? "تمامی ستون ها" : selected; opt.selected = true;
-    sel.appendChild(opt);
-  }
+  // Never reinsert a remembered value that is absent from this operation's
+  // scoped list. Doing so would disclose a sheet name from a prior account.
   syncQuickForms();
 }
 function renderExactToggle() {
@@ -5269,7 +5340,7 @@ function BuildExportWorkbook() {
   const skip = {}; skip[IDX_SHEET] = 1; skip[UNDO_BUFFER_SHEET] = 1; skip[NAV_SHEET_NAME] = 1;
   for (const name of WB.order) {
     if (skip[name]) continue;
-    const sh = WB.sheets[name]; if (!sh) continue;
+    const sh = WB.sheets[name]; if (!sh || !Access.can("export", name)) continue;
     const ws = XLSX.utils.aoa_to_sheet(sh.rows || []);
     if (sh.merges && sh.merges.length) {
       ws["!merges"] = sh.merges.map(m => ({ s: { r: m.r1 - 1, c: m.c1 - 1 }, e: { r: m.r2 - 1, c: m.c2 - 1 } }));
@@ -5923,7 +5994,7 @@ function renderFeed() {
   const host = document.getElementById("dash-feed");
   if (!host) return;
   const log = WB.sheets[LOG_SHEET];
-  const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ""));
+  const rows = (log ? log.rows : []).slice(1).filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== "") && canViewLogEntry(r));
   const colors = { ADD: "#22c55e", REMOVE: "#ef4444", UNDO: "#f59e0b", EDIT: "#3b82f6", ERROR: "#ef4444", ARCHIVE_FAIL: "#ef4444" };
   clear(host);
   if (!rows.length) {
@@ -6103,6 +6174,7 @@ const ACTIONS = {
   "nav-sheet": el => modNavigator.NavToSelectedSheet(el.dataset.name),
   "open-category": el => openCategory(el.dataset.cat),
   "manage-categories": () => manageCategories(),
+  "manage-category-sections": el => manageCategorySections(el.dataset.category),
   "manage-regions": () => manageRegions(),
   "toggle-quick": button => toggleQuickForm(button),
   "quick-exact": () => modUI.ToggleExactMatch(),
@@ -7643,7 +7715,7 @@ function refreshRegionUI() {
   renderSheetCatalog();
 }
 function manageRegions() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("manage-regions")) return false;
   const draft=JSON.parse(JSON.stringify(state.regionConfig || defaultRegionConfig()));
   let selected=draft.regions[0]?.id || '', pendingDelete='', query='';
   const previousFocus=document.activeElement, overlay=document.getElementById('modal-overlay');
@@ -7817,10 +7889,10 @@ const CAT_MATCH_ORDER = ["provinces", "equipment", "carriers", "costs", "datacen
 // Only metadata is customized; no category operation edits/deletes worksheet data.
 function defaultCategoryConfig() {
   return { version: 1, categories: SHEET_CATEGORIES.filter(c => c.id !== 'system')
-    .map(({id, name, sub, color, icon}) => ({id, name, sub, color, icon})), assignments: [] };
+    .map(({id, name, sub, color, icon}) => ({id, name, sub, color, icon})), assignments: [], sections: [], sectionAssignments: [], sectionInitialized: [] };
 }
 function normalizeCategoryConfig(value) {
-  if (value == null) return null; // legacy files retain the original automatic rules
+  if (value == null) return null; // legacy files retain the original automatic categories
   if (value.version !== 1 || !Array.isArray(value.categories) || !Array.isArray(value.assignments)) return null;
   const ids = new Set(), names = new Set(['همه بخش‌ها', 'سایر', 'سیستم'].map(NormalizeText)), categories = [];
   for (const c of value.categories) {
@@ -7838,7 +7910,38 @@ function normalizeCategoryConfig(value) {
     if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== 'string' || IsSystemSheet(pair[0])) continue;
     if (pair[1] === 'other' || ids.has(pair[1])) assignments.set(pair[0], pair[1]);
   }
-  return {version:1, categories, assignments:Array.from(assignments)};
+  // Each ordinary category can have its own editable sections. A section only
+  // groups existing sheets: deleting it releases its assignments and never
+  // deletes a worksheet or a record.
+  const sections = [], sectionIds = new Set(), sectionNames = new Set();
+  const rawSections = Array.isArray(value.sections) ? value.sections : [];
+  for (const section of rawSections) {
+    if (!section || typeof section.id !== 'string' || !/^[a-z][a-z0-9_-]{0,99}$/.test(section.id) || sectionIds.has(section.id)
+      || typeof section.category !== 'string' || !ids.has(section.category)) return null;
+    const name = typeof section.name === 'string' ? section.name.trim() : '';
+    const nameKey = section.category+'\u0000'+NormalizeText(name);
+    if (!name || name.length > 80 || NormalizeText(name)==='بدون بخش' || sectionNames.has(nameKey)) return null;
+    sectionIds.add(section.id);sectionNames.add(nameKey);sections.push({id:section.id,category:section.category,name});
+  }
+  const sectionInitialized = [...new Set((Array.isArray(value.sectionInitialized) ? value.sectionInitialized : [])
+    .filter(id=>typeof id==='string'&&ids.has(id)))];
+  const draft = {version:1,categories,assignments:Array.from(assignments),sections,sectionAssignments:[],sectionInitialized};
+  const sectionAssignments = new Map();
+  const rawSectionAssignments = Array.isArray(value.sectionAssignments) ? value.sectionAssignments : [];
+  for (const pair of rawSectionAssignments) {
+    if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== 'string' || typeof pair[1] !== 'string' || IsSystemSheet(pair[0])) continue;
+    const section = sections.find(item=>item.id===pair[1]);
+    if (section && categoryOf(pair[0],draft).id===section.category) sectionAssignments.set(pair[0],section.id);
+  }
+  draft.sectionAssignments=Array.from(sectionAssignments);
+  return draft;
+}
+function managedCategorySections(categoryId, config = state.categoryConfig) {
+  return (config?.sections || []).filter(section=>section.category===categoryId);
+}
+function categorySectionOf(name, categoryId = categoryOf(name).id, config = state.categoryConfig) {
+  const sectionId = (config?.sectionAssignments || []).find(pair=>pair[0]===name)?.[1];
+  return managedCategorySections(categoryId,config).find(section=>section.id===sectionId) || null;
 }
 function managedCategories(config = state.categoryConfig) {
   return config ? config.categories : SHEET_CATEGORIES.filter(c => c.id !== 'system');
@@ -7864,7 +7967,7 @@ function refreshCategoryUI() {
   saveUIState();
 }
 function manageCategories() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("manage-categories")) return false;
   const draft = JSON.parse(JSON.stringify(state.categoryConfig || defaultCategoryConfig()));
   let selected = draft.categories[0]?.id || '', pendingDelete = '', query = '';
   const previousFocus = document.activeElement;
@@ -7961,6 +8064,100 @@ function manageCategories() {
   });
   clear(overlay);overlay.appendChild(box);overlay.classList.add('show');renderList();renderEditor();
   box.querySelector('#category-name')?.focus();
+}
+
+// General section manager. It intentionally mirrors the region manager but
+// assigns existing sheets to named sections inside one category. It never
+// creates, renames or deletes a worksheet and therefore cannot remove data.
+function manageCategorySections(categoryId) {
+  if (!Access.require('manage-categories')) return false;
+  const draft = JSON.parse(JSON.stringify(state.categoryConfig || defaultCategoryConfig()));
+  const category = draft.categories.find(item=>item.id===categoryId);
+  if (!category) { Toast('دستهٔ انتخاب‌شده دیگر وجود ندارد.','warn'); return false; }
+  draft.sections = Array.isArray(draft.sections) ? draft.sections : [];
+  draft.sectionAssignments = Array.isArray(draft.sectionAssignments) ? draft.sectionAssignments : [];
+  // Titles are independent grouping metadata. Existing worksheets are seeded
+  // once as editable section titles, then future title changes never rename or
+  // delete those worksheets.
+  let selected='', pendingDelete='', query='';
+  const previousFocus=document.activeElement,overlay=document.getElementById('modal-overlay');
+  const box=el('div',{class:'mbox category-manager',role:'dialog','aria-modal':'true','aria-labelledby':'section-manager-title'});
+  const error=el('p',{id:'section-error',role:'alert',class:'category-error'}),list=el('div',{class:'category-list','aria-label':'بخش‌های دسته'}),editor=el('div',{class:'category-editor'});
+  const close=()=>{overlay.classList.remove('show');clear(overlay);previousFocus?.focus();};
+  const action=(text,id,fn,cls='btn btn-ghost btn-sm')=>el('button',{type:'button',id,class:cls,onclick:fn,text});
+  const sections=()=>draft.sections.filter(section=>section.category===categoryId);
+  const setAssignment=(sheet,id)=>{
+    draft.sectionAssignments=draft.sectionAssignments.filter(pair=>pair[0]!==sheet);
+    if(id)draft.sectionAssignments.push([sheet,id]);
+  };
+  const categorySheets=()=>WB.order.filter(name=>IsDataSheet(name)&&categoryOf(name,draft).id===categoryId);
+  draft.sectionInitialized=Array.isArray(draft.sectionInitialized)?draft.sectionInitialized:[];
+  if(!draft.sectionInitialized.includes(categoryId)){
+    // First opening migrates the currently visible titles into independent
+    // section records. The worksheet name/data remains untouched forever.
+    if(!sections().length)categorySheets().forEach(name=>{
+      let title=name,number=2;
+      while(sections().some(item=>NormalizeText(item.name)===NormalizeText(title)))title=name+' '+number++;
+      const id='section-'+crypto.randomUUID();draft.sections.push({id,category:categoryId,name:title});setAssignment(name,id);
+    });
+    draft.sectionInitialized.push(categoryId);
+  }
+  selected=sections()[0]?.id||'';
+  const sectionOf=(name)=>{
+    const id=draft.sectionAssignments.find(pair=>pair[0]===name)?.[1];
+    return sections().find(section=>section.id===id) || null;
+  };
+  const renderList=()=>{
+    clear(list);
+    for(const section of sections())list.appendChild(el('button',{type:'button',class:'category-choice'+(section.id===selected?' active':''),'data-section-id':section.id,'aria-pressed':String(section.id===selected),onclick:()=>{selected=section.id;pendingDelete='';renderList();renderEditor();}},
+      el('span',{text:section.name}),el('b',{text:String(categorySheets().filter(name=>sectionOf(name)?.id===section.id).length)})));
+    if(!sections().length)list.appendChild(el('p',{class:'hint',text:'هنوز عنوانی برای این دسته ثبت نشده است. با «افزودن بخش» شروع کنید؛ شیت‌ها بعداً به آن منتسب می‌شوند.'}));
+  };
+  const renderEditor=()=>{
+    clear(editor);
+    const section=sections().find(item=>item.id===selected);
+    if(!section){editor.appendChild(el('p',{class:'hint',text:'برای ویرایش عنوان یا تخصیص شیت‌ها، یک بخش را انتخاب یا ایجاد کنید. خود شیت‌ها و داده‌هایشان حذف نمی‌شوند.'}));return;}
+    const rows=el('div',{class:'category-sheet-list'}),count=el('p',{class:'hint','aria-live':'polite'});
+    const matches=()=>categorySheets().filter(name=>NormalizeText(name).includes(NormalizeText(query)));
+    const renderRows=()=>{
+      clear(rows);const names=matches();
+      count.textContent=names.length+' شیت قابل نمایش · '+categorySheets().filter(name=>sectionOf(name)?.id===section.id).length+' شیت در این بخش';
+      names.forEach(name=>{
+        const current=sectionOf(name);
+        const input=el('input',{type:'checkbox',checked:current?.id===section.id,'data-section-sheet':name,onchange:event=>{
+          setAssignment(name,event.target.checked?section.id:'');renderRows();renderList();
+          rows.querySelector('[data-section-sheet="'+CSS.escape(name)+'"]')?.focus();
+        }});
+        rows.appendChild(el('label',{class:'category-sheet'},input,el('span',{text:name}),el('small',{text:current?.name || 'بدون بخش'})));
+      });
+      if(!names.length)rows.appendChild(el('p',{class:'hint',text:'شیتی در این دسته با این نام یافت نشد.'}));
+    };
+    editor.append(el('label',{for:'section-name',text:'نام بخش'}),el('input',{id:'section-name',class:'inp',value:section.name,maxlength:80,oninput:event=>{section.name=event.target.value;error.textContent='';renderList();}}),
+      el('div',{class:'category-edit-actions'},action(pendingDelete===section.id?'تأیید حذف بخش':'حذف بخش','section-delete',()=>{
+        if(pendingDelete!==section.id){pendingDelete=section.id;renderEditor();return;}
+        draft.sectionAssignments=draft.sectionAssignments.filter(pair=>pair[1]!==section.id);
+        draft.sections=draft.sections.filter(item=>item.id!==section.id);selected=sections()[0]?.id||'';pendingDelete='';renderList();renderEditor();
+      },'btn btn-red btn-sm')),
+      el('p',{class:'hint',text:pendingDelete===section.id?'با تأیید، فقط خود بخش حذف و شیت‌های آن «بدون بخش» می‌شوند؛ هیچ شیت یا داده‌ای پاک نمی‌شود.':'تیک هر شیت آن را به این بخش منتقل می‌کند؛ برداشتن تیک، آن را بدون بخش می‌کند. هر شیت فقط یک بخش در این دسته دارد.'}),
+      el('label',{for:'section-sheet-search',text:'جستجوی شیت‌های همین دسته'}),el('input',{id:'section-sheet-search',class:'inp',placeholder:'نام شیت…',value:query,oninput:event=>{query=event.target.value;renderRows();}}),rows,count);
+    renderRows();
+  };
+  box.append(el('div',{class:'t'},el('span',{id:'section-manager-title',text:'مدیریت بخش‌های «'+category.name+'»'}),action('×','section-close',close)),
+    el('div',{class:'c'},el('p',{class:'hint',text:'مانند مدیریت مناطق، عنوان‌های فعلی این دسته در ستون سمت راست قابل ویرایش و حذف‌اند. همه شیت‌ها مستقل و در «همه بخش‌ها» باقی می‌مانند؛ فقط با تیک‌زدن به این عنوان‌ها منتسب می‌شوند. حذف بخش، شیت یا سلول‌های داده را حذف نمی‌کند.'}),
+      action('+ افزودن بخش','section-new',()=>{let number=1;while(sections().some(item=>item.name==='بخش جدید '+number))number++;selected='section-'+crypto.randomUUID();draft.sections.push({id:selected,category:categoryId,name:'بخش جدید '+number});pendingDelete='';error.textContent='';renderList();renderEditor();editor.querySelector('#section-name')?.focus();},'btn btn-cyan btn-sm'),
+      el('div',{class:'category-manager-grid'},list,editor),error),
+    el('div',{class:'f'},action('ذخیره تغییرات','section-save',()=>{
+      const clean=normalizeCategoryConfig(draft);
+      if(!clean){error.textContent='نام بخش‌ها نباید خالی، تکراری، بیشتر از ۸۰ نویسه یا «بدون بخش» باشد.';return;}
+      state.categoryConfig=clean;WriteChangeLog('CATEGORY_SECTIONS','-','-','SUCCESS','Category sections and worksheet assignments updated');saveState();refreshCategoryUI();close();Toast('بخش‌های «'+category.name+'» ذخیره شدند.','ok');
+    },'btn btn-primary'),action('انصراف','section-cancel',close)));
+  box.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();close();}
+    if(event.key==='Tab'){const items=[...box.querySelectorAll('button,input')].filter(item=>!item.disabled&&item.getClientRects().length);const first=items[0],last=items.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}
+  });
+  clear(overlay);overlay.appendChild(box);overlay.classList.add('show');renderList();renderEditor();
+  (box.querySelector('#section-name')||box.querySelector('#section-new'))?.focus();
+  return true;
 }
 
 function sheetsOfCategory(catId) {
@@ -8115,29 +8312,46 @@ function renderSheetCatalog() {
       if (c.id === "other") return categoryOf(n).id === "other";
       return categoryOf(n).id === c.id && (!IsSystemSheet(n) || state.showSystem);
     });
-    if (!names.length && c.id !== 'provinces') return;
+    // Managers must be able to create the first section even before this
+    // category has a worksheet. Ordinary viewers still do not see empty areas.
+    if (!names.length && c.id !== 'provinces' && !Access.can('manage-categories')) return;
     rendered++;
     if (c.id === 'provinces') {
       host.appendChild(renderProvinceHierarchy(names, c));
       return;
     }
-    const grid = el("div", { class: "sheet-grid" });
-    names.forEach(n => {
-      const rows = Math.max(0, countRows(n) - 1);
-      const tags = sheetTags(n);
-      const card = el("div", {
-        class: "sheet-card" + (state.currentSheet === n ? " active" : ""),
-        "data-act": "open-sheet", "data-name": n
-      },
-        el("div", { class: "sc-glow", style: { background: c.color } }),
-        el("div", { class: "sc-top" },
-          el("span", { class: "sc-dot", style: { background: c.color } }),
-          el("div", { class: "sc-name", text: n })),
-        el("div", { class: "sc-tags" },
-          el("span", { class: "sc-rows", text: rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f" }),
-          ...tags.map(t => el("span", { class: "sc-tag", text: t }))));
-      grid.appendChild(card);
-    });
+    const makeGrid = list => {
+      const grid = el("div", { class: "sheet-grid" });
+      list.forEach(n => {
+        const rows = Math.max(0, countRows(n) - 1);
+        const tags = sheetTags(n);
+        const card = el("div", {
+          class: "sheet-card" + (state.currentSheet === n ? " active" : ""),
+          "data-act": "open-sheet", "data-name": n
+        },
+          el("div", { class: "sc-glow", style: { background: c.color } }),
+          el("div", { class: "sc-top" },
+            el("span", { class: "sc-dot", style: { background: c.color } }),
+            el("div", { class: "sc-name", text: n })),
+          el("div", { class: "sc-tags" },
+            el("span", { class: "sc-rows", text: rows.toLocaleString("fa-IR") + " \u0631\u06a9\u0648\u0631\u062f" }),
+            ...tags.map(t => el("span", { class: "sc-tag", text: t }))));
+        grid.appendChild(card);
+      });
+      return grid;
+    };
+    const sections = managedCategorySections(c.id);
+    let content = names.length ? makeGrid(names) : el('p',{class:'hint category-subsection-empty',text:'هنوز شیتی در این دسته نیست؛ می‌توانید نخستین بخش را ایجاد کنید و بعد شیت‌های موجود را به آن منتسب کنید.'});
+    if (sections.length) {
+      const grouped = el('div',{class:'category-subsections'});
+      const groups = sections.map(section=>({name:section.name,names:names.filter(name=>categorySectionOf(name,c.id)?.id===section.id)}));
+      const unassigned = names.filter(name=>!categorySectionOf(name,c.id));
+      if (unassigned.length) groups.push({name:'بدون بخش',names:unassigned});
+      groups.forEach(group=>grouped.appendChild(el('section',{class:'category-subsection'},
+        el('div',{class:'category-subsection-head'},el('h4',{text:group.name}),el('span',{text:group.names.length.toLocaleString('fa-IR')+' شیت'})),
+        group.names.length ? makeGrid(group.names) : el('p',{class:'hint category-subsection-empty',text:'هنوز شیتی در این بخش قرار نگرفته است.'}))));
+      content=grouped;
+    }
     host.appendChild(el("div", { class: "cat-section fade-in" },
       el("div", { class: "cat-head" },
         el("div", { class: "ch-ico", style: { background: c.color + "22", color: c.color } }, catSvgNode(c)),
@@ -8145,8 +8359,9 @@ function renderSheetCatalog() {
           el("h3", { style: { color: "var(--txt-0)" }, text: c.name }),
           el("div", { class: "ch-sub", text: c.sub })),
         el("div", { class: "ch-line" }),
+        el('button',{type:'button',class:'btn btn-ghost btn-sm category-section-manage','data-act':'manage-category-sections','data-category':c.id,text:'مدیریت بخش‌ها'}),
         el("div", { class: "ch-n", text: names.length + " SHEET" })),
-      grid));
+      content));
   });
   if (!rendered) host.appendChild(el("div", { class: "empty-state", text: "\u0634\u06cc\u062a\u06cc \u062f\u0631 \u0627\u06cc\u0646 \u062f\u0633\u062a\u0647 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f." }));
 }
@@ -8244,6 +8459,12 @@ const Access = (() => {
     const user=db.users.find(u=>u.id===activeId&&u.enabled);
     return user?JSON.parse(JSON.stringify(user)):null;
   }
+  // Mirror the server's scope rule: region assignments govern provincial
+  // worksheets; individually granted sheet names govern every other worksheet.
+  function scopeAllowsSheet(user,sheet){
+    const provincial=provinceOf(sheet);
+    return provincial ? user.regions.includes(provincial.region) : user.sheets.includes(sheet);
+  }
   function can(operation,sheet){
     const u=current();if(!u)return false;
     if(['users','source'].includes(operation))return u.role===1;
@@ -8254,9 +8475,10 @@ const Access = (() => {
       if(IsSystemSheet(sheet))return false;
       return scopeAllowsSheet(u,sheet);
     }
-    // "admin" keeps the existing configuration screens available to level 2;
-    // destructive data actions have their own, narrower capabilities below.
-    if(['admin','undo'].includes(operation))return u.role<=2;
+    // Central category/region metadata is a server-authorised administrative
+    // operation. Levels 1 and 2 may manage it; the API independently rejects
+    // a crafted metadata write by a scoped level-3/4 account.
+    if(['admin','undo','manage-categories','manage-regions'].includes(operation))return u.role<=2;
     if(operation==='manual')return u.role<=3;
     if(operation==='export')return u.role<=3;
     if(operation==='backup')return u.role<=3;
@@ -8296,6 +8518,8 @@ const Access = (() => {
     if(a==='backup')return can('backup');
     if(a==='restore')return can('restore');
     if(['reset-empty','reset-all'].includes(a))return can('reset');
+    if(a==='manage-regions')return can('manage-regions');
+    if(['manage-categories','manage-category-sections'].includes(a))return can('manage-categories');
     if(['open-sheet','nav-sheet','show-more-rows'].includes(a))return can('workspace') && can('read',node.dataset.name);
     if(['go-cp','toggle-sidebar','toggle-fold','province-region','province-section','open-category','set-filter','filter-rows','quick-exact'].includes(a))return can('workspace');
     if(a==='switch-view')return viewAllowed(node.dataset.view);

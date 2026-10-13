@@ -92,6 +92,76 @@ def safe_tree(obj,depth=0):
     elif isinstance(obj,list):
         for v in obj:safe_tree(v,depth+1)
 
+def validate_category_config(value):
+    """Validate only grouping metadata; it never changes worksheet contents.
+
+    Logical category sections are server-persisted records.  Their IDs and
+    worksheet assignments are bounded and canonicalised here, so a malformed
+    browser payload cannot turn a section-title change into a workbook change.
+    Older deployments that predate sections remain compatible because the new
+    three fields are optional on input and are emitted as empty arrays.
+    """
+    if value is None:return None
+    if not isinstance(value,dict) or value.get('version')!=1 or not isinstance(value.get('categories'),list) or not isinstance(value.get('assignments'),list):
+        fail(400,'پیکربندی دسته‌بندی نامعتبر است.')
+    if len(value['categories'])>100 or len(value['assignments'])>1000:fail(400,'پیکربندی دسته‌بندی بیش از حد بزرگ است.')
+    ids=set();titles={norm(x) for x in ('همه بخش‌ها','سایر','سیستم')};categories=[]
+    for item in value['categories']:
+        if not isinstance(item,dict):fail(400,'دسته نامعتبر است.')
+        ident=item.get('id');title=item.get('name')
+        if not isinstance(ident,str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,79}',ident) or ident in {'all','other','system'} or ident in ids:
+            fail(400,'شناسهٔ دسته نامعتبر است.')
+        if not isinstance(title,str) or not (1<=len(title.strip())<=80) or norm(title) in titles:fail(400,'نام دسته نامعتبر است.')
+        sub=item.get('sub','');color=item.get('color','#2fd4c4');icon=item.get('icon','layers')
+        if not isinstance(sub,str) or not isinstance(color,str) or not isinstance(icon,str):fail(400,'جزئیات دسته نامعتبر است.')
+        ids.add(ident);titles.add(norm(title));categories.append({'id':ident,'name':title.strip(),'sub':sub[:100],
+          'color':color if re.fullmatch(r'#[0-9a-fA-F]{6}',color) else '#2fd4c4','icon':icon[:40]})
+    assignments={}
+    for pair in value['assignments']:
+        if not isinstance(pair,list) or len(pair)!=2 or not all(isinstance(v,str) for v in pair):fail(400,'انتساب دسته نامعتبر است.')
+        sheet,ident=pair
+        if not (1<=len(sheet)<=31) or sheet in SYSTEM or (ident!='other' and ident not in ids):fail(400,'انتساب دسته نامعتبر است.')
+        assignments[sheet]=ident
+    # Keep section assignment metadata consistent with the category that the
+    # browser will render. Custom categories are explicitly assigned; built-in
+    # names use the same priority as the client-side category matcher.
+    def category_for_sheet(sheet):
+        if sheet in assignments:return assignments[sheet]
+        if province(sheet):candidate='provinces'
+        elif re.search(r'تجهیزات|EOL|EOS',sheet):candidate='equipment'
+        elif re.search(r'جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک',sheet):candidate='carriers'
+        elif 'هزینه' in sheet:candidate='costs'
+        elif re.search(r'مرکز داده|ساختمان|سازمان',sheet):candidate='datacenters'
+        elif re.search(r'شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری',sheet):candidate='services'
+        else:candidate='other'
+        return candidate if candidate in ids else 'other'
+    raw_sections=value.get('sections',[]);raw_section_assignments=value.get('sectionAssignments',[]);raw_initialized=value.get('sectionInitialized',[])
+    if not isinstance(raw_sections,list) or not isinstance(raw_section_assignments,list) or not isinstance(raw_initialized,list) or len(raw_sections)>500 or len(raw_section_assignments)>1000 or len(raw_initialized)>100:
+        fail(400,'پیکربندی بخش‌ها نامعتبر است.')
+    section_ids=set();section_titles=set();sections=[]
+    for item in raw_sections:
+        if not isinstance(item,dict):fail(400,'بخش نامعتبر است.')
+        ident=item.get('id');category=item.get('category');title=item.get('name')
+        if not isinstance(ident,str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,99}',ident) or ident in section_ids or category not in ids or category=='provinces':
+            fail(400,'شناسهٔ بخش نامعتبر است.')
+        if not isinstance(title,str) or not (1<=len(title.strip())<=80) or norm(title)=='بدون بخش' or (category,norm(title)) in section_titles:
+            fail(400,'نام بخش نامعتبر است.')
+        section_ids.add(ident);section_titles.add((category,norm(title)));sections.append({'id':ident,'category':category,'name':title.strip()})
+    section_by_id={section['id']:section for section in sections};section_assignments={}
+    for pair in raw_section_assignments:
+        if not isinstance(pair,list) or len(pair)!=2 or not all(isinstance(v,str) for v in pair):fail(400,'انتساب بخش نامعتبر است.')
+        sheet,ident=pair;section=section_by_id.get(ident)
+        if not (1<=len(sheet)<=31) or sheet in SYSTEM or not section or category_for_sheet(sheet)!=section['category']:
+            fail(400,'انتساب بخش نامعتبر است.')
+        section_assignments[sheet]=ident
+    initialized=[]
+    for ident in raw_initialized:
+        if not isinstance(ident,str) or ident not in ids:fail(400,'وضعیت اولیهٔ بخش نامعتبر است.')
+        if ident not in initialized:initialized.append(ident)
+    return {'version':1,'categories':categories,'assignments':[[sheet,ident] for sheet,ident in assignments.items()],
+      'sections':sections,'sectionAssignments':[[sheet,ident] for sheet,ident in section_assignments.items()],
+      'sectionInitialized':initialized}
+
 def validate_state(raw):
     if not isinstance(raw,dict):fail(400,'داده معتبر نیست.')
     safe_tree(raw)
@@ -114,8 +184,8 @@ def validate_state(raw):
         if name not in EPHEMERAL:clean[name]={'rows':sh['rows'],'merges':sh['merges']}
     locks=raw.get('lockedSheets') or {}
     if not isinstance(locks,dict) or any(type(v)!=bool for v in locks.values()):fail(400,'قفل شیت‌ها نامعتبر است.')
-    for config in ['categoryConfig','regionConfig']:
-        if raw.get(config) is not None and not isinstance(raw[config],dict):fail(400,'پیکربندی نامعتبر است.')
+    category=validate_category_config(raw.get('categoryConfig'))
+    if raw.get('regionConfig') is not None and not isinstance(raw['regionConfig'],dict):fail(400,'پیکربندی نامعتبر است.')
     region=raw.get('regionConfig')
     if region is not None:
         if region.get('version')!=1 or not isinstance(region.get('regions'),list) or not isinstance(region.get('assignments'),list):fail(400,'پیکربندی مناطق نامعتبر است.')
@@ -128,7 +198,7 @@ def validate_state(raw):
             if not isinstance(pair,list) or len(pair)!=2 or not all(isinstance(v,str) for v in pair) or pair[0] not in valid or pair[0] in seen or pair[1] not in ids+['unassigned']:fail(400,'انتساب استان نامعتبر است.')
             seen.add(pair[0])
         if seen!=valid or len(ids)!=len(set(ids)):fail(400,'همهٔ استان‌ها باید یک انتساب مشخص داشته باشند.')
-    return {'v':2,'order':[n for n in order if n in clean],'sheets':clean,'lockedSheets':locks,'categoryConfig':raw.get('categoryConfig'),'regionConfig':region,'panelProtected':raw.get('panelProtected',True) is not False}
+    return {'v':2,'order':[n for n in order if n in clean],'sheets':clean,'lockedSheets':locks,'categoryConfig':category,'regionConfig':region,'panelProtected':raw.get('panelProtected',True) is not False}
 
 def sequence_delta(old,new):
     """Only insertion OR deletion, never replacement/reordering. Preserve exact types."""

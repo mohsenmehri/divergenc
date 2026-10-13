@@ -113,6 +113,36 @@ class CentralTests(unittest.TestCase):
     def test_role2_cannot_administer_accounts(self):
         c=self.user(2);self.assertEqual(c.get('/api/users').status_code,403);self.assertEqual(self.post(c,'users',{'users':[]}).status_code,403)
         p=self.state(c);p['state']['sheets']['Network']['rows'][1][1]='LEVEL2';self.assertEqual(self.save(c,p).status_code,200)
+    def test_logical_section_metadata_survives_server_commit_without_sheet_mutation(self):
+        # A logical title/assignment is server-persisted metadata. It must not
+        # rename, drop, or rewrite the real worksheet it classifies.
+        p=self.state();before=copy.deepcopy(p['state']['sheets']['Network'])
+        p['state']['categoryConfig']={
+            'version':1,
+            'categories':[{'id':'datacenters','name':'مراکز داده','sub':'Data centers','color':'#5b93ff','icon':'server'}],
+            'assignments':[['Network','datacenters']],
+            'sections':[{'id':'section-primary','category':'datacenters','name':'مرکزهای اصلی'}],
+            'sectionAssignments':[['Network','section-primary']],
+            'sectionInitialized':['datacenters']}
+        self.assertEqual(self.save(self.a,p).status_code,200)
+        saved=self.state()['state']
+        self.assertEqual(saved['categoryConfig']['sections'][0]['name'],'مرکزهای اصلی')
+        self.assertEqual(saved['categoryConfig']['sectionAssignments'],[['Network','section-primary']])
+        self.assertEqual(saved['categoryConfig']['sectionInitialized'],['datacenters'])
+        self.assertIn('Network',saved['order']);self.assertEqual(saved['sheets']['Network'],before)
+        # Level 2 is an authorised central manager, while a scoped account
+        # cannot forge a logical-title or assignment change.
+        operator=self.user(2);operator_state=self.state(operator)
+        operator_state['state']['categoryConfig']['sections'][0]['name']='مرکزهای عملیاتی'
+        self.assertEqual(self.save(operator,operator_state).status_code,200)
+        scoped=self.user(3,regions=['2'],sheets=['Network']);attempt=self.state(scoped)
+        attempt['state']['categoryConfig']['sections'][0]['name']='تغییر غیرمجاز'
+        self.assertEqual(self.save(scoped,attempt).status_code,403)
+        self.assertEqual(self.state()['state']['categoryConfig']['sections'][0]['name'],'مرکزهای عملیاتی')
+        malformed=self.state();malformed['state']['categoryConfig']['sections'][0]['id']='invalid section id'
+        self.assertEqual(self.save(self.a,malformed).status_code,400)
+        malformed=self.state();malformed['state']['categoryConfig']['assignments']=[['Network','other']]
+        self.assertEqual(self.save(self.a,malformed).status_code,400)
     def test_disable_revokes_session_and_preserves_last_admin(self):
         c=self.user(3);p=self.a.get('/api/users').json
         next(x for x in p['users'] if x['role']==3)['enabled']=False

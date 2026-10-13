@@ -7,6 +7,8 @@ test('central HTML contains server auth and sync, never restores a local workboo
  const access=html.match(/<script id="fam-local-access-js">([\s\S]*?)<\/script>/)[1];
  assert.ok(!access.includes('localStorage'));assert.ok(!access.includes('hashPassword'));
  assert.match(access,/FamShared.api\('users'/);assert.match(access,/FamShared.api\('password'/);
+ assert.match(access,/function scopeAllowsSheet/);assert.match(access,/manage-category-sections/);
+ assert.match(html,/function manageCategorySections\(categoryId\)/);assert.match(html,/sectionInitialized/);
  assert.match(html,/idbDelete=async\(\)=>true/);
  assert.match(html,/await Access.start\(\);\s+await FamShared.load\(\);/);
  assert.equal((html.match(/FamShared.ready\(\)/g)||[]).length,1);
