@@ -1,443 +1,763 @@
-<mxfile host="Electron" agent="ChatGPT" pages="3">
-  <diagram id="D_j02gKO1O3TspLVl_gF" name="AntiVirus Network - Professional">
-    <mxGraphModel dx="1459" dy="892" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+<?xml version="1.0" encoding="utf-8"?>
+<mxfile host="Arena" agent="Arena-Agent" version="24.7.5" type="device">
+  <diagram id="n74" name="1 - Overview - 3Layer">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1200" math="0" shadow="0">
       <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="Py8enKNGcU8qughr7Lbr-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=1.5;arcSize=12;fontColor=#333333;" vertex="1">
-          <mxGeometry height="250" width="1320" x="716" y="730" as="geometry" />
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="n1" value="ساختار ارتباطی شبکه — فام (تجارت الکترونیک و فناوری اطلاعات ملل)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=26;fontColor=#0D47A1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="200" y="45" width="1500" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ba1e2;strokeColor=#006EAF;strokeWidth=1.5;arcSize=12;fontColor=#ffffff;" vertex="1">
-          <mxGeometry height="210" width="1320" x="695" y="996" as="geometry" />
+        <mxCell id="n2" value="شعبه → PTMP / MPLS استانی → مرکز استان → MPLS کشوری → دیتاسنتر تهران / دیتاسنتر سمنان" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=13;fontColor=#546E7A;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="200" y="92" width="1500" height="26" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7EA;strokeColor=#D9A441;strokeWidth=1.5;arcSize=12;" vertex="1">
-          <mxGeometry height="230" width="1320" x="695" y="1241" as="geometry" />
+        <mxCell id="n3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=none;strokeWidth=0;arcSize=4;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="150" y="140" width="1350" height="160" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-4" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=24;fontStyle=1;fontColor=#17324D;align=center;verticalAlign=middle;" value="AntiVirus Network – Enterprise Connectivity Architecture" vertex="1">
-          <mxGeometry height="40" width="760" x="975" y="651" as="geometry" />
+        <mxCell id="n4" value="لایه ۱ — دیتاسنترها (Data Centers)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#0D47A1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="168" y="148" width="600" height="20" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-5" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=12;fontColor=#607D8B;align=center;verticalAlign=middle;" value="Logical topology • WAN / Intranet / APN / LTE transport • Central Firewall • Branch Spokes" vertex="1">
-          <mxGeometry height="25" width="740" x="985" y="689" as="geometry" />
+        <mxCell id="n5" value="دیتاسنتر تهران&lt;br&gt;DC Tehran" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=1.5;arcSize=8;fontSize=16;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="480" y="175" width="300" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-6" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;fontStyle=1;fontColor=#30475E;align=left;verticalAlign=middle;" value="CORE / TRANSPORT NETWORKS" vertex="1">
-          <mxGeometry height="25" width="240" x="715" y="733" as="geometry" />
+        <mxCell id="n6" value="روتر آنتی‌ویروس" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=2;arcSize=8;fontSize=13;fontColor=#4527A0;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="830" y="190" width="240" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-7" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;fontStyle=1;fontColor=#30475E;align=left;verticalAlign=middle;" value="SECURITY &amp; DATACENTER" vertex="1">
-          <mxGeometry height="25" width="300" x="715" y="1008" as="geometry" />
+        <mxCell id="n7" value="Tu 38 · Tu 40" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontColor=#5E35B1;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="830" y="250" width="240" height="20" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-8" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;fontStyle=1;fontColor=#30475E;align=left;verticalAlign=middle;" value="BRANCH / SPOKE CONNECTIVITY" vertex="1">
-          <mxGeometry height="25" width="320" x="715" y="1253" as="geometry" />
+        <mxCell id="n8" value="دیتاسنتر سمنان&lt;br&gt;DC Semnan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=1.5;arcSize=8;fontSize=16;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="175" width="300" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=2;fontColor=#FFFFFF;fontStyle=1;fontSize=14;" value="HUB Router (Cisco)" vertex="1">
-          <mxGeometry height="75" width="170" x="835" y="796" as="geometry" />
+        <mxCell id="n9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n5" target="n6">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-10" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Port-Channel 1-WAN (G0/0/0 - G0/0/1)" vertex="1">
-          <mxGeometry height="25" width="120" x="860" y="876" as="geometry" />
+        <mxCell id="n10" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#78909C;strokeColor=none;strokeWidth=0;arcSize=0;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="400" y="330" width="1100" height="7" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-11" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Port-Channel 2-LAN (G0/0/2 - G0/0/3)" vertex="1">
-          <mxGeometry height="25" width="120" x="861" y="906" as="geometry" />
+        <mxCell id="n11" value="باس ارتباطی دیتاسنترها" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#607D8B;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="400" y="340" width="620" height="16" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-13" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="INTRANET TCI" vertex="1">
-          <mxGeometry height="70" width="170" x="1415" y="756" as="geometry" />
+        <mxCell id="n12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#1565C0;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.209;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n5" target="n10">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-14" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="APN Network Mobinnet" vertex="1">
-          <mxGeometry height="70" width="170" x="1415" y="856" as="geometry" />
+        <mxCell id="n13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#1565C0;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.791;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n8" target="n10">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-15" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="LTE Network Asiatech" vertex="1">
-          <mxGeometry height="70" width="170" x="1715" y="806" as="geometry" />
+        <mxCell id="n14" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=none;strokeWidth=0;arcSize=4;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="150" y="360" width="1350" height="140" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-16" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565C0;strokeWidth=2.5;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-12">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1060" y="833.5" />
-              <mxPoint x="1060" y="833.5" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="n15" value="بسترهای انتقال کشوری" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#EF6C00;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="168" y="368" width="600" height="20" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-17" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-13">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1310" y="833.5" />
-              <mxPoint x="1310" y="791" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="n16" value="MPLS کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#EF6C00;strokeWidth=2;arcSize=8;fontSize=15;fontColor=#E65100;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="400" width="320" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-18" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-14">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1310" y="840" />
-              <mxPoint x="1310" y="891" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="n17" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=2;arcSize=8;fontSize=15;fontColor=#EF6C00;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="400" width="320" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-19" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-15">
-          <mxGeometry relative="1" x="0.2778" as="geometry">
-            <Array as="points">
-              <mxPoint x="1310" y="840" />
-              <mxPoint x="1230" y="840" />
-              <mxPoint x="1230" y="841" />
-            </Array>
-            <mxPoint x="1310" y="830" as="sourcePoint" />
-          </mxGeometry>
+        <mxCell id="n18" value="VSAT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B2EBF2;strokeColor=#00ACC1;strokeWidth=2;arcSize=8;fontSize=15;fontColor=#006064;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="400" width="320" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-20" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="WAN / MPLS" vertex="1">
-          <mxGeometry height="25" width="100" x="1165" y="736" as="geometry" />
+        <mxCell id="n19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#E65100;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.055;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n16" target="n10">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-21" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Intranet transport" vertex="1">
-          <mxGeometry height="25" width="120" x="1440" y="731" as="geometry" />
+        <mxCell id="n20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.418;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n17" target="n10">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-22" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="APN transport" vertex="1">
-          <mxGeometry height="25" width="110" x="1459" y="928" as="geometry" />
+        <mxCell id="n21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#00838F;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.782;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n18" target="n10">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-23" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="LTE transport" vertex="1">
-          <mxGeometry height="25" width="110" x="1755" y="875.5" as="geometry" />
+        <mxCell id="n22" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#78909C;strokeColor=none;strokeWidth=0;arcSize=0;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="533" width="1120" height="7" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-24" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#37474F;strokeColor=#263238;strokeWidth=2;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" value="WAN-Edge Switch" vertex="1">
-          <mxGeometry height="70" width="180" x="825" y="1066" as="geometry" />
+        <mxCell id="n23" value="باس مشترک انتقال — در دسترس همهٔ مراکز استان" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#607D8B;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="300" y="543" width="620" height="16" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-25" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C62828;strokeColor=#8E0000;strokeWidth=2;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" value="Firewall" vertex="1">
-          <mxGeometry height="70" width="160" x="1120" y="1066" as="geometry" />
+        <mxCell id="n24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#E65100;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.143;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n16" target="n22">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-26" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="LAN DC" vertex="1">
-          <mxGeometry height="70" width="170" x="1415" y="1066" as="geometry" />
+        <mxCell id="n25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n17" target="n22">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-27" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F0FF;strokeColor=#9674C6;strokeWidth=1.5;arcSize=12;" value="AntiVirus / Management Servers" vertex="1">
-          <mxGeometry height="110" width="240" x="1695" y="1046" as="geometry" />
+        <mxCell id="n26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#00838F;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.857;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n18" target="n22">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-28" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-24" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C62828;strokeWidth=2.5;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-25">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n27" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=none;strokeWidth=0;arcSize=4;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="150" y="565" width="1350" height="115" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-29" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-25" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#C62828;strokeWidth=2.5;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-26">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n28" value="لایه ۲ — مراکز استان (شعبه مادر میانی)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#2E7D32;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="168" y="573" width="700" height="20" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-30" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-26" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-27">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n29" value="مرکز استان 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#1B5E20;strokeWidth=1.5;arcSize=8;fontSize=15;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="600" width="320" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-31" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Central security boundary" vertex="1">
-          <mxGeometry height="25" width="180" x="1110" y="1141" as="geometry" />
+        <mxCell id="n30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#607D8B;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.143;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n22" target="n29">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-32" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Server / management segment" vertex="1">
-          <mxGeometry height="25" width="160" x="1440" y="1141" as="geometry" />
+        <mxCell id="n31" value="مرکز استان 2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#1B5E20;strokeWidth=1.5;arcSize=8;fontSize=15;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="600" width="320" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-33" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.2;fontSize=11;fontColor=#455A64;align=left;verticalAlign=middle;spacing=8;" value="Static routing / tunnel mapping: • Tunnel 38 → Intranet (TEH) • Tunnel 39 → Intranet (Provinces) • Tunnel 40 → APN (Mobinnet) • Tunnel 37 → LTE (Asiatech)" vertex="1">
-          <mxGeometry height="105" width="430" x="1100" y="1211" as="geometry" />
+        <mxCell id="n32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#607D8B;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n22" target="n31">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-34" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=1.5;fontStyle=1;fontSize=12;" value="BR-1 Spoke" vertex="1">
-          <mxGeometry height="75" width="180" x="755" y="1321" as="geometry" />
+        <mxCell id="n33" value="مرکز استان 3" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#1B5E20;strokeWidth=1.5;arcSize=8;fontSize=15;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="600" width="320" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-35" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=1.5;fontStyle=1;fontSize=12;" value="BR-2 Spoke" vertex="1">
-          <mxGeometry height="75" width="180" x="1045" y="1321" as="geometry" />
+        <mxCell id="n34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#607D8B;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.857;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n22" target="n33">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-36" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=1.5;fontStyle=1;fontSize=12;" value="BR&amp;amp;ATM-3 Spoke" vertex="1">
-          <mxGeometry height="75" width="180" x="1335" y="1321" as="geometry" />
+        <mxCell id="n35" value="هر مرکز استان روی هر سه بستر (MPLS کشوری · LTE مبین نت · VSAT) به دیتاسنترها متصل است" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10.5;fontColor=#558B2F;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="300" y="682" width="1120" height="20" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-37" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;strokeWidth=1.5;fontStyle=1;fontSize=12;" value="ATM Spoke" vertex="1">
-          <mxGeometry height="75" width="180" x="1625" y="1321" as="geometry" />
+        <mxCell id="n36" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#78909C;strokeColor=none;strokeWidth=0;arcSize=0;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="710" width="1120" height="7" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-38" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-34" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B8794;strokeWidth=2;dashed=1;endArrow=none;">
-          <mxGeometry relative="1" x="-0.8333" as="geometry">
-            <Array as="points">
-              <mxPoint x="700" y="1358.5" />
-              <mxPoint x="700" y="770" />
-              <mxPoint x="1430" y="770" />
-              <mxPoint x="1430" y="780" />
-            </Array>
-            <mxPoint x="1420" y="770" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="n37" value="باس استانی" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#607D8B;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="300" y="720" width="620" height="16" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-39" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Tunnel 38 • Intranet" vertex="1">
-          <mxGeometry height="25" width="180" x="663" y="974" as="geometry" />
+        <mxCell id="n38" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=none;strokeWidth=0;arcSize=4;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="150" y="745" width="1350" height="90" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-40" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-36" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B8794;strokeWidth=2;dashed=1;endArrow=none;entryX=1;entryY=1;entryDx=0;entryDy=0;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" target="Py8enKNGcU8qughr7Lbr-14">
-          <mxGeometry relative="1" x="0.0939" as="geometry">
-            <Array as="points">
-              <mxPoint x="1970" y="1339.8" />
-              <mxPoint x="1970" y="915.7" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="n39" value="PTMP استانی / MPLS استانی" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#6A1B9A;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="168" y="753" width="700" height="20" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-41" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Tunnel 39 • Intranet" vertex="1">
-          <mxGeometry height="25" width="180" x="1935" y="974" as="geometry" />
+        <mxCell id="n40" value="ارتباط شعب هر استان با مرکز استان همان استان (شعبه مادر میانی)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=2;arcSize=8;fontSize=13;fontColor=#4A148C;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="300" y="775" width="1120" height="50" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-42" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-35" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7B8794;strokeWidth=2;dashed=1;endArrow=none;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="Py8enKNGcU8qughr7Lbr-13">
-          <mxGeometry relative="1" x="0.295" as="geometry">
-            <Array as="points">
-              <mxPoint x="1225" y="1370" />
-              <mxPoint x="2080" y="1370" />
-              <mxPoint x="2080" y="791" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="n41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.143;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n29" target="n36">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-43" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Tunnel 40 • APN" vertex="1">
-          <mxGeometry height="25" width="180" x="1833" y="1005" as="geometry" />
+        <mxCell id="n42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n31" target="n36">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-45" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=11;fontColor=#455A64;align=center;verticalAlign=middle;" value="Tunnel 37 • LTE" vertex="1">
-          <mxGeometry height="25" width="180" x="1559" y="1008" as="geometry" />
+        <mxCell id="n43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.857;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n33" target="n36">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-46" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="Branch LAN" vertex="1">
-          <mxGeometry height="45" width="110" x="790" y="1436" as="geometry" />
+        <mxCell id="n44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n36" target="n40">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-47" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-34" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-46">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n45" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#78909C;strokeColor=none;strokeWidth=0;arcSize=0;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="250" y="862" width="1310" height="7" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-48" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="Branch LAN" vertex="1">
-          <mxGeometry height="45" width="110" x="1080" y="1436" as="geometry" />
+        <mxCell id="n46" value="باس شعب" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#607D8B;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="250" y="872" width="620" height="16" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-49" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-35" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-48">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n47" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.466;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n40" target="n45">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-50" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="Branch LAN" vertex="1">
-          <mxGeometry height="45" width="110" x="1370" y="1436" as="geometry" />
+        <mxCell id="n48" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=none;strokeWidth=0;arcSize=4;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="150" y="900" width="1350" height="95" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-51" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-36" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-50">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n49" value="لایه ۳ — شعب" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#E65100;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="168" y="903" width="500" height="18" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-52" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="ATM LAN" vertex="1">
-          <mxGeometry height="45" width="110" x="1660" y="1436" as="geometry" />
+        <mxCell id="n50" value="شعبه 1/1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="290" y="930" width="160" height="52" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-53" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-37" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-52">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n51" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.6;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.0916;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n45" target="n50">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-55" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=14;fontStyle=1;fontColor=#30475E;align=left;verticalAlign=middle;" value="LEGEND" vertex="1">
-          <mxGeometry height="25" width="100" x="1805" y="1251" as="geometry" />
+        <mxCell id="n52" value="شعبه 1/2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="470" y="930" width="160" height="52" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-56" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="LAN" vertex="1">
-          <mxGeometry height="60" width="130" x="1090" y="890" as="geometry" />
+        <mxCell id="n53" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.6;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.2290;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n45" target="n52">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-62" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=12;fontColor=#607D8B;align=center;verticalAlign=middle;" value="Central security inspection / control point" vertex="1">
-          <mxGeometry height="25" width="500" x="1045" y="1186" as="geometry" />
+        <mxCell id="n54" value="شعبه 2/1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="690" y="930" width="160" height="52" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-63" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#546E7A;strokeWidth=2;endArrow=none;" target="Py8enKNGcU8qughr7Lbr-12" value="">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1060" y="833.5" />
-              <mxPoint x="1060" y="833.5" />
-            </Array>
-            <mxPoint x="1005" y="834" as="sourcePoint" />
-            <mxPoint x="1715" y="841" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="n55" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.6;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.3969;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n45" target="n54">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-12" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#607D8B;strokeWidth=2;fontStyle=1;fontSize=13;" value="WAN" vertex="1">
-          <mxGeometry height="60" width="150" x="1080" y="805" as="geometry" />
+        <mxCell id="n56" value="شعبه 2/2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="870" y="930" width="160" height="52" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-69" edge="1" parent="1" style="edgeStyle=entityRelationEdgeStyle;fontSize=12;html=1;endArrow=ERone;endFill=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="Py8enKNGcU8qughr7Lbr-56" value="">
-          <mxGeometry height="100" relative="1" width="100" as="geometry">
-            <mxPoint x="1005" y="1090" as="sourcePoint" />
-            <mxPoint x="1105" y="990" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="n57" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.6;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5344;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n45" target="n56">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-70" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-9" style="endArrow=none;html=1;rounded=0;exitX=0.976;exitY=0.907;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;exitPerimeter=0;" target="Py8enKNGcU8qughr7Lbr-56" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1300" y="1120" as="sourcePoint" />
-            <mxPoint x="1460" y="1120" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="n58" value="شعبه 3/1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="930" width="160" height="52" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-71" connectable="0" parent="Py8enKNGcU8qughr7Lbr-70" style="resizable=0;html=1;whiteSpace=wrap;align=left;verticalAlign=bottom;" value="" vertex="1">
-          <mxGeometry relative="1" x="-1" as="geometry" />
+        <mxCell id="n59" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.6;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.7023;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n45" target="n58">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="Py8enKNGcU8qughr7Lbr-73" edge="1" parent="1" source="Py8enKNGcU8qughr7Lbr-37" style="endArrow=none;html=1;rounded=0;entryX=0.029;entryY=0.743;entryDx=0;entryDy=0;exitX=0.089;exitY=0.013;exitDx=0;exitDy=0;exitPerimeter=0;entryPerimeter=0;" target="Py8enKNGcU8qughr7Lbr-15" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1330" y="1120" as="sourcePoint" />
-            <mxPoint x="1490" y="1120" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="n60" value="شعبه 3/2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F57C00;strokeColor=#E65100;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="930" width="160" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="n61" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.6;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.8397;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n45" target="n60">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n62" value="اینترانت کشوری&lt;br&gt;مسیر مستقیم شعب" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=2;arcSize=8;fontSize=15;fontColor=#1B5E20;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="480" width="220" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="n63" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n45" target="n62">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n64" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="n62" target="n10">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n65" value="فقط شعب دارای اینترانت&lt;br&gt;(همهٔ شعب نیست)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=11;fontColor=#2E7D32;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="1600" y="590" width="220" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="n66" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#E0E0E0;strokeWidth=1.5;arcSize=4;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="150" y="1015" width="1350" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="n67" value="راهنما" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#37474F;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="168" y="1023" width="400" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n68" value="MPLS کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#EF6C00;strokeWidth=2;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="170" y="1052" width="240" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n69" value="PTMP / MPLS استانی" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=2;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="1052" width="240" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n70" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=2;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="670" y="1052" width="240" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n71" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=2;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1052" width="240" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n72" value="VSAT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#B2EBF2;strokeColor=#00ACC1;strokeWidth=2;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="1052" width="240" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="n73" value="نوار خاکستری = باس مشترک (چند لینک هم‌مسیر) — برای جلوگیری از تداخل خطوط ترسیم شده است" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10.5;fontColor=#546E7A;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="170" y="1094" width="1310" height="18" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="ythy5UWfyEtZLl1bKPhT" name="WAN_Rezvani">
-    <mxGraphModel dx="3038" dy="2438" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+  <diagram id="n111" name="2 - Branch Models">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="950" math="0" shadow="0">
       <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="0fz45jxnJM6YCbMeO6qe-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="130" width="270" x="-40" y="370" as="geometry" />
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="n75" value="مدل‌های ارتباطی شعب" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=26;fontColor=#0D47A1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="200" y="40" width="1400" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="0fz45jxnJM6YCbMeO6qe-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="160" width="760" x="-270" y="-300" as="geometry" />
+        <mxCell id="n76" value="سه مدل شعبه در شبکه وجود دارد" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=14;fontColor=#546E7A;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="200" y="88" width="1400" height="26" as="geometry"/>
         </mxCell>
-        <mxCell id="0fz45jxnJM6YCbMeO6qe-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="100" width="290" x="145" y="-270" as="geometry" />
+        <mxCell id="n77" value="مدل ۱ — رایج‌ترین" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#2E7D32;strokeWidth=2;arcSize=8;fontSize=15;fontColor=#2E7D32;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="150" width="480" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="0fz45jxnJM6YCbMeO6qe-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="" vertex="1">
-          <mxGeometry height="100" width="290" x="-200" y="-270" as="geometry" />
+        <mxCell id="n78" value="شعبه" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#37474F;strokeColor=#263238;strokeWidth=1.5;arcSize=8;fontSize=16;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="260" y="235" width="200" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="s0Eac9gDDc72NHViNJWR-1" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#d80073;fontColor=#ffffff;strokeColor=#A50040;strokeWidth=2;" value="MPLS_Proviance" vertex="1">
-          <mxGeometry height="80" width="150" x="20" y="660" as="geometry" />
+        <mxCell id="n79" value="MPLS استانی /&lt;br&gt;PTMP استانی" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=1.5;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="135" y="360" width="145" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="s0Eac9gDDc72NHViNJWR-2" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#76608a;strokeColor=#432D57;strokeWidth=2;fontColor=#ffffff;" value="MPLS_Country" vertex="1">
-          <mxGeometry height="80" width="150" x="13" y="140" as="geometry" />
+        <mxCell id="n80" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=1.5;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="290" y="360" width="145" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="s0Eac9gDDc72NHViNJWR-3" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" value="Intranet" vertex="1">
-          <mxGeometry height="80" width="150" x="355" y="140" as="geometry" />
+        <mxCell id="n81" value="مرکز استان&lt;br&gt;(مادر میانی)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#1B5E20;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="160" y="560" width="180" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="s0Eac9gDDc72NHViNJWR-5" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="P1_B1" vertex="1">
-          <mxGeometry height="50" width="50" x="-180" y="940" as="geometry" />
+        <mxCell id="n82" value="DC تهران /&lt;br&gt;DC سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="380" y="560" width="180" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="s0Eac9gDDc72NHViNJWR-7" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="P1_Hub1" vertex="1">
-          <mxGeometry height="50" width="50" x="10" y="390" as="geometry" />
+        <mxCell id="n83" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n78" target="n79">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="s0Eac9gDDc72NHViNJWR-8" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="P1_Hub2" vertex="1">
-          <mxGeometry height="50" width="50" x="110" y="400" as="geometry" />
+        <mxCell id="n84" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n79" target="n81">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="d9Wo2qRhATl9T73VqI6E-2" edge="1" parent="1" source="s0Eac9gDDc72NHViNJWR-5" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.187;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;jumpStyle=line;fillColor=#d80073;strokeColor=#A50040;strokeWidth=2;" target="s0Eac9gDDc72NHViNJWR-1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n85" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n78" target="n80">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="d9Wo2qRhATl9T73VqI6E-5" edge="1" parent="1" source="0fz45jxnJM6YCbMeO6qe-7" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.513;entryY=0.125;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;jumpStyle=line;fillColor=#d80073;strokeColor=#A50040;strokeWidth=2;" target="s0Eac9gDDc72NHViNJWR-1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n86" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n80" target="n82">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-1" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="TEH_Hub1" vertex="1">
-          <mxGeometry height="50" width="50" x="-100" y="-250" as="geometry" />
+        <mxCell id="n87" value="مدل ۲ — با پشتیبان LTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#1565C0;strokeWidth=2;arcSize=8;fontSize=15;fontColor=#1565C0;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="660" y="150" width="480" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-2" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="TEH_Hub2" vertex="1">
-          <mxGeometry height="50" width="50" y="-250" as="geometry" />
+        <mxCell id="n88" value="شعبه" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#37474F;strokeColor=#263238;strokeWidth=1.5;arcSize=8;fontSize=16;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="800" y="235" width="200" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-3" edge="1" parent="1" source="0fz45jxnJM6YCbMeO6qe-7" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;jumpStyle=line;fillColor=#76608a;strokeColor=#432D57;strokeWidth=2;" target="s0Eac9gDDc72NHViNJWR-2">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n89" value="MPLS استانی /&lt;br&gt;PTMP استانی" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=1.5;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="675" y="360" width="145" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-5" edge="1" parent="1" source="s0Eac9gDDc72NHViNJWR-2" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.513;exitY=0.15;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;jumpStyle=line;strokeColor=#432D57;fillColor=#76608a;strokeWidth=2;" target="0fz45jxnJM6YCbMeO6qe-3">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n90" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=1.5;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="830" y="360" width="145" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-7" edge="1" parent="1" source="s9uRKGjE9vdrQQ4WVvcp-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;jumpStyle=line;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" target="s0Eac9gDDc72NHViNJWR-3">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n91" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=1.5;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="985" y="360" width="145" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-10" connectable="0" parent="8dUDhfJZBHEPytVUmVr7-7" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="T33" vertex="1">
-          <mxGeometry relative="1" x="-0.5662" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
+        <mxCell id="n92" value="مرکز استان&lt;br&gt;(مادر میانی)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#1B5E20;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="560" width="180" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-9" edge="1" parent="1" source="s0Eac9gDDc72NHViNJWR-3" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.4;exitY=0.1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;jumpStyle=line;strokeColor=#82b366;fillColor=#d5e8d4;strokeWidth=2;" target="0fz45jxnJM6YCbMeO6qe-3">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n93" value="DC تهران /&lt;br&gt;DC سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="920" y="560" width="180" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-11" connectable="0" parent="8dUDhfJZBHEPytVUmVr7-9" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="T 33 (For Branches)&lt;br&gt;T 38 (For ANtivirus)" vertex="1">
-          <mxGeometry relative="1" x="-0.8754" as="geometry">
-            <mxPoint x="-135" y="-126" as="offset" />
-          </mxGeometry>
+        <mxCell id="n94" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n88" target="n89">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-11" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="SMN_Hub1" vertex="1">
-          <mxGeometry height="50" width="50" x="205" y="-250" as="geometry" />
+        <mxCell id="n95" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n89" target="n92">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-12" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="SMN_Hub2" vertex="1">
-          <mxGeometry height="50" width="50" x="325" y="-250" as="geometry" />
+        <mxCell id="n96" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n88" target="n90">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-13" edge="1" parent="1" source="s0Eac9gDDc72NHViNJWR-2" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.52;exitY=0.138;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;jumpStyle=line;strokeColor=#432D57;fillColor=#76608a;strokeWidth=2;" target="0fz45jxnJM6YCbMeO6qe-4">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n97" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n90" target="n93">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-16" edge="1" parent="1" source="s0Eac9gDDc72NHViNJWR-3" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.4;exitY=0.1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;jumpStyle=line;strokeColor=#82b366;fillColor=#d5e8d4;strokeWidth=2;" target="0fz45jxnJM6YCbMeO6qe-4">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n98" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n88" target="n91">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-19" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="TEH_AV" vertex="1">
-          <mxGeometry height="50" width="50" x="-180" y="-250" as="geometry" />
+        <mxCell id="n99" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n91" target="n93">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="8dUDhfJZBHEPytVUmVr7-21" edge="1" parent="1" source="0fz45jxnJM6YCbMeO6qe-7" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;jumpStyle=line;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;" target="s0Eac9gDDc72NHViNJWR-3">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n100" value="مدل ۳ — بدون PTMP/MPLS استانی" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#C62828;strokeWidth=2;arcSize=8;fontSize=15;fontColor=#C62828;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="150" width="480" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="TWXmbP1Z4ak5Xy-909hx-1" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#f0a30a;fontColor=#000000;strokeColor=#BD7000;" value="Mobinnet" vertex="1">
-          <mxGeometry height="80" width="150" x="-330" y="140" as="geometry" />
+        <mxCell id="n101" value="شعبه" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#37474F;strokeColor=#263238;strokeWidth=1.5;arcSize=8;fontSize=16;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="235" width="200" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="KCy6xj8x7PT33p8NRsXH-6" edge="1" parent="1" source="0rvdsdcZtkqGxzzvfzdq-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.625;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;fillColor=#fad9d5;strokeColor=#ae4132;" target="0fz45jxnJM6YCbMeO6qe-3">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n102" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=1.5;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1215" y="360" width="145" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="0rvdsdcZtkqGxzzvfzdq-1" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#fad9d5;strokeColor=#ae4132;" value="Asiatech" vertex="1">
-          <mxGeometry height="80" width="150" x="-650.5" y="140" as="geometry" />
+        <mxCell id="n103" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=1.5;arcSize=8;fontSize=12;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="360" width="145" height="100" as="geometry"/>
         </mxCell>
-        <mxCell id="0fz45jxnJM6YCbMeO6qe-2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;strokeWidth=2;" value="DC_Edges" vertex="1">
-          <mxGeometry height="30" width="60" x="75" y="-300" as="geometry" />
+        <mxCell id="n104" value="مرکز استان&lt;br&gt;(مادر میانی)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2E7D32;strokeColor=#1B5E20;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="560" width="180" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="0fz45jxnJM6YCbMeO6qe-5" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;strokeWidth=2;" value="Tehran DC" vertex="1">
-          <mxGeometry height="30" width="60" x="-85" y="-270" as="geometry" />
+        <mxCell id="n105" value="DC تهران /&lt;br&gt;DC سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1460" y="560" width="180" height="65" as="geometry"/>
         </mxCell>
-        <mxCell id="0fz45jxnJM6YCbMeO6qe-6" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;strokeWidth=2;" value="Semnan DC" vertex="1">
-          <mxGeometry height="30" width="75" x="260" y="-270" as="geometry" />
+        <mxCell id="n106" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n101" target="n102">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-1" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="P1_B2" vertex="1">
-          <mxGeometry height="50" width="50" x="305" y="940" as="geometry" />
+        <mxCell id="n107" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n102" target="n105">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-2" edge="1" parent="1" source="s0Eac9gDDc72NHViNJWR-5" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;fillColor=#f0a30a;strokeColor=#BD7000;strokeWidth=2;jumpStyle=line;" target="TWXmbP1Z4ak5Xy-909hx-1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n108" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n101" target="n103">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-3" edge="1" parent="1" source="s9uRKGjE9vdrQQ4WVvcp-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.742;entryY=0.854;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;strokeWidth=2;fillColor=#e51400;strokeColor=#B20000;jumpStyle=line;" target="s0Eac9gDDc72NHViNJWR-1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n109" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n103" target="n105">
+          <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-4" edge="1" parent="1" source="TWXmbP1Z4ak5Xy-909hx-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.625;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fillColor=#f0a30a;strokeColor=#BD7000;strokeWidth=2;endArrow=none;endFill=0;" target="0fz45jxnJM6YCbMeO6qe-3">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-5" edge="1" parent="1" source="TWXmbP1Z4ak5Xy-909hx-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.625;exitY=0.2;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endArrow=none;endFill=0;fillColor=#f0a30a;strokeColor=#BD7000;strokeWidth=2;" target="0fz45jxnJM6YCbMeO6qe-4">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-8" edge="1" parent="1" source="s9uRKGjE9vdrQQ4WVvcp-6" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;fillColor=#60a917;strokeColor=#2D7600;strokeWidth=2;jumpStyle=line;endArrow=none;endFill=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;" target="s0Eac9gDDc72NHViNJWR-3">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-6" parent="1" style="sketch=0;points=[[0.5,0,0],[1,0.5,0],[0.5,1,0],[0,0.5,0],[0.145,0.145,0],[0.8555,0.145,0],[0.855,0.8555,0],[0.145,0.855,0]];verticalLabelPosition=bottom;html=1;verticalAlign=top;aspect=fixed;align=center;pointerEvents=1;shape=mxgraph.cisco19.rect;prIcon=router;fillColor=#FAFAFA;strokeColor=#005073;strokeWidth=2;" value="P1_B2" vertex="1">
-          <mxGeometry height="50" width="50" x="70" y="970" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-7" edge="1" parent="1" source="s9uRKGjE9vdrQQ4WVvcp-6" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.483;entryY=0.971;entryDx=0;entryDy=0;entryPerimeter=0;jumpStyle=line;strokeWidth=2;endArrow=none;endFill=0;fillColor=#d80073;strokeColor=#A50040;" target="s0Eac9gDDc72NHViNJWR-1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-9" edge="1" parent="1" source="s9uRKGjE9vdrQQ4WVvcp-6" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;fillColor=#f0a30a;strokeColor=#BD7000;strokeWidth=2;jumpStyle=line;endArrow=none;endFill=0;" target="TWXmbP1Z4ak5Xy-909hx-1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-13" edge="1" parent="1" source="TWXmbP1Z4ak5Xy-909hx-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.55;exitY=0.95;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fillColor=#f0a30a;strokeColor=#BD7000;strokeWidth=2;endArrow=none;endFill=0;" target="0fz45jxnJM6YCbMeO6qe-7">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T(B)" vertex="1">
-          <mxGeometry height="30" width="60" x="137.5" y="890" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T(33/44)" vertex="1">
-          <mxGeometry height="30" width="60" x="227.5" y="900" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-16" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="22 or 2 / 42" vertex="1">
-          <mxGeometry height="30" width="75" x="-82.5" y="890" as="geometry" />
-        </mxCell>
-        <mxCell id="s9uRKGjE9vdrQQ4WVvcp-18" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="22 or 2 / 42" vertex="1">
-          <mxGeometry height="30" width="95" x="-92.5" y="970" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T(38)(Antiviruse" vertex="1">
-          <mxGeometry height="30" width="120" x="227.5" y="930" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T(40)(Antiviruse" vertex="1">
-          <mxGeometry height="30" width="120" x="-105" y="910" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-3" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T(40)(Antiviruse" vertex="1">
-          <mxGeometry height="30" width="120" x="-105" y="990" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-4" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T(B)" vertex="1">
-          <mxGeometry height="30" width="60" x="57.5" y="830" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-5" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T(B)" vertex="1">
-          <mxGeometry height="30" width="60" x="2.5" y="840" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-6" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T0 (Branches)" vertex="1">
-          <mxGeometry height="30" width="95" x="102.5" y="500" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-7" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T1 or 10 (ATM)" vertex="1">
-          <mxGeometry height="30" width="95" x="110" y="520" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-8" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T (2000)" vertex="1">
-          <mxGeometry height="30" width="60" x="-65" y="-120" as="geometry" />
-        </mxCell>
-        <mxCell id="VP-rhfZXn6QMol4f8-vo-9" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="T (3000)" vertex="1">
-          <mxGeometry height="30" width="60" x="145" y="-120" as="geometry" />
-        </mxCell>
-        <mxCell id="KCy6xj8x7PT33p8NRsXH-1" parent="1" style="shape=mxgraph.signs.travel.cashier;html=1;pointerEvents=1;fillColor=#000000;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;" value="" vertex="1">
-          <mxGeometry height="80" width="69" x="-655" y="329" as="geometry" />
-        </mxCell>
-        <mxCell id="KCy6xj8x7PT33p8NRsXH-3" parent="1" style="shape=mxgraph.signs.travel.cashier;html=1;pointerEvents=1;fillColor=#000000;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;" value="" vertex="1">
-          <mxGeometry height="80" width="69" x="-565" y="329" as="geometry" />
-        </mxCell>
-        <mxCell id="KCy6xj8x7PT33p8NRsXH-4" edge="1" parent="1" source="KCy6xj8x7PT33p8NRsXH-1" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;fillColor=#fad9d5;strokeColor=#ae4132;" target="0rvdsdcZtkqGxzzvfzdq-1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="KCy6xj8x7PT33p8NRsXH-5" edge="1" parent="1" source="KCy6xj8x7PT33p8NRsXH-3" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.55;entryY=0.95;entryDx=0;entryDy=0;entryPerimeter=0;endArrow=none;endFill=0;fillColor=#fad9d5;strokeColor=#ae4132;" target="0rvdsdcZtkqGxzzvfzdq-1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="n110" value="نکته: در مدل ۳ شعبه هیچ لینک PTMP / MPLS استانی ندارد و تمام ترافیک روی اینترانت کشوری و LTE مبین نت منتقل می‌شود." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=13;fontColor=#C62828;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="120" y="680" width="1560" height="30" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="-NijrWmPuj-VLRQ4Mp7n" name="Page-3">
-    <mxGraphModel dx="1094" dy="669" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+  <diagram id="n151" name="3 - ATM and Cash-less">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="950" math="0" shadow="0">
       <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="n112" value="ارتباط خودپردازها (ATM) و کش‌لس‌ها (Cash-less)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=26;fontColor=#0D47A1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="150" y="40" width="1300" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="n113" value="خودپردازها روتر دارند — کش‌لس‌ها روتر ندارند و از طریق Stunnel متصل می‌شوند" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=14;fontColor=#C62828;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="150" y="88" width="1300" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n114" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;arcSize=2;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="150" width="660" height="700" as="geometry"/>
+        </mxCell>
+        <mxCell id="n115" value="خودپرداز (ATM) — دارای روتر" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontColor=#37474F;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="115" y="160" width="500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n116" value="خودپرداز +&lt;br&gt;روتر" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#37474F;strokeColor=#263238;strokeWidth=1.5;arcSize=8;fontSize=15;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="330" y="215" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n117" value="آسیاتک&lt;br&gt;Asiatech" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.5;arcSize=8;fontSize=14;fontColor=#BF360C;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="160" y="360" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n118" value="مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F9A825;strokeWidth=1.5;arcSize=8;fontSize=14;fontColor=#795548;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="520" y="360" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n119" value="ADSL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCCBC;strokeColor=#D84315;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#BF360C;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="160" y="480" width="80" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="n120" value="LTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFECB3;strokeColor=#F9A825;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#795548;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="260" y="480" width="80" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="n121" value="LTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFECB3;strokeColor=#F9A825;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#795548;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="565" y="480" width="90" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="n122" value="دیتاسنتر تهران / سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=1.5;arcSize=8;fontSize=15;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="290" y="600" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n123" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#D84315;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.15;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n116" target="n117">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n124" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.85;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n116" target="n118">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n125" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#D84315;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n117" target="n119">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n126" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n117" target="n120">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n127" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n118" target="n121">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n128" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#D84315;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n119" target="n122">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n129" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n120" target="n122">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n130" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n121" target="n122">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n131" value="آسیاتک: دو بستر — ADSL و LTE    |    مبین نت: یک بستر — فقط LTE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=13;fontColor=#37474F;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="115" y="700" width="630" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="n132" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#90A4AE;strokeWidth=2;arcSize=2;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="840" y="150" width="660" height="700" as="geometry"/>
+        </mxCell>
+        <mxCell id="n133" value="کش‌لس (Cash-less) — بدون روتر" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=16;fontColor=#5E35B1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="855" y="160" width="500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n134" value="کش‌لس&lt;br&gt;بدون روتر" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5E35B1;strokeColor=#263238;strokeWidth=1.5;arcSize=8;fontSize=15;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="215" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n135" value="آسیاتک&lt;br&gt;Asiatech" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBE9E7;strokeColor=#D84315;strokeWidth=1.5;arcSize=8;fontSize=14;fontColor=#BF360C;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="900" y="360" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n136" value="مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F9A825;strokeWidth=1.5;arcSize=8;fontSize=14;fontColor=#795548;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="360" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n137" value="ADSL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFCCBC;strokeColor=#D84315;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#BF360C;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="900" y="480" width="80" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="n138" value="LTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFECB3;strokeColor=#F9A825;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#795548;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="480" width="80" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="n139" value="LTE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFECB3;strokeColor=#F9A825;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#795548;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1305" y="480" width="90" height="48" as="geometry"/>
+        </mxCell>
+        <mxCell id="n140" value="دیتاسنتر تهران / سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565C0;strokeColor=#0D47A1;strokeWidth=1.5;arcSize=8;fontSize=15;fontColor=#FFFFFF;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="600" width="280" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="n141" value="Stunnel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#D84315;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.15;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n134" target="n135">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n142" value="Stunnel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.85;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n134" target="n136">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n143" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#D84315;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n135" target="n137">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n144" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n135" target="n138">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n145" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n136" target="n139">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n146" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#D84315;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n137" target="n140">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n147" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n138" target="n140">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n148" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=2;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="n139" target="n140">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n149" value="آسیاتک: دو بستر — ADSL و LTE    |    مبین نت: یک بستر — فقط LTE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=13;fontColor=#37474F;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="855" y="700" width="630" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="n150" value="تمام ارتباطات از طریق Stunnel و بدون روتر برقرار می‌شود" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=13;fontColor=#5E35B1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="855" y="735" width="630" height="30" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="n247" name="4 - Tunnel Numbering">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="n152" value="نقشه شماره تونل‌ها (Tunnel Numbering)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=26;fontColor=#0D47A1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="150" y="40" width="1600" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="n153" value="تانل‌ها در شعبه مادر میانی (مرکز استان) و در شعبه عادی" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=14;fontColor=#546E7A;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="150" y="88" width="1600" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n154" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;strokeWidth=2;arcSize=2;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="120" width="830" height="760" as="geometry"/>
+        </mxCell>
+        <mxCell id="n155" value="شعبه مادر میانی — مرکز استان" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=17;fontColor=#0D47A1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="120" y="132" width="700" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n156" value="سرویس / بستر" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#78909C;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="120" y="170" width="260" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n157" value="شماره تونل" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#78909C;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="420" y="170" width="220" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n158" value="مقصد" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#78909C;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="660" y="170" width="260" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n159" value="MPLS کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#EF6C00;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="200" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n160" value="Tun 3000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#EF6C00;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#E65100;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="200" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n161" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="200" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n162" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#E65100;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n159" target="n160">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n163" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#E65100;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n160" target="n161">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n164" value="MPLS کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#EF6C00;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="272" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n165" value="Tun 2000" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#EF6C00;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#E65100;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="272" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n166" value="دیتاسنتر سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="272" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n167" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#E65100;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n164" target="n165">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n168" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#E65100;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n165" target="n166">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n169" value="PTMP استانی → شعب زیرمجموعه" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="344" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n170" value="Tun 0 / Tun 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8E24AA;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#6A1B9A;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="344" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n171" value="شعبه زیرمجموعه" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="344" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n172" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n169" target="n170">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n173" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n170" target="n171">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n174" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="416" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n175" value="Tu 33" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#43A047;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#2E7D32;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="416" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n176" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="416" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n177" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n174" target="n175">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n178" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n175" target="n176">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n179" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="488" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n180" value="Tu 44" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#43A047;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#2E7D32;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="488" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n181" value="دیتاسنتر سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="488" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n182" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n179" target="n180">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n183" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n180" target="n181">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n184" value="اینترانت — آنتی‌ویروس" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="560" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n185" value="Tu 38" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7E57C2;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#5E35B1;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="560" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n186" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="560" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n187" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n184" target="n185">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n188" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n185" target="n186">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n189" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="632" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n190" value="Tu 2 / Tu 22" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FBC02D;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#F9A825;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="632" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n191" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="632" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n192" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n189" target="n190">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n193" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n190" target="n191">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n194" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="704" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n195" value="Tu 42" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FBC02D;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#F9A825;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="704" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n196" value="دیتاسنتر سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="704" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n197" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n194" target="n195">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n198" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n195" target="n196">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n199" value="LTE مبین نت — آنتی‌ویروس" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="120" y="776" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n200" value="Tu 40" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7E57C2;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#5E35B1;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="420" y="776" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n201" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="630" y="776" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n202" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n199" target="n200">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n203" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n200" target="n201">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n204" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;strokeWidth=2;arcSize=2;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="970" y="120" width="830" height="760" as="geometry"/>
+        </mxCell>
+        <mxCell id="n205" value="شعبه عادی" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=17;fontColor=#0D47A1;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="990" y="132" width="700" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n206" value="سرویس / بستر" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#78909C;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="990" y="170" width="260" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n207" value="شماره تونل" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#78909C;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="170" width="220" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n208" value="مقصد" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#78909C;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="170" width="260" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="n209" value="MPLS / PTMP استانی" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#8E24AA;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="200" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n210" value="Tu *&lt;br&gt;(نام شعبه)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#8E24AA;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#6A1B9A;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="200" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n211" value="مرکز استان — مثال: شعبه ۲۵۷ → Tu257" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="200" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n212" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n209" target="n210">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n213" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#6A1B9A;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n210" target="n211">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n214" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="272" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n215" value="Tu 33" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#43A047;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#2E7D32;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="272" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n216" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="272" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n217" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n214" target="n215">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n218" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n215" target="n216">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n219" value="اینترانت کشوری" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#43A047;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="344" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n220" value="Tu 44" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#43A047;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#2E7D32;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="344" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n221" value="دیتاسنتر سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="344" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n222" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n219" target="n220">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n223" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#2E7D32;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n220" target="n221">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n224" value="اینترانت — آنتی‌ویروس" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="416" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n225" value="Tu 38" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7E57C2;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#5E35B1;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="416" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n226" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="416" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n227" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n224" target="n225">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n228" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n225" target="n226">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n229" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="488" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n230" value="Tu 2 / Tu 22" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FBC02D;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#F9A825;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="488" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n231" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="488" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n232" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n229" target="n230">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n233" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n230" target="n231">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n234" value="LTE مبین نت" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF59D;strokeColor=#FBC02D;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="560" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n235" value="Tu 42" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#FBC02D;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#F9A825;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="560" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n236" value="دیتاسنتر سمنان" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="560" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n237" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n234" target="n235">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n238" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#F9A825;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n235" target="n236">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n239" value="LTE مبین نت — آنتی‌ویروس" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#7E57C2;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#263238;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="632" width="290" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n240" value="Tu 40" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7E57C2;strokeWidth=2.5;arcSize=8;fontSize=16;fontColor=#5E35B1;fontStyle=1;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="632" width="190" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n241" value="دیتاسنتر تهران" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#90A4AE;strokeWidth=1.5;arcSize=8;fontSize=13;fontColor=#37474F;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="632" width="280" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="n242" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n239" target="n240">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n243" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=0;strokeColor=#5E35B1;strokeWidth=1.5;dashed=0;fontSize=11;fontColor=#37474F;fontFamily=Tahoma;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="n240" target="n241">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n244" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#EF9A9A;strokeWidth=2;arcSize=4;fontSize=12;fontColor=#212121;fontStyle=0;fontFamily=Tahoma;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="100" y="915" width="1700" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="n245" value="نکته مهم: اگر شعبه سرویس اینترانت کشوری داشته باشد، تونل آنتی‌ویروس روی LTE مبین نت نخواهد بود و Tu 40 تعریف نمی‌شود." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=14;fontColor=#C62828;fontStyle=1;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="120" y="928" width="1660" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="n246" value="در این حالت ترافیک آنتی‌ویروس همان Tu 38 روی اینترانت کشوری است.  |  مثال نام‌گذاری: شعبه ۲۵۷ در PTMP/MPLS استانی → Tu257" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontColor=#C62828;fontStyle=0;fontFamily=Tahoma;" vertex="1" parent="1">
+          <mxGeometry x="120" y="962" width="1660" height="26" as="geometry"/>
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
