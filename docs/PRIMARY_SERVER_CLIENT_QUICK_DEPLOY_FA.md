@@ -10,55 +10,56 @@
 
 ---
 
-## A) به‌روزرسانی همین اصلاح رابط روی سرورِ در حال کار
+## A) به‌روزرسانی قطعی رابط روی سرورِ در حال کار
 
-### فایل موردنیاز
+### روش توصیه‌شده: بستهٔ تأییدشدهٔ IIS
 
-فقط این یک فایل را از بستهٔ همین انتشار بردارید:
+برای جلوگیری از کپی‌شدن فایل در مسیر اشتباه IIS، از بستهٔ مستقل
+`FAM-IIS-Verified-UI17-Update.zip` استفاده کنید. این بسته `FAM.html` و
+`web.config` را در **Physical Path واقعی** سایت IIS پیدا و جایگزین می‌کند؛ پیش
+از تغییر SHA-256 payload را کنترل می‌کند، از دو فایل قبلی بکاپ می‌گیرد، سایت
+هدف را بازراه‌اندازی می‌کند و وجود قابلیت‌های نسخهٔ جدید را کنترل می‌کند.
 
-```text
-server\www\FAM.html
-```
+1. ZIP را روی خود سرور کامل Extract کنید؛ ساختار پوشهٔ `payload` را تغییر ندهید.
+2. روی `APPLY-FAM-IIS-CLIENT-UPDATE.cmd` راست‌کلیک و **Run as administrator** را انتخاب کنید.
+3. تنها نتیجهٔ معتبر پیام زیر است:
 
-> این روش به دیتابیس، حساب‌ها، رمزها، گواهی، DNS، IIS، backend و تنظیمات موجود دست نمی‌زند.
+   ```text
+   FAM IIS CLIENT UPDATE: SUCCESS
+   ```
 
-### مراحل روی خود سرور `10.16.243.18` (با Administrator)
+4. اسکریپت مسیر واقعی IIS و محل backup را نمایش می‌دهد. در نصب معمولی backup در
+   این مسیر است:
 
-1. فایل جدید را مثلاً در `C:\Temp\FAM.html` قرار دهید.
-2. PowerShell را با **Run as administrator** باز کنید و دقیقاً این دستورها را اجرا کنید:
+   ```text
+   C:\ProgramData\FAM\client-update-backups\
+   ```
 
-```powershell
-$source = 'C:\Temp\FAM.html'
-$target = 'C:\FAM\server\www\FAM.html'
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+> نسخهٔ آمادهٔ فعلی برای binding `communication-02.toosbank.corp` تنظیم شده است.
+> اگر نام HTTPS سایت دیگری است، PowerShell را با Administrator باز کنید و به‌جای
+> CMD این دستور را از پوشهٔ Extract‌شده اجرا کنید:
+>
+> ```powershell
+> .\APPLY-FAM-IIS-CLIENT-UPDATE.ps1 -HostName 'نام-واقعی-HTTPS-سایت'
+> ```
 
-if (-not (Test-Path $source)) { throw "فایل جدید پیدا نشد: $source" }
-if (-not (Test-Path $target)) { throw "فایل نصب‌شده پیدا نشد: $target" }
-Copy-Item $target "$target.bak-$stamp" -Force
-Copy-Item $source $target -Force
-Get-FileHash $target -Algorithm SHA256
-```
+### روش دستی فقط در صورت نیاز
 
-3. **هیچ فایل دیگری را کپی نکنید.** به‌خصوص به این موارد دست نزنید:
+در IIS Manager سایت دارای hostname واقعی کاربران را انتخاب کنید → **Basic
+Settings** → **Physical path**. فقط در همان مسیر، `FAM.html` و `web.config`
+را از `server\www` نسخهٔ جدید جایگزین کنید. هرگز مسیر را حدس نزنید و فایل را
+در یک پوشهٔ هم‌نام دیگر کپی نکنید.
 
-```text
-C:\FAMData\fam.sqlite3
-C:\FAMData\backups\
-C:\FAM\server\windows\settings.json
-C:\FAMData\client-setup\
-```
+> این روش به دیتابیس، حساب‌ها، رمزها، گواهی، DNS، backend و تنظیمات binding
+> موجود دست نمی‌زند.
 
-4. از خود سرور یا یک کلاینتی که تنظیمات شبکهٔ نهایی را دارد، بررسی کنید:
-
-```powershell
-curl.exe --noproxy "*" -I https://ertebatat-fam/FAM.html
-```
-
-باید `HTTP/1.1 200 OK` ببینید. `iisreset` برای جایگزینی فایل HTML لازم نیست.
-
-5. کاربران صفحه‌های باز را با **Ctrl+F5** تازه‌سازی کنند و با هر دو تم، یک جستجو و یک فرآیند حذف را بررسی کنند.
+`web.config` جدید هدرهای `no-store/no-cache` را برای FAM فعال می‌کند. بنابراین
+کاربران با باز کردن مجدد سایت یا یک **F5 عادی** آخرین رابط نصب‌شده را دریافت
+می‌کنند و نیازی به پاک‌کردن Cache یا `Ctrl+F5` ندارند. صفحه‌ای که از قبل باز
+مانده فقط یک بار باید Reload شود.
 
 ---
+
 
 ## B) نصب کامل آفلاین — فقط برای سرور تازه یا بازسازی کامل
 

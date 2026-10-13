@@ -15,6 +15,15 @@ test('central HTML contains server auth and sync, never restores a local workboo
  assert.ok(!html.includes('restore saved session (previously imported data), if any'));
  for(const [,js] of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(js);
 });
+test('the deployed client has a verifiable release marker',()=>{
+ const local=read('FAM.html'),central=read('server/www/FAM.html');
+ for(const html of [local,central]){
+  assert.match(html,/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
+  assert.match(html,/FAM UI-17 · 2026-10-13/);
+  assert.match(html,/operation-primary-action/);
+  assert.match(html,/function manageCategorySections\(categoryId\)/);
+ }
+});
 test('light theme only paints: no DOM relocation, box geometry or background shorthand resets',()=>{
  const css=read('src/light-palette.css'),html=read('FAM.html');
  assert.doesNotMatch(css,/(?:^|[;{])\s*(?:display|visibility|position|width|height|min-width|min-height|font|font-size|font-family|padding|margin|gap|order|grid-template-columns|background)\s*:/m);

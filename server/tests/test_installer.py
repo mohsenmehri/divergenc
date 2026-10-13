@@ -89,4 +89,32 @@ class IISConfigurationCheck(unittest.TestCase):
         root=ET.parse(Path(__file__).resolve().parents[1]/'www/web.config').getroot()
         self.assertEqual(root.find('./system.webServer/httpErrors').attrib['existingResponse'],'PassThrough')
 
+    def test_fam_client_is_never_cached_by_iis(self):
+        root=ET.parse(Path(__file__).resolve().parents[1]/'www/web.config').getroot()
+        server=root.find('./system.webServer')
+        self.assertEqual(server.find('./staticContent/clientCache').attrib['cacheControlMode'],'DisableCache')
+        headers={node.attrib['name']:node.attrib.get('value','') for node in server.findall('./httpProtocol/customHeaders/add')}
+        self.assertEqual(headers['Cache-Control'],'no-store, no-cache, must-revalidate, max-age=0')
+        self.assertEqual(headers['Pragma'],'no-cache')
+        self.assertEqual(headers['Expires'],'0')
+
+    def test_verified_iis_client_patch_targets_iis_physical_path_and_validates_payload(self):
+        root=Path(__file__).resolve().parents[2]
+        patch=root/'patches'/'fam-iis-verified-client-update'
+        if not patch.is_dir(): self.skipTest('standalone verified IIS patch is not bundled inside the full offline archive')
+        script=(patch/'APPLY-FAM-IIS-CLIENT-UPDATE.ps1').read_text(encoding='utf8')
+        self.assertTrue((patch/'APPLY-FAM-IIS-CLIENT-UPDATE.cmd').is_file())
+        self.assertIn('Get-Website',script)
+        self.assertIn('Get-WebBinding',script)
+        self.assertIn('physicalPath',script)
+        self.assertIn('client-update-backups',script)
+        self.assertIn('operation-primary-action',script)
+        self.assertIn('manageCategorySections',script)
+        self.assertIn('cacheControlMode="DisableCache"',script)
+        self.assertIn('FAM-UI-17-IIS-20261013.1',script)
+        entries={name:digest for digest,name in (line.split('  ',1) for line in (patch/'payload'/'SHA256SUMS.txt').read_text(encoding='utf8').splitlines())}
+        import hashlib
+        for relative in ('FAM.html','web.config'):
+            self.assertEqual(entries[relative],hashlib.sha256((patch/'payload'/relative).read_bytes()).hexdigest())
+
 if __name__=='__main__':unittest.main()
