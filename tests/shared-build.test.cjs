@@ -8,6 +8,8 @@ test('central HTML contains server auth and sync, never restores a local workboo
  assert.ok(!access.includes('localStorage'));assert.ok(!access.includes('hashPassword'));
  assert.match(access,/FamShared.api\('users'/);assert.match(access,/FamShared.api\('password'/);
  assert.match(access,/function scopeAllowsSheet/);assert.match(access,/manage-category-sections/);
+ assert.match(access,/const PERMISSION_GROUPS=/);assert.match(access,/categories:\[\.\.\.cs\]/);assert.match(access,/permissions:\[\.\.\.ps\]/);assert.match(access,/Do not silently broaden a retained legacy account/);
+ assert.doesNotMatch(access,/id:'user-role'/);assert.doesNotMatch(access,/سطح [۱-۴]/);
  assert.match(html,/function manageCategorySections\(categoryId\)/);assert.match(html,/sectionInitialized/);
  assert.match(html,/idbDelete=async\(\)=>true/);
  assert.match(html,/await Access.start\(\);\s+await FamShared.load\(\);/);
@@ -43,7 +45,8 @@ test('central client announces remote server revisions without overwriting local
 test('central manual backup requests a verified private server snapshot',()=>{
  const html=read('server/www/FAM.html'),sync=read('src/shared-sync.js');
  assert.match(sync,/backupAll=async\(\)=>\{/);
- assert.match(sync,/if\(!Access\.require\('admin'\)\)return false/);
+ assert.match(sync,/if\(!Access\.require\('backup'\)\)return false/);
+ assert.match(sync,/if\(!Access\.require\('undo'\)\)return false/);
  assert.match(sync,/api\('backups',\{\}\)/);
  assert.match(sync,/پشتیبان کامل روی سرور ثبت شد/);
  assert.match(html,/api\('backups',\{\}\)/);

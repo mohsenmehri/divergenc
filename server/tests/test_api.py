@@ -233,4 +233,77 @@ class CentralTests(unittest.TestCase):
         p=self.state(c);p['state']['order'].append('خودپرداز تهران');p['state']['sheets']['خودپرداز تهران']={'rows':[['ID','Name'],['','  ']],'merges':[]}
         self.assertEqual(self.save(c,p).status_code,403)
 
+
+    def custom_user(self, permissions, categories, regions=None, name='custom-user'):
+        """Create a central explicit-access account without a numeric role."""
+        payload=self.a.get('/api/users').json
+        payload['users'].append({'id':str(uuid.uuid4()),'username':name,'name':'Custom '+name,
+          'enabled':True,'regions':regions or [],'sheets':[],
+          'categories':categories,'permissions':permissions,'password':'1109'})
+        result=self.post(self.a,'users',payload)
+        self.assertEqual(result.status_code,200,result.json)
+        return self.login(name)
+
+    def test_custom_permission_accounts_migrate_and_use_category_region_scope(self):
+        # New installations persist both explicit arrays and expose them, while
+        # the retained numeric role field is no longer an authority boundary.
+        with sqlite3.connect(self.path) as db:
+            fields={row[1] for row in db.execute('PRAGMA table_info(users)')}
+        self.assertTrue({'categories','permissions'}<=fields)
+        scoped=self.custom_user(['view-sheets','edit-cells'],['other'],name='service-editor')
+        envelope=self.state(scoped)
+        self.assertEqual(envelope['user']['categories'],['other'])
+        self.assertEqual(envelope['user']['permissions'],['view-sheets','edit-cells'])
+        self.assertEqual(envelope['state']['order'],['Network'])
+        envelope['state']['sheets']['Network']['rows'][1][1]='SCOPED'
+        self.assertEqual(self.save(scoped,envelope).status_code,200)
+        # A browser that acquired a broader old snapshot still cannot write a
+        # provincial worksheet outside the selected category/region scope.
+        forged=self.state();forged['state']['sheets']['تهران']['rows'][1][1]='FORGED'
+        self.assertEqual(self.save(scoped,forged).status_code,403)
+        # Import is intentionally a full-workbook capability, so a full-scope
+        # importer can add a sheet without being granted unrelated cell edits.
+        importer=self.custom_user(['import-data'],['provinces','datacenters','services','carriers','equipment','costs','other'],
+          regions=[str(index) for index in range(1,len(REGIONS)+1)],name='full-importer')
+        imported=self.state(importer);imported['state']['order'].append('Imported')
+        imported['state']['sheets']['Imported']={'rows':[['ID'],['NEW']],'merges':[]}
+        self.assertEqual(self.save(importer,imported).status_code,200)
+
+    def test_custom_permissions_not_legacy_role_enforce_every_sensitive_route(self):
+        no_edit=self.custom_user(['view-sheets'],['other'],name='viewer-with-role')
+        payload=self.a.get('/api/users').json
+        row=next(user for user in payload['users'] if user['username']=='viewer-with-role')
+        # A crafted legacy role value does not elevate an explicit-access row.
+        row['role']=1
+        self.assertEqual(self.post(self.a,'users',payload).status_code,200)
+        self.assertEqual(no_edit.get('/api/users').status_code,403)
+        downgrade=self.a.get('/api/users').json
+        account=next(user for user in downgrade['users'] if user['username']=='viewer-with-role')
+        account.pop('categories');account.pop('permissions')
+        self.assertEqual(self.post(self.a,'users',downgrade).status_code,400)
+        snapshot=self.state(no_edit);snapshot['state']['sheets']['Network']['rows'][1][1]='DENIED'
+        self.assertEqual(self.save(no_edit,snapshot).status_code,403)
+
+        users_manager=self.custom_user(['manage-users'],[],name='access-manager')
+        self.assertEqual(users_manager.get('/api/users').status_code,200)
+        manager_state=self.state(users_manager)
+        self.assertEqual(manager_state['state']['order'],[])
+        self.assertEqual(users_manager.post('/api/backups',json={},headers={'Origin':ORIGIN,'X-FAM-CSRF':users_manager.csrf}).status_code,403)
+
+    def test_custom_metadata_and_data_permissions_are_independently_server_checked(self):
+        category_manager=self.custom_user(['manage-categories'],[],name='category-manager')
+        proposal=self.state(category_manager)
+        # Category managers get a name-only worksheet catalog, never cells.
+        self.assertEqual(proposal['state']['order'],['Network','تهران','فارس'])
+        self.assertEqual(proposal['state']['sheets']['Network'],{'rows':[],'merges':[]})
+        proposal['state']['categoryConfig']={'version':1,'categories':[
+          {'id':'services','name':'سرویس‌ها','sub':'Services','color':'#a78bfa','icon':'globe'}],
+          'assignments':[['Network','services']],'sections':[],'sectionAssignments':[],'sectionInitialized':[]}
+        self.assertEqual(self.save(category_manager,proposal).status_code,200)
+        self.assertEqual(self.state()['state']['categoryConfig']['assignments'],[['Network','services']])
+
+        viewer=self.custom_user(['view-sheets'],['services'],name='metadata-forger')
+        forged=self.state(viewer);forged['state']['categoryConfig']['categories'][0]['name']='دستکاری'
+        self.assertEqual(self.save(viewer,forged).status_code,403)
+
 if __name__=='__main__':unittest.main()

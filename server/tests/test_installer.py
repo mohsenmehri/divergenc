@@ -119,4 +119,22 @@ class IISConfigurationCheck(unittest.TestCase):
         for relative in ('FAM.html','web.config'):
             self.assertEqual(entries[relative],hashlib.sha256((patch/'payload'/relative).read_bytes()).hexdigest())
 
+
+    def test_custom_access_server_patch_has_hashed_backend_and_client_payload(self):
+        root=Path(__file__).resolve().parents[2]
+        patch=root/'patches'/'fam-custom-access-server';payload=patch/'payload'
+        self.assertTrue((patch/'APPLY-CUSTOM-ACCESS-UPDATE.cmd').is_file())
+        script=(patch/'APPLY-CUSTOM-ACCESS-UPDATE.ps1').read_text(encoding='utf8')
+        self.assertIn("'FAM-Central'",script)
+        self.assertIn('SHA256SUMS.txt',script)
+        self.assertIn('Restore-Backup',script)
+        self.assertIn('Wait-Backend $true',script)
+        self.assertIn('categories TEXT', (payload/'app.py').read_text(encoding='utf8'))
+        self.assertIn('const PERMISSION_GROUPS=',(payload/'FAM.html').read_text(encoding='utf8'))
+        self.assertNotIn("id:'user-role'",(payload/'FAM.html').read_text(encoding='utf8'))
+        import hashlib
+        entries={name:digest for digest,name in (line.split('  ',1) for line in (payload/'SHA256SUMS.txt').read_text(encoding='utf8').splitlines())}
+        self.assertEqual(set(entries),{'app.py','FAM.html'})
+        for name,digest in entries.items():self.assertEqual(digest,hashlib.sha256((payload/name).read_bytes()).hexdigest())
+
 if __name__=='__main__':unittest.main()
