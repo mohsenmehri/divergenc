@@ -65,7 +65,11 @@ class NetworkOpsTests(unittest.TestCase):
     def test_network_operations_page_is_dynamic_and_network_ops_is_opt_in(self):
         page = self.app.test_client().get("/network-operations")
         self.assertEqual(page.status_code, 200)
-        self.assertIn("عملیات شبکه", page.get_data(as_text=True))
+        markup = page.get_data(as_text=True)
+        self.assertIn("عملیات شبکه", markup)
+        self.assertIn("crypto.subtle", markup)
+        self.assertIn("/api/network/probes", markup)
+        self.assertIn("await api('/api/network/probes','POST',{workerId,sealed})", markup)
         page.close()
         # The template is outside the IIS/Flask static roots: only the rewrite
         # route may serve it, and its APIs still require an authenticated user.
@@ -144,6 +148,47 @@ class NetworkOpsTests(unittest.TestCase):
         self.assertEqual(self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token)).status_code, 200)
         # A normal browser route still rejects a write without Origin + CSRF.
         self.assertEqual(self.admin.post("/api/network/jobs", json={}).status_code, 403)
+
+    def test_user_entered_probe_is_opaque_to_fam_and_claimed_only_by_its_worker(self):
+        token = self.worker()
+        public_key = "-----BEGIN PUBLIC KEY-----\n" + ("A" * 400) + "\n-----END PUBLIC KEY-----\n"
+        registered = self.admin.post(
+            "/api/network/workers/worker-lab-01/probe-key", json={"publicKey": public_key}, headers=self.worker_headers(token)
+        )
+        self.assertEqual(registered.status_code, 200, registered.json)
+        key = self.admin.get("/api/network/workers/worker-lab-01/probe-key")
+        self.assertEqual(key.status_code, 200, key.json)
+        self.assertEqual(key.json["fingerprint"], registered.json["fingerprint"])
+        sealed = {
+            "algorithm": "RSA-OAEP-256/AES-256-GCM",
+            "keyFingerprint": key.json["fingerprint"],
+            "encryptedKey": "A" * 512,
+            "iv": "B" * 16,
+            "ciphertext": "C" * 24,
+        }
+        queued = self.post(self.admin, "network/probes", {"workerId": "worker-lab-01", "sealed": sealed})
+        self.assertEqual(queued.status_code, 201, queued.json)
+        self.assertTrue(queued.json["job"]["interactive"])
+        self.assertNotIn("host", str(queued.json).lower())
+        self.assertNotIn("password", str(queued.json).lower())
+        claimed = self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token))
+        self.assertEqual(claimed.status_code, 200, claimed.json)
+        self.assertEqual(set(claimed.json["job"]), {"id", "kind", "deviceIds", "leaseSeconds", "sealed"})
+        self.assertEqual(claimed.json["job"]["sealed"], sealed)
+        device_id = claimed.json["job"]["deviceIds"][0]
+        completed = self.admin.post(
+            "/api/network/worker/jobs/" + queued.json["job"]["id"] + "/complete",
+            json={"results": [{"deviceId": device_id, "status": "succeeded", "facts": {"interfaces": {"errDisabled": 1}},
+                                "warnings": ["err-disabled interfaces detected"], "error": None}]},
+            headers=self.worker_headers(token),
+        )
+        self.assertEqual(completed.status_code, 200, completed.json)
+        # The sealed credential envelope is cleared on completion and no
+        # connection value is ever returned from the FAM data model.
+        detail = self.admin.get("/api/network/jobs/" + queued.json["job"]["id"])
+        self.assertTrue(detail.json["job"]["interactive"])
+        self.assertNotIn("sealed", str(detail.json).lower())
+        self.assertNotIn("password", str(detail.json).lower())
 
     def test_job_scope_is_explicit_and_a_device_cannot_run_twice(self):
         self.assertEqual(self.inventory().status_code, 200)

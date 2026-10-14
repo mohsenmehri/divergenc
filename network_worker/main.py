@@ -9,6 +9,7 @@ import time
 from .client import ControlPlaneClient, ControlPlaneError
 from .config import ConfigError, load
 from .runner import Runner
+from .probe_envelope import ProbeEnvelopeError, ProbeKeyStore
 from .secrets import DPAPISecretStore, SecretStoreError
 
 
@@ -25,8 +26,10 @@ def main():
         settings = load(args.config)
         token = os.environ.get(settings.token_env, "")
         client = ControlPlaneClient(settings, token)
-        runner = Runner(settings, client, DPAPISecretStore(settings.secret_store))
-    except (ConfigError, ControlPlaneError, SecretStoreError):
+        probe_keys = ProbeKeyStore(settings.probe_key_store)
+        client.register_probe_key(probe_keys.public_key_pem())
+        runner = Runner(settings, client, DPAPISecretStore(settings.secret_store), probe_keys)
+    except (ConfigError, ControlPlaneError, SecretStoreError, ProbeEnvelopeError):
         print("FAM Network Worker configuration is invalid or unavailable.", file=sys.stderr)
         return 2
 

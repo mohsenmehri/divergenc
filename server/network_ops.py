@@ -14,6 +14,8 @@ The first release is intentionally narrow:
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -85,6 +87,8 @@ def _public_worker(row):
         "id": row["id"],
         "name": row["name"],
         "enabled": bool(row["enabled"]),
+        "interactiveProbeReady": bool(row["probe_public_key"]),
+        "probeKeyFingerprint": row["probe_key_fingerprint"],
         "createdAt": row["created_at"],
         "lastSeenAt": row["last_seen_at"],
     }
@@ -105,6 +109,8 @@ def _public_job(row):
         "workerId": row["worker_id"],
         "resultCount": row["result_count"],
         "failureCount": row["failure_count"],
+        # The encrypted envelope is deliberately never returned to a browser.
+        "interactive": bool(row["interactive"]),
     }
 
 
@@ -149,6 +155,40 @@ def _device_input(value):
         "lab": lab,
         "platform": platform,
     }
+
+
+def _probe_public_key(value):
+    """Validate an opaque Worker public key without accepting private key data."""
+    if (not isinstance(value, str) or len(value) > 4096 or
+            not value.startswith("-----BEGIN PUBLIC KEY-----\n") or
+            not value.endswith("-----END PUBLIC KEY-----\n")):
+        raise ValueError("کلید رمزنگاری Worker")
+    body = "".join(value.splitlines()[1:-1])
+    try:
+        decoded = base64.b64decode(body, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise ValueError("کلید رمزنگاری Worker") from exc
+    if len(decoded) < 256:
+        raise ValueError("کلید رمزنگاری Worker")
+    return value, hashlib.sha256(value.encode("ascii")).hexdigest()
+
+
+def _sealed_probe(value, fingerprint):
+    """Accept only an opaque browser-to-Worker encrypted payload.
+
+    FAM validates the envelope shape and the Worker's current public-key
+    fingerprint, but never receives a decryptable IP address or credential.
+    """
+    allowed = {"algorithm", "keyFingerprint", "encryptedKey", "iv", "ciphertext"}
+    if not isinstance(value, dict) or set(value) != allowed or value.get("algorithm") != "RSA-OAEP-256/AES-256-GCM":
+        raise ValueError("درخواست رمزگذاری‌شده")
+    if value.get("keyFingerprint") != fingerprint:
+        raise ValueError("کلید Worker تغییر کرده است؛ صفحه را دوباره باز کنید.")
+    for key, minimum, maximum in (("encryptedKey", 500, 520), ("iv", 16, 20), ("ciphertext", 24, 4096)):
+        item = value.get(key)
+        if not isinstance(item, str) or not minimum <= len(item) <= maximum or not re.fullmatch(r"[A-Za-z0-9_-]+", item):
+            raise ValueError("درخواست رمزگذاری‌شده")
+    return value
 
 
 def _result_input(value):
@@ -233,7 +273,9 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
               enabled INTEGER NOT NULL CHECK(enabled IN (0,1)),
               created_by TEXT NOT NULL,
               created_at INTEGER NOT NULL,
-              last_seen_at INTEGER
+              last_seen_at INTEGER,
+              probe_public_key TEXT,
+              probe_key_fingerprint TEXT
             );
             CREATE TABLE IF NOT EXISTS network_jobs(
               id TEXT PRIMARY KEY,
@@ -249,7 +291,9 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
               finished_at INTEGER,
               worker_id TEXT,
               result_count INTEGER NOT NULL DEFAULT 0,
-              failure_count INTEGER NOT NULL DEFAULT 0
+              failure_count INTEGER NOT NULL DEFAULT 0,
+              sealed_payload TEXT,
+              interactive INTEGER NOT NULL DEFAULT 0 CHECK(interactive IN (0,1))
             );
             CREATE INDEX IF NOT EXISTS network_jobs_queue ON network_jobs(status,created_at);
             CREATE TABLE IF NOT EXISTS network_results(
@@ -272,6 +316,19 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             );
             """
         )
+        # Existing phase-one databases predate direct interactive probes. These
+        # additive migrations preserve the original job schema and never add a
+        # plaintext endpoint, IP, or credential column.
+        worker_columns = {row["name"] for row in db.execute("PRAGMA table_info(network_workers)")}
+        if "probe_public_key" not in worker_columns:
+            db.execute("ALTER TABLE network_workers ADD COLUMN probe_public_key TEXT")
+        if "probe_key_fingerprint" not in worker_columns:
+            db.execute("ALTER TABLE network_workers ADD COLUMN probe_key_fingerprint TEXT")
+        job_columns = {row["name"] for row in db.execute("PRAGMA table_info(network_jobs)")}
+        if "sealed_payload" not in job_columns:
+            db.execute("ALTER TABLE network_jobs ADD COLUMN sealed_payload TEXT")
+        if "interactive" not in job_columns:
+            db.execute("ALTER TABLE network_jobs ADD COLUMN interactive INTEGER NOT NULL DEFAULT 0")
         db.execute("INSERT OR IGNORE INTO network_settings VALUES(1,0)")
 
     def enabled():
@@ -344,6 +401,79 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
         write_access()
         with connect() as db:
             return jsonify(workers=[_public_worker(row) for row in db.execute("SELECT * FROM network_workers ORDER BY name")])
+
+    @app.get("/api/network/workers/<worker_id>/probe-key")
+    def network_worker_probe_key(worker_id):
+        write_access()
+        if not IDENTIFIER.fullmatch(worker_id):
+            fail(404, "Worker پیدا نشد.")
+        with connect() as db:
+            row = db.execute("SELECT * FROM network_workers WHERE id=? AND enabled=1", (worker_id,)).fetchone()
+            if not row or not row["probe_public_key"] or not row["probe_key_fingerprint"]:
+                fail(409, "کلید رمزنگاری این Worker هنوز آماده نیست.")
+            return jsonify(workerId=worker_id, publicKey=row["probe_public_key"], fingerprint=row["probe_key_fingerprint"])
+
+    @app.post("/api/network/workers/<worker_id>/probe-key")
+    def register_network_worker_probe_key(worker_id):
+        body = data()
+        if set(body) != {"publicKey"} or not IDENTIFIER.fullmatch(worker_id):
+            fail(400, "کلید رمزنگاری Worker نامعتبر است.")
+        try:
+            public_key, fingerprint = _probe_public_key(body["publicKey"])
+        except ValueError:
+            fail(400, "کلید رمزنگاری Worker نامعتبر است.")
+        with transaction() as db:
+            worker = worker_auth(db)
+            if worker["id"] != worker_id:
+                fail(403, "Worker فقط می‌تواند کلید خود را ثبت کند.")
+            db.execute(
+                "UPDATE network_workers SET probe_public_key=?,probe_key_fingerprint=? WHERE id=?",
+                (public_key, fingerprint, worker_id),
+            )
+            event(db, worker_id, "worker_probe_key_registered", detail=fingerprint)
+            return jsonify(workerId=worker_id, fingerprint=fingerprint)
+
+    @app.post("/api/network/probes")
+    def enqueue_interactive_probe():
+        """Queue one browser-encrypted, read-only Cisco IOS err-disabled check."""
+        write_access()
+        body = data()
+        if set(body) != {"workerId", "sealed"} or not isinstance(body.get("workerId"), str) or not IDENTIFIER.fullmatch(body["workerId"]):
+            fail(400, "درخواست بررسی مستقیم نامعتبر است.")
+        with transaction() as db:
+            release_expired_claims(db)
+            worker = db.execute("SELECT * FROM network_workers WHERE id=? AND enabled=1", (body["workerId"],)).fetchone()
+            if not worker or not worker["probe_public_key"] or not worker["probe_key_fingerprint"]:
+                fail(409, "Worker انتخاب‌شده برای بررسی مستقیم آماده نیست.")
+            try:
+                sealed = _sealed_probe(body["sealed"], worker["probe_key_fingerprint"])
+            except ValueError as exc:
+                fail(400, str(exc))
+            # One interactive credential-bearing check per Worker at a time
+            # keeps its time window and blast radius deliberately small.
+            active_rows = db.execute(
+                "SELECT sealed_payload FROM network_jobs WHERE status IN ('queued','claimed') AND sealed_payload IS NOT NULL"
+            ).fetchall()
+            for active in active_rows:
+                try:
+                    if json.loads(active["sealed_payload"]).get("workerId") == worker["id"]:
+                        fail(409, "یک بررسی مستقیم دیگر برای این Worker در حال انجام است.")
+                except (json.JSONDecodeError, AttributeError):
+                    fail(409, "یک بررسی مستقیم دیگر برای این Worker در حال انجام است.")
+            job_id = "job_" + uuid.uuid4().hex
+            device_id = "probe-" + uuid.uuid4().hex
+            now = _millis()
+            sealed_payload = _json({"workerId": worker["id"], "sealed": sealed})
+            db.execute(
+                """INSERT INTO network_jobs(id,kind,site_id,group_id,device_ids,status,requested_by,created_at,sealed_payload,interactive)
+                   VALUES(?,?,?,?,?,'queued',?,?,?,1)""",
+                (job_id, "read_only_inventory", "interactive", "", _json([device_id]), g.user["username"], now, sealed_payload),
+            )
+            row = db.execute("SELECT * FROM network_jobs WHERE id=?", (job_id,)).fetchone()
+            # The audit contains only a generated probe ID, never an address or
+            # credential, and the sealed envelope cannot be rendered by FAM.
+            event(db, g.user["username"], "interactive_read_only_probe_queued", job_id=job_id, detail=device_id)
+            return jsonify(job=_public_job(row)), 201
 
     @app.post("/api/network/inventory")
     def save_network_device():
@@ -493,7 +623,7 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
                 fail(404, "Job پیدا نشد.")
             if row["status"] != "queued":
                 fail(409, "فقط Job در صف قابل لغو است.")
-            db.execute("UPDATE network_jobs SET status='cancelled',finished_at=? WHERE id=?", (_millis(), job_id))
+            db.execute("UPDATE network_jobs SET status='cancelled',finished_at=?,sealed_payload=NULL WHERE id=?", (_millis(), job_id))
             updated = db.execute("SELECT * FROM network_jobs WHERE id=?", (job_id,)).fetchone()
             event(db, g.user["username"], "job_cancelled", job_id=job_id)
             return jsonify(job=_public_job(updated))
@@ -506,7 +636,20 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
         with transaction() as db:
             worker = worker_auth(db)
             release_expired_claims(db)
-            row = db.execute("SELECT * FROM network_jobs WHERE status='queued' ORDER BY created_at LIMIT 1").fetchone()
+            rows = db.execute("SELECT * FROM network_jobs WHERE status='queued' ORDER BY created_at").fetchall()
+            row = None
+            sealed_payload = None
+            for candidate in rows:
+                if candidate["sealed_payload"]:
+                    try:
+                        parsed = json.loads(candidate["sealed_payload"])
+                    except (TypeError, json.JSONDecodeError):
+                        continue
+                    if not isinstance(parsed, dict) or parsed.get("workerId") != worker["id"] or not isinstance(parsed.get("sealed"), dict):
+                        continue
+                    sealed_payload = parsed["sealed"]
+                row = candidate
+                break
             if not row:
                 return jsonify(job=None)
             now = _millis()
@@ -517,14 +660,18 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             )
             claimed = db.execute("SELECT * FROM network_jobs WHERE id=?", (row["id"],)).fetchone()
             event(db, worker["id"], "job_claimed", job_id=row["id"])
-            # This is deliberately only IDs + a fixed operation.  No command,
-            # management IP, password, or raw configuration crosses this API.
-            return jsonify(job={
+            # Ordinary jobs carry only IDs. A direct check additionally carries
+            # opaque ciphertext that only the Worker's DPAPI-held private key
+            # can decrypt; FAM never receives its plaintext.
+            job = {
                 "id": claimed["id"],
                 "kind": claimed["kind"],
                 "deviceIds": json.loads(claimed["device_ids"]),
                 "leaseSeconds": max(60, min(lease_seconds, 3600)),
-            })
+            }
+            if sealed_payload is not None:
+                job["sealed"] = sealed_payload
+            return jsonify(job=job)
 
     @app.post("/api/network/worker/jobs/<job_id>/complete")
     def worker_complete_job(job_id):
@@ -562,7 +709,7 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
                 )
             db.execute(
                 """UPDATE network_jobs SET status='completed',finished_at=?,lease_expires_at=NULL,
-                   result_count=?,failure_count=? WHERE id=?""",
+                   result_count=?,failure_count=?,sealed_payload=NULL WHERE id=?""",
                 (now, len(results), failures, job_id),
             )
             completed = db.execute("SELECT * FROM network_jobs WHERE id=?", (job_id,)).fetchone()

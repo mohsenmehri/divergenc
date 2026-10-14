@@ -1,46 +1,49 @@
-# عملیات شبکه FAM — فاز اول: اعتبارسنجی و Inventory فقط‌خواندنی
+# عملیات شبکه FAM — فاز اول: Inventory و بررسی مستقیم Err-disabled فقط‌خواندنی
 
-این فاز با هدف اتصال کنترل‌شده به تجهیزات Cisco شروع شده است، اما عمداً یک سامانهٔ تغییر کانفیگ یا اجرای دستور عمومی نیست.
+فاز اول فقط برای مشاهدهٔ کنترل‌شدهٔ وضعیت Cisco IOS است. این فاز نه یک ترمینال عمومی است و نه سامانهٔ تغییر کانفیگ.
+
+## دو مسیر مجاز
+
+1. **Inventory محلی:** تجهیز با یک شناسه در FAM ثبت می‌شود و IP/credential فقط در فایل محلی Worker قرار می‌گیرد.
+2. **بررسی مستقیم یک‌باره:** کاربر مجاز، IP یا نام میزبان، نام کاربری و رمز SSH را در فرم «بررسی مستقیم Err-disabled» وارد می‌کند. مرورگر قبل از ارسال، کل این چهار مقدار را با کلید عمومی Worker رمز می‌کند. FAM/IIS فقط ciphertext موقت را حمل می‌کند؛ نه IP و نه نام کاربری/رمز متن‌واضح را دریافت، لاگ یا ذخیره نمی‌کند. Worker همان ciphertext را فقط در حافظه و زیر کلید خصوصی DPAPI خود باز می‌کند؛ پس از پایان یا لغو Job، ciphertext نیز از FAM حذف می‌شود.
+
+مسیر دوم برای زمانی است که تجهیز آزمایشگاهی جداگانه وجود ندارد. هر درخواست فقط **یک تجهیز** را بررسی می‌کند و هیچ Credential یا آدرس پایداری در FAM نمی‌سازد.
 
 ## مرز مسئولیت‌ها
 
 | جزء | مسئولیت | آنچه هرگز نگه نمی‌دارد/انجام نمی‌دهد |
 |---|---|---|
-| **FAM / IIS** | احراز هویت کاربران، مجوز، Inventory متادیتا، صف Job، گزارش ساخت‌یافته و Audit | IP مدیریت، رمز، Enable Secret، RADIUS Secret، SNMP Community، raw running-config، raw CLI output، SSH مستقیم |
-| **Network Worker** | اتصال SSH به تجهیزی که در mapping محلی آن تعریف شده، اجرای مجموعهٔ ثابت show-commandها، ارسال نتیجهٔ ساخت‌یافته | UI، اجرای دستور آزاد، config mode، `write memory`، remediation، ذخیرهٔ token در log |
-| **Windows DPAPI** | رمزگشایی Credential فقط زیر حساب سرویس مستقل Worker | دسترسی برای هویت IIS/FAM یا کاربر مرورگر |
+| **FAM / IIS** | احراز هویت، مجوز، صف Job، گزارش ساخت‌یافته و Audit؛ حمل کوتاه‌مدت ciphertext بررسی مستقیم | رمز یا IP متن‌واضح، Enable Secret، RADIUS Secret، SNMP Community، raw running-config، raw CLI output، SSH مستقیم |
+| **مرورگر کاربر مجاز** | ورود موقت اطلاعات برای بررسی مستقیم و رمزگذاری Web Crypto با کلید عمومی Worker | ذخیره‌سازی Credential؛ ارسال متن‌واضح به API FAM |
+| **Network Worker** | اتصال SSH، اجرای show-commandهای ثابت و ارسال نتیجهٔ ساخت‌یافته | UI، دستور آزاد، config mode، `write memory`، remediation، نگهداری Credential بررسی مستقیم |
+| **Windows DPAPI** | محافظت از کلید خصوصی بررسی مستقیم و credentialهای mapping محلی، فقط زیر حساب Worker | دسترسی برای هویت IIS/FAM یا کاربر مرورگر |
 
-FAM فقط شناسهٔ تجهیز را به Worker می‌دهد. آدرس SSH و `credentialRef` فقط در فایل محلی Worker هستند. Worker نیز فقط شناسه را از Job می‌پذیرد و اگر در mapping محلی یافت نشود، اتصال نمی‌گیرد.
+## دستورات مجاز و نتیجهٔ Err-disabled
 
-## قابلیت‌های فعلی
+Worker فقط commandهای ثابت زیر را اجرا می‌کند:
 
-- صفحهٔ جداگانهٔ کنترل: `/network-operations`
-- Inventory متادیتای آزمایشگاهی: شناسه، نام، Site، Device Group اختیاری و وضعیت فعال/غیرفعال؛ بدون فیلد آدرس یا Credential
-- Scope اجباری: **Site → Device Group اختیاری → فهرست صریح Device IDها**
-- حداکثر ۱۰ تجهیز آزمایشگاهی در هر Job و قفل هم‌زمانی هر Device ID
-- فقط Job ثابت `read_only_inventory`
-- Worker با Token مجزا و قابل چرخش؛ Token فقط هنگام Pair شدن نشان داده می‌شود و هش آن در FAM ذخیره می‌شود.
-- نتایج ساخت‌یافته: hostname، model، OS version، شمارنده‌های کلی interface و هشدارهای محدود. Raw CLI output پذیرفته یا ذخیره نمی‌شود.
-- Worker فقط commandهای ثابت زیر را اجرا می‌کند و `enable()`، config mode، `send_config_set` و هر command آزاد در آن وجود ندارد:
-  - `show version`
-  - `show inventory`
-  - `show ip interface brief`
-  - `show interfaces status`
-  - `show interfaces counters errors`
-  - `show errdisable recovery`
+- `show version`
+- `show inventory`
+- `show ip interface brief`
+- `show interfaces status`
+- `show interfaces counters errors`
+- `show errdisable recovery`
 
-## پیش‌نیازهای امنیتی پیش از فعال‌سازی
+اگر عبارت `err-disabled` در خروجی‌های status/errors دیده شود، Worker فقط شمارش رابط‌ها و هشدار `err-disabled interfaces detected` را برمی‌گرداند. نام پورت و raw CLI output ذخیره نمی‌شود. Worker هرگز `enable()`، config mode، `send_config_set` یا دستور آزاد اجرا نمی‌کند.
 
-1. `bac.zip` عمومی را یک رخداد افشای اطلاعات در نظر بگیرید؛ Credentialهای FTP، RADIUS Shared Secret، SNMP Community، Local Account و Enable Secret را طبق Change Plan rotate کنید.
-2. Worker را روی سرور یا VM جدا از IIS/FAM نصب کنید و **با حساب سرویس Windows مستقل** اجرا کنید. استفاده از همان Identity مربوط به Application Pool یا `LocalSystem` مجاز نیست.
-3. IP ثابت Worker را فقط به ACL مدیریت تجهیزات اضافه کنید. وجود `access-class` روی VTY باید قبل از تست هر تجهیز بررسی شود.
-4. در Worker یک حساب اختصاصی با کمترین سطح مجاز برای commandهای ثابت Read-only بسازید. حساب‌های RADIUS فعلی با Full Access نباید Credential سرویس باشند.
-5. Token Pairing را فقط یک‌بار مشاهده و فوراً زیر حساب Worker نگهداری کنید؛ در FAM، IIS، repository، فایل نمونه یا ticket قرار ندهید.
-6. فایل DPAPI و `worker.json` فقط باید برای حساب Worker مجوز خواندن داشته باشند. فایل نمونه را کپی کنید اما هرگز `worker.json` یا `*.dpapi` را commit نکنید.
+## استقرار هم‌مکان روی همان سرور FAM/IIS
+
+Worker می‌تواند روی همان سرور ویندوزی FAM/IIS باشد، اما نباید داخل IIS، پوشهٔ public یا هویت Application Pool اجرا شود.
+
+1. یک حساب Windows مستقل و کم‌دسترسی فقط برای Worker بسازید؛ از `LocalSystem` و Identity مربوط به IIS/FAM استفاده نکنید.
+2. Worker و فایل‌های خصوصی آن را بیرون از مسیر IIS، مثلاً `C:\FAM-NetworkWorker`، قرار دهید. روی `worker.json`، `*.dpapi` و پوشهٔ `private` فقط همان حساب Worker مجوز بخواند/بنویسد.
+3. IP سرور Worker را فقط به ACL مدیریت تجهیز اضافه کنید. قبل از هر اجرا، VTY `access-class` و مسیر SSH تجهیز را بررسی کنید.
+4. حساب SSH تجهیزات باید اختصاصی و با کمترین دسترسی لازم برای show-commandهای بالا باشد. از حساب RADIUS دارای Full Access به عنوان حساب سرویس استفاده نکنید.
+5. فایل `worker.json` هیچ credential ندارد. برای بررسی مستقیم، Worker در اولین اجرا یک کلید RSA 3072-bit می‌سازد و با DPAPI همان حساب محافظت می‌کند؛ کلید عمومی آن از طریق Token Pairing به FAM ثبت می‌شود.
 
 ## فعال‌سازی کنترل‌پلین
 
-به‌صورت پیش‌فرض API شبکه غیرفعال است. پس از آماده‌سازی Worker مستقل، روی سرور FAM متغیرهای زیر را تنظیم و سرویس را با روش عملیاتی تأییدشدهٔ سازمان restart کنید:
+به‌صورت پیش‌فرض API شبکه غیرفعال است. پس از نصب Patch سرور و آماده‌سازی Worker، روی سرور FAM متغیرهای زیر را تنظیم و سرویس FAM را با روش عملیاتی تأییدشدهٔ سازمان restart کنید:
 
 ```text
 FAM_NETWORK_OPS_ENABLED=1
@@ -48,41 +51,36 @@ FAM_NETWORK_OPS_MAX_LAB_DEVICES=10
 FAM_NETWORK_OPS_JOB_LEASE_SECONDS=600
 ```
 
-در مدل دسترسی سفارشی FAM، فقط حساب دارای مجوز **مدیریت کاربران و دسترسی‌ها** (`manage-users`) می‌تواند Inventory آزمایشگاهی را ثبت، Worker را pair، Job را ایجاد یا آن را در حالت queued لغو کند. حساب دارای مجوز **مشاهدهٔ تاریخچه** (`view-history`) فقط گزارش‌ها را می‌بیند. حساب‌های نقش‌محور قدیمی صرفاً برای سازگاری تا زمان مهاجرت باقی می‌مانند و هیچ «سطح‌بندی» جدیدی در UI عملیات شبکه نمایش داده نمی‌شود.
+فقط حساب دارای مجوز **مدیریت کاربران و دسترسی‌ها** (`manage-users`) می‌تواند Worker را pair، Inventory آزمایشگاهی را ثبت، یا بررسی مستقیم یک‌باره را درخواست کند. حساب دارای مجوز **مشاهدهٔ تاریخچه** (`view-history`) فقط گزارش‌ها را می‌بیند.
 
-## راه‌اندازی Worker آزمایشگاهی
+## راه‌اندازی Worker هم‌مکان
 
-1. پوشهٔ `network_worker/` را روی میزبان Worker جداگانه کپی کنید؛ آن را در IIS یا مسیر public قرار ندهید.
-2. Python و وابستگی‌های همان پوشه را زیر حساب سرویس Worker نصب کنید:
+1. محتویات `network_worker/` را در `C:\FAM-NetworkWorker\network_worker` کپی کنید؛ آن را زیر `C:\FAM\server\www` قرار ندهید.
+2. Python و وابستگی‌ها را زیر حساب سرویس Worker نصب کنید:
 
    ```powershell
    py -m venv C:\FAM-NetworkWorker\venv
-   C:\FAM-NetworkWorker\venv\Scripts\pip.exe install -r C:\FAM-NetworkWorker\requirements.txt
+   C:\FAM-NetworkWorker\venv\Scripts\pip.exe install -r C:\FAM-NetworkWorker\network_worker\requirements.txt
    ```
 
-3. `worker.example.json` را به `worker.json` کپی کنید. تنها در همین فایل محلی Device ID، آدرس SSH، پورت، `credentialRef` و timeout قرار می‌گیرد. URL کنترل‌پلین باید HTTPS باشد. اگر FAM از گواهی خصوصی یا self-signed استفاده می‌کند، فایل عمومی گواهیِ تأییدشدهٔ FAM را در `caFile` قرار دهید؛ Worker هر دو قالب رایج PEM و Windows DER `.cer` را می‌پذیرد.
-4. از صفحهٔ `/network-operations` یک Worker ثبت کنید. Token یک‌بار نمایش‌داده‌شده را به متغیر محیطی تعریف‌شده در `tokenEnv` همان حساب سرویس بدهید. Worker درخواست‌های کنترل‌پلین را صریحاً و مستقیم ارسال می‌کند و هر Proxy/PAC سیستمی را برای این Token دور می‌زند؛ Token را هرگز در تنظیمات Proxy، URL، log یا فایل JSON قرار ندهید.
-5. تحت **همان حساب Worker**، Credential اختصاصی فقط‌خواندنی را با دستور زیر وارد DPAPI کنید. این فرمان رمز را نمایش یا ذخیرهٔ متن‌واضح نمی‌کند:
-
-   ```powershell
-   C:\FAM-NetworkWorker\venv\Scripts\python.exe -m network_worker.provision_secret --store C:\FAM-NetworkWorker\private\secrets.json.dpapi --ref cisco-readonly-lab
-   ```
-
-6. ابتدا فقط یک تجهیز lab را به Inventory کنترل‌پلین اضافه کنید و Device ID آن را با mapping محلی یکسان بگذارید. سپس Worker را یک مرتبه اجرا کنید:
+3. `worker.example.json` را به `worker.json` کپی کنید. `controlPlaneUrl` باید HTTPS باشد. اگر FAM از گواهی خصوصی یا self-signed استفاده می‌کند، فایل عمومی گواهیِ تأییدشدهٔ FAM را در `caFile` قرار دهید. `devices` برای بررسی مستقیم می‌تواند خالی بماند.
+4. در `/network-operations` یک Worker ثبت کنید. Token یک‌بار نمایش‌داده‌شده را فقط زیر هویت همان حساب Worker در متغیر تعریف‌شده توسط `tokenEnv` قرار دهید؛ Token را در IIS، repository، URL یا ticket وارد نکنید.
+5. Worker را یک‌بار زیر همان هویت اجرا کنید تا کلید DPAPI و کلید عمومی بررسی مستقیم ثبت شود:
 
    ```powershell
    C:\FAM-NetworkWorker\venv\Scripts\python.exe -m network_worker.main --config C:\FAM-NetworkWorker\worker.json --once
    ```
 
-7. پس از بررسی نتیجه، Worker را با Service Manager سازمان، زیر همان حساب مستقل، به‌صورت سرویس اجرا کنید. هم‌زمانی فاز اول حداکثر ۲ اتصال است؛ افزایش آن نیازمند تست ظرفیت جداگانه است.
+6. در صفحهٔ عملیات شبکه، فرم «بررسی مستقیم Err-disabled» را باز کنید، همان Worker را انتخاب کنید و IP/نام میزبان، username و password SSH را وارد کنید. این داده‌ها قبل از درخواست API در مرورگر رمز می‌شوند؛ پس از دریافت نتیجهٔ Job در هیچ‌جا نگهداری نمی‌شوند.
+7. پس از مشاهدهٔ نتیجه، Worker را زیر همان حساب مستقل با Service Manager سازمان یا Scheduled Task تأییدشده اجرا کنید. این Worker هیچ پورت ورودی ایجاد نمی‌کند.
 
 ## ممنوعیت‌های فاز اول
 
 - هیچ endpoint یا UI برای Command آزاد، config mode، backup restore، تغییر ACL، shutdown/no shutdown، err-disable recovery یا ذخیرهٔ config وجود ندارد.
-- تشخیص `err-disabled` فقط گزارش می‌شود. حتی Link Flap هرگز به auto-remediation تبدیل نمی‌شود.
-- raw output، running-config و بکاپ FTP نباید در FAM، SQLite، log مرورگر یا گزارش Job ذخیره شود.
-- این فاز جایگزین سامانهٔ بکاپ نیست و فایل‌های FTP موجود را دریافت یا پردازش نمی‌کند.
+- تشخیص `err-disabled` فقط گزارش می‌شود و هرگز auto-remediation نیست.
+- raw output، running-config و بکاپ FTP در FAM، SQLite، لاگ مرورگر یا گزارش Job ذخیره نمی‌شود.
+- رمز یا IP بررسی مستقیم در FAM به‌صورت متن‌واضح ذخیره نمی‌شود؛ فقط Worker دارای کلید DPAPI می‌تواند ciphertext یک‌باره را باز کند.
 
 ## معیار عبور به مرحلهٔ بعد
 
-تنها پس از ثبت موفق تست نماینده روی تجهیزات واقعی، تأیید ACL مبدأ Worker، بررسی خروجی‌های ساخت‌یافته و تأیید امنیت Credentialها می‌توان inventory/reporting گسترده‌تر را مطرح کرد. هر remediation بعدی باید feature جداگانه، approval انسانی، allow-list سیاست، pre-check/post-check، ثبت Audit و امکان توقف داشته باشد.
+پس از مشاهدهٔ موفق یک بررسی مستقیم فقط‌خواندنی، تأیید ACL مبدأ Worker و بازبینی نتیجهٔ ساخت‌یافته، Inventory گسترده‌تر قابل طرح است. هر remediation بعدی باید یک قابلیت جدا، محدودهٔ تجهیز صریح، approval انسانی، pre-check/post-check، Audit و امکان توقف داشته باشد.

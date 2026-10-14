@@ -36,6 +36,12 @@ class SecretStoreConfig:
 
 
 @dataclass(frozen=True)
+class ProbeKeyStoreConfig:
+    kind: str
+    path: Path
+
+
+@dataclass(frozen=True)
 class Settings:
     control_plane_url: str
     worker_id: str
@@ -44,6 +50,7 @@ class Settings:
     max_parallel: int
     ca_file: Path | None
     secret_store: SecretStoreConfig
+    probe_key_store: ProbeKeyStoreConfig
     devices: dict[str, Device]
 
 
@@ -92,6 +99,16 @@ def _url(value):
     return f"https://{parsed.netloc}"
 
 
+def _store(value, label, cls):
+    if not isinstance(value, dict) or set(value) != {"type", "path"} or value.get("type") != "windows-dpapi" or not isinstance(value.get("path"), str):
+        raise ConfigError(f"{label} must use windows-dpapi")
+    try:
+        path = _absolute_path(value["path"])
+    except ConfigError as exc:
+        raise ConfigError(f"{label} path must be absolute") from exc
+    return cls(kind="windows-dpapi", path=path)
+
+
 def _device(value):
     allowed = {"id", "host", "port", "credentialRef", "platform", "timeoutSeconds"}
     if not isinstance(value, dict) or set(value) != allowed:
@@ -109,30 +126,29 @@ def _device(value):
 def load(path: str | Path) -> Settings:
     """Load a configuration without accepting inline tokens or credentials.
 
-    Device hostnames belong only to this Worker file.  FAM receives a device ID
-    in a job and looks it up here; neither the control plane nor a browser sees
-    address/credential fields.
+    Device hostnames belong only to this Worker file. FAM receives a device ID
+    in an ordinary inventory job and looks it up here. An interactive probe is
+    different: its connection fields are browser-encrypted for this Worker's
+    DPAPI key, are decrypted only in Worker memory, and are never persisted.
     """
     file_path = Path(path)
     try:
         raw = json.loads(file_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ConfigError("configuration file cannot be read") from exc
-    allowed = {"controlPlaneUrl", "workerId", "tokenEnv", "pollSeconds", "maxParallel", "caFile", "secretStore", "devices"}
+    allowed = {"controlPlaneUrl", "workerId", "tokenEnv", "pollSeconds", "maxParallel", "caFile", "secretStore", "probeKeyStore", "devices"}
     if not isinstance(raw, dict) or set(raw) != allowed:
         raise ConfigError("configuration must contain exactly the documented fields")
     token_env = raw["tokenEnv"]
     if not isinstance(token_env, str) or not ENV_NAME.fullmatch(token_env):
         raise ConfigError("tokenEnv is invalid")
-    secret = raw["secretStore"]
-    if not isinstance(secret, dict) or set(secret) != {"type", "path"} or secret.get("type") != "windows-dpapi" or not isinstance(secret.get("path"), str):
-        raise ConfigError("secretStore must use windows-dpapi")
     try:
-        secret_path = _absolute_path(secret["path"])
+        secret_store = _store(raw["secretStore"], "secretStore", SecretStoreConfig)
+        probe_key_store = _store(raw["probeKeyStore"], "probeKeyStore", ProbeKeyStoreConfig)
         ca_file = None if raw["caFile"] is None else _absolute_path(raw["caFile"])
     except ConfigError as exc:
-        raise ConfigError("secretStore/caFile path must be absolute") from exc
-    if not isinstance(raw["devices"], list) or not 1 <= len(raw["devices"]) <= 500:
+        raise ConfigError(str(exc)) from exc
+    if not isinstance(raw["devices"], list) or len(raw["devices"]) > 500:
         raise ConfigError("devices is invalid")
     parsed_devices = [_device(item) for item in raw["devices"]]
     if any(item.platform != "cisco_ios" for item in parsed_devices):
@@ -147,6 +163,7 @@ def load(path: str | Path) -> Settings:
         # The first validation release deliberately caps concurrency at two.
         max_parallel=_integer(raw["maxParallel"], "maxParallel", 1, 2),
         ca_file=Path(ca_file) if ca_file else None,
-        secret_store=SecretStoreConfig(kind="windows-dpapi", path=secret_path),
+        secret_store=secret_store,
+        probe_key_store=probe_key_store,
         devices={item.id: item for item in parsed_devices},
     )

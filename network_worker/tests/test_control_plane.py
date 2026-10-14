@@ -21,6 +21,7 @@ class ControlPlaneTests(unittest.TestCase):
             max_parallel=1,
             ca_file=Path(ca_file) if ca_file else None,
             secret_store=SimpleNamespace(),
+            probe_key_store=SimpleNamespace(),
             devices={},
         )
 
@@ -47,12 +48,14 @@ class MainExitCodeTests(unittest.TestCase):
     def test_once_returns_nonzero_when_control_plane_claim_fails(self):
         runner = Mock()
         runner.run_once.side_effect = worker_main.ControlPlaneError("test")
-        settings = SimpleNamespace(token_env="FAM_NETWORK_WORKER_TOKEN", secret_store=SimpleNamespace())
+        settings = SimpleNamespace(token_env="FAM_NETWORK_WORKER_TOKEN", secret_store=SimpleNamespace(), probe_key_store=SimpleNamespace())
+        probe_keys = Mock(); probe_keys.public_key_pem.return_value = "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n"
         with (
             patch.object(worker_main, "arguments", return_value=SimpleNamespace(config="ignored", once=True)),
             patch.object(worker_main, "load", return_value=settings),
             patch.object(worker_main, "ControlPlaneClient"),
             patch.object(worker_main, "DPAPISecretStore"),
+            patch.object(worker_main, "ProbeKeyStore", return_value=probe_keys),
             patch.object(worker_main, "Runner", return_value=runner),
             patch.dict(worker_main.os.environ, {"FAM_NETWORK_WORKER_TOKEN": "fwn_" + "x" * 32}, clear=False),
         ):
@@ -60,12 +63,14 @@ class MainExitCodeTests(unittest.TestCase):
 
     def test_once_returns_zero_only_after_successful_claim_cycle(self):
         runner = Mock()
-        settings = SimpleNamespace(token_env="FAM_NETWORK_WORKER_TOKEN", secret_store=SimpleNamespace())
+        settings = SimpleNamespace(token_env="FAM_NETWORK_WORKER_TOKEN", secret_store=SimpleNamespace(), probe_key_store=SimpleNamespace())
+        probe_keys = Mock(); probe_keys.public_key_pem.return_value = "-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----\n"
         with (
             patch.object(worker_main, "arguments", return_value=SimpleNamespace(config="ignored", once=True)),
             patch.object(worker_main, "load", return_value=settings),
             patch.object(worker_main, "ControlPlaneClient"),
             patch.object(worker_main, "DPAPISecretStore"),
+            patch.object(worker_main, "ProbeKeyStore", return_value=probe_keys),
             patch.object(worker_main, "Runner", return_value=runner),
             patch.dict(worker_main.os.environ, {"FAM_NETWORK_WORKER_TOKEN": "fwn_" + "x" * 32}, clear=False),
         ):

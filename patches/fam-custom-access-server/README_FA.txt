@@ -2,7 +2,7 @@
 
 این پچ برای نصب مرکزی FAM در C:\FAM و C:\FAMData است. رابط مدیریت کاربران را با نسخهٔ محلی یکسان می‌کند: محدودهٔ دسته‌ها، زیرمحدودهٔ مناطق برای استان‌ها، و مجوزهای ریزعملیاتی. «سطح کاربر» در فرم نمایش داده نمی‌شود.
 
-این revision همچنین فقط کنترل‌پلین فاز اول عملیات شبکه را اضافه می‌کند: صفحهٔ `/network-operations`، Inventory متادیتا، صف Job فقط‌خواندنی و Pairing Worker. Network Operations به‌صورت پیش‌فرض غیرفعال می‌ماند؛ تا زمانی که `FAM_NETWORK_OPS_ENABLED=1` تنظیم نشود و Worker مستقل pair نگردد، هیچ API شبکه‌ای فعال نیست. راهنمای کامل: `docs/NETWORK_OPERATIONS_PHASE1_FA.md` در بستهٔ مرکزی کامل.
+این revision کنترل‌پلین فاز اول عملیات شبکه را اضافه/به‌روزرسانی می‌کند: صفحهٔ `/network-operations`، Inventory متادیتا، صف Job فقط‌خواندنی، Pairing Worker و بررسی مستقیم Err-disabled با اطلاعاتی که کاربر خودش وارد می‌کند. مرورگر آن اطلاعات را فقط برای کلید عمومی Worker رمز می‌کند؛ FAM/IIS هیچ IP یا Credential متن‌واضحی را ذخیره نمی‌کند. Network Operations به‌صورت پیش‌فرض غیرفعال می‌ماند؛ تا زمانی که `FAM_NETWORK_OPS_ENABLED=1` تنظیم نشود و Worker با هویت Windows مستقل از IIS/FAM pair نگردد، هیچ API شبکه‌ای فعال نیست. Worker می‌تواند روی همان سرور باشد، اما خارج از مسیر IIS و با حساب مستقل اجرا می‌شود. راهنمای کامل: `docs/NETWORK_OPERATIONS_PHASE1_FA.md` در بستهٔ Worker.
 
 روش اجرا
 1) ZIP را روی خود سرور Extract کنید.

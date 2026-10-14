@@ -78,14 +78,24 @@ class ControlPlaneClient:
             raise ControlPlaneError("control-plane response is invalid")
         return parsed
 
+    def register_probe_key(self, public_key: str):
+        if not isinstance(public_key, str) or not public_key.startswith("-----BEGIN PUBLIC KEY-----\n") or len(public_key) > 4096:
+            raise ControlPlaneError("Worker probe key is invalid")
+        response = self._post(f"/api/network/workers/{self.worker_id}/probe-key", {"publicKey": public_key})
+        if response.get("workerId") != self.worker_id or not isinstance(response.get("fingerprint"), str):
+            raise ControlPlaneError("Worker probe-key registration is invalid")
+        return response
+
     def claim(self):
         response = self._post("/api/network/worker/claim", {})
         job = response.get("job")
         if job is None:
             return None
-        if not isinstance(job, dict) or set(job) != {"id", "kind", "deviceIds", "leaseSeconds"}:
+        if not isinstance(job, dict) or set(job) not in ({"id", "kind", "deviceIds", "leaseSeconds"}, {"id", "kind", "deviceIds", "leaseSeconds", "sealed"}):
             raise ControlPlaneError("control-plane job is invalid")
-        if job["kind"] != "read_only_inventory" or not isinstance(job["id"], str) or not isinstance(job["deviceIds"], list):
+        if (job["kind"] != "read_only_inventory" or not isinstance(job["id"], str) or
+                not isinstance(job["deviceIds"], list) or
+                ("sealed" in job and not isinstance(job["sealed"], dict))):
             raise ControlPlaneError("control-plane job is invalid")
         return job
 
