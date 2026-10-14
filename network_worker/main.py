@@ -29,6 +29,20 @@ def main():
     except (ConfigError, ControlPlaneError, SecretStoreError):
         print("FAM Network Worker configuration is invalid or unavailable.", file=sys.stderr)
         return 2
+
+    if args.once:
+        try:
+            runner.run_once()
+        except ControlPlaneError:
+            # Deliberately no exception text: avoid writing tokens, proxy
+            # diagnostics, or device details into a Windows service log.
+            print("FAM Network Worker control-plane request failed.", file=sys.stderr)
+            return 3
+        except Exception:
+            print("FAM Network Worker job failed safely.", file=sys.stderr)
+            return 4
+        return 0
+
     while True:
         try:
             did_work = runner.run_once()
@@ -40,8 +54,6 @@ def main():
         except Exception:
             print("FAM Network Worker job failed safely.", file=sys.stderr)
             did_work = False
-        if args.once:
-            return 0
         time.sleep(1 if did_work else settings.poll_seconds)
 
 

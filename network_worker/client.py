@@ -2,15 +2,38 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import ssl
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
 
 from .config import Settings
 
 
 class ControlPlaneError(RuntimeError):
     """A sanitized control-plane communication failure."""
+
+
+def _tls_context(ca_file: Path | None):
+    """Create a context from the local CA file without trusting proxies.
+
+    Windows exports public certificates as binary DER ``.cer`` files by
+    default. OpenSSL accepts PEM paths directly, but not DER paths; support
+    both formats locally so a Worker can use the verified public certificate
+    emitted by FAM without a manual conversion step.
+    """
+    try:
+        if ca_file is None:
+            return ssl.create_default_context()
+        try:
+            return ssl.create_default_context(cafile=str(ca_file))
+        except ssl.SSLError:
+            der = ca_file.read_bytes()
+            context = ssl.create_default_context()
+            context.load_verify_locations(cadata=ssl.DER_cert_to_PEM_cert(der))
+            return context
+    except (OSError, TypeError, ValueError, ssl.SSLError) as exc:
+        raise ControlPlaneError("control-plane CA file is unavailable or invalid") from exc
 
 
 class ControlPlaneClient:
@@ -20,7 +43,15 @@ class ControlPlaneClient:
         self.base_url = settings.control_plane_url.rstrip("/")
         self.worker_id = settings.worker_id
         self.token = token
-        self.context = ssl.create_default_context(cafile=str(settings.ca_file) if settings.ca_file else None)
+        self.context = _tls_context(settings.ca_file)
+        # FAM is an explicitly configured internal control-plane endpoint.
+        # A Windows/PAC proxy may return a gateway page for its short hostname,
+        # so Worker API traffic is always direct and never exposes its bearer
+        # token to a proxy.
+        self.opener = build_opener(
+            ProxyHandler({}),
+            HTTPSHandler(context=self.context),
+        )
 
     def _post(self, path, value):
         payload = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -37,9 +68,9 @@ class ControlPlaneClient:
             },
         )
         try:
-            with urlopen(request, timeout=45, context=self.context) as response:
+            with self.opener.open(request, timeout=45) as response:
                 parsed = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (HTTPError, URLError, TimeoutError, ssl.SSLError, json.JSONDecodeError) as exc:
             # Do not surface response text: it can contain reverse-proxy details
             # and must never result in an accidental token/header log.
             raise ControlPlaneError("control-plane request failed") from exc

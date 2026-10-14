@@ -6,4 +6,4 @@ Worker یک جزء مستقل برای فاز اول عملیات شبکه اس�
 - فایل نمونهٔ فاقد Credential: `worker.example.json`
 - فایل واقعی `worker.json` و همهٔ `*.dpapi` طبق `.gitignore` محلی Worker هرگز نباید وارد repository شوند.
 
-Worker باید با حساب Windows مستقل از IIS/FAM اجرا شود. این پروژه هیچ fallback برای secret در Environment Variable ندارد؛ Credential تجهیز فقط در store رمز‌شدهٔ DPAPI زیر هویت Worker خوانده می‌شود.
+Worker باید با حساب Windows مستقل از IIS/FAM اجرا شود. این پروژه هیچ fallback برای secret در Environment Variable ندارد؛ Credential تجهیز فقط در store رمز‌شدهٔ DPAPI زیر هویت Worker خوانده می‌شود. ارتباط کنترل‌پلین FAM همیشه مستقیم و بدون Proxy/PAC برقرار می‌شود؛ در صورت گواهی خصوصی، `caFile` می‌تواند گواهی عمومی PEM یا Windows DER `.cer` تأییدشدهٔ FAM باشد.

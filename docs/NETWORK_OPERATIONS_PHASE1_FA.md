@@ -60,8 +60,8 @@ FAM_NETWORK_OPS_JOB_LEASE_SECONDS=600
    C:\FAM-NetworkWorker\venv\Scripts\pip.exe install -r C:\FAM-NetworkWorker\requirements.txt
    ```
 
-3. `worker.example.json` را به `worker.json` کپی کنید. تنها در همین فایل محلی Device ID، آدرس SSH، پورت، `credentialRef` و timeout قرار می‌گیرد. URL کنترل‌پلین باید HTTPS باشد.
-4. از صفحهٔ `/network-operations` یک Worker ثبت کنید. Token یک‌بار نمایش‌داده‌شده را به متغیر محیطی تعریف‌شده در `tokenEnv` همان حساب سرویس بدهید.
+3. `worker.example.json` را به `worker.json` کپی کنید. تنها در همین فایل محلی Device ID، آدرس SSH، پورت، `credentialRef` و timeout قرار می‌گیرد. URL کنترل‌پلین باید HTTPS باشد. اگر FAM از گواهی خصوصی یا self-signed استفاده می‌کند، فایل عمومی گواهیِ تأییدشدهٔ FAM را در `caFile` قرار دهید؛ Worker هر دو قالب رایج PEM و Windows DER `.cer` را می‌پذیرد.
+4. از صفحهٔ `/network-operations` یک Worker ثبت کنید. Token یک‌بار نمایش‌داده‌شده را به متغیر محیطی تعریف‌شده در `tokenEnv` همان حساب سرویس بدهید. Worker درخواست‌های کنترل‌پلین را صریحاً و مستقیم ارسال می‌کند و هر Proxy/PAC سیستمی را برای این Token دور می‌زند؛ Token را هرگز در تنظیمات Proxy، URL، log یا فایل JSON قرار ندهید.
 5. تحت **همان حساب Worker**، Credential اختصاصی فقط‌خواندنی را با دستور زیر وارد DPAPI کنید. این فرمان رمز را نمایش یا ذخیرهٔ متن‌واضح نمی‌کند:
 
    ```powershell
