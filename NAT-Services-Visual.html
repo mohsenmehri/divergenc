@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقشه سرویس‌های NAT — bac.zip</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#ffffff; --ink:#0f172a; --muted:#64748b;
+    --green:#059669; --green-bg:#ecfdf5; --green-br:#a7f3d0;
+    --blue:#2563eb;  --blue-bg:#eff6ff;  --blue-br:#bfdbfe;
+    --purple:#7c3aed;--purple-bg:#f5f3ff;--purple-br:#ddd6fe;
+    --orange:#d97706;--orange-bg:#fffbeb;--orange-br:#fde68a;
+    --red:#dc2626;   --red-bg:#fef2f2;   --red-br:#fecaca;
+    --cyan:#0891b2;  --cyan-bg:#ecfeff;  --cyan-br:#a5f3fc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Tahoma,'Segoe UI',sans-serif;background:#e2e8f0;color:var(--ink);line-height:1.9}
+  header{background:linear-gradient(135deg,#0f172a,#1e3a5f 60%,#155e75);color:#fff;padding:34px 20px 26px;text-align:center}
+  header h1{margin:0 0 6px;font-size:27px}
+  header p{margin:2px 0;color:#cbd5e1;font-size:13.5px}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 16px 50px}
+  .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px 16px;font-size:13px;color:#9a3412;margin-bottom:20px}
+  h2.sec{font-size:19px;margin:30px 0 6px;padding-right:10px;border-right:5px solid var(--blue)}
+  h2.sec small{display:block;font-size:12.5px;color:var(--muted);font-weight:normal}
+  /* ------- flow ------- */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:16px 0 6px}
+  .node{background:#fff;border:2px solid #cbd5e1;border-radius:14px;padding:12px 14px;min-width:170px;flex:1;text-align:center;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+  .node b{display:block;font-size:14.5px}
+  .node span{font-size:12px;color:var(--muted)}
+  .node.nat{border-color:var(--green);background:var(--green-bg)}
+  .node.svc-gam{border-color:var(--blue);background:var(--blue-bg)}
+  .node.svc-sam{border-color:var(--purple);background:var(--purple-bg)}
+  .arrow{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 6px;min-width:110px}
+  .arrow .lbl{font-size:11.5px;color:#334155;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:20px;padding:1px 10px;white-space:nowrap}
+  .arrow .arr{font-size:20px;color:#94a3b8;line-height:1.2}
+  code,.ip{font-family:Consolas,monospace;direction:ltr;unicode-bidi:embed;font-size:12.5px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:0 6px;white-space:nowrap}
+  /* ------- cards ------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:16px;margin-top:14px}
+  .card{background:var(--card);border-radius:16px;padding:18px;border-top:6px solid var(--green);box-shadow:0 3px 10px rgba(15,23,42,.08)}
+  .card.blue{border-top-color:var(--blue)} .card.purple{border-top-color:var(--purple)}
+  .card.cyan{border-top-color:var(--cyan)} .card.orange{border-top-color:var(--orange)} .card.red{border-top-color:var(--red)}
+  .card h3{margin:0 0 2px;font-size:17px}
+  .card .en{color:var(--muted);font-size:12px;font-family:Consolas,monospace;direction:ltr;text-align:right}
+  .badge{display:inline-block;font-size:11px;font-weight:bold;border-radius:20px;padding:1px 11px;margin:6px 0 8px}
+  .b-on{background:var(--green-bg);color:var(--green);border:1px solid var(--green-br)}
+  .b-wait{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-br)}
+  .b-off{background:var(--red-bg);color:var(--red);border:1px solid var(--red-br)}
+  table{width:100%;border-collapse:collapse;font-size:12.8px;margin-top:6px}
+  td{padding:4px 6px;border-bottom:1px dashed #e2e8f0;vertical-align:top}
+  td.k{color:var(--muted);white-space:nowrap;width:105px;font-size:12px}
+  .evi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;font-size:12.3px;margin-top:10px}
+  .evi b{color:#334155}
+  .ports span{display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;border-radius:6px;padding:0 7px;margin:2px 1px;font-family:Consolas,monospace;font-size:11.5px;direction:ltr}
+  .warn{background:var(--red-bg);border:1px solid var(--red-br);color:#991b1b;border-radius:12px;padding:10px 16px;font-size:13px;margin-top:14px}
+  .warn.o{background:var(--orange-bg);border-color:var(--orange-br);color:#92400e}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:36px}
+  @media(max-width:700px){.arrow{transform:rotate(90deg);margin:2px auto}.flow{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🗺️ نقشه سرویس‌های NAT</h1>
+  <p>استخراج‌شده از ۱۹ فایل کانفیگ داخل <b>bac.zip</b> — شناسایی سرویس‌ها بر اساس Description اینترفیس‌ها، اسم Routeها و نام ACL/Poolها</p>
+  <p>IPها دقیقاً همان‌طور که در کانفیگ ماسک شده‌اند (<code>*.x.x.x</code>) نمایش داده شده‌اند</p>
+</header>
+
+<div class="wrap">
+
+<div class="note">📌 <b>راهنما:</b> <span class="badge b-on">● NAT فعال</span> یعنی هم Rule وجود دارد هم اینترفیس Inside/Outside —
+  <span class="badge b-wait">● آماده ولی فعال‌نشده</span> یعنی Pool/ACL/Route هست ولی دستور NAT نیست —
+  <span class="badge b-off">● غیرفعال/نامشخص</span> یعنی Rule هست ولی مسیر NAT کامل نیست.</div>
+
+<!-- ══════════════ بخش شعب ══════════════ -->
+<h2 class="sec">🏢 بخش ۱ — شعب: سرویس‌های بانکی «گام» و «سمش» روی بستر اینترانت
+  <small>LAN شعبه ← روتر شعبه (PAT) ← تانل Intranet / Intranet-Semnan ← سرور سرویس</small>
+</h2>
+
+<div class="flow">
+  <div class="node"><b>💻 LAN شعبه</b><span>283: *.2.34.0/26<br>486: *.4.86.0/26<br>580: *.5.80.0/24<br>حوزه: *.0.28.0/25</span></div>
+  <div class="arrow"><span class="lbl">Fa0/0.100 — NAT Inside</span><span class="arr">◀━━━</span></div>
+  <div class="node nat"><b>🔀 روتر شعبه — PAT</b><span>سورس LAN به IP تانل<br>ترجمه می‌شود (Overload)</span></div>
+  <div class="arrow"><span class="lbl">Tunnel33 / Tunnel44</span><span class="arr">◀━━━</span></div>
+  <div class="node svc-gam"><b>🏦 سامانه گام</b><span>*.20.30.194 (اینترانت)<br>*.20.59.8 (سمنان)</span></div>
+  <div class="node svc-sam" style="margin-right:8px"><b>📨 سامانه سمش سمنان</b><span>*.26.50.1</span></div>
+</div>
+
+<div class="cards">
+
+  <!-- GAM central -->
+  <div class="card blue">
+    <h3>🏦 سامانه گام — مسیر اینترانت مرکزی</h3>
+    <div class="en">ACL: GAM → Tunnel33 “Intranet”</div>
+    <span class="badge b-on">● NAT فعال — در 486، 580 و حوزه مازندران</span>
+    <table>
+      <tr><td class="k">سرور مقصد</td><td><span class="ip">*.20.30.194</span></td></tr>
+      <tr><td class="k">مسیر خروج</td><td>Tunnel33 — اینترانت</td></tr>
+      <tr><td class="k">IP بعد از NAT</td><td>IP خود تانل 33 هر شعبه (PAT):<br><span class="ip">486 → 33.1.4.86</span> <span class="ip">580 → 33.1.5.80</span> <span class="ip">حوزه → 33.1.0.28</span></td></tr>
+      <tr><td class="k">پورت</td><td>در سطح NAT همه IP/پورت‌ها (<code>permit ip</code>)</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> اسم ACL ‏<code>GAM</code> است و روی Tunnel33 با دیسکریپشن <code>description Intranet</code> / <code>Connect to Intranet</code> اعمال شده:
+      <code>ip nat inside source list GAM interface Tunnel33 overload</code></div>
+  </div>
+
+  <!-- GAM Semnan -->
+  <div class="card blue">
+    <h3>🏦 سامانه گام — سمنان</h3>
+    <div class="en">ACL: GAM2 → Tunnel44 “Intranet-Semnan”</div>
+    <span class="badge b-on">● NAT فعال — در همه شعب (283، 486، 580، حوزه)</span>
+    <table>
+      <tr><td class="k">سرور مقصد</td><td><span class="ip">*.20.59.8</span></td></tr>
+      <tr><td class="k">مسیر خروج</td><td>Tunnel44 — اینترانت سمنان</td></tr>
+      <tr><td class="k">IP بعد از NAT</td><td>IP خود تانل 44 هر شعبه (PAT):<br><span class="ip">283 → 44.1.2.34</span> <span class="ip">486 → 44.1.4.86</span><br><span class="ip">580 → 44.1.5.80</span> <span class="ip">حوزه → 44.1.0.28</span></td></tr>
+      <tr><td class="k">پورت کاربردی</td><td><span class="ports"><span>TCP 80 (www)</span></span> طبق LAN-ACL — یعنی وب‌سرویس گام سمنان</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> روت صریحاً نام دارد: <code>ip route *.20.59.8 … Tunnel44 name Semnan-GAM</code> و تانل هم
+      <code>description Intranet-Semnan</code> دارد.</div>
+  </div>
+
+  <!-- SAMASH -->
+  <div class="card purple">
+    <h3>📨 سامانه سمش (Samash) — سمنان</h3>
+    <div class="en">ACL: GAM2 → Tunnel44 “Intranet-Semnan”</div>
+    <span class="badge b-on">● NAT فعال — در همه شعب (283، 486، 580، حوزه)</span>
+    <table>
+      <tr><td class="k">سرور مقصد</td><td><span class="ip">*.26.50.1</span></td></tr>
+      <tr><td class="k">مسیر خروج</td><td>Tunnel44 — اینترانت سمنان</td></tr>
+      <tr><td class="k">IP بعد از NAT</td><td>IP خود تانل 44 هر شعبه (مثل کارت بالا)</td></tr>
+      <tr><td class="k">پورت‌های کاربردی</td><td><span class="ports"><span>80</span><span>443</span><span>2929</span><span>2930</span><span>2931</span><span>2932</span><span>2933</span><span>2934</span><span>2935</span><span>2938</span><span>4444</span><span>6550</span><span>7676</span><span>7778</span></span> طبق LAN-ACL</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> <code>ip route *.26.50.1 … Tunnel44 name Semnan-Samash</code> — و تأیید مستقل در روتر تهران:
+      اینترفیس Tunnel1 با <code>description Samash-Test</code> و <code>ip nhrp authentication SAMASH</code> (در حال حاضر shutdown).</div>
+  </div>
+</div>
+
+<div class="warn">⚠️ <b>ناسازگاری شعبه 283:</b> مقصد «گام مرکزی» در 283 ‏<span class="ip">*.20.165.8</span> است، ولی در بقیه شعب <span class="ip">*.20.30.194</span> — به‌احتمال زیاد IP قدیمی گام که در 283 به‌روز نشده.
+  همچنین در <b>حوزه مازندران</b> فقط نیمه اول LAN ‏(<span class="ip">*.0.28.0/25</span>) NAT می‌شود، نه کل /24.</div>
+
+<!-- ══════════════ بخش FAM ══════════════ -->
+<h2 class="sec">🏛️ بخش ۲ — مرکز FAM ‏(R-Active-FAM): سرویس‌های بین‌بانکی روی بستر NIBN
+  <small>هاست‌های داخلی ← روتر FAM (NAT) ← اینترفیس NIBN-TEST ← سرورهای بین‌بانکی</small>
+</h2>
+
+<div class="flow">
+  <div class="node"><b>🖥️ هاست‌های داخلی</b><span>*.12.104.5<br>*.*.102.48 / .41<br>(Po1.100 — NAT Inside، ‏*.*.*.2)</span></div>
+  <div class="arrow"><span class="lbl">Port-channel1.100</span><span class="arr">◀━━━</span></div>
+  <div class="node nat"><b>🔀 روتر FAM — NAT</b><span>ترجمه سورس به IPهای<br>اختصاصی هر سرویس در رنج<br>*.168.81.x</span></div>
+  <div class="arrow"><span class="lbl">Po1.30 “NIBN-TEST”<br>*.168.81.27</span><span class="arr">◀━━━</span></div>
+  <div class="node svc-gam"><b>💳 شتاب / پایا / پیوند</b><span>*.168.*.70 (شتاب)<br>*.168.*.68 (پایا ۱)<br>*.168.*.53 (پیوند)</span></div>
+</div>
+
+<div class="cards">
+
+  <div class="card cyan">
+    <h3>💳 شبکه شتاب (SHETAB)</h3>
+    <div class="en">POOL: SHETAB — ACL 138</div>
+    <span class="badge b-on">● NAT فعال</span>
+    <table>
+      <tr><td class="k">سورس قبل NAT</td><td><span class="ip">*.12.104.5</span></td></tr>
+      <tr><td class="k">سرور مقصد</td><td><span class="ip">*.168.*.70</span> (via گیت‌وی *.168.81.1)</td></tr>
+      <tr><td class="k">IP بعد از NAT</td><td><span class="ip">*.168.81.10</span> — بدون Overload</td></tr>
+      <tr><td class="k">پورت</td><td>همه IP/پورت‌ها (<code>permit ip</code>)</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> <code>ip nat pool SHETAB *.168.81.10</code> + ‏<code>ip nat inside source list 138 pool SHETAB</code>؛ مسیر روی اینترفیس با <code>description NIBN-TEST</code>.</div>
+  </div>
+
+  <div class="card cyan">
+    <h3>🏧 پایا — اتصال مستقیم ۱ (Direct-PAYA1)</h3>
+    <div class="en">POOL: Direct-PAYA1 — ACL 140</div>
+    <span class="badge b-on">● NAT فعال</span>
+    <table>
+      <tr><td class="k">سورس قبل NAT</td><td><span class="ip">*.*.102.48</span></td></tr>
+      <tr><td class="k">سرور مقصد</td><td><span class="ip">*.168.*.68</span> و کل شبکه <span class="ip">*.168.81.0/24</span></td></tr>
+      <tr><td class="k">IP بعد از NAT</td><td><span class="ip">*.168.81.11</span> — بدون Overload</td></tr>
+      <tr><td class="k">پورت</td><td>همه IP/پورت‌ها (<code>permit ip</code>)</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> روت سرور مقصد صریحاً نام دارد: <code>ip route *.168.*.68 … name direct-Paya1</code> + ‏<code>ip nat inside source list 140 pool Direct-PAYA1</code>.</div>
+  </div>
+
+  <div class="card">
+    <h3>↩️ انتشار معکوس سرور *.168.*.70 (همان هاست شتاب)</h3>
+    <div class="en">Outside Static NAT</div>
+    <span class="badge b-on">● NAT فعال — Static یک‌به‌یک</span>
+    <table>
+      <tr><td class="k">سورس بیرونی</td><td><span class="ip">*.168.*.70</span></td></tr>
+      <tr><td class="k">ترجمه به</td><td><span class="ip">*.*.*.1</span></td></tr>
+      <tr><td class="k">پورت</td><td>همه پورت‌ها/پروتکل‌ها (Static بدون پورت)</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> <code>ip nat outside source static *.168.*.70 *.*.*.1</code> — همان هاستی که در کارت شتاب مقصد است، این‌جا در جهت برگشت سورسش ترجمه می‌شود.</div>
+  </div>
+
+  <div class="card orange">
+    <h3>🔗 پیوند (PEYVAND)</h3>
+    <div class="en">POOL: PEYVAND — ACL 139</div>
+    <span class="badge b-wait">● آماده است ولی NAT فعال نیست</span>
+    <table>
+      <tr><td class="k">سورس برنامه‌ریزی‌شده</td><td><span class="ip">*.*.102.41</span></td></tr>
+      <tr><td class="k">سرور مقصد</td><td><span class="ip">*.168.*.53</span></td></tr>
+      <tr><td class="k">IP ترجمه تعریف‌شده</td><td><span class="ip">*.168.81.50</span> (فقط Pool هست)</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> <code>ip route *.168.*.53 … name peyvand</code> و ACL 139 و Pool ‏<code>PEYVAND</code> هر سه هستند، اما دستور ‏<code>ip nat inside source list 139 …</code> وجود ندارد.</div>
+  </div>
+
+  <div class="card orange">
+    <h3>🏧 پایا — اتصال مستقیم ۲ (Direct-PAYA2)</h3>
+    <div class="en">POOL: Direct-PAYA2 — ACL 141</div>
+    <span class="badge b-wait">● آماده است ولی NAT فعال نیست</span>
+    <table>
+      <tr><td class="k">سورس برنامه‌ریزی‌شده</td><td><span class="ip">*.*.102.48</span></td></tr>
+      <tr><td class="k">سرور مقصد</td><td><span class="ip">*.168.*.69</span></td></tr>
+      <tr><td class="k">IP ترجمه تعریف‌شده</td><td><span class="ip">*.168.81.12</span> (فقط Pool هست)</td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> <code>ip route *.168.*.69 … name direct-Paya2</code> و ACL 141 هستند، اما Rule نات متناظر نوشته نشده.</div>
+  </div>
+
+  <div class="card orange">
+    <h3>✉️ سپام (SEPAM) + مقصد روتری *.168.*.106</h3>
+    <div class="en">POOL: SEPAM / nat-pool-3 (rotary)</div>
+    <span class="badge b-wait">● فقط Pool و Route — NAT فعال نیست</span>
+    <table>
+      <tr><td class="k">Pool سپام</td><td><span class="ip">*.168.81.30</span> — بدون ACL و بدون Rule</td></tr>
+      <tr><td class="k">Pool روتری</td><td><span class="ip">*.168.*.106</span> ‏(<code>nat-pool-3 type rotary</code>) — روتش هست: <span class="ip">*.168.*.106 via *.168.81.1</span></td></tr>
+    </table>
+    <div class="evi"><b>🔍 شواهد:</b> فقط تعریف Pool در خطوط 619 و 624؛ هیچ دستور <code>ip nat … destination/rotary</code> یا Rule متناظر در کانفیگ نیست.</div>
+  </div>
+</div>
+
+<!-- ══════════════ بخش تهران ══════════════ -->
+<h2 class="sec">🌆 بخش ۳ — تهران (4451-TEH-1/2): سرویس نامشخص
+  <small>تنها NAT این دو روتر، بدون هیچ نشانه‌ای از نام سرویس در کانفیگ</small>
+</h2>
+
+<div class="cards">
+  <div class="card red">
+    <h3>❓ سرویس نامشخص — Static NAT تهران</h3>
+    <div class="en">Tehran-Ruter-Active:386 / Stundby:359</div>
+    <span class="badge b-off">● به‌احتمال زیاد غیرفعال</span>
+    <table>
+      <tr><td class="k">نگاشت</td><td><span class="ip">*.*.1.38</span> ↔ <span class="ip">*.*.25.29</span> (یک‌به‌یک، همه پورت‌ها)</td></tr>
+      <tr><td class="k">نام سرویس</td><td>در هیچ Description/Route/ACLای نامی برای این دو IP نیامده</td></tr>
+      <tr><td class="k">وضعیت</td><td>هیچ اینترفیسی <code>ip nat inside/outside</code> ندارد ⇒ Rule عملاً ترافیکی ترجمه نمی‌کند</td></tr>
+    </table>
+    <div class="evi"><b>🔍 تنها شاهد همسایه:</b> در همین روترها سرویس «سمش» شناخته‌شده است (<code>description Samash-Test</code> روی Tunnel1، shutdown) ولی هیچ ارتباط مستندی بین آن و این Static NAT در کانفیگ دیده نمی‌شود؛ روی دستگاه با <code>show ip nat translations</code> قطعی می‌شود.</div>
+  </div>
+</div>
+
+<footer>منبع: bac.zip — فایل‌های Branch-283/486/580، Hovzeh-Mazandaran، Fam-Router-Active، Tehran-Router • گزارش مشروح متنی: NAT-Report-bac.md</footer>
+
+</div>
+</body>
+</html>
