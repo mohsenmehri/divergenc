@@ -98,6 +98,16 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertEqual(headers['Pragma'],'no-cache')
         self.assertEqual(headers['Expires'],'0')
 
+    def test_network_operations_page_is_proxied_to_flask_not_placed_in_iis_static_root(self):
+        server_root=Path(__file__).resolve().parents[1]
+        config=ET.parse(server_root/'www/web.config').getroot()
+        rules=config.findall('./system.webServer/rewrite/rules/rule')
+        rule=next(item for item in rules if item.attrib.get('name')=='Network Operations control page to loopback service')
+        self.assertEqual(rule.find('match').attrib['url'],'^network-operations$')
+        self.assertEqual(rule.find('action').attrib['url'],'http://127.0.0.1:8765/network-operations')
+        self.assertTrue((server_root/'network_operations.html').is_file())
+        self.assertFalse((server_root/'www'/'network-operations.html').exists())
+
     def test_verified_iis_client_patch_targets_iis_physical_path_and_validates_payload(self):
         root=Path(__file__).resolve().parents[2]
         patch=root/'patches'/'fam-iis-verified-client-update'
@@ -130,6 +140,10 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertIn('Restore-Backup',script)
         self.assertIn('Wait-Backend $true',script)
         self.assertIn('$SourceWebConfig',script)
+        self.assertIn('$SourceNetworkOps',script)
+        self.assertIn('$SourceNetworkPage',script)
+        self.assertIn("'network_ops.py'",script)
+        self.assertIn("'network_operations.html'",script)
         self.assertIn("'web.config'",script)
         self.assertIn('categories TEXT', (payload/'app.py').read_text(encoding='utf8'))
         self.assertIn('const PERMISSION_GROUPS=',(payload/'FAM.html').read_text(encoding='utf8'))
@@ -137,9 +151,11 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertIn('max-age=31536000',(payload/'web.config').read_text(encoding='utf8'))
         import hashlib
         entries={name:digest for digest,name in (line.split('  ',1) for line in (payload/'SHA256SUMS.txt').read_text(encoding='utf8').splitlines())}
-        self.assertEqual(set(entries),{'app.py','FAM.html','web.config'})
+        self.assertEqual(set(entries),{'app.py','network_ops.py','network_operations.html','FAM.html','web.config'})
         for name,digest in entries.items():self.assertEqual(digest,hashlib.sha256((payload/name).read_bytes()).hexdigest())
         self.assertEqual((payload/'app.py').read_bytes(),(root/'server'/'app.py').read_bytes())
+        self.assertEqual((payload/'network_ops.py').read_bytes(),(root/'server'/'network_ops.py').read_bytes())
+        self.assertEqual((payload/'network_operations.html').read_bytes(),(root/'server'/'network_operations.html').read_bytes())
         self.assertEqual((payload/'FAM.html').read_bytes(),(root/'server'/'www'/'FAM.html').read_bytes())
         self.assertEqual((payload/'web.config').read_bytes(),(root/'server'/'www'/'web.config').read_bytes())
         self.assertEqual((root/'patches'/'fam-custom-access-local'/'FAM.html').read_bytes(),(root/'FAM.html').read_bytes())

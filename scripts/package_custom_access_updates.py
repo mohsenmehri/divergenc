@@ -20,9 +20,15 @@ def add_archive(source:Path,output:Path):
 # forks. Synchronise first, then write the manifest the Windows updater checks.
 server=ROOT/'patches'/'fam-custom-access-server'
 payload=server/'payload';payload.mkdir(parents=True,exist_ok=True)
-for source,name in ((ROOT/'server'/'app.py','app.py'),(ROOT/'server'/'www'/'FAM.html','FAM.html'),(ROOT/'server'/'www'/'web.config','web.config')):
+for source,name in (
+    (ROOT/'server'/'app.py','app.py'),
+    (ROOT/'server'/'network_ops.py','network_ops.py'),
+    (ROOT/'server'/'network_operations.html','network_operations.html'),
+    (ROOT/'server'/'www'/'FAM.html','FAM.html'),
+    (ROOT/'server'/'www'/'web.config','web.config'),
+):
     (payload/name).write_bytes(source.read_bytes())
-expected=''.join(f'{hashlib.sha256((payload/name).read_bytes()).hexdigest()}  {name}\n' for name in ('app.py','FAM.html','web.config'))
+expected=''.join(f'{hashlib.sha256((payload/name).read_bytes()).hexdigest()}  {name}\n' for name in ('app.py','network_ops.py','network_operations.html','FAM.html','web.config'))
 (payload/'SHA256SUMS.txt').write_text(expected,encoding='utf8')
 local=ROOT/'patches'/'fam-custom-access-local'
 local.mkdir(parents=True,exist_ok=True)

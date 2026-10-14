@@ -1,0 +1,22 @@
+{
+  "controlPlaneUrl": "https://fam.example.invalid",
+  "workerId": "worker-lab-01",
+  "tokenEnv": "FAM_NETWORK_WORKER_TOKEN",
+  "pollSeconds": 15,
+  "maxParallel": 2,
+  "caFile": "C:\\FAM-NetworkWorker\\private\\fam-ca.cer",
+  "secretStore": {
+    "type": "windows-dpapi",
+    "path": "C:\\FAM-NetworkWorker\\private\\secrets.json.dpapi"
+  },
+  "devices": [
+    {
+      "id": "lab-isr-01",
+      "host": "192.0.2.10",
+      "port": 22,
+      "credentialRef": "cisco-readonly-lab",
+      "platform": "cisco_ios",
+      "timeoutSeconds": 30
+    }
+  ]
+}
