@@ -3,21 +3,21 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Wolf M-A  v4.1  |  Crypto & Gold        (نسخهٔ اصلاح‌شده — بر پایهٔ v4)
 // ───────────────────────────────────────────────────────────────────────────────
-//  خلاصهٔ اصلاحات نسبت به v4:
-//   1) dynamic_requests = false  → درخواست‌های داده از ~۳۹ به ~۱۱ کاهش یافت
-//   2) f_tfState کاملاً خودکفا شد → هیچ وابستگی به متغیرهای گلوبالِ چارت ندارد
-//      (قبلاً کد موتور ساختار ۴ بار در کانتکست‌های TF کپی و اجرا می‌شد)
-//   3) ستون‌های TF با lookahead_on + آفست یک کندل  → بدون ری‌پینت
-//   4) رفع کد مردهٔ Transition (سقف اعتماد ۵۳ بود، آستانه ۵۵)
-//   5) رفع بی‌اثر بودن فیلتر ماکرو در حالت Gold (_dollarWeak غالب بود)
-//   6) ماکرو ستون‌های TF حالا روی تایم‌فریم همان ستون محاسبه می‌شود (قبلاً از تایم‌فریم چارت می‌آمد)
-//   7) OB: حذف واقعی لیبل و آرایه‌های اضافی؛ پول‌های بی‌استفاده پنهان می‌شوند
-//   8) ثابت‌های نام‌گذاری‌شده برای آستانه‌های سیگنال؛ تابع f_bullBear؛ فرمت اعشار در Bias
-//   6) قاعدهٔ ماکرو یک‌جا در f_macroAllowLong/Short تعریف شد (ضدّ drift)
-//   7) ستون TOTAL2 اضافه شد و ورودی‌های نماد واقعاً به درخواست‌ها وصل شدند
-//   8) پاکسازی: import بی‌استفاده، ورودی‌های مرده، plot(na)، محاسبات تکراری
-//   9) رفع ناسازگاری رنگ‌ها، پاکسازی لیبل‌های OB، default برای switch
-//  10) max_bars_back از 5000 به 700 و MAX_HIST از 2000 به 500 (کاهش حافظه)
+//  وضعیت نسخهٔ ۴.۱.۱ (نسبت به v4):
+//   • ماکرو ستون‌های TF: هر ستون پرچم‌های ماکرو خودِ تایم‌فریم را دارد
+//     (۲۸ درخواست مستقل + ۷ درخواست چارت + ۴ درخواست ساختار = ۳۹ ؛ زیر سقف ۴۰)
+//   • dynamic_requests = false: خروجی درخواست‌ها به‌صورت مقدار منتقل می‌شود
+//   • ری‌پینت: آفست [1] + lookahead_on در درخواست‌های TF؛ سیگنال فعلی با barstate.isconfirmed
+//   • Transition: سقف اعتماد ~56.6 و آستانهٔ ستاپ ۵۵ (قبلاً سقف ۵۳ و کد مرده بود)
+//   • Gold: DXY/US10Y/VIX در اسلات‌های slot1..3 ؛ قاعدهٔ ماکرو یک‌جا در f_macroAllowLong/Short
+//   • OB: حذف واقعی لیبل و آرایه‌های اضافی؛ پول‌های بی‌استفاده پنهان می‌شوند
+//   • سیگنال: آستانه‌ها ثابت‌های نام‌گذاری‌شده‌اند (NET_STRONG, NET_WEAK, SP_T1..4, CONF_*)
+//   • جدول: f_bullBear برای همهٔ ردیف‌های Bull/Bear؛ فرمت اعشار Bias
+//   • تشخیص BTC: فقط نمادهایی که با BTC/XBT شروع شوند (WBTC و BTC.D جدا)
+//   • برچسب تایم‌فریم: مقادیر رایج دقیقه (2, 4, 6, 7, 8, 9, 20, 25, 90) اضافه شد
+//  یادداشت: f_tfState و f_computeBias سری‌های OHLC کانتکست فعلی و ورودی‌های ثابت را می‌خوانند؛
+//  هیچ متغیر mutable گلوبالی را نمی‌خوانند (شرط Pine برای درخواست‌های TF).
+
 // ═══════════════════════════════════════════════════════════════════════════════
 indicator('Wolf M-A v4.1 | Crypto & Gold', overlay = true, max_bars_back = 700,
      max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500,
@@ -286,8 +286,8 @@ ticker3TFCustom = input.timeframe('15', 'Time 3', display = display.none)
 ticker4TFCustom = input.timeframe('1D', 'Time 4', display = display.none)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//                       کتابخانهٔ توابع خالص (PURE FUNCTIONS)
-//   نکته: این توابع به هیچ متغیر mutable گلوبال وابسته نیستند تا امن باشند
+//                       کتابخانهٔ توابع کمکی
+//   نکته: این توابع هیچ متغیر mutable گلوبالی را نمی‌خوانند (فقط ورودی، سری OHLC کانتکست و ورودی‌های ثابت)
 //   و بتوانند داخل کانتکست request.security اجرا شوند.
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -321,6 +321,7 @@ get_structure_lowest_bar(lookback) =>
 
 getTFLabel(tf) =>
     tf == '1' ? '1m' : tf == '3' ? '3m' : tf == '5' ? '5m' : tf == '10' ? '10m' :
+     tf == '2' ? '2m' : tf == '4' ? '4m' : tf == '6' ? '6m' : tf == '7' ? '7m' : tf == '8' ? '8m' : tf == '9' ? '9m' : tf == '20' ? '20m' : tf == '25' ? '25m' : tf == '90' ? '90m' :
      tf == '15' ? '15m' : tf == '30' ? '30m' : tf == '45' ? '45m' : tf == '60' ? '1H' :
      tf == '120' ? '2H' : tf == '180' ? '3H' : tf == '240' ? '4H' : tf == '360' ? '6H' :
      tf == '480' ? '8H' : tf == '720' ? '12H' : tf == '1D' ? '1D' : tf == 'D' ? '1D' :
@@ -395,7 +396,7 @@ f_macroAllowShort(_isGold, _dxyUp, _vixUp, _totUp, _usdtUp) =>
     _isGold ? f_goldRiskOn(_dxyUp, _vixUp) : (not _totUp and _usdtUp)
 
 // ═══════════════════════════════════════════════════════════════
-//   محاسبهٔ Bias (خالص — فقط ورودی‌ها و آرگومان‌ها)
+//   محاسبهٔ Bias (ورودی‌ها + سری‌های کانتکست + ورودی‌های ثابت)
 // ═══════════════════════════════════════════════════════════════
 f_computeBias(_sd, _rHH, _rHL, _rLL, _rLH,
               _isGold, _ga1, _ga2, _ga3,
@@ -978,7 +979,8 @@ dxyUp   = _dxyRaw   > _dxyEma   and _dxyEma   > _dxyEma[1]
 us10yUp = _us10yRaw > _us10yEma and _us10yEma > _us10yEma[1]
 vixUp   = _vixRaw   > _vixEma   and _vixEma   > _vixEma[1]
 
-_isBtcChart = str.contains(str.upper(syminfo.ticker), "BTC")
+_tkrUp      = str.upper(syminfo.ticker)
+_isBtcChart = (str.pos(_tkrUp, "BTC") == 0 or str.pos(_tkrUp, "XBT") == 0) and not str.contains(_tkrUp, ".D")
 
 macroRegimeCrypto = f_getMacroRegime(false, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur)
 macroRegimeGold   = f_getMacroRegime(true,  dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur)
@@ -1767,9 +1769,9 @@ f_shortConf(_c) =>
 f_shortConfColor(_c) =>
     nz(_c) >= 75 ? textColorl : nz(_c) >= 60 ? color.rgb(255,215,0) : color.rgb(160,160,180)
 
-btcd_cur  = bUp_cur ? "Bull 🟢" : "Bear 🔴"
-totl_cur  = tUp_cur ? "Bull 🟢" : "Bear 🔴"
-tot2_cur  = aUp_cur ? "Bull 🟢" : "Bear 🔴"
+btcd_cur  = f_bullBear(bUp_cur)
+totl_cur  = f_bullBear(tUp_cur)
+tot2_cur  = f_bullBear(aUp_cur)
 f_bullBear(_up) => _up ? "Bull 🟢" : "Bear 🔴"
 
 usdtd_cur = f_bullBear(uUp_cur)
