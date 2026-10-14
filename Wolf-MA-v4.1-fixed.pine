@@ -600,7 +600,7 @@ f_tfState(bool _isBtc, bool _totUp, bool _btcUp, bool _usdtUp, bool _tot2Up,
 
     // ── رژیم ماکرو، Bias و شمارش هم‌راستایی
     _macroReg = f_getMacroRegime(isGoldMode, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up)
-    [_lbT, _sbT] = f_computeBias(_sDir, _rHH, _rHL, _rLL, _rLH, isGoldMode,
+    [_biasL, _biasS] = f_computeBias(_sDir, _rHH, _rHL, _rLL, _rLH, isGoldMode,
          _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up,
          _dispB, _dispS, _dRatio, _lsh, _lsl, _fvgF, _upStr, _dnStr)
 
@@ -621,7 +621,7 @@ f_tfState(bool _isBtc, bool _totUp, bool _btcUp, bool _usdtUp, bool _tot2Up,
         _ra4 := 0.0
 
     // خروجی با آفست یک کندل → همراه با lookahead_on ری‌پینت نمی‌کند
-    [_trend[1], math.round(_conf[1]), _lbT[1], _sbT[1], _ra1[1], _ra2[1], _ra3[1], _ra4[1], _macroReg[1], _alL[1], _alS[1]]
+    [_trend[1], math.round(_conf[1]), _biasL[1], _biasS[1], _ra1[1], _ra2[1], _ra3[1], _ra4[1], _macroReg[1], _alL[1], _alS[1]]
 
 // ═══════════════════════════════════════════════════════════════
 //                    PRE-CALCULATIONS (CHART)
