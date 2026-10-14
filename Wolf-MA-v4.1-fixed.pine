@@ -1769,11 +1769,11 @@ f_shortConf(_c) =>
 f_shortConfColor(_c) =>
     nz(_c) >= 75 ? textColorl : nz(_c) >= 60 ? color.rgb(255,215,0) : color.rgb(160,160,180)
 
+f_bullBear(_up) => _up ? "Bull 🟢" : "Bear 🔴"
+
 btcd_cur  = f_bullBear(bUp_cur)
 totl_cur  = f_bullBear(tUp_cur)
 tot2_cur  = f_bullBear(aUp_cur)
-f_bullBear(_up) => _up ? "Bull 🟢" : "Bear 🔴"
-
 usdtd_cur = f_bullBear(uUp_cur)
 
 btcd_tf1 = f_bullBear(slot2Up_tf1)
