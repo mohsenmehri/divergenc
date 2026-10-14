@@ -10,6 +10,9 @@
 //   3) ستون‌های TF با lookahead_on + آفست یک کندل  → بدون ری‌پینت
 //   4) رفع کد مردهٔ Transition (سقف اعتماد ۵۳ بود، آستانه ۵۵)
 //   5) رفع بی‌اثر بودن فیلتر ماکرو در حالت Gold (_dollarWeak غالب بود)
+//   6) ماکرو ستون‌های TF حالا روی تایم‌فریم همان ستون محاسبه می‌شود (قبلاً از تایم‌فریم چارت می‌آمد)
+//   7) OB: حذف واقعی لیبل و آرایه‌های اضافی؛ پول‌های بی‌استفاده پنهان می‌شوند
+//   8) ثابت‌های نام‌گذاری‌شده برای آستانه‌های سیگنال؛ تابع f_bullBear؛ فرمت اعشار در Bias
 //   6) قاعدهٔ ماکرو یک‌جا در f_macroAllowLong/Short تعریف شد (ضدّ drift)
 //   7) ستون TOTAL2 اضافه شد و ورودی‌های نماد واقعاً به درخواست‌ها وصل شدند
 //   8) پاکسازی: import بی‌استفاده، ورودی‌های مرده، plot(na)، محاسبات تکراری
@@ -949,7 +952,7 @@ confidenceIndex = _computeConfidenceIndex(trendState)
 
 // ═══════════════════════════════════════════════════════════════
 //   MACRO DATA  (۷ درخواست — یک‌بار در کانتکست چارت)
-//   با dynamic_requests = false مقادیر ماکرو گلوبال و یکسان هستند
+//   این مقادیر فقط برای ماکرو چارت (ستون «کنونی») استفاده می‌شوند؛ ستون‌های TF پرچم‌های خودشان را دارند
 // ═══════════════════════════════════════════════════════════════
 _totRaw   = request.security(symTotal,   timeframe.period, close)
 _tot2Raw  = request.security(symTotal2,  timeframe.period, close)
@@ -990,17 +993,59 @@ _macroAllowLong_cur  = isGoldMode ? _macroAllowLongGold   : _macroAllowLong
 _macroAllowShort_cur = isGoldMode ? _macroAllowShortGold  : _macroAllowShort
 
 // ═══════════════════════════════════════════════════════════════
+//   MACRO FLAGS در هر تایم‌فریم ستون‌ها (۲۸ درخواست مستقل — بدون تودرتو)
+//   هر پرچم روی کندل‌های همان TF محاسبه و با آفست [1] + lookahead_on خوانده می‌شود
+// ═══════════════════════════════════════════════════════════════
+f_upFlag(float _src) =>
+    float _ema = ta.ema(nz(_src), domLookback)
+    _src > _ema and _ema > _ema[1]
+
+up_tot_1 = request.security(symTotal, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_1 = request.security(symTotal2, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_1 = request.security(symBtcDom, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_1 = request.security(symUsdtDom, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_1 = request.security(symDxy, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_1 = request.security(symUs10y, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_1 = request.security(symVix, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+up_tot_2 = request.security(symTotal, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_2 = request.security(symTotal2, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_2 = request.security(symBtcDom, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_2 = request.security(symUsdtDom, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_2 = request.security(symDxy, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_2 = request.security(symUs10y, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_2 = request.security(symVix, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+up_tot_3 = request.security(symTotal, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_3 = request.security(symTotal2, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_3 = request.security(symBtcDom, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_3 = request.security(symUsdtDom, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_3 = request.security(symDxy, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_3 = request.security(symUs10y, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_3 = request.security(symVix, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+up_tot_4 = request.security(symTotal, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_4 = request.security(symTotal2, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_4 = request.security(symBtcDom, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_4 = request.security(symUsdtDom, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_4 = request.security(symDxy, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_4 = request.security(symUs10y, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_4 = request.security(symVix, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+
+// ═══════════════════════════════════════════════════════════════
 //   REQUEST.SECURITY  (۴ درخواست — بدون ری‌پینت)
 //   ⚠️ lookahead_on فقط همراه با آفست [1] داخل f_tfState امن است
 // ═══════════════════════════════════════════════════════════════
+// اسلات‌های ماکرو TF: Crypto → slot1=TOTAL, slot2=BTC.D, slot3=USDT.D, slot4=TOTAL2 | Gold → slot1=DXY, slot2=US10Y, slot3=VIX
 [CT1, CONF1, lb_tf1, sb_tf1, ra1_tf1, ra2_tf1, ra3_tf1, ra4_tf1, macro_tf1, alCnt_tf1, alCntB_tf1] =
-     request.security(syminfo.tickerid, ticker1TFCustom, f_tfState(_isBtcChart, tUp_cur, bUp_cur, uUp_cur, aUp_cur, dxyUp, us10yUp, vixUp), lookahead = barmerge.lookahead_on)
+     request.security(syminfo.tickerid, ticker1TFCustom, f_tfState(_isBtcChart, up_tot_1, up_btc_1, up_usdt_1, up_tot2_1, up_dxy_1, up_us10y_1, up_vix_1), lookahead = barmerge.lookahead_on)
 [CT2, CONF2, lb_tf2, sb_tf2, ra1_tf2, ra2_tf2, ra3_tf2, ra4_tf2, macro_tf2, alCnt_tf2, alCntB_tf2] =
-     request.security(syminfo.tickerid, ticker2TFCustom, f_tfState(_isBtcChart, tUp_cur, bUp_cur, uUp_cur, aUp_cur, dxyUp, us10yUp, vixUp), lookahead = barmerge.lookahead_on)
+     request.security(syminfo.tickerid, ticker2TFCustom, f_tfState(_isBtcChart, up_tot_2, up_btc_2, up_usdt_2, up_tot2_2, up_dxy_2, up_us10y_2, up_vix_2), lookahead = barmerge.lookahead_on)
 [CT3, CONF3, lb_tf3, sb_tf3, ra1_tf3, ra2_tf3, ra3_tf3, ra4_tf3, macro_tf3, alCnt_tf3, alCntB_tf3] =
-     request.security(syminfo.tickerid, ticker3TFCustom, f_tfState(_isBtcChart, tUp_cur, bUp_cur, uUp_cur, aUp_cur, dxyUp, us10yUp, vixUp), lookahead = barmerge.lookahead_on)
+     request.security(syminfo.tickerid, ticker3TFCustom, f_tfState(_isBtcChart, up_tot_3, up_btc_3, up_usdt_3, up_tot2_3, up_dxy_3, up_us10y_3, up_vix_3), lookahead = barmerge.lookahead_on)
 [CT4, CONF4, lb_tf4, sb_tf4, ra1_tf4, ra2_tf4, ra3_tf4, ra4_tf4, macro_tf4, alCnt_tf4, alCntB_tf4] =
-     request.security(syminfo.tickerid, ticker4TFCustom, f_tfState(_isBtcChart, tUp_cur, bUp_cur, uUp_cur, aUp_cur, dxyUp, us10yUp, vixUp), lookahead = barmerge.lookahead_on)
+     request.security(syminfo.tickerid, ticker4TFCustom, f_tfState(_isBtcChart, up_tot_4, up_btc_4, up_usdt_4, up_tot2_4, up_dxy_4, up_us10y_4, up_vix_4), lookahead = barmerge.lookahead_on)
 
 // ═══════════════════════════════════════════════════════════════
 //   محاسبه TF فعلی
@@ -1017,22 +1062,22 @@ CONFL = math.round(confidenceIndex)
 _alignCount     = (trendState == "Bull" ? 1 : 0) + (_structBullStrong ? 1 : 0) + (liqSweepLow  ? 1 : 0) + (_macroAllowLong_cur  ? 1 : 0) + (dispIsBullish ? 1 : 0)
 _alignCountBear = (trendState == "Bear" ? 1 : 0) + (_structBearStrong ? 1 : 0) + (liqSweepHigh ? 1 : 0) + (_macroAllowShort_cur ? 1 : 0) + (dispIsBearish ? 1 : 0)
 
-tUp_tf1  = ra1_tf1 > 0.5
-bUp_tf1  = ra2_tf1 > 0.5
-uUp_tf1  = ra3_tf1 > 0.5
-aUp_tf1  = ra4_tf1 > 0.5
-tUp_tf2  = ra1_tf2 > 0.5
-bUp_tf2  = ra2_tf2 > 0.5
-uUp_tf2  = ra3_tf2 > 0.5
-aUp_tf2  = ra4_tf2 > 0.5
-tUp_tf3  = ra1_tf3 > 0.5
-bUp_tf3  = ra2_tf3 > 0.5
-uUp_tf3  = ra3_tf3 > 0.5
-aUp_tf3  = ra4_tf3 > 0.5
-tUp_tf4  = ra1_tf4 > 0.5
-bUp_tf4  = ra2_tf4 > 0.5
-uUp_tf4  = ra3_tf4 > 0.5
-aUp_tf4  = ra4_tf4 > 0.5
+slot1Up_tf1  = ra1_tf1 > 0.5
+slot2Up_tf1  = ra2_tf1 > 0.5
+slot3Up_tf1  = ra3_tf1 > 0.5
+slot4Up_tf1  = ra4_tf1 > 0.5
+slot1Up_tf2  = ra1_tf2 > 0.5
+slot2Up_tf2  = ra2_tf2 > 0.5
+slot3Up_tf2  = ra3_tf2 > 0.5
+slot4Up_tf2  = ra4_tf2 > 0.5
+slot1Up_tf3  = ra1_tf3 > 0.5
+slot2Up_tf3  = ra2_tf3 > 0.5
+slot3Up_tf3  = ra3_tf3 > 0.5
+slot4Up_tf3  = ra4_tf3 > 0.5
+slot1Up_tf4  = ra1_tf4 > 0.5
+slot2Up_tf4  = ra2_tf4 > 0.5
+slot3Up_tf4  = ra3_tf4 > 0.5
+slot4Up_tf4  = ra4_tf4 > 0.5
 
 // ═══════════════════════════════════════════════════════════════
 //   ZONE
@@ -1047,7 +1092,7 @@ isDiscount = not na(midPoint) and price <= midPoint
 f_biasText(_lb, _sb)  =>
     float _l = nz(_lb)
     float _s = nz(_sb)
-    _l > _s ? "Long "  + str.tostring(_l) + "%" : "Short " + str.tostring(_s) + "%"
+    _l > _s ? "Long "  + str.tostring(_l, "#.#") + "%" : "Short " + str.tostring(_s, "#.#") + "%"
 f_biasColor(_lb, _sb) => nz(_lb) > nz(_sb) ? textColorl : textColors
 
 // ═══════════════════════════════════════════════════════════════
@@ -1097,6 +1142,17 @@ htfAligned_tf2 = f_isHTFAligned(lb_tf2, sb_tf2, CT3, CT4)
 htfAligned_tf3 = f_isHTFAligned(lb_tf3, sb_tf3, CT4, CTL)
 htfAligned_cur = f_isHTFAligned(lb_cur, sb_cur, CT3, CT4)
 
+// ── ثابت‌های موتور سیگنال (تنظیم آستانه‌ها فقط از همین‌جا)
+SP_T1        = 30      // اسپرد Bias ≥ این → امتیاز +40
+SP_T2        = 20      // → +28
+SP_T3        = 12      // → +18
+SP_T4        = 6       // → +8
+NET_STRONG   = 52.0    // امتیاز خالص برای 🟢 LONG / 🔴 SHORT
+NET_WEAK     = 28.0    // امتیاز خالص برای 🟡 LONG? / 🟡 SHORT?
+NET_CONFLICT = 30.0    // آستانهٔ تبدیل تعارض به 🟡 LONG? / 🟡 SHORT?
+CONF_SPREAD  = 8.0     // آستانهٔ اسپرد برای تشخیص تعارض
+CONF_MACRO   = 18.0    // آستانهٔ امتیاز ماکرو برای تشخیص تعارض
+
 // ═══════════════════════════════════════════════════════════════
 //   SIGNAL ENGINE
 // ═══════════════════════════════════════════════════════════════
@@ -1110,21 +1166,21 @@ f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict,
 
     // ── 1) Bias Spread Score
     float _spreadScore = 0.0
-    if _spread >= 30
+    if _spread >= SP_T1
         _spreadScore := 40.0
-    else if _spread >= 20
+    else if _spread >= SP_T2
         _spreadScore := 28.0
-    else if _spread >= 12
+    else if _spread >= SP_T3
         _spreadScore := 18.0
-    else if _spread >= 6
+    else if _spread >= SP_T4
         _spreadScore := 8.0
-    else if _spread <= -30
+    else if _spread <= -SP_T1
         _spreadScore := -40.0
-    else if _spread <= -20
+    else if _spread <= -SP_T2
         _spreadScore := -28.0
-    else if _spread <= -12
+    else if _spread <= -SP_T3
         _spreadScore := -18.0
-    else if _spread <= -6
+    else if _spread <= -SP_T4
         _spreadScore := -8.0
 
     // ── 2) Trend Score
@@ -1180,17 +1236,17 @@ f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict,
     float _net = _spreadScore + _trendScore + _confScore + _macroScore + _htfScore
 
     // ── 7) Conflict Detection
-    bool _macroConflict = (_spreadScore > 8.0  and _macroScore <= -18.0) or (_spreadScore < -8.0 and _macroScore >=  18.0)
-    bool _trendConflict = (_spreadScore > 8.0  and _trendScore < 0.0)  or (_spreadScore < -8.0 and _trendScore > 0.0)
+    bool _macroConflict = (_spreadScore > CONF_SPREAD and _macroScore <= -CONF_MACRO) or (_spreadScore < -CONF_SPREAD and _macroScore >= CONF_MACRO)
+    bool _trendConflict = (_spreadScore > CONF_SPREAD and _trendScore < 0.0) or (_spreadScore < -CONF_SPREAD and _trendScore > 0.0)
     bool _hasConflict   = _macroConflict or _trendConflict
 
     // ── 8) تصمیم نهایی
     if _hasConflict
-        if _net >= 30.0
+        if _net >= NET_CONFLICT
             signal      := "🟡 LONG?"
             signalColor := color.rgb(255, 220, 100)
             signalBg    := color.rgb(60, 50, 0)
-        else if _net <= -30.0
+        else if _net <= -NET_CONFLICT
             signal      := "🟡 SHORT?"
             signalColor := color.rgb(255, 180, 100)
             signalBg    := color.rgb(60, 30, 0)
@@ -1199,19 +1255,19 @@ f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict,
             signalColor := color.rgb(255, 165, 0)
             signalBg    := color.rgb(55, 35, 0)
     else
-        if _net >= 52.0
+        if _net >= NET_STRONG
             signal      := "🟢 LONG"
             signalColor := textColorl
             signalBg    := color.rgb(0, 80, 30)
-        else if _net >= 28.0
+        else if _net >= NET_WEAK
             signal      := "🟡 LONG?"
             signalColor := color.rgb(255, 220, 100)
             signalBg    := color.rgb(60, 50, 0)
-        else if _net <= -52.0
+        else if _net <= -NET_STRONG
             signal      := "🔴 SHORT"
             signalColor := textColors
             signalBg    := color.rgb(80, 0, 0)
-        else if _net <= -28.0
+        else if _net <= -NET_WEAK
             signal      := "🟡 SHORT?"
             signalColor := color.rgb(255, 180, 100)
             signalBg    := color.rgb(60, 30, 0)
@@ -1554,8 +1610,15 @@ ob_set_order_blocks(ob_top, ob_btm, ob_left, ob_avg, ob_lbl, ext_last, bg_css, b
             array.unshift(ob_box, box.new(na, na, na, na, xloc = xloc.bar_index, extend = extend.right, bgcolor = bg_css, border_color = color.new(border_css, 70)))
             array.unshift(ob_lvl, line.new(na, na, na, na, xloc = xloc.bar_index, extend = extend.right, color = lvl_css, style = ob_get_line_style(ob_line_style), width = ob_line_width))
     if barstate.islast
-        if array.size(ob_top) > 0
-            for i = 0 to math.min(ext_last - 1, array.size(ob_top) - 1) by 1
+        // ✅ حذف واقعی OB های اضافی: قدیمی‌ترین‌ها انتهای آرایه‌اند؛ هر پنج آرایه همگام می‌مانند
+        while array.size(ob_lbl) > ext_last
+            label.delete(array.pop(ob_lbl))
+            array.pop(ob_top)
+            array.pop(ob_btm)
+            array.pop(ob_avg)
+            array.pop(ob_left)
+        for i = 0 to ext_last - 1 by 1
+            if i < array.size(ob_top)
                 get_box  = array.get(ob_box,  i)
                 get_lvl  = array.get(ob_lvl,  i)
                 get_lbl  = array.get(ob_lbl,  i)
@@ -1566,13 +1629,17 @@ ob_set_order_blocks(ob_top, ob_btm, ob_left, ob_avg, ob_lbl, ext_last, bg_css, b
                 _safeLeft = math.max(_left, bar_index - MAX_HIST)
                 box.set_lefttop    (get_box, _safeLeft, _top_val)
                 box.set_rightbottom(get_box, bar_index, _btm_val)
+                box.set_bgcolor    (get_box, bg_css)
+                box.set_border_color(get_box, color.new(border_css, 70))
                 line.set_xy1(get_lvl, _safeLeft, _avg_val)
                 line.set_xy2(get_lvl, bar_index, _avg_val)
+                line.set_color(get_lvl, lvl_css)
                 label.set_xy(get_lbl, int(math.round((_safeLeft + bar_index) / 2.0)), _avg_val)
-        // ✅ پاکسازی لیبل‌های OB قدیمی (قبلاً روی چارت انبار می‌شدند)
-        for i = 0 to array.size(ob_lbl) - 1
-            if i > ext_last - 1
-                label.set_text(array.get(ob_lbl, i), "")
+            else
+                // ✅ پول‌های بی‌استفاده پنهان می‌شوند (قبلاً مختصات قدیمی روی چارت می‌ماند)
+                box.set_bgcolor(array.get(ob_box, i), color.new(color.white, 100))
+                box.set_border_color(array.get(ob_box, i), color.new(color.white, 100))
+                line.set_color(array.get(ob_lvl, i), color.new(color.white, 100))
 
 var ob_os       = 0
 var target_bull = 0.
@@ -1688,7 +1755,7 @@ f_shortMacro(_r) =>
 f_shortBias(_lb, _sb) =>
     float _l = nz(_lb)
     float _s = nz(_sb)
-    _l > _s ? "L" + str.tostring(_l) + "%" : "S" + str.tostring(_s) + "%"
+    _l > _s ? "L" + str.tostring(_l, "#.#") + "%" : "S" + str.tostring(_s, "#.#") + "%"
 
 f_shortBiasColor(_lb, _sb) =>
     nz(_lb) > nz(_sb) ? textColorl : textColors
@@ -1703,44 +1770,46 @@ f_shortConfColor(_c) =>
 btcd_cur  = bUp_cur ? "Bull 🟢" : "Bear 🔴"
 totl_cur  = tUp_cur ? "Bull 🟢" : "Bear 🔴"
 tot2_cur  = aUp_cur ? "Bull 🟢" : "Bear 🔴"
-usdtd_cur = uUp_cur ? "Bull 🟢" : "Bear 🔴"
+f_bullBear(_up) => _up ? "Bull 🟢" : "Bear 🔴"
 
-btcd_tf1 = bUp_tf1 ? "Bull 🟢" : "Bear 🔴"
-btcd_tf2 = bUp_tf2 ? "Bull 🟢" : "Bear 🔴"
-btcd_tf3 = bUp_tf3 ? "Bull 🟢" : "Bear 🔴"
-btcd_tf4 = bUp_tf4 ? "Bull 🟢" : "Bear 🔴"
+usdtd_cur = f_bullBear(uUp_cur)
 
-totl_tf1 = tUp_tf1 ? "Bull 🟢" : "Bear 🔴"
-totl_tf2 = tUp_tf2 ? "Bull 🟢" : "Bear 🔴"
-totl_tf3 = tUp_tf3 ? "Bull 🟢" : "Bear 🔴"
-totl_tf4 = tUp_tf4 ? "Bull 🟢" : "Bear 🔴"
+btcd_tf1 = f_bullBear(slot2Up_tf1)
+btcd_tf2 = f_bullBear(slot2Up_tf2)
+btcd_tf3 = f_bullBear(slot2Up_tf3)
+btcd_tf4 = f_bullBear(slot2Up_tf4)
 
-tot2_tf1 = aUp_tf1 ? "Bull 🟢" : "Bear 🔴"
-tot2_tf2 = aUp_tf2 ? "Bull 🟢" : "Bear 🔴"
-tot2_tf3 = aUp_tf3 ? "Bull 🟢" : "Bear 🔴"
-tot2_tf4 = aUp_tf4 ? "Bull 🟢" : "Bear 🔴"
+totl_tf1 = f_bullBear(slot1Up_tf1)
+totl_tf2 = f_bullBear(slot1Up_tf2)
+totl_tf3 = f_bullBear(slot1Up_tf3)
+totl_tf4 = f_bullBear(slot1Up_tf4)
 
-usdtd_tf1 = uUp_tf1 ? "Bull 🟢" : "Bear 🔴"
-usdtd_tf2 = uUp_tf2 ? "Bull 🟢" : "Bear 🔴"
-usdtd_tf3 = uUp_tf3 ? "Bull 🟢" : "Bear 🔴"
-usdtd_tf4 = uUp_tf4 ? "Bull 🟢" : "Bear 🔴"
+tot2_tf1 = f_bullBear(slot4Up_tf1)
+tot2_tf2 = f_bullBear(slot4Up_tf2)
+tot2_tf3 = f_bullBear(slot4Up_tf3)
+tot2_tf4 = f_bullBear(slot4Up_tf4)
 
-dxy_tf1 = tUp_tf1 ? "Strong 🟢" : "Weak 🔴"
-dxy_tf2 = tUp_tf2 ? "Strong 🟢" : "Weak 🔴"
-dxy_tf3 = tUp_tf3 ? "Strong 🟢" : "Weak 🔴"
-dxy_tf4 = tUp_tf4 ? "Strong 🟢" : "Weak 🔴"
+usdtd_tf1 = f_bullBear(slot3Up_tf1)
+usdtd_tf2 = f_bullBear(slot3Up_tf2)
+usdtd_tf3 = f_bullBear(slot3Up_tf3)
+usdtd_tf4 = f_bullBear(slot3Up_tf4)
+
+dxy_tf1 = slot1Up_tf1 ? "Strong 🟢" : "Weak 🔴"
+dxy_tf2 = slot1Up_tf2 ? "Strong 🟢" : "Weak 🔴"
+dxy_tf3 = slot1Up_tf3 ? "Strong 🟢" : "Weak 🔴"
+dxy_tf4 = slot1Up_tf4 ? "Strong 🟢" : "Weak 🔴"
 dxy_cur = dxyUp ? "Strong 🟢" : "Weak 🔴"
 
-us10y_tf1 = bUp_tf1 ? "Rising 📈" : "Falling 📉"
-us10y_tf2 = bUp_tf2 ? "Rising 📈" : "Falling 📉"
-us10y_tf3 = bUp_tf3 ? "Rising 📈" : "Falling 📉"
-us10y_tf4 = bUp_tf4 ? "Rising 📈" : "Falling 📉"
+us10y_tf1 = slot2Up_tf1 ? "Rising 📈" : "Falling 📉"
+us10y_tf2 = slot2Up_tf2 ? "Rising 📈" : "Falling 📉"
+us10y_tf3 = slot2Up_tf3 ? "Rising 📈" : "Falling 📉"
+us10y_tf4 = slot2Up_tf4 ? "Rising 📈" : "Falling 📉"
 us10y_cur = us10yUp ? "Rising 📈" : "Falling 📉"
 
-vix_tf1 = uUp_tf1 ? "High 🔴" : "Low 🟢"
-vix_tf2 = uUp_tf2 ? "High 🔴" : "Low 🟢"
-vix_tf3 = uUp_tf3 ? "High 🔴" : "Low 🟢"
-vix_tf4 = uUp_tf4 ? "High 🔴" : "Low 🟢"
+vix_tf1 = slot3Up_tf1 ? "High 🔴" : "Low 🟢"
+vix_tf2 = slot3Up_tf2 ? "High 🔴" : "Low 🟢"
+vix_tf3 = slot3Up_tf3 ? "High 🔴" : "Low 🟢"
+vix_tf4 = slot3Up_tf4 ? "High 🔴" : "Low 🟢"
 vix_cur = vixUp ? "High 🔴" : "Low 🟢"
 
 _zoneTxt = na(midPoint) ? "—" : isPremium ? "🔺 Premium" : "🔻 Discount"
