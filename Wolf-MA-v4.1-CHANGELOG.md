@@ -74,3 +74,7 @@
 ## Hotfix: CE10095 — `"_sbT" is already defined`
 - خطا: در `f_tfState` متغیر `_sbT` (بولی، خط ~550) دوباره در خروجی `[_lbT, _sbT] = f_computeBias(...)` تعریف شده بود.
 - رفع: خروجی Bias به `_biasL, _biasS` تغییر نام داد و در `return` تنظیم شد. مقدار و منطق تغییری نکرده است.
+
+## Hotfix 2: CE10123 — ternary روی توابع tuple-خروجی
+- خطا: `isGoldMode ? f_getRecommendationGold(...) : f_getRecommendationCrypto(...)` در `f_getRecByMode`. Ternary نمی‌تواند تابعی را که tuple برمی‌گرداند بگیرد.
+- رفع: با `if / else` و متغیرهای `_rr`, `_rc` بازنویسی شد.

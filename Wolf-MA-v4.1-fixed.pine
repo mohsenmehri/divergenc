@@ -1288,7 +1288,17 @@ f_getRecommendationGold(_macro, _bias, _biasShort) =>
     [rec, recColor]
 
 f_getRecByMode(_macro, _bias, _biasShort) =>
-    isGoldMode ? f_getRecommendationGold(_macro, _bias, _biasShort) : f_getRecommendationCrypto(_macro, _bias, _biasShort)
+    string _rr = na
+    color  _rc = na
+    if isGoldMode
+        [gr, gc] = f_getRecommendationGold(_macro, _bias, _biasShort)
+        _rr := gr
+        _rc := gc
+    else
+        [cr, cc] = f_getRecommendationCrypto(_macro, _bias, _biasShort)
+        _rr := cr
+        _rc := cc
+    [_rr, _rc]
 
 [rec_tf1, col_tf1] = f_getRecByMode(macro_tf1, lb_tf1, sb_tf1)
 [rec_tf2, col_tf2] = f_getRecByMode(macro_tf2, lb_tf2, sb_tf2)
