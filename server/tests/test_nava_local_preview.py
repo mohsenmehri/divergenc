@@ -19,8 +19,13 @@ class NavaLocalPreviewChecks(unittest.TestCase):
                 "README_FA.txt",
             })
             html = archive.read("FAM-Nava-Visual-Preview.html").decode("utf-8")
+        self.assertIn("پیش‌نمایش کامل ظاهری نوا", html)
         self.assertIn("بدون ارتباط با سرور", html)
-        self.assertIn("پیش‌نمایش ظاهری نوا", html)
+        self.assertIn('id="sidebar-toggle"', html)
+        self.assertIn("پنهان یا آشکار کردن منو", html)
+        self.assertIn('class="nav-group open"', html)
+        for view in ("dashboard", "search", "sections", "add", "history", "users", "settings"):
+            self.assertIn(f'id="view-{view}"', html)
         self.assertNotIn("fetch(", html)
         self.assertNotIn("XMLHttpRequest", html)
         self.assertNotIn("WebSocket", html)
