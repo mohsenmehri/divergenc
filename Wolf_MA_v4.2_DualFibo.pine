@@ -491,7 +491,7 @@ f_tfState(bool _isBtc, bool _totUp, bool _btcUp, bool _usdtUp, bool _tot2Up,
         _sLow  := low
 
     _sMaxBar = math.max(bar_index + get_structure_highest_bar(Len), bar_index - MAX_HIST)
-    _sMinBar = math.max(bar_index + get_structure_lowest_bar(Len), bar_index - MAX_HIST) math.max(bar_index + get_structure_lowest_bar(_spanForLow_tf),  bar_index - MAX_HIST)
+    _sMinBar = math.max(bar_index + get_structure_lowest_bar(Len), bar_index - MAX_HIST)
 
     _atr    = ta.atr(atrLen)
     _bodyHi = math.max(open, close)
