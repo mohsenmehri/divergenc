@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\FamNext.Application\FamNext.Application.csproj" />
+    <!-- Restored only from the organisation-approved NuGet feed in the VM/build system. -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.0" />
+  </ItemGroup>
+</Project>
