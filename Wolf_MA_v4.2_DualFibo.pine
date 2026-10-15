@@ -911,7 +911,7 @@ else
 
     // ── تعقیب سقف (انتهای فیبو در لگ صعودی) — در کلاسیک با هر شدوی بالاتر، در پیوت فقط تا قفل
     if not na(structureHigh) and high > structureHigh and (structureDirection == 0 or structureDirection == 2)
-        bool canChaseHigh
+        bool canChaseHigh = false
         if isClassicMode
             canChaseHigh := fibWickTrailClassic ? true : f_canChaseStructure(structureHighStartIndex)
         else
@@ -924,7 +924,7 @@ else
 
     // ── تعقیب کف (انتهای فیبو در لگ نزولی)
     if not na(structureLow) and low < structureLow and (structureDirection == 0 or structureDirection == 1)
-        bool canChaseLow
+        bool canChaseLow = false
         if isClassicMode
             canChaseLow := fibWickTrailClassic ? true : f_canChaseStructure(structureLowStartIndex)
         else
