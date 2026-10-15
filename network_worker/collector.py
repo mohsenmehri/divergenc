@@ -9,6 +9,9 @@ from __future__ import annotations
 import re
 
 from .config import Device
+
+
+INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
 from .secrets import Credential
 
 
@@ -40,6 +43,23 @@ def _version_facts(output):
     return facts
 
 
+def err_disabled_ports(interface_status):
+    """Return syntax-safe interface identifiers from a fixed show command.
+
+    The direct recovery workflow needs a human to select an affected port.
+    Only the first token of an ``err-disabled`` status line is retained; all
+    other device output remains transient and is never sent to FAM.
+    """
+    ports = []
+    for line in interface_status.splitlines():
+        if "err-disabled" not in line.lower():
+            continue
+        fields = line.split()
+        if fields and INTERFACE.fullmatch(fields[0]) and fields[0] not in ports:
+            ports.append(fields[0])
+    return ports[:128]
+
+
 def _interface_facts(interface_brief, interface_status, errors):
     interfaces = {}
     # IOS's "show ip interface brief" has a stable header then interfaces.
@@ -49,10 +69,15 @@ def _interface_facts(interface_brief, interface_status, errors):
         interfaces["total"] = len(data)
         interfaces["up"] = _line_count("\n".join(data), lambda line: bool(re.search(r"\bup\s+up\s*$", line)))
         interfaces["down"] = max(0, interfaces["total"] - interfaces["up"])
-    # No raw interface identifiers are retained.  Only a count is reported.
-    err_disabled = _line_count(interface_status + "\n" + errors, lambda line: "err-disabled" in line.lower())
+    ports = err_disabled_ports(interface_status)
+    # Some IOS variants surface the word only in a counter/error response. Keep
+    # its count, but expose a recoverable port only when its status line was
+    # parsed safely from the fixed status command.
+    err_disabled = max(len(ports), _line_count(interface_status + "\n" + errors, lambda line: "err-disabled" in line.lower()))
     if err_disabled:
         interfaces["errDisabled"] = err_disabled
+    if ports:
+        interfaces["errDisabledPorts"] = [{"name": port} for port in ports]
     return interfaces
 
 

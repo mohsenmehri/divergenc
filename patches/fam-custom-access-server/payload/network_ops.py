@@ -1,16 +1,13 @@
-"""Read-only Network Operations control-plane endpoints.
+"""Controlled Network Operations control-plane endpoints.
 
-This module deliberately contains no SSH implementation and does not store a
-management address, password, enable secret, RADIUS secret, SNMP community, or
-raw CLI output.  FAM queues only inventory IDs.  A separately deployed Worker
-owns the local ID-to-device mapping and the DPAPI-protected credentials.
+FAM itself has no SSH implementation and never stores a management address,
+password, enable secret, RADIUS secret, SNMP community, or raw CLI output. A
+Worker on the managed server owns connections and DPAPI-protected keys.
 
-The first release is intentionally narrow:
-* one fixed job type: ``read_only_inventory``;
-* only explicit, small lab-device selections;
-* fixed platform: Cisco IOS (``cisco_ios``);
-* fixed, structured result fields with no raw output; and
-* no configuration, remediation, or free-form command endpoint.
+The exposed surface is deliberately narrow: fixed Cisco IOS discovery plus one
+human-confirmed ``errdisabled_recovery`` for an interface previously reported
+by that exact discovery job. There is no terminal, command text, global config,
+auto-remediation, or configuration-save endpoint.
 """
 from __future__ import annotations
 
@@ -29,11 +26,14 @@ from flask import g, jsonify, request, send_file
 
 IDENTIFIER = re.compile(r"[a-z][a-z0-9._-]{1,63}")
 NAME = re.compile(r"[^\r\n]{1,80}")
+INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
 ERROR_CODES = {
     "authentication_failed",
     "command_failed",
     "connection_failed",
     "local_inventory_missing",
+    "precheck_failed",
+    "recovery_failed",
     "timeout",
     "unsupported_platform",
     "worker_error",
@@ -111,6 +111,9 @@ def _public_job(row):
         "failureCount": row["failure_count"],
         # The encrypted envelope is deliberately never returned to a browser.
         "interactive": bool(row["interactive"]),
+        "operation": row["operation"],
+        "sourceJobId": row["source_job_id"],
+        "targetInterface": row["target_interface"],
     }
 
 
@@ -205,7 +208,7 @@ def _result_input(value):
         raise ValueError("نتیجهٔ Worker")
 
     facts = value.get("facts")
-    if not isinstance(facts, dict) or set(facts) - {"hostname", "model", "osVersion", "interfaces"}:
+    if not isinstance(facts, dict) or set(facts) - {"hostname", "model", "osVersion", "interfaces", "recovery"}:
         raise ValueError("دادهٔ Inventory")
     normalized_facts = {}
     for key in ("hostname", "model", "osVersion"):
@@ -213,14 +216,35 @@ def _result_input(value):
             normalized_facts[key] = _fact_text(facts[key], "دادهٔ Inventory")
     if "interfaces" in facts:
         interfaces = facts["interfaces"]
-        if not isinstance(interfaces, dict) or set(interfaces) - {"total", "up", "down", "errDisabled"}:
+        if not isinstance(interfaces, dict) or set(interfaces) - {"total", "up", "down", "errDisabled", "errDisabledPorts"}:
             raise ValueError("دادهٔ Inventory")
         normalized_interfaces = {}
-        for key, number in interfaces.items():
-            if type(number) is not int or number < 0 or number > 100000:
+        for key in ("total", "up", "down", "errDisabled"):
+            if key in interfaces:
+                number = interfaces[key]
+                if type(number) is not int or number < 0 or number > 100000:
+                    raise ValueError("دادهٔ Inventory")
+                normalized_interfaces[key] = number
+        if "errDisabledPorts" in interfaces:
+            ports = interfaces["errDisabledPorts"]
+            if not isinstance(ports, list) or len(ports) > 128:
                 raise ValueError("دادهٔ Inventory")
-            normalized_interfaces[key] = number
+            normalized_ports = []
+            for port in ports:
+                if not isinstance(port, dict) or set(port) != {"name"} or not isinstance(port.get("name"), str) or not INTERFACE.fullmatch(port["name"]):
+                    raise ValueError("دادهٔ Inventory")
+                normalized_ports.append({"name": port["name"]})
+            if len({item["name"] for item in normalized_ports}) != len(normalized_ports):
+                raise ValueError("دادهٔ Inventory")
+            normalized_interfaces["errDisabledPorts"] = normalized_ports
         normalized_facts["interfaces"] = normalized_interfaces
+    if "recovery" in facts:
+        recovery = facts["recovery"]
+        if (not isinstance(recovery, dict) or set(recovery) != {"interface", "status"} or
+                not isinstance(recovery.get("interface"), str) or not INTERFACE.fullmatch(recovery["interface"]) or
+                recovery.get("status") not in {"recovered", "not_completed"}):
+            raise ValueError("دادهٔ بازیابی")
+        normalized_facts["recovery"] = {"interface": recovery["interface"], "status": recovery["status"]}
 
     warnings = value.get("warnings")
     if not isinstance(warnings, list) or len(warnings) > 12:
@@ -293,7 +317,10 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
               result_count INTEGER NOT NULL DEFAULT 0,
               failure_count INTEGER NOT NULL DEFAULT 0,
               sealed_payload TEXT,
-              interactive INTEGER NOT NULL DEFAULT 0 CHECK(interactive IN (0,1))
+              interactive INTEGER NOT NULL DEFAULT 0 CHECK(interactive IN (0,1)),
+              operation TEXT NOT NULL DEFAULT 'inventory',
+              source_job_id TEXT,
+              target_interface TEXT
             );
             CREATE INDEX IF NOT EXISTS network_jobs_queue ON network_jobs(status,created_at);
             CREATE TABLE IF NOT EXISTS network_results(
@@ -329,6 +356,12 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             db.execute("ALTER TABLE network_jobs ADD COLUMN sealed_payload TEXT")
         if "interactive" not in job_columns:
             db.execute("ALTER TABLE network_jobs ADD COLUMN interactive INTEGER NOT NULL DEFAULT 0")
+        if "operation" not in job_columns:
+            db.execute("ALTER TABLE network_jobs ADD COLUMN operation TEXT NOT NULL DEFAULT 'inventory'")
+        if "source_job_id" not in job_columns:
+            db.execute("ALTER TABLE network_jobs ADD COLUMN source_job_id TEXT")
+        if "target_interface" not in job_columns:
+            db.execute("ALTER TABLE network_jobs ADD COLUMN target_interface TEXT")
         db.execute("INSERT OR IGNORE INTO network_settings VALUES(1,0)")
 
     def enabled():
@@ -465,14 +498,72 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             now = _millis()
             sealed_payload = _json({"workerId": worker["id"], "sealed": sealed})
             db.execute(
-                """INSERT INTO network_jobs(id,kind,site_id,group_id,device_ids,status,requested_by,created_at,sealed_payload,interactive)
-                   VALUES(?,?,?,?,?,'queued',?,?,?,1)""",
+                """INSERT INTO network_jobs(id,kind,site_id,group_id,device_ids,status,requested_by,created_at,sealed_payload,interactive,operation)
+                   VALUES(?,?,?,?,?,'queued',?,?,?,1,'interactive_probe')""",
                 (job_id, "read_only_inventory", "interactive", "", _json([device_id]), g.user["username"], now, sealed_payload),
             )
             row = db.execute("SELECT * FROM network_jobs WHERE id=?", (job_id,)).fetchone()
             # The audit contains only a generated probe ID, never an address or
             # credential, and the sealed envelope cannot be rendered by FAM.
             event(db, g.user["username"], "interactive_read_only_probe_queued", job_id=job_id, detail=device_id)
+            return jsonify(job=_public_job(row)), 201
+
+    @app.post("/api/network/recoveries")
+    def enqueue_errdisabled_recovery():
+        """Queue a single human-confirmed recovery for a reported interface."""
+        write_access()
+        body = data()
+        allowed = {"workerId", "sourceJobId", "deviceId", "interface", "sealed"}
+        if set(body) != allowed or not all(isinstance(body.get(key), str) for key in ("workerId", "sourceJobId", "deviceId", "interface")):
+            fail(400, "درخواست رفع Err-disabled نامعتبر است.")
+        if (not IDENTIFIER.fullmatch(body["workerId"]) or not body["sourceJobId"].startswith("job_") or
+                not IDENTIFIER.fullmatch(body["deviceId"]) or not INTERFACE.fullmatch(body["interface"])):
+            fail(400, "درخواست رفع Err-disabled نامعتبر است.")
+        with transaction() as db:
+            release_expired_claims(db)
+            worker = db.execute("SELECT * FROM network_workers WHERE id=? AND enabled=1", (body["workerId"],)).fetchone()
+            source = db.execute("SELECT * FROM network_jobs WHERE id=?", (body["sourceJobId"],)).fetchone()
+            if (not worker or not worker["probe_public_key"] or not worker["probe_key_fingerprint"] or not source or
+                    source["status"] != "completed" or source["operation"] != "interactive_probe" or source["worker_id"] != worker["id"]):
+                fail(409, "منبع معتبر برای رفع Err-disabled یافت نشد.")
+            result = db.execute(
+                "SELECT * FROM network_results WHERE job_id=? AND device_id=? AND status='succeeded'",
+                (source["id"], body["deviceId"]),
+            ).fetchone()
+            if not result:
+                fail(409, "نتیجهٔ موفقی برای تجهیز انتخاب‌شده وجود ندارد.")
+            try:
+                facts = json.loads(result["facts"])
+                ports = facts.get("interfaces", {}).get("errDisabledPorts", [])
+                reported = {item["name"] for item in ports if isinstance(item, dict) and isinstance(item.get("name"), str)}
+            except (TypeError, json.JSONDecodeError, AttributeError):
+                reported = set()
+            if body["interface"] not in reported:
+                fail(409, "این پورت در نتیجهٔ Err-disabled همان Job گزارش نشده است.")
+            try:
+                sealed = _sealed_probe(body["sealed"], worker["probe_key_fingerprint"])
+            except ValueError as exc:
+                fail(400, str(exc))
+            active_rows = db.execute(
+                "SELECT sealed_payload FROM network_jobs WHERE status IN ('queued','claimed') AND sealed_payload IS NOT NULL"
+            ).fetchall()
+            for active in active_rows:
+                try:
+                    if json.loads(active["sealed_payload"]).get("workerId") == worker["id"]:
+                        fail(409, "یک بررسی یا بازیابی دیگر برای این Worker در حال انجام است.")
+                except (json.JSONDecodeError, AttributeError):
+                    fail(409, "یک بررسی یا بازیابی دیگر برای این Worker در حال انجام است.")
+            job_id = "job_" + uuid.uuid4().hex
+            now = _millis()
+            sealed_payload = _json({"workerId": worker["id"], "sealed": sealed})
+            db.execute(
+                """INSERT INTO network_jobs(id,kind,site_id,group_id,device_ids,status,requested_by,created_at,sealed_payload,interactive,operation,source_job_id,target_interface)
+                   VALUES(?,?,?,?,?,'queued',?,?,?,1,'errdisabled_recovery',?,?)""",
+                (job_id, "read_only_inventory", "interactive", "", _json([body["deviceId"]]), g.user["username"], now,
+                 sealed_payload, source["id"], body["interface"]),
+            )
+            row = db.execute("SELECT * FROM network_jobs WHERE id=?", (job_id,)).fetchone()
+            event(db, g.user["username"], "errdisabled_recovery_queued", job_id=job_id, detail=body["interface"])
             return jsonify(job=_public_job(row)), 201
 
     @app.post("/api/network/inventory")
@@ -660,12 +751,14 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             )
             claimed = db.execute("SELECT * FROM network_jobs WHERE id=?", (row["id"],)).fetchone()
             event(db, worker["id"], "job_claimed", job_id=row["id"])
-            # Ordinary jobs carry only IDs. A direct check additionally carries
-            # opaque ciphertext that only the Worker's DPAPI-held private key
-            # can decrypt; FAM never receives its plaintext.
+            # Ordinary jobs carry only IDs. Interactive jobs additionally carry
+            # opaque ciphertext plus a pre-authorized operation/interface. The
+            # Worker must match all three before it can act.
             job = {
                 "id": claimed["id"],
                 "kind": claimed["kind"],
+                "operation": claimed["operation"],
+                "targetInterface": claimed["target_interface"],
                 "deviceIds": json.loads(claimed["device_ids"]),
                 "leaseSeconds": max(60, min(lease_seconds, 3600)),
             }
@@ -693,6 +786,10 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             reported = [item["deviceId"] for item in results]
             if len(results) != len(requested) or len(set(reported)) != len(reported) or set(reported) != set(requested):
                 fail(400, "نتیجه باید دقیقاً برای تجهیزات همان Job ارسال شود.")
+            if row["operation"] == "errdisabled_recovery":
+                recovery = results[0].get("facts", {}).get("recovery")
+                if not recovery or recovery.get("interface") != row["target_interface"]:
+                    fail(400, "نتیجهٔ بازیابی با پورت تأییدشده منطبق نیست.")
             now = _millis()
             failures = 0
             for item in results:

@@ -69,7 +69,9 @@ class NetworkOpsTests(unittest.TestCase):
         self.assertIn("عملیات شبکه", markup)
         self.assertIn("crypto.subtle", markup)
         self.assertIn("/api/network/probes", markup)
+        self.assertIn("/api/network/recoveries", markup)
         self.assertIn("await api('/api/network/probes','POST',{workerId,sealed})", markup)
+        self.assertIn("selected interface is not currently err-disabled", Path("network_worker/remediator.py").read_text(encoding="utf-8"))
         page.close()
         # The template is outside the IIS/Flask static roots: only the rewrite
         # route may serve it, and its APIs still require an authenticated user.
@@ -173,12 +175,12 @@ class NetworkOpsTests(unittest.TestCase):
         self.assertNotIn("password", str(queued.json).lower())
         claimed = self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token))
         self.assertEqual(claimed.status_code, 200, claimed.json)
-        self.assertEqual(set(claimed.json["job"]), {"id", "kind", "deviceIds", "leaseSeconds", "sealed"})
+        self.assertEqual(set(claimed.json["job"]), {"id", "kind", "operation", "targetInterface", "deviceIds", "leaseSeconds", "sealed"})
         self.assertEqual(claimed.json["job"]["sealed"], sealed)
         device_id = claimed.json["job"]["deviceIds"][0]
         completed = self.admin.post(
             "/api/network/worker/jobs/" + queued.json["job"]["id"] + "/complete",
-            json={"results": [{"deviceId": device_id, "status": "succeeded", "facts": {"interfaces": {"errDisabled": 1}},
+            json={"results": [{"deviceId": device_id, "status": "succeeded", "facts": {"interfaces": {"errDisabled": 1, "errDisabledPorts": [{"name": "Gi0/1"}]}},
                                 "warnings": ["err-disabled interfaces detected"], "error": None}]},
             headers=self.worker_headers(token),
         )
@@ -189,6 +191,31 @@ class NetworkOpsTests(unittest.TestCase):
         self.assertTrue(detail.json["job"]["interactive"])
         self.assertNotIn("sealed", str(detail.json).lower())
         self.assertNotIn("password", str(detail.json).lower())
+        # A recovery can target only the interface that the completed discovery
+        # result structurally reported; it cannot be a free-form CLI request.
+        wrong_port = self.post(self.admin, "network/recoveries", {
+            "workerId": "worker-lab-01", "sourceJobId": queued.json["job"]["id"], "deviceId": device_id,
+            "interface": "Gi0/2", "sealed": sealed,
+        })
+        self.assertEqual(wrong_port.status_code, 409)
+        recovery = self.post(self.admin, "network/recoveries", {
+            "workerId": "worker-lab-01", "sourceJobId": queued.json["job"]["id"], "deviceId": device_id,
+            "interface": "Gi0/1", "sealed": sealed,
+        })
+        self.assertEqual(recovery.status_code, 201, recovery.json)
+        self.assertEqual(recovery.json["job"]["operation"], "errdisabled_recovery")
+        self.assertEqual(recovery.json["job"]["targetInterface"], "Gi0/1")
+        recovery_claim = self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token))
+        self.assertEqual(recovery_claim.status_code, 200, recovery_claim.json)
+        self.assertEqual(recovery_claim.json["job"]["operation"], "errdisabled_recovery")
+        self.assertEqual(recovery_claim.json["job"]["targetInterface"], "Gi0/1")
+        completed_recovery = self.admin.post(
+            "/api/network/worker/jobs/" + recovery.json["job"]["id"] + "/complete",
+            json={"results": [{"deviceId": device_id, "status": "succeeded",
+                                "facts": {"recovery": {"interface": "Gi0/1", "status": "recovered"}}, "warnings": [], "error": None}]},
+            headers=self.worker_headers(token),
+        )
+        self.assertEqual(completed_recovery.status_code, 200, completed_recovery.json)
 
     def test_job_scope_is_explicit_and_a_device_cannot_run_twice(self):
         self.assertEqual(self.inventory().status_code, 200)
@@ -209,7 +236,7 @@ class NetworkOpsTests(unittest.TestCase):
         claimed = self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token))
         self.assertEqual(claimed.status_code, 200, claimed.json)
         payload = claimed.json["job"]
-        self.assertEqual(set(payload), {"id", "kind", "deviceIds", "leaseSeconds"})
+        self.assertEqual(set(payload), {"id", "kind", "operation", "targetInterface", "deviceIds", "leaseSeconds"})
         self.assertEqual(payload["deviceIds"], ["lab-isr-01"])
         self.assertNotIn("host", str(payload))
         raw_attempt = {

@@ -91,10 +91,13 @@ class ControlPlaneClient:
         job = response.get("job")
         if job is None:
             return None
-        if not isinstance(job, dict) or set(job) not in ({"id", "kind", "deviceIds", "leaseSeconds"}, {"id", "kind", "deviceIds", "leaseSeconds", "sealed"}):
+        ordinary = {"id", "kind", "operation", "targetInterface", "deviceIds", "leaseSeconds"}
+        interactive = ordinary | {"sealed"}
+        if not isinstance(job, dict) or set(job) not in (ordinary, interactive):
             raise ControlPlaneError("control-plane job is invalid")
-        if (job["kind"] != "read_only_inventory" or not isinstance(job["id"], str) or
-                not isinstance(job["deviceIds"], list) or
+        if (job["kind"] != "read_only_inventory" or job.get("operation") not in {"inventory", "interactive_probe", "errdisabled_recovery"} or
+                not isinstance(job["id"], str) or not isinstance(job["deviceIds"], list) or
+                (job["targetInterface"] is not None and (not isinstance(job["targetInterface"], str) or len(job["targetInterface"]) > 64)) or
                 ("sealed" in job and not isinstance(job["sealed"], dict))):
             raise ControlPlaneError("control-plane job is invalid")
         return job

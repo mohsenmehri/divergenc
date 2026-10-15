@@ -1,13 +1,16 @@
 # FAM Network Worker
 
-Worker جزء اجرایی فاز اول عملیات شبکه است و فقط Jobهای `read_only_inventory` را از FAM می‌گیرد. روی Cisco IOS فقط commandهای ثابت `show` را اجرا می‌کند و هیچ Command آزاد یا config mode ندارد.
+Worker روی سرور مرکزی FAM اجرا می‌شود و اتصال SSH به تجهیزات فقط از همان سرور انجام می‌گیرد؛ کاربران فقط UI مرورگر FAM را می‌بینند.
 
-دو روش کار دارد:
+قابلیت‌ها:
 
-- **Inventory محلی:** Device ID به mapping محلی IP و credentialRef در `worker.json` متصل می‌شود و Credential در DPAPI حساب Worker است.
-- **بررسی مستقیم یک‌باره:** کاربر مجاز IP/hostname، username و password را در فرم FAM وارد می‌کند. مرورگر، payload را با کلید عمومی RSA همین Worker رمز می‌کند. کلید خصوصی با DPAPI حساب Worker نگهداری می‌شود؛ FAM/IIS فقط ciphertext موقت را حمل می‌کند و هرگز دادهٔ متن‌واضح را نمی‌بیند.
+- Inventory فقط‌خواندنی Cisco IOS با commandهای ثابت `show`.
+- بررسی مستقیم Err-disabled: کاربر IP/hostname، username و password را در مرورگر وارد می‌کند؛ مرورگر آن‌ها را برای کلید DPAPI/RSA Worker رمز می‌کند و FAM هیچ متن‌واضحی نمی‌بیند.
+- رفع کنترل‌شدهٔ یک Interface Err-disabled: فقط پورت گزارش‌شده از بررسی موفق، با pre-check، توالی محدود `shutdown` / `no shutdown`، post-check و بدون `write memory`.
 
-- راهنمای معماری، استقرار هم‌مکان و محدودیت‌ها: [`../docs/NETWORK_OPERATIONS_PHASE1_FA.md`](../docs/NETWORK_OPERATIONS_PHASE1_FA.md)
+Worker ترمینال یا اجرای دستور آزاد نیست. هیچ Command عمومی، تغییر global configuration، backup/restore یا auto-remediation ندارد.
+
+- راهنمای معماری و استقرار: [`../docs/NETWORK_OPERATIONS_PHASE1_FA.md`](../docs/NETWORK_OPERATIONS_PHASE1_FA.md)
 - فایل نمونهٔ فاقد Credential: `worker.example.json`
 - فایل واقعی `worker.json` و همهٔ `*.dpapi` طبق `.gitignore` محلی Worker هرگز نباید وارد repository شوند.
 

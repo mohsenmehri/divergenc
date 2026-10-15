@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from types import SimpleNamespace
 
 from network_worker.collector import READ_ONLY_COMMANDS, collect
 from network_worker.config import ConfigError, load
 from network_worker.runner import Runner
 from network_worker.probe_envelope import ProbeKeyStore
+from network_worker.remediator import recover_errdisabled
 from network_worker.config import ProbeKeyStoreConfig
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -48,7 +50,24 @@ class FakeProbeKeys:
     def decrypt(self, envelope, worker_id):
         if envelope != {"sealed": "one-time"} or worker_id != "worker-lab-01":
             raise AssertionError("unexpected sealed probe")
-        return "192.0.2.55", 22, "operator", "not-a-real-password"
+        return SimpleNamespace(host="192.0.2.55", port=22, username="operator", password="not-a-real-password", operation="interactive_probe", interface=None)
+
+
+class RecoveryConnection:
+    def __init__(self):
+        self.config = []
+        self.status_calls = 0
+        self.disconnected = False
+
+    def send_command(self, command, read_timeout):
+        self.status_calls += 1
+        return "Port Name Status\nGi0/1 test err-disabled" if self.status_calls == 1 else "Port Name Status\nGi0/1 test connected"
+
+    def send_config_set(self, commands, read_timeout):
+        self.config.extend(commands)
+
+    def disconnect(self):
+        self.disconnected = True
 
 
 class FakeClient:
@@ -105,6 +124,7 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(result["status"], "succeeded")
         self.assertEqual(result["facts"]["hostname"], "lab-r1")
         self.assertEqual(result["facts"]["interfaces"]["errDisabled"], 1)
+        self.assertEqual(result["facts"]["interfaces"]["errDisabledPorts"], [{"name": "Gi0/1"}])
         self.assertNotIn("inventory output", json.dumps(result))
         self.assertNotIn("192.0.2.1", json.dumps(result))
         source = Path("network_worker/collector.py").read_text(encoding="utf-8")
@@ -112,9 +132,18 @@ class WorkerTests(unittest.TestCase):
         self.assertNotIn("config_mode(", source)
         self.assertNotIn(".enable(", source)
 
+    def test_recovery_is_limited_to_one_prechecked_interface_and_never_saves_config(self):
+        device = self.settings().devices["lab-isr-01"]
+        connection = RecoveryConnection()
+        result = recover_errdisabled(device, Credential("readonly", "password"), "Gi0/1", connection_factory=lambda **kwargs: connection)
+        self.assertEqual(connection.config, ["interface Gi0/1", "shutdown", "no shutdown"])
+        self.assertTrue(connection.disconnected)
+        self.assertEqual(result["facts"]["recovery"], {"interface": "Gi0/1", "status": "recovered"})
+        self.assertNotIn("write memory", " ".join(connection.config).lower())
+
     def test_runner_maps_only_claimed_inventory_ids_and_reports_missing_mapping(self):
         settings = self.settings()
-        client = FakeClient({"id": "job_test", "kind": "read_only_inventory", "deviceIds": ["lab-isr-01", "unknown-device"], "leaseSeconds": 600})
+        client = FakeClient({"id": "job_test", "kind": "read_only_inventory", "operation": "inventory", "targetInterface": None, "deviceIds": ["lab-isr-01", "unknown-device"], "leaseSeconds": 600})
 
         def fake_collector(device, credential):
             return {"deviceId": device.id, "status": "succeeded", "facts": {"hostname": "r1"}, "warnings": [], "error": None}
@@ -133,7 +162,7 @@ class WorkerTests(unittest.TestCase):
         store = ProbeKeyStore(ProbeKeyStoreConfig("windows-dpapi", Path("C:/private/probe.dpapi")))
         store._private_key, store._public_pem = key, public
         raw = bytes(range(32)); iv = bytes(range(12)); worker_id = "worker-lab-01"
-        value = json.dumps({"host": "192.0.2.55", "port": 22, "username": "operator", "password": "not-a-real-password"}, separators=(",", ":")).encode()
+        value = json.dumps({"host": "192.0.2.55", "port": 22, "username": "operator", "password": "not-a-real-password", "operation": "interactive_probe", "interface": None}, separators=(",", ":")).encode()
         encrypted = AESGCM(raw).encrypt(iv, value, ("FAM Network Worker Probe v1|" + worker_id).encode())
         b64 = lambda data: base64.urlsafe_b64encode(data).decode().rstrip("=")
         envelope = {
@@ -141,12 +170,13 @@ class WorkerTests(unittest.TestCase):
             "encryptedKey": b64(key.public_key().encrypt(raw, padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None))),
             "iv": b64(iv), "ciphertext": b64(encrypted),
         }
-        self.assertEqual(store.decrypt(envelope, worker_id), ("192.0.2.55", 22, "operator", "not-a-real-password"))
+        connection = store.decrypt(envelope, worker_id)
+        self.assertEqual((connection.host, connection.port, connection.username, connection.operation, connection.interface), ("192.0.2.55", 22, "operator", "interactive_probe", None))
 
     def test_one_time_browser_sealed_probe_never_uses_or_persists_device_mapping(self):
         settings = self.settings()
         client = FakeClient({
-            "id": "job_probe", "kind": "read_only_inventory", "deviceIds": ["probe-123"], "leaseSeconds": 600,
+            "id": "job_probe", "kind": "read_only_inventory", "operation": "interactive_probe", "targetInterface": None, "deviceIds": ["probe-123"], "leaseSeconds": 600,
             "sealed": {"sealed": "one-time"},
         })
         captured = {}

@@ -10,7 +10,9 @@ import base64
 import hashlib
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
+import re
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes, serialization
@@ -22,7 +24,20 @@ from .secrets import SecretStoreError, protect, unprotect
 
 
 class ProbeEnvelopeError(RuntimeError):
-    """A sealed interactive probe cannot be safely used."""
+    """A sealed interactive request cannot be safely used."""
+
+
+INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
+
+
+@dataclass(frozen=True)
+class ProbeConnection:
+    host: str
+    port: int
+    username: str
+    password: str
+    operation: str
+    interface: str | None
 
 
 def _b64url_decode(value: str) -> bytes:
@@ -88,7 +103,7 @@ class ProbeKeyStore:
     def fingerprint(self) -> str:
         return _fingerprint(self.public_key_pem())
 
-    def decrypt(self, envelope: dict, worker_id: str) -> tuple[str, int, str, str]:
+    def decrypt(self, envelope: dict, worker_id: str) -> ProbeConnection:
         """Decrypt and validate one job envelope without persisting its content."""
         self._load_or_create()
         if not isinstance(envelope, dict) or set(envelope) != {
@@ -112,7 +127,7 @@ class ProbeKeyStore:
             value = json.loads(plaintext.decode("utf-8"))
         except (InvalidTag, ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ProbeEnvelopeError("probe envelope cannot be decrypted") from exc
-        if not isinstance(value, dict) or set(value) != {"host", "port", "username", "password"}:
+        if not isinstance(value, dict) or set(value) != {"host", "port", "username", "password", "operation", "interface"}:
             raise ProbeEnvelopeError("probe payload is invalid")
         try:
             host = _host(value["host"])
@@ -120,7 +135,12 @@ class ProbeKeyStore:
         except Exception as exc:
             raise ProbeEnvelopeError("probe payload is invalid") from exc
         username, password = value["username"], value["password"]
+        operation, interface = value["operation"], value["interface"]
         if (not isinstance(username, str) or not 1 <= len(username) <= 128 or "\n" in username or "\r" in username or
                 not isinstance(password, str) or not 1 <= len(password) <= 512):
             raise ProbeEnvelopeError("probe payload is invalid")
-        return host, port, username, password
+        if operation == "interactive_probe" and interface is None:
+            return ProbeConnection(host, port, username, password, operation, None)
+        if operation == "errdisabled_recovery" and isinstance(interface, str) and INTERFACE.fullmatch(interface):
+            return ProbeConnection(host, port, username, password, operation, interface)
+        raise ProbeEnvelopeError("probe payload is invalid")
