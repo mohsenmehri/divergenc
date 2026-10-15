@@ -15,6 +15,10 @@
 //   • جدول: f_bullBear برای همهٔ ردیف‌های Bull/Bear؛ فرمت اعشار Bias
 //   • تشخیص BTC: فقط نمادهایی که با BTC/XBT شروع شوند (WBTC و BTC.D جدا)
 //   • برچسب تایم‌فریم: مقادیر رایج دقیقه (2, 4, 6, 7, 8, 9, 20, 25, 90) اضافه شد
+//  نسخهٔ ۴.۱.۲ (بهترین‌عمل‌ها): گیت Short طلا = دلار↑ + بازدهی↑ + بدون ترس؛ رژیم «TightUSD»
+//   • گیت Short آلت در BTC.D↑ و TOTAL2 ضعیف؛ امتیاز BTCSeason برای آلت منفی
+//   • شمارش هم‌راستایی بدون دوباره‌شماری ساختار
+//   • هشدار AI شامل SL / TP1 (1R) / TP2 (2R) بر پایه‌ی ساختار ± ۰.۵ ATR
 //  یادداشت: f_tfState و f_computeBias سری‌های OHLC کانتکست فعلی و ورودی‌های ثابت را می‌خوانند؛
 //  هیچ متغیر mutable گلوبالی را نمی‌خوانند (شرط Pine برای درخواست‌های TF).
 
@@ -353,7 +357,7 @@ f_canChaseStructure(int _startIdx) =>
 f_goldRiskOff(_dxyUp, _vixUp) => _vixUp and _dxyUp
 f_goldInflation(_dxyUp, _y10Up, _vixUp) => _vixUp and not _dxyUp and _y10Up
 f_goldDollarWeak(_dxyUp, _y10Up) => not _dxyUp and not _y10Up     // ← سخت‌گیرانه (قبلاً فقط not _dxyUp بود)
-f_goldRiskOn(_dxyUp, _vixUp) => not _vixUp and not _dxyUp
+f_goldTightUsd(_dxyUp, _y10Up, _vixUp) => _dxyUp and _y10Up and not _vixUp
 
 f_getMacroRegime(_isGold, _ga1, _ga2, _ga3, _ca1, _ca2, _ca3, _ca4) =>
     string _reg = "Neutral"
@@ -364,8 +368,8 @@ f_getMacroRegime(_isGold, _ga1, _ga2, _ga3, _ca1, _ca2, _ca3, _ca4) =>
             _reg := "Inflation"
         else if f_goldDollarWeak(_ga1, _ga2)
             _reg := "Dollar↓"
-        else if f_goldRiskOn(_ga1, _ga3)
-            _reg := "RiskOn"
+        else if f_goldTightUsd(_ga1, _ga2, _ga3)
+            _reg := "TightUSD"
     else
         bool _isAlt = _ca1 and _ca4 and not _ca2 and not _ca3
         bool _isBtc = _ca1 and _ca2 and not _ca3 and not _isAlt
@@ -392,8 +396,15 @@ f_macroAllowLong(_isGold, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2
         _res := _alt or (_btc and _isBtcSym) or (_def and _isBtcSym)
     _res
 
-f_macroAllowShort(_isGold, _dxyUp, _vixUp, _totUp, _usdtUp) =>
-    _isGold ? f_goldRiskOn(_dxyUp, _vixUp) : (not _totUp and _usdtUp)
+f_macroAllowShort(_isGold, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up, _isBtcSym) =>
+    bool _res = false
+    if _isGold
+        _res := f_goldTightUsd(_dxyUp, _y10Up, _vixUp)
+    else
+        // (الف) بازار ریزشی و سرمایه به استیبل ⇒ Short
+        // (ب) آلت‌کوین: BTC.D بالا و TOTAL2 (آلت‌ها) ضعیف ⇒ آلت‌ها عقب‌اند ⇒ Short آلت
+        _res := (not _totUp and _usdtUp) or (not _isBtcSym and _btcUp and not _tot2Up)
+    _res
 
 // ═══════════════════════════════════════════════════════════════
 //   محاسبهٔ Bias (ورودی‌ها + سری‌های کانتکست + ورودی‌های ثابت)
@@ -609,10 +620,10 @@ f_tfState(bool _isBtc, bool _totUp, bool _btcUp, bool _usdtUp, bool _tot2Up,
          _dispB, _dispS, _dRatio, _lsh, _lsl, _fvgF, _upStr, _dnStr)
 
     _macroL = f_macroAllowLong(isGoldMode, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up, _isBtc)
-    _macroS = f_macroAllowShort(isGoldMode, _dxyUp, _vixUp, _totUp, _usdtUp)
+    _macroS = f_macroAllowShort(isGoldMode, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up, _isBtc)
 
-    int _alL = (_trend == "Bull" ? 1 : 0) + (_sbsT ? 1 : 0) + (_lsl ? 1 : 0) + (_macroL ? 1 : 0) + (_dispB ? 1 : 0)
-    int _alS = (_trend == "Bear" ? 1 : 0) + (_sbrsT ? 1 : 0) + (_lsh ? 1 : 0) + (_macroS ? 1 : 0) + (_dispS ? 1 : 0)
+    int _alL = ((_trend == "Bull" or _sbsT) ? 1 : 0) + (_lsl ? 1 : 0) + (_macroL ? 1 : 0) + (_dispB ? 1 : 0)
+    int _alS = ((_trend == "Bear" or _sbrsT) ? 1 : 0) + (_lsh ? 1 : 0) + (_macroS ? 1 : 0) + (_dispS ? 1 : 0)
 
     float _ra1 = _totUp  ? 1.0 : 0.0
     float _ra2 = _btcUp  ? 1.0 : 0.0
@@ -986,9 +997,9 @@ macroRegimeCrypto = f_getMacroRegime(false, dxyUp, us10yUp, vixUp, tUp_cur, bUp_
 macroRegimeGold   = f_getMacroRegime(true,  dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur)
 
 _macroAllowLong      = f_macroAllowLong(false, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
-_macroAllowShort     = f_macroAllowShort(false, dxyUp, vixUp, tUp_cur, uUp_cur)
+_macroAllowShort     = f_macroAllowShort(false, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
 _macroAllowLongGold  = f_macroAllowLong(true, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
-_macroAllowShortGold = f_macroAllowShort(true, dxyUp, vixUp, tUp_cur, uUp_cur)
+_macroAllowShortGold = f_macroAllowShort(true, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
 
 macro_cur            = isGoldMode ? macroRegimeGold       : macroRegimeCrypto
 _macroAllowLong_cur  = isGoldMode ? _macroAllowLongGold   : _macroAllowLong
@@ -1061,8 +1072,8 @@ CONFL = math.round(confidenceIndex)
      dispIsBullish, dispIsBearish, dispRatio,
      liqSweepHigh, liqSweepLow, fvgFactor, breakUpStrength, breakDnStrength)
 
-_alignCount     = (trendState == "Bull" ? 1 : 0) + (_structBullStrong ? 1 : 0) + (liqSweepLow  ? 1 : 0) + (_macroAllowLong_cur  ? 1 : 0) + (dispIsBullish ? 1 : 0)
-_alignCountBear = (trendState == "Bear" ? 1 : 0) + (_structBearStrong ? 1 : 0) + (liqSweepHigh ? 1 : 0) + (_macroAllowShort_cur ? 1 : 0) + (dispIsBearish ? 1 : 0)
+_alignCount     = ((trendState == "Bull" or _structBullStrong) ? 1 : 0) + (liqSweepLow  ? 1 : 0) + (_macroAllowLong_cur  ? 1 : 0) + (dispIsBullish ? 1 : 0)
+_alignCountBear = ((trendState == "Bear" or _structBearStrong) ? 1 : 0) + (liqSweepHigh ? 1 : 0) + (_macroAllowShort_cur ? 1 : 0) + (dispIsBearish ? 1 : 0)
 
 slot1Up_tf1  = ra1_tf1 > 0.5
 slot2Up_tf1  = ra2_tf1 > 0.5
@@ -1158,7 +1169,7 @@ CONF_MACRO   = 18.0    // آستانهٔ امتیاز ماکرو برای تشخ
 // ═══════════════════════════════════════════════════════════════
 //   SIGNAL ENGINE
 // ═══════════════════════════════════════════════════════════════
-f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict, _htfAligned, _isGold) =>
+f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict, _htfAligned, _isGold, _isBtcSym) =>
     string signal      = "⚪ WAIT"
     color  signalColor = color.rgb(160, 160, 180)
     color  signalBg    = color.rgb(40,  40,  50)
@@ -1215,13 +1226,13 @@ f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict,
             _macroScore := _isLongBias ?  14.0 : -3.0
         else if _macro == "Dollar↓"
             _macroScore := _isLongBias ?   9.0 :  0.0
-        else if _macro == "RiskOn"
+        else if _macro == "TightUSD"
             _macroScore := _isLongBias ? -22.0 : 20.0
     else
         if _macro == "AltSeason"
             _macroScore := _isLongBias ?  20.0 : -5.0
         else if _macro == "BTCSeason"
-            _macroScore := _isLongBias ?  11.0 : -3.0
+            _macroScore := _isLongBias ? (_isBtcSym ? 11.0 : -8.0) : (_isBtcSym ? -3.0 : 5.0)
         else if _macro == "DefensiveBTC"
             _macroScore := _isLongBias ?   4.0 :  0.0
         else if _macro == "RiskOff"
@@ -1276,12 +1287,12 @@ f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict,
 
     [signal, signalColor, signalBg]
 
-[sig_tf1, sigCol_tf1, sigBg_tf1] = f_getSignalFinal(CT1, lb_tf1, sb_tf1, CONF1, macro_tf1, alCnt_tf1, alCntB_tf1, htfConflict_tf1, htfAligned_tf1, isGoldMode)
-[sig_tf2, sigCol_tf2, sigBg_tf2] = f_getSignalFinal(CT2, lb_tf2, sb_tf2, CONF2, macro_tf2, alCnt_tf2, alCntB_tf2, htfConflict_tf2, htfAligned_tf2, isGoldMode)
-[sig_tf3, sigCol_tf3, sigBg_tf3] = f_getSignalFinal(CT3, lb_tf3, sb_tf3, CONF3, macro_tf3, alCnt_tf3, alCntB_tf3, htfConflict_tf3, htfAligned_tf3, isGoldMode)
+[sig_tf1, sigCol_tf1, sigBg_tf1] = f_getSignalFinal(CT1, lb_tf1, sb_tf1, CONF1, macro_tf1, alCnt_tf1, alCntB_tf1, htfConflict_tf1, htfAligned_tf1, isGoldMode, _isBtcChart)
+[sig_tf2, sigCol_tf2, sigBg_tf2] = f_getSignalFinal(CT2, lb_tf2, sb_tf2, CONF2, macro_tf2, alCnt_tf2, alCntB_tf2, htfConflict_tf2, htfAligned_tf2, isGoldMode, _isBtcChart)
+[sig_tf3, sigCol_tf3, sigBg_tf3] = f_getSignalFinal(CT3, lb_tf3, sb_tf3, CONF3, macro_tf3, alCnt_tf3, alCntB_tf3, htfConflict_tf3, htfAligned_tf3, isGoldMode, _isBtcChart)
 // TF4 بالاترین تایم‌فریم است؛ بالاتر از آن چیزی برای مقایسه وجود ندارد → false/false
-[sig_tf4, sigCol_tf4, sigBg_tf4] = f_getSignalFinal(CT4, lb_tf4, sb_tf4, CONF4, macro_tf4, alCnt_tf4, alCntB_tf4, false,            false,            isGoldMode)
-[sig_cur, sigCol_cur, sigBg_cur] = f_getSignalFinal(CTL, lb_cur, sb_cur, CONFL, macro_cur, _alignCount, _alignCountBear, htfConflict_cur, htfAligned_cur, isGoldMode)
+[sig_tf4, sigCol_tf4, sigBg_tf4] = f_getSignalFinal(CT4, lb_tf4, sb_tf4, CONF4, macro_tf4, alCnt_tf4, alCntB_tf4, false,            false,            isGoldMode, _isBtcChart)
+[sig_cur, sigCol_cur, sigBg_cur] = f_getSignalFinal(CTL, lb_cur, sb_cur, CONFL, macro_cur, _alignCount, _alignCountBear, htfConflict_cur, htfAligned_cur, isGoldMode, _isBtcChart)
 
 sig_cur_confirmed    = _barConfirmed ? sig_cur    : "⏳ " + sig_cur
 sigCol_cur_confirmed = _barConfirmed ? sigCol_cur : color.rgb(120, 120, 120)
@@ -1319,8 +1330,8 @@ f_getRecommendationCrypto(_macro, _bias, _biasShort) =>
 f_getRecommendationGold(_macro, _bias, _biasShort) =>
     string rec      = "⚖️ Neutral"
     color  recColor = color.rgb(160, 160, 180)
-    if _macro == "RiskOn"
-        rec      := "❌ Risk-On"
+    if _macro == "TightUSD"
+        rec      := "❌ USD↑ + Yields↑"
         recColor := textColors
     else if _macro == "RiskOff" and _bias >= 62
         rec      := "✅✅ RiskOff"
@@ -1404,11 +1415,11 @@ f_overallRecommendationGold() =>
     int riskOffCount   = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "RiskOff")
     int inflationCount = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "Inflation")
     int dollarCount    = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "Dollar↓")
-    int riskOnCount    = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "RiskOn")
+    int tightUsdCount    = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "TightUSD")
 
     string rec      = "⚖️ Neutral"
     color  recColor = color.rgb(160, 160, 180)
-    if riskOnCount >= 3
+    if tightUsdCount >= 3
         rec      := "❌ RiskOn"
         recColor := textColors
     else if riskOffCount >= 2 and lb_cur >= 62
@@ -1423,14 +1434,14 @@ f_overallRecommendationGold() =>
     else if dollarCount >= 2
         rec      := "✅ Dollar↓"
         recColor := textColorl
-    else if riskOnCount >= 1 and sb_cur >= 55
+    else if tightUsdCount >= 1 and sb_cur >= 55
         rec      := "⚡ Be Careful"
         recColor := color.rgb(255, 100, 0)
     else if sb_cur >= 60
         rec      := "⬇️ Strong Short"
         recColor := textColors
 
-    [rec, recColor, "RkOf " + str.tostring(riskOffCount), "Infl " + str.tostring(inflationCount), "$↓ " + str.tostring(dollarCount), "RkOn " + str.tostring(riskOnCount)]
+    [rec, recColor, "RkOf " + str.tostring(riskOffCount), "Infl " + str.tostring(inflationCount), "$↓ " + str.tostring(dollarCount), "USD↑ " + str.tostring(tightUsdCount)]
 
 f_overallByMode() =>
     if isGoldMode
@@ -1693,7 +1704,7 @@ f_getAltStatusGold(_r) =>
     _r == "RiskOff"   ? "Bull 🟢"  :
      _r == "Inflation" ? "Bull 🟠"  :
      _r == "Dollar↓"  ? "Bull 🟢"  :
-     _r == "RiskOn"   ? "Bear 🔴"  : "Neutral ⚪"
+     _r == "TightUSD"   ? "Bear 🔴"  : "Neutral ⚪"
 
 f_getRegimeColorCrypto(_r) =>
     _r == "AltSeason"    ? color.rgb(0,230,80)   :
@@ -1705,7 +1716,7 @@ f_getRegimeColorGold(_r) =>
     _r == "RiskOff"   ? color.rgb(0,230,80)   :
      _r == "Inflation" ? color.rgb(255,165,0)  :
      _r == "Dollar↓"  ? color.rgb(100,200,100):
-     _r == "RiskOn"   ? color.rgb(255,65,65)  : color.rgb(160,160,180)
+     _r == "TightUSD"   ? color.rgb(255,65,65)  : color.rgb(160,160,180)
 
 f_getMacroTextCrypto(_r) =>
     _r == "AltSeason"    ? "AltSeason ✅"  :
@@ -1717,7 +1728,7 @@ f_getMacroTextGold(_r) =>
     _r == "RiskOff"   ? "Risk-Off ✅"  :
      _r == "Inflation" ? "Inflation 🔥" :
      _r == "Dollar↓"  ? "Weak $ 💵"    :
-     _r == "RiskOn"   ? "Risk-On ⚠️"   : "Neutral ⚪"
+     _r == "TightUSD"   ? "USD↑ ⚠️"   : "Neutral ⚪"
 
 getTrendColor(_tv) =>
     _tv == "Bull"        ? textColorl           :
@@ -1746,7 +1757,7 @@ f_shortTrend(_tv) =>
     _tv == "Bull" ? "🟢B" : _tv == "Bear" ? "🔴Be" : _tv == "Range" ? "⬜R" : _tv == "Transition" ? "🟠T" : "⚪"
 
 f_shortMacroGold(_r) =>
-    _r == "RiskOff" ? "RkOf🟢" : _r == "Inflation" ? "Infl🟠" : _r == "Dollar↓" ? "$↓🟢" : _r == "RiskOn" ? "RkOn🔴" : "Ntrl⚪"
+    _r == "RiskOff" ? "RkOf🟢" : _r == "Inflation" ? "Infl🟠" : _r == "Dollar↓" ? "$↓🟢" : _r == "TightUSD" ? "$↑🔴" : "Ntrl⚪"
 
 f_shortMacroCrypto(_r) =>
     _r == "AltSeason" ? "Alt🟢" : _r == "BTCSeason" ? "BTC🟠" : _r == "RiskOff" ? "RkOf🔴" : _r == "DefensiveBTC" ? "Def🔵" : "Ntrl⚪"
@@ -2095,7 +2106,11 @@ alertcondition(sig_cur == "🟢 LONG"  and _barConfirmed, 'Signal Long Current T
 alertcondition(sig_cur == "🔴 SHORT" and _barConfirmed, 'Signal Short Current TF', 'سیگنال SHORT در TF فعلی')
 
 // آلرت‌های آماده (فقط روی کندل تأییدشده — ضد ری‌پینت)
+// ── طرح معامله: استاپ بیرون ساختار با بافر ۰.۵ ATR؛ حداقل ریسک ۰.۵ ATR
+_riskL = math.max(close - (nz(structureLow, low) - 0.5 * atrValue), 0.5 * atrValue)
+_riskS = math.max((nz(structureHigh, high) + 0.5 * atrValue) - close, 0.5 * atrValue)
+
 if _aiLong
-    alert('🐺 AI LONG | ' + syminfo.ticker + ' | ' + currentTFLabel + ' | close=' + str.tostring(close, format.mintick), alert.freq_once_per_bar_close)
+    alert('🐺 AI LONG | ' + syminfo.ticker + ' | ' + currentTFLabel + ' | entry≈' + str.tostring(close, format.mintick) + ' | SL=' + str.tostring(close - _riskL, format.mintick) + ' | TP1=' + str.tostring(close + _riskL, format.mintick) + ' | TP2=' + str.tostring(close + 2 * _riskL, format.mintick), alert.freq_once_per_bar_close)
 if _aiShort
-    alert('🐺 AI SHORT | ' + syminfo.ticker + ' | ' + currentTFLabel + ' | close=' + str.tostring(close, format.mintick), alert.freq_once_per_bar_close)
+    alert('🐺 AI SHORT | ' + syminfo.ticker + ' | ' + currentTFLabel + ' | entry≈' + str.tostring(close, format.mintick) + ' | SL=' + str.tostring(close + _riskS, format.mintick) + ' | TP1=' + str.tostring(close - _riskS, format.mintick) + ' | TP2=' + str.tostring(close - 2 * _riskS, format.mintick), alert.freq_once_per_bar_close)

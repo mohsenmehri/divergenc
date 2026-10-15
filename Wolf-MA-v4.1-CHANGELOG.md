@@ -111,3 +111,31 @@
 - `f_computeBias` و `f_tfState` سری‌های `high/low/close/open` کانتکست را می‌خوانند؛ این شرط ذاتی محاسبه روی هر TF در Pine است و با حذف آن، خروجی HTF غلط می‌شود.
 - تعداد درخواست‌ها ۳۹ است؛ زیر سقف ۴۰ اما بدون حاشیه. افزودن یک نماد جدید از سقف رد می‌شود.
 - `Len` (ورودی FVG) به‌عنوان طول lookback ساختار هم استفاده می‌شود؛ این اتصال از نسخهٔ v4 مانده و تغییرش رفتار را عوض می‌کند. در صورت نیاز یک ورودی جدا اضافه کنید.
+
+## نسخهٔ ۴.۱.۲ — اعمال بهترین‌عمل‌ها (بر اساس منابع و بازبینی کد)
+
+### منابع
+- طلا: دلار قوی و بازدهی واقعی بالا معمولاً برای طلا منفی‌اند؛ ضعف دلار برای طلا مثبت است. ([acy](https://acy.com/en/market-news/education/gold-strategy-using-vix-yields-dxy-2025-l-s-162409/)، [investing.com](https://www.investing.com/analysis/us-dollar-strength-is-becoming-golds-biggest-nearterm-constraint-200689299)، [longtermtrends](https://www.longtermtrends.com/gold-vs-real-yields/))
+- ریسک: استاپ بیرون سطح ساختاری با بافر ۰.۳ تا ۱ ATR، حجم از فاصلهٔ استاپ، خروج جزئی در ۱.۵ تا ۲R. ([apptrading](https://apptrading.ai/en/blog/stop-loss-strategies-to-protect-trading-capital)، [traderssecondbrain](https://traderssecondbrain.com/guides/stop-loss-placement-methods))
+- آلت‌کوین: در فاز BTC، آلت‌ها معمولاً عقب می‌مانند؛ افت BTC.D و رشد آلت‌ها نشانهٔ چرخش است. ([crypto.news](https://crypto.news/what-is-alt-season-and-why-it-keeps-not-arriving/)، [theledgermind](https://theledgermind.com/altcoin-season-vs/))
+
+### تغییرات
+| # | تغییر | محل |
+|---|---|---|
+| 1 | گیت Short طلا از `not VIX and not DXY` به `DXY↑ and US10Y↑ and not VIX` تغییر کرد. اکنون با گیت Long طلا ناسازگار نیست (مجموعه‌ها جدا هستند). | `f_goldTightUsd`, `f_macroAllowShort` |
+| 2 | رژیم طلا از «RiskOn» به «TightUSD» تغییر نام داد تا با گیت هم‌خوان باشد. متن‌ها و شمارش جدول هم به‌روز شد. | رژیم، امتیاز، جدول |
+| 3 | گیت Short آلت: `(BTC.D↑ and TOTAL2 ضعیف)` به گیت قبلی اضافه شد؛ برای BTC همان قانون قبلی است. | `f_macroAllowShort` |
+| 4 | امتیاز ماکرو BTCSeason وابسته به نماد شد: آلت Long = −8 (قبلاً +11 بود و با گیت هم‌خوان نبود)، آلت Short = +5. | `f_getSignalFinal` (پارامتر `_isBtcSym` اضافه شد) |
+| 5 | شمارش هم‌راستایی: ترند Bull و ساختار قوی دیگر دو امتیاز جدا نمی‌گیرند (یک امتیاز). | `_alL/_alS`, `_alignCount` |
+| 6 | هشدار AI شامل SL، TP1 (1R) و TP2 (2R) است. SL = ساختار ∓ ۰.۵ ATR، حداقل ریسک ۰.۵ ATR. | `_riskL/_riskS` و alert |
+
+### اثرها (پیش‌بینی، نه نتیجهٔ بک‌تست)
+- سیگنال Short طلا کمتر و دقیق‌تر می‌شود؛ در ضعف دلار دیگر Short طلا داده نمی‌شود.
+- در روندهای Bull/Bear تعداد هم‌راستایی یک امتیاز کمتر می‌شود؛ تعداد سیگنال AI کمی کاهش می‌یابد.
+- آلت‌ها در BTCSeason کمتر Long می‌گیرند و در BTC.D↑ بیشتر Short.
+
+### باقی‌مانده‌ها (تصمیم با شما یا بک‌تست)
+- گیت Long طلا در RiskOff هنوز نیاز به DXY↑ دارد (`VIX↑ and DXY↑`). منابع دلار قوی را برای طلا منفی می‌دانند؛ این شرط ممکن است در بک‌تست بررسی شود.
+- آستانه‌ها (۵۲/۲۸/۳۰، ۶۲، ۵۵) تنظیم نشده‌اند.
+- هیچ بک‌تستی انجام نشده است. این تغییرات فقط بر اساس منطق و منابع است، و کامپایل هم نشده‌اند.
+- SL/TP فقط در هشدار نمایش داده می‌شود؛ `strategy()` و بک‌تست رسمی هنوز ساخته نشده‌اند.
