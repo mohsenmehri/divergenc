@@ -1,7 +1,7 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 //@version=6
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Wolf M-A  v4.2  |  Crypto & Gold        (نسخهٔ اصلاح‌شده — Dual Fibonacci Anchor)
+//  Wolf M-A  v4.2.1|  Crypto & Gold        (Dual Fibonacci Anchor — Hotfix)
 // ───────────────────────────────────────────────────────────────────────────────
 //  وضعیت نسخهٔ ۴.۱.۱ (نسبت به v4):
 //   • ماکرو ستون‌های TF: هر ستون پرچم‌های ماکرو خودِ تایم‌فریم را دارد
@@ -490,11 +490,8 @@ f_tfState(bool _isBtc, bool _totUp, bool _btcUp, bool _usdtUp, bool _tot2Up,
         _sHigh := high
         _sLow  := low
 
-    // ── ۴.۲ — بازهٔ پویا: سقف را بین آخرین کف تا الان، و کف را بین آخرین سقف تا الان جستجو کن (به‌جای Len ثابت ۲۵)
-    _spanForHigh_tf = _sLowIdx <= 0 ? math.min(Len, MAX_HIST) : f_spanFrom(_sLowIdx)
-    _spanForLow_tf  = _sHighIdx <= 0 ? math.min(Len, MAX_HIST) : f_spanFrom(_sHighIdx)
-    _sMaxBar = math.max(bar_index + get_structure_highest_bar(_spanForHigh_tf), bar_index - MAX_HIST)
-    _sMinBar = math.max(bar_index + get_structure_lowest_bar(_spanForLow_tf),  bar_index - MAX_HIST)
+    _sMaxBar = math.max(bar_index + get_structure_highest_bar(Len), bar_index - MAX_HIST)
+    _sMinBar = math.max(bar_index + get_structure_lowest_bar(Len), bar_index - MAX_HIST) math.max(bar_index + get_structure_lowest_bar(_spanForLow_tf),  bar_index - MAX_HIST)
 
     _atr    = ta.atr(atrLen)
     _bodyHi = math.max(open, close)
@@ -807,11 +804,9 @@ if bar_index == 0
     structureHigh           := high
     structureLow            := low
 
-// ── ۴.۲ — بازهٔ پویا: هر شکست، اکسترمم مخالف را دقیقا بین لنگر قبلی تا کندل شکست جستجو می‌کند
-_spanForHigh = structureLowStartIndex <= 0 ? math.min(Len, MAX_HIST) : f_spanFrom(structureLowStartIndex)
-_spanForLow  = structureHighStartIndex <= 0 ? math.min(Len, MAX_HIST) : f_spanFrom(structureHighStartIndex)
-structureMaxBar = math.max(bar_index + get_structure_highest_bar(_spanForHigh), bar_index - MAX_HIST)
-structureMinBar = math.max(bar_index + get_structure_lowest_bar(_spanForLow), bar_index - MAX_HIST)
+// ── ۴.۲ — بازهٔ جستجو: Len ثابت ۲۵ حفظ شد تا رگرسیون ایجاد نشود؛ دقت ابتدا با f_spanFrom در نسخهٔ بعدی بهینه می‌شود
+structureMaxBar = math.max(bar_index + get_structure_highest_bar(Len), bar_index - MAX_HIST)
+structureMinBar = math.max(bar_index + get_structure_lowest_bar(Len), bar_index - MAX_HIST)
 
 _bodyHigh = math.max(open, close)
 _bodyLow  = math.min(open, close)
@@ -890,32 +885,33 @@ else if isStructureHighBroken
 
 else
     bool isClassicMode = fibAnchorMode == 'Wick-to-Wick (کلاسیک)'
-    // ── ۴.۲ — تشخیص پیوت برای قفل کردن انتها (فقط حالت پیوت)
+    // ── ۴.۲ — در حالت کلاسیک، شدو بدون محدودیت دنبال می‌شود؛ در حالت پیوت فقط تا structChaseBars و تا تشکیل پیوت مخالف
+    // برای جلوگیری از قفل دائمی (باگ v4.2)، در پیوت فعلاً فقط محدودیت میله اعمال می‌شود و پیوت به‌عنوان فیلتر نرم استفاده می‌شود
     bool pivotHighNow = not na(ta.pivothigh(high, fibPivotLen, fibPivotLen))
     bool pivotLowNow  = not na(ta.pivotlow(low,   fibPivotLen, fibPivotLen))
+    // قفل پیوت فقط وقتی فعال است که پولبک تأییدشده دیده شود — اما حتی در قفل، شدوی بالاتر/پایین‌ترِ جدید اجازهٔ به‌روزرسانی دارد
     if not isClassicMode
-        // در لگ صعودی، پس از تأیید پیوت سقف یا دیدن پولبک (پیوت کف)، سقف قفل می‌شود
-        if (structureDirection == 2 or structureDirection == 0) and pivotHighNow
+        if (structureDirection == 2 and pivotLowNow) or (structureDirection == 2 and pivotHighNow)
             structureHighLocked := true
-        if (structureDirection == 1 or structureDirection == 0) and pivotLowNow
+        if (structureDirection == 1 and pivotHighNow) or (structureDirection == 1 and pivotLowNow)
             structureLowLocked := true
-        // پولبک مخالف هم نشانهٔ پایان امتداد است
-        if structureDirection == 2 and pivotLowNow
-            structureHighLocked := true
-        if structureDirection == 1 and pivotHighNow
-            structureLowLocked := true
+        // اگر شدوی جدید فراتر از قفل زد، قفل باز می‌شود (جلوگیری از فریز در سقف/کف قدیمی)
+        if not na(structureHigh) and high > structureHigh
+            structureHighLocked := false
+        if not na(structureLow) and low < structureLow
+            structureLowLocked := false
     else
-        // کلاسیک: قفل‌ها همیشه باز
         structureHighLocked := false
         structureLowLocked  := false
 
-    // ── تعقیب سقف (انتهای فیبو در لگ صعودی) — در کلاسیک با هر شدوی بالاتر، در پیوت فقط تا قفل
+    // ── تعقیب سقف (انتهای فیبو در لگ صعودی)
     if not na(structureHigh) and high > structureHigh and (structureDirection == 0 or structureDirection == 2)
         bool canChaseHigh = false
         if isClassicMode
             canChaseHigh := fibWickTrailClassic ? true : f_canChaseStructure(structureHighStartIndex)
         else
-            canChaseHigh := not structureHighLocked and f_canChaseStructure(structureHighStartIndex)
+            // پیوت: اگر قفل است ولی شدوی جدید بالاتر زده، اجازه بده؛ در غیر این صورت فقط تا ChaseBars
+            canChaseHigh := f_canChaseStructure(structureHighStartIndex)
         if canChaseHigh
             structureHigh           := high
             structureHighStartIndex := bar_index
@@ -928,7 +924,7 @@ else
         if isClassicMode
             canChaseLow := fibWickTrailClassic ? true : f_canChaseStructure(structureLowStartIndex)
         else
-            canChaseLow := not structureLowLocked and f_canChaseStructure(structureLowStartIndex)
+            canChaseLow := f_canChaseStructure(structureLowStartIndex)
         if canChaseLow
             structureLow           := low
             structureLowStartIndex := bar_index
