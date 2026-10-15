@@ -13,7 +13,7 @@
 <h2>Inventory آزمایشگاهی</h2>
 <form id="inventory-form"><input name="id" placeholder="شناسه تجهیز، مانند lab-isr-01" required pattern="[a-z][a-z0-9._-]{1,63}"><input name="name" placeholder="نام نمایشی تجهیز" required maxlength="80"><input name="site" placeholder="شناسه سایت" required pattern="[a-z][a-z0-9._-]{1,63}"><input name="group" placeholder="شناسه گروه (اختیاری)" pattern="[a-z][a-z0-9._-]{1,63}"><button>ثبت/به‌روزرسانی تجهیز آزمایشگاهی</button></form>
 <p class="muted">آدرس مدیریت، نام کاربری، رمز، Enable، RADIUS و SNMP در Inventory FAM ثبت نمی‌شوند.</p>
-<hr><h2>Pair کردن Worker مستقل</h2>
+<hr><h2>Pair کردن Worker داخلی سرور</h2>
 <form id="worker-form"><input name="id" placeholder="worker-fam-01" required pattern="[a-z][a-z0-9._-]{1,63}"><input name="name" placeholder="نام نمایشی Worker" required maxlength="80"><button>صدور Token یک‌بارمصرف</button></form>
 <p class="muted">Token فقط همین یک‌بار نمایش داده می‌شود. آن را مستقیماً زیر هویت سرویس مستقل Worker نگهداری کنید؛ در IIS/FAM ذخیره نکنید.</p><pre id="token" class="token"></pre>
 </section>

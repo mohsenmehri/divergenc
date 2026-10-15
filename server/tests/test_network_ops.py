@@ -62,8 +62,11 @@ class NetworkOpsTests(unittest.TestCase):
     def worker_headers(token):
         return {"Authorization": "Bearer " + token, "X-FAM-Worker-ID": "worker-lab-01"}
 
-    def test_network_operations_page_is_dynamic_and_network_ops_is_opt_in(self):
-        page = self.app.test_client().get("/network-operations")
+    def test_network_operations_page_is_private_dynamic_and_network_ops_is_opt_in(self):
+        anonymous = self.app.test_client().get("/network-operations", follow_redirects=False)
+        self.assertEqual(anonymous.status_code, 302)
+        self.assertEqual(anonymous.headers["Location"], "/login.html")
+        page = self.admin.get("/network-operations")
         self.assertEqual(page.status_code, 200)
         markup = page.get_data(as_text=True)
         self.assertIn("عملیات شبکه", markup)

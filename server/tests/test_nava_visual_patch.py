@@ -26,7 +26,7 @@ class NavaVisualPatchChecks(unittest.TestCase):
         self.assertIn("FAM Nava visual test", html)
         # This must stay a test payload: the normal central client remains an
         # independent, unmodified release until a visual design is approved.
-        self.assertNotIn('data-nava-visual-test="true"', (ROOT / "server" / "www" / "FAM.html").read_text(encoding="utf-8"))
+        self.assertNotIn('data-nava-visual-test="true"', (ROOT / "server" / "private_ui" / "FAM.html").read_text(encoding="utf-8"))
 
         apply_script = (PATCH / "APPLY-FAM-NAVA-VISUAL-TEST.ps1").read_text(encoding="utf-8")
         self.assertIn("Get-FileHash", apply_script)

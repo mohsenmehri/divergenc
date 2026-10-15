@@ -21,7 +21,7 @@ import secrets
 import time
 import uuid
 
-from flask import g, jsonify, request, send_file
+from flask import g, jsonify, redirect, request, send_file
 
 
 IDENTIFIER = re.compile(r"[a-z][a-z0-9._-]{1,63}")
@@ -263,7 +263,7 @@ def _result_input(value):
     }
 
 
-def register_network_ops(app, *, connect, transaction, data, fail, can_read_network, can_write_network):
+def register_network_ops(app, *, connect, transaction, data, fail, can_read_network, can_write_network, page_session):
     """Attach the Network Operations API to the FAM control plane.
 
     ``connect`` and ``transaction`` are supplied by ``server.app`` so this
@@ -417,9 +417,11 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
 
     @app.get("/network-operations")
     def network_operations_page():
-        # The static screen contains no privileged data. Every data call below
-        # remains protected by the normal FAM session/CSRF guard.
-        return send_file(app.root_path + "/network_operations.html", mimetype="text/html")
+        # Keep every operational UI behind the same FAM session boundary as
+        # the main spreadsheet. The page has no secrets, but it is not a public
+        # static asset and all of its data calls stay server-authorised.
+        if not page_session():return redirect('/login.html',code=302)
+        return send_file(app.root_path + "/network_operations.html", mimetype="text/html", max_age=0, conditional=False)
 
     @app.get("/api/network/overview")
     def network_overview():

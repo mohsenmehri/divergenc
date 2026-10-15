@@ -49,7 +49,8 @@ def probe(host,address,cert_path,port=443):
             return data
         finally:conn.close()
     html=request('GET','/')
-    if b'fam-shared-js' not in html:raise RuntimeError('IIS is not serving the CENTRAL FAM client')
+    if b'id="login-form"' not in html or b'fam-shared-js' in html:
+        raise RuntimeError('IIS is not serving the minimal FAM login shell')
     request('GET','/api/session',expected=401)
     # No genuine credentials. Checks that PUBLIC_ORIGIN and POST proxying work.
     request('POST','/api/login',{'username':'health-probe-'+secrets.token_hex(8),'password':secrets.token_urlsafe(24)},expected=401)

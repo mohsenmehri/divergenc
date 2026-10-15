@@ -29,6 +29,23 @@ class CentralTests(unittest.TestCase):
         p['users'].append({'id':str(uuid.uuid4()),'username':name or 'user'+str(role),'name':'User '+str(role),'role':role,'enabled':True,'regions':regions or [],'sheets':sheets or [],'password':'1109'})
         r=self.post(self.a,'users',p);self.assertEqual(r.status_code,200,r.json)
         return self.login(name or 'user'+str(role))
+    def test_full_spreadsheet_client_is_not_a_public_iis_file_and_requires_a_session(self):
+        anonymous=self.app.test_client()
+        for path in ('/app','/FAM.html'):
+            response=anonymous.get(path,follow_redirects=False)
+            self.assertEqual(response.status_code,302)
+            self.assertEqual(response.headers['Location'],'/login.html')
+        response=self.a.get('/app')
+        try:
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.mimetype,'text/html')
+            self.assertIn(b'data-fam-variant="shared"',response.data)
+        finally:
+            response.close()
+        root=Path(__file__).resolve().parents[1]
+        self.assertTrue((root/'private_ui'/'FAM.html').is_file())
+        self.assertFalse((root/'www'/'FAM.html').exists())
+
     def test_two_clients_and_restart(self):
         b=self.login('admin');p=self.state();p['state']['sheets']['Network']['rows'][1][1]='CENTRAL'
         self.assertEqual(self.save(self.a,p).status_code,200)

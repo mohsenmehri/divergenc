@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'">
+  <meta name="referrer" content="same-origin">
+  <title>ورود به فام</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <main class="card" aria-labelledby="login-title">
+    <div class="mark" aria-hidden="true">ف</div>
+    <h1 id="login-title">فام مرکزی</h1>
+    <p class="subtitle">تجارت الکترونیک و فناوری اطلاعات ملل</p>
+    <form id="login-form" novalidate>
+      <label for="username">نام کاربری</label>
+      <input id="username" name="username" autocomplete="username" inputmode="text" minlength="3" maxlength="40" required autofocus>
+      <label for="password">رمز عبور</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" minlength="4" maxlength="128" required>
+      <p id="message" class="message" role="alert" aria-live="polite"></p>
+      <button id="submit" type="submit">ورود امن</button>
+    </form>
+    <p class="notice">پس از ورود، اطلاعات Sheetها و منطق اصلی فقط از سرویس مرکزی و با مجوز دسترسی دریافت می‌شوند.</p>
+  </main>
+  <script src="login.js" defer></script>
+</body>
+</html>

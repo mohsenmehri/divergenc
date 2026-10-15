@@ -5,7 +5,7 @@
 ```text
 مرورگر کاربر ── HTTPS/443 ──> FAM/IIS روی سرور مرکزی
                                    │
-                                   └── Worker با حساب Windows مستقل ── SSH/22 ──> سوئیچ Cisco IOS
+                                   └── سرویس داخلی Worker با هویت Built-in Local Service ── SSH/22 ──> سوئیچ Cisco IOS
 ```
 
 کاربر فقط با مرورگر به صفحهٔ FAM متصل می‌شود؛ هیچ اتصال SSH از رایانهٔ کاربر به تجهیزات لازم نیست. اتصال SSH و تمام عملیات شبکه فقط از Worker نصب‌شده روی سرور مرکزی انجام می‌شود. Worker هیچ پورت ورودی جدیدی باز نمی‌کند.
@@ -14,7 +14,7 @@
 
 ### ۱. بررسی مستقیم Err-disabled
 
-کاربر مجاز در FAM، Worker، IP/hostname سوئیچ، username و password SSH را وارد می‌کند. مرورگر این داده‌ها را قبل از ارسال با کلید عمومی Worker رمز می‌کند. FAM/IIS فقط ciphertext موقت را در صف Job حمل می‌کند؛ IP و Credential متن‌واضح را نمی‌بیند، لاگ نمی‌کند و ذخیره نمی‌کند. Worker زیر هویت مستقل خود و با کلید خصوصی DPAPI آن را فقط در حافظه باز می‌کند.
+کاربر مجاز در FAM، Worker، IP/hostname سوئیچ، username و password SSH را وارد می‌کند. مرورگر این داده‌ها را قبل از ارسال با کلید عمومی Worker رمز می‌کند. FAM/IIS فقط ciphertext موقت را در صف Job حمل می‌کند؛ IP و Credential متن‌واضح را نمی‌بیند، لاگ نمی‌کند و ذخیره نمی‌کند. Worker زیر هویت داخلی غیرتعاملی `NT AUTHORITY\LOCAL SERVICE` و با کلید خصوصی DPAPI همان هویت آن را فقط در حافظه باز می‌کند. این هویت Password، Desktop Login یا حساب FAM برای اپراتورها ندارد.
 
 Worker فقط دستورهای ثابت زیر را اجرا می‌کند:
 
@@ -61,11 +61,11 @@ no shutdown
 
 ## استقرار هم‌مکان روی همان سرور FAM/IIS
 
-Worker می‌تواند روی همان سرور FAM/IIS باشد، اما باید خارج از مسیر IIS و با حساب Windows مستقل اجرا شود.
+Worker فقط یک سرویس داخلی روی همان سرور FAM/IIS است؛ سرور دوم یا حساب دستی برای کاربران ایجاد نمی‌شود. برای اجرای غیرتعاملی آن از هویت Built-in `NT AUTHORITY\LOCAL SERVICE` استفاده کنید؛ از `LocalSystem` و هویت Application Pool استفاده نکنید.
 
-1. حساب Windows مستقل و کم‌دسترسی برای Worker بسازید؛ از `LocalSystem` و هویت Application Pool استفاده نکنید.
+1. حساب نام‌دار مانند `FAMNetworkWorker` نسازید و Password سرویس تعریف نکنید.
 2. Worker را در مسیری مانند `C:\FAM-NetworkWorker` نصب کنید، نه زیر `C:\FAM\server\www`.
-3. روی `worker.json`، `*.dpapi` و پوشهٔ `private` فقط حساب Worker مجوز بخواند/بنویسد.
+3. روی `worker.json`، `*.dpapi` و پوشهٔ `private` فقط `LOCAL SERVICE`، `SYSTEM` و Administratorهای مجاز مجوز لازم داشته باشند.
 4. ACL مدیریت تجهیزات باید اجازهٔ SSH از IP سرور Worker را بدهد؛ رایانه‌های کاربران نیازی به مسیر SSH به تجهیزات ندارند.
 5. FAM باید فقط از HTTPS و نامی استفاده کند که در SAN گواهی آن وجود دارد. `controlPlaneUrl` همان HTTPS origin واقعی FAM است.
 
@@ -87,7 +87,7 @@ FAM_NETWORK_OPS_JOB_LEASE_SECONDS=600
    C:\FAM-NetworkWorker\venv\Scripts\python.exe -m network_worker.main --config C:\FAM-NetworkWorker\worker.json --once
    ```
 
-4. سپس Worker را زیر همان حساب مستقل به‌صورت سرویس یا Scheduled Task اجرا کنید.
+4. سپس Worker را به‌صورت Scheduled Task/Service با هویت `NT AUTHORITY\LOCAL SERVICE` اجرا کنید؛ هیچ Passwordی برای آن وارد نمی‌شود.
 5. کاربر دارای مجوز `manage-users` می‌تواند بررسی و recovery کنترل‌شده را درخواست کند؛ حساب دارای `view-history` فقط گزارش‌ها را می‌بیند.
 
 ## ممنوعیت‌ها

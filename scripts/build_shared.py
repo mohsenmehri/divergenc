@@ -29,5 +29,5 @@ s=s.replace('data-default-theme="original"','data-default-theme="original" data-
 s=s.replace('<title>','<title>فام مرکزی — ',1)
 s=s.replace('\n</head>','\n<style id="fam-shared-css">\n'+(root/'src/shared-sync.css').read_text()+'\n</style>\n</head>',1)
 s=s.replace('\n</body>','\n<script id="fam-shared-js">\n'+(root/'src/shared-sync.js').read_text()+'\n</script>\n</body>',1)
-p=root/'server/www/FAM.html';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)
-print('Built central two-theme client:',p.relative_to(root))
+p=root/'server/private_ui/FAM.html';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)
+print('Built protected central two-theme client:',p.relative_to(root))

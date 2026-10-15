@@ -17,7 +17,7 @@ import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
-from flask import Flask, request, jsonify, g, send_file
+from flask import Flask, request, jsonify, g, redirect, send_file
 
 try:
     from .manage import backup as verified_backup
@@ -621,8 +621,22 @@ def create_app(config=None):
             p['order'].append('CHANGE_LOG')
         return {'revision':row['revision'],'epoch':row['epoch'],'state':p,'user':user}
     @app.get('/')
+    def root():
+        # IIS serves this small public login document. Keep the loopback root
+        # consistent for direct health checks without publishing the full UI.
+        return send_file(ROOT/'www'/'login.html',mimetype='text/html',max_age=0,conditional=False)
+
+    @app.get('/app')
     @app.get('/FAM.html')
-    def index():return send_file(ROOT/'www'/'FAM.html',mimetype='text/html')
+    def index():
+        # The interactive spreadsheet client is not an IIS static asset.  A
+        # user must first hold an active FAM session before its UI code can be
+        # sent.  The business/data engine and the private workbook remain on
+        # the server in every case; browsers receive only authorised API data.
+        with connect() as db:
+            try:user_and_session(db)
+            except Problem:return redirect('/login.html',code=302)
+        return send_file(ROOT/'private_ui'/'FAM.html',mimetype='text/html',max_age=0,conditional=False)
     @app.post('/api/login')
     def login():
         value=data();name=str(value.get('username','')).strip().lower();pw=value.get('password','')
@@ -787,10 +801,16 @@ def create_app(config=None):
             db.execute('UPDATE settings SET users_revision=users_revision+1 WHERE id=1')
             return jsonify(user=public_user(db.execute('SELECT * FROM users WHERE id=?',(u['id'],)).fetchone()))
 
+    def page_session():
+        with connect() as db:
+            try:user_and_session(db)
+            except Problem:return False
+        return True
+
     if register_network_ops is not None:
         register_network_ops(app, connect=connect, transaction=transaction, data=data,
                              fail=fail, can_read_network=network_read_allowed,
-                             can_write_network=network_write_allowed)
+                             can_write_network=network_write_allowed, page_session=page_session)
     return app
 
 if __name__=='__main__':

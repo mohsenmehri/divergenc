@@ -1,7 +1,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),crypto=require('node:crypto');
 const read=p=>fs.readFileSync(p,'utf8');
+const CENTRAL='server/private_ui/FAM.html';
 test('central HTML contains server auth and sync, never restores a local workbook at boot',()=>{
- const html=read('server/www/FAM.html');
+ const html=read(CENTRAL);
  assert.equal((html.match(/id="fam-shared-js"/g)||[]).length,1);
  assert.equal((html.match(/id="fam-local-access-js"/g)||[]).length,1);
  const access=html.match(/<script id="fam-local-access-js">([\s\S]*?)<\/script>/)[1];
@@ -17,8 +18,15 @@ test('central HTML contains server auth and sync, never restores a local workboo
  assert.ok(!html.includes('restore saved session (previously imported data), if any'));
  for(const [,js] of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g))new vm.Script(js);
 });
+test('only a minimal login shell is static while the interactive client remains private',()=>{
+ const login=read('server/www/login.html'),script=read('server/www/login.js');
+ assert.ok(fs.existsSync(CENTRAL));assert.ok(!fs.existsSync('server/www/FAM.html'));
+ assert.match(login,/id="login-form"/);assert.match(login,/login\.js/);
+ assert.match(script,/fetch\('api\/login'/);assert.match(script,/location\.replace\('app'\)/);
+ assert.doesNotMatch(login,/fam-shared-js/);assert.doesNotMatch(script,/Mohsen_FINAL|sqlite|private_ui/);
+});
 test('the deployed client has a verifiable release marker',()=>{
- const local=read('FAM.html'),central=read('server/www/FAM.html');
+ const local=read('FAM.html'),central=read(CENTRAL);
  for(const html of [local,central]){
   assert.match(html,/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
   assert.match(html,/FAM UI-17 · 2026-10-13/);
@@ -34,7 +42,7 @@ test('light theme only paints: no DOM relocation, box geometry or background sho
  assert.match(css,/#fx-stage[^}]*opacity:0!important/);
 });
 test('central client announces remote server revisions without overwriting local work',()=>{
- const html=read('server/www/FAM.html'),sync=read('src/shared-sync.js');
+ const html=read(CENTRAL),sync=read('src/shared-sync.js');
  assert.match(sync,/live-update-notice/);assert.match(sync,/دریافت نسخهٔ جدید/);
  assert.match(sync,/function hasUnsavedWork\(\)/);assert.match(sync,/if\(signature\(\)!==clean\)/);
  assert.match(sync,/change\?\.actor/);assert.match(html,/id:'live-update-notice'/);
@@ -43,7 +51,7 @@ test('central client announces remote server revisions without overwriting local
  assert.doesNotMatch(html,/data-act="run-macro" data-arg="modFixUnlock\.UnlockDataSheets"/);
 });
 test('central manual backup requests a verified private server snapshot',()=>{
- const html=read('server/www/FAM.html'),sync=read('src/shared-sync.js');
+ const html=read(CENTRAL),sync=read('src/shared-sync.js');
  assert.match(sync,/backupAll=async\(\)=>\{/);
  assert.match(sync,/if\(!Access\.require\('backup'\)\)return false/);
  assert.match(sync,/if\(!Access\.require\('undo'\)\)return false/);

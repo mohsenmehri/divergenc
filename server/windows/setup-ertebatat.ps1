@@ -2,9 +2,9 @@
 #Requires -RunAsAdministrator
 [CmdletBinding()]
 param(
-    [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9-]{0,62}$')][string]$HostName='ertebatat-fam',
+    [ValidatePattern('^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$')][string]$HostName='communication-02.toosbank.corp',
     [string]$ServerAddress='10.16.243.18',
-    [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$')][string]$SiteName='FAM-Ertebatat',
+    [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9 ._-]{0,63}$')][string]$SiteName='FAM-Communication-02',
     [string]$InstallRoot='C:\FAM',
     [string]$DataDir='C:\FAMData',
     [string]$CertificateThumbprint='',
@@ -207,7 +207,7 @@ try {
         }
     }
     if (!$Chosen) {
-        if (!$CreateCertificate -and !(Read-FamYes "No usable certificate covers '$HostName'. Create a NEW self-signed certificate for FAM only, leaving other certificates unchanged?" -Unattended:$Unattended)) { throw 'A hostname-valid certificate is required. Existing IP-only certificates do not cover ertebatat-fam.' }
+        if (!$CreateCertificate -and !(Read-FamYes "No usable certificate covers '$HostName'. Create a NEW self-signed certificate for FAM only, leaving other certificates unchanged?" -Unattended:$Unattended)) { throw 'A hostname-valid certificate is required. Existing IP-only certificates do not cover the requested hostname.' }
         $Cert=New-SelfSignedCertificate -DnsName $HostName -CertStoreLocation Cert:\LocalMachine\My -Type SSLServerAuthentication -KeyAlgorithm RSA -KeyLength 3072 -HashAlgorithm SHA256 -KeyExportPolicy NonExportable -NotAfter (Get-Date).AddYears(2) -FriendlyName ('FAM '+$HostName)
         if (!(Test-FamCertificate $Cert $HostName)) { throw "The generated certificate does not contain DNS SAN $HostName; it will not be bound." }
         $Chosen=[pscustomobject]@{ Cert=$Cert; Store='My' }
@@ -272,9 +272,13 @@ try {
     $WindowsFiles=@('install.ps1','start.ps1','backup-daily.ps1','trust-client.ps1',
         'preflight_backup.py','verify_deployment.py','prepare-offline.ps1',
         'setup-common.psm1','setup-ertebatat.ps1','dependencies.json','offline-wheels.json')
-    $WwwFiles=@('FAM.html','web.config')
+    # The large interactive client is deliberately private: Flask sends it
+    # only after the FAM session check. IIS receives just the small login shell.
+    $PrivateUiFiles=@('FAM.html')
+    $WwwFiles=@('login.html','login.css','login.js','web.config')
     $Files=@(
         @($ServerFiles | ForEach-Object { Get-Item -LiteralPath (Join-Path $SourceServer $_) })
+        @($PrivateUiFiles | ForEach-Object { Get-Item -LiteralPath (Join-Path $SourceServer "private_ui\$_") })
         @($WindowsFiles | ForEach-Object { Get-Item -LiteralPath (Join-Path $PSScriptRoot $_) })
         @($WwwFiles | ForEach-Object { Get-Item -LiteralPath (Join-Path $SourceServer "www\$_") })
     )
@@ -291,7 +295,7 @@ try {
     & (Join-Path $TargetServer 'windows\install.ps1') @BackendArgs
     Wait-FamBackend
 
-    $Pool='FAM-Ertebatat-Pool'
+    $Pool='FAM-Communication-02-Pool'
     if (!(Test-Path ('IIS:\AppPools\'+$Pool))) { New-WebAppPool -Name $Pool | Out-Null }
     $OtherPoolUsers=@(foreach ($S in @(Get-Website)) {
         if ($S.Name -ne $SiteName -and $S.applicationPool -eq $Pool) { $S }
@@ -316,17 +320,17 @@ try {
     & icacls $WebRoot /grant ('IIS AppPool\'+$Pool+':(OI)(CI)RX') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Failed to grant the FAM pool read-only access to www.' }
     # No IIS identity is given access to the database directory.
-    $Rule='FAM-Ertebatat-HTTPS'
+    $Rule='FAM-Communication-02-HTTPS'
     $ExistingRule=Get-NetFirewallRule -Name $Rule -ErrorAction SilentlyContinue
     if ($ExistingRule) { Write-Host 'Existing FAM firewall rule retained without changing administrator-defined scopes.' }
-    elseif ($AddFirewallRule) { New-NetFirewallRule -Name $Rule -DisplayName 'FAM HTTPS (ertebatat-fam)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 -LocalAddress $ServerAddress -Profile @('Domain','Private') -RemoteAddress LocalSubnet | Out-Null }
+    elseif ($AddFirewallRule) { New-NetFirewallRule -Name $Rule -DisplayName ('FAM HTTPS ('+$HostName+')') -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 -LocalAddress $ServerAddress -Profile @('Domain','Private') -RemoteAddress LocalSubnet | Out-Null }
     else { Write-Host 'Firewall/GPO access left unchanged as arranged by the network administrator.' }
     Start-WebAppPool -Name $Pool -ErrorAction SilentlyContinue
     Start-Website -Name $SiteName
 
     $ClientDir=Join-Path $DataDir 'client-setup'
     New-Item -ItemType Directory -Force -Path $ClientDir | Out-Null
-    $CerPath=Join-Path $ClientDir 'ertebatat-fam.cer'
+    $CerPath=Join-Path $ClientDir 'fam-server.cer'
     Export-Certificate -Cert $Certificate -FilePath $CerPath -Force | Out-Null
     Copy-Item (Join-Path $TargetServer 'windows\trust-client.ps1') (Join-Path $ClientDir 'trust-client.ps1') -Force
     @('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0trust-client.ps1"','pause') | Set-Content -Encoding ASCII (Join-Path $ClientDir 'TRUST-FAM.cmd')
