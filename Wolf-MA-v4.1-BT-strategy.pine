@@ -1,0 +1,2209 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=6
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Wolf M-A  v4.1  |  Crypto & Gold        (نسخهٔ اصلاح‌شده — بر پایهٔ v4)
+// ───────────────────────────────────────────────────────────────────────────────
+//  وضعیت نسخهٔ ۴.۱.۱ (نسبت به v4):
+//   • ماکرو ستون‌های TF: هر ستون پرچم‌های ماکرو خودِ تایم‌فریم را دارد
+//     (۲۸ درخواست مستقل + ۷ درخواست چارت + ۴ درخواست ساختار = ۳۹ ؛ زیر سقف ۴۰)
+//   • dynamic_requests = false: خروجی درخواست‌ها به‌صورت مقدار منتقل می‌شود
+//   • ری‌پینت: آفست [1] + lookahead_on در درخواست‌های TF؛ سیگنال فعلی با barstate.isconfirmed
+//   • Transition: سقف اعتماد ~56.6 و آستانهٔ ستاپ ۵۵ (قبلاً سقف ۵۳ و کد مرده بود)
+//   • Gold: DXY/US10Y/VIX در اسلات‌های slot1..3 ؛ قاعدهٔ ماکرو یک‌جا در f_macroAllowLong/Short
+//   • OB: حذف واقعی لیبل و آرایه‌های اضافی؛ پول‌های بی‌استفاده پنهان می‌شوند
+//   • سیگنال: آستانه‌ها ثابت‌های نام‌گذاری‌شده‌اند (NET_STRONG, NET_WEAK, SP_T1..4, CONF_*)
+//   • جدول: f_bullBear برای همهٔ ردیف‌های Bull/Bear؛ فرمت اعشار Bias
+//   • تشخیص BTC: فقط نمادهایی که با BTC/XBT شروع شوند (WBTC و BTC.D جدا)
+//   • برچسب تایم‌فریم: مقادیر رایج دقیقه (2, 4, 6, 7, 8, 9, 20, 25, 90) اضافه شد
+//  نسخهٔ ۴.۱.۲ (بهترین‌عمل‌ها): گیت Short طلا = دلار↑ + بازدهی↑ + بدون ترس؛ رژیم «TightUSD»
+//   • گیت Short آلت در BTC.D↑ و TOTAL2 ضعیف؛ امتیاز BTCSeason برای آلت منفی
+//   • شمارش هم‌راستایی بدون دوباره‌شماری ساختار
+//   • هشدار AI شامل SL / TP1 (1R) / TP2 (2R) بر پایه‌ی ساختار ± ۰.۵ ATR
+//  یادداشت: f_tfState و f_computeBias سری‌های OHLC کانتکست فعلی و ورودی‌های ثابت را می‌خوانند؛
+//  هیچ متغیر mutable گلوبالی را نمی‌خوانند (شرط Pine برای درخواست‌های TF).
+
+// ═══════════════════════════════════════════════════════════════════════════════
+strategy('Wolf M-A v4.1 BT | Crypto & Gold', overlay = true, max_bars_back = 700,
+     max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500,
+     dynamic_requests = false,
+     initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 1,
+     pyramiding = 0, process_orders_on_close = false, calc_on_every_tick = false,
+     margin_long = 100, margin_short = 100,
+     commission_type = strategy.commission.percent, commission_value = 0.05,
+     slippage = 2)
+
+// ═══════════════════════════════════════════════════════════════
+//                    MARKET MODE SELECTOR
+// ═══════════════════════════════════════════════════════════════
+marketMode  = input.string('Gold/Forex', 'Market Mode', options = ['Crypto', 'Gold/Forex'], group = 'Market Selection')
+isGoldMode  = marketMode == 'Gold/Forex'
+displayMode = input.string('Mobile', 'Display Mode', options = ['Desktop', 'Mobile'], group = 'Market Selection')
+isMobile    = displayMode == 'Mobile'
+
+// ═══════════════════════════════════════════════════════════════
+//                    INPUTS - TABLE
+// ═══════════════════════════════════════════════════════════════
+Stable1     = input.bool(true, 'Show Table Brief', group = 'Table Brief', inline = '0')
+posInput1   = input.string('Bottom Right', 'Position', options = ['Bottom Left','Bottom Right','Top Left','Top Right'], group = 'Table Brief', inline = '1')
+sizefont1   = input.string('size small',   'size text', options = ['size auto','size tiny','size small','size normal','size large','size huge'], group = 'Table Brief', inline = '1')
+
+tblBg       = input.color(color.rgb(12,12,22),   'Table Background',        group = 'Table')
+frameColor  = input.color(color.rgb(100,70,200), 'Table Frame',             group = 'Table')
+borderColor = input.color(color.rgb(45,40,75),   'Table Border',            group = 'Table')
+hdrBg       = input.color(color.rgb(30,20,60),   'Header Background',       group = 'Table')
+hdrTxt      = input.color(color.rgb(255,215,0),  'Header Text',             group = 'Table')
+nameBg      = input.color(color.rgb(25,15,50),   'Label Column Background', group = 'Table')
+nameTxt     = input.color(color.rgb(180,160,255),'Label Column Text',       group = 'Table')
+cellBg      = input.color(color.rgb(20,20,35),   'Cell Background',         group = 'Table')
+sepColor    = input.color(color.rgb(80,80,100),  'Separator Color',         group = 'Table')
+textColorl  = input.color(color.rgb(0,230,80),   'Long Color',              group = 'Table')
+textColors  = input.color(color.rgb(255,65,65),  'Short Color',             group = 'Table')
+
+// ═══════════════════════════════════════════════════════════════
+//                    ORDER BLOCK INPUTS
+// ═══════════════════════════════════════════════════════════════
+ob_length     = input.int(5,   'Volume Pivot Length', minval = 1,                             group = 'Order Block')
+bull_ext_last = input.int(3,   'Bullish OB',          minval = 1, inline = 'bull',            group = 'Order Block')
+bg_bull_css   = input.color(color.new(#169400, 80),   '',         inline = 'bull',            group = 'Order Block')
+bull_css      = input.color(#169400,                  '',         inline = 'bull',            group = 'Order Block')
+bull_avg_css  = input.color(color.new(#9598a1, 37),   '',         inline = 'bull',            group = 'Order Block')
+bear_ext_last = input.int(3,   'Bearish OB',          minval = 1, inline = 'bear',            group = 'Order Block')
+bg_bear_css   = input.color(color.new(#ff1100, 80),   '',         inline = 'bear',            group = 'Order Block')
+bear_css      = input.color(#ff1100,                  '',         inline = 'bear',            group = 'Order Block')
+bear_avg_css  = input.color(color.new(#9598a1, 37),   '',         inline = 'bear',            group = 'Order Block')
+ob_line_style = input.string('⎯⎯⎯', 'Average Line Style', options = ['⎯⎯⎯','----','····'], group = 'Order Block')
+ob_line_width = input.int(1,   'Average Line Width',  minval = 1,                             group = 'Order Block')
+ob_mitigation = input.string('Wick', 'Mitigation Method', options = ['Wick','Close'],         group = 'Order Block')
+
+// ═══════════════════════════════════════════════════════════════
+//                    PRICE INPUTS
+// ═══════════════════════════════════════════════════════════════
+price          = input(close,   'Price Source')
+price1         = input(hlcc4,   'price fibo')
+confirmOnClose = input.bool(true, '✅ تأیید روی بسته شدن کندل', group = 'Signal Settings', inline = 'confirm')
+
+// ═══════════════════════════════════════════════════════════════
+//                    CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+MAX_HIST    = 500          // بیشینهٔ عمق تاریخ برای سطوح ساختار (کاهش حافظه)
+MAX_FVG_CNT = 20
+
+// ═══════════════════════════════════════════════════════════════
+//   تابع کمکی سبک (باید قبل از ورودی‌های استایل تعریف شود)
+// ═══════════════════════════════════════════════════════════════
+getLineStyle(lineOption) =>
+    lineOption == '┈' ? line.style_dotted : lineOption == '╌' ? line.style_dashed : line.style_solid
+
+// ═══════════════════════════════════════════════════════════════
+//                    TREND ENGINE INPUTS
+// ═══════════════════════════════════════════════════════════════
+emaFastLen     = input.int(20, 'EMA Fast',           group = 'Trend Engine', minval = 1)
+emaSlowLen     = input.int(50, 'EMA Slow',           group = 'Trend Engine', minval = 1)
+structLookback = input.int(10, 'Structure Lookback', group = 'Trend Engine', minval = 3)
+
+// ═══════════════════════════════════════════════════════════════
+//                    FVG INPUTS
+// ═══════════════════════════════════════════════════════════════
+isFvgToShow            = input(true,                       'Display FVG',          group = 'Fear Value Gap')
+bullishFvgColor        = input(color.new(color.green, 50), 'Bullish FVG Color',    group = 'Fear Value Gap')
+bearishFvgColor        = input(color.new(color.red,   50), 'Bearish FVG Color',    group = 'Fear Value Gap')
+fvgHistoryNbr          = input.int(5,                      'Number of FVG',        minval = 1, maxval = 20, group = 'Fear Value Gap')
+Len                    = input.int(25,                     'len FVG',              group = 'Fear Value Gap')
+isMitigatedFvgToReduce = input(false,                      'Reduce mitigated FVG', group = 'Fear Value Gap')
+
+// ═══════════════════════════════════════════════════════════════
+//                    DISPLACEMENT / STRUCTURE INPUTS
+// ═══════════════════════════════════════════════════════════════
+useDisplacementFilter = input.bool(false, 'Use Displacement Filter', group = 'Structures', inline = 'disp')
+displacementMult      = input.float(1.5,  'ATR Multiplier',          group = 'Structures', inline = 'disp', minval = 0.1, step = 0.1)
+atrLen                = input.int(14,     'ATR Length',               group = 'Structures', inline = 'disp', minval = 1)
+useBreakQuality       = input.bool(false, 'استفاده از Break Quality', group = 'Structures', inline = 'bq')
+breakQualityThresh    = input.float(0.3,  'حداقل Break Strength',     group = 'Structures', inline = 'bq', minval = 0.0, step = 0.05)
+
+isStructBodyCandleBreak = input(true, 'Break with candle body', group = 'Structures')
+structChaseBars         = input.int(3, 'Structure Chase Bars',  group = 'Structures', minval = 1, maxval = 20,
+     tooltip = 'سطح ساختار حداکثر تا این تعداد کندل پس از شروع ساق، «تعقیب» می‌شود (قبلاً هاردکد ۳ بود)')
+isCurrentStructToShow   = input(true, 'Display current structure', group = 'Structures')
+bullishBosColor         = input(color.silver, 'Bullish BOS Color',   group = 'Structures')
+bearishBosColor         = input(color.silver, 'Bearish BOS Color',   group = 'Structures')
+bosLineStyleOption      = input.string('─',   'BOS Style',           group = 'Structures', options = ['─','┈','╌'])
+bosLineWidth            = input.int(1,        'BOS Width',           group = 'Structures', minval = 1, maxval = 5)
+bullishChochColor       = input(color.yellow, 'Bullish CHoCH Color', group = 'Structures')
+bearishChochColor       = input(color.yellow, 'Bearish CHoCH Color', group = 'Structures')
+chochLineStyleOption    = input.string('─',   'CHoCH Style',         group = 'Structures', options = ['─','┈','╌'])
+chochLineWidth          = input.int(1,        'CHoCH Width',         group = 'Structures', minval = 1, maxval = 5)
+currentStructColor      = input(color.blue,   'Current Structure Color', group = 'Structures')
+currentStructLineStyleOption = input.string('─', 'Current Structure Style', group = 'Structures', options = ['─','┈','╌'])
+currentStructLineWidth  = input.int(1,        'Current Structure Width', group = 'Structures', minval = 1, maxval = 5)
+structHistoryNbr        = input.int(5,        'Number of breaks to show', minval = 1, maxval = 20)
+
+// تبدیل رشتهٔ استایل به مقدار line.style_* (پس از تعریف getLineStyle)
+bosLineStyle           = getLineStyle(bosLineStyleOption)
+chochLineStyle         = getLineStyle(chochLineStyleOption)
+currentStructLineStyle = getLineStyle(currentStructLineStyleOption)
+
+// ═══════════════════════════════════════════════════════════════
+//                    LIQUIDITY INPUTS
+// ═══════════════════════════════════════════════════════════════
+showLiquidity   = input.bool(true,   'Show Liquidity Levels',      group = 'Liquidity')
+eqHighTolerance = input.float(0.001, 'Equal High/Low Tolerance %', group = 'Liquidity', minval = 0.0, step = 0.001) / 100
+eqLen           = input.int(10,      'Equal H/L Lookback',         group = 'Liquidity', minval = 2)
+liqColor        = input.color(color.new(color.orange, 30), 'Liquidity Color', group = 'Liquidity')
+liqMaxCount     = input.int(5,       'Max Liquidity Levels',       group = 'Liquidity', minval = 1, maxval = 15)
+
+// ═══════════════════════════════════════════════════════════════
+//                    FIBONACCI INPUTS
+// ═══════════════════════════════════════════════════════════════
+nn = input(3, 'fasele', group = 'Structure Fibonacci', inline = 'Fasele')
+
+fibo1Value  = input.float(1.618, '', group = 'Structure Fibonacci', inline = 'Fibo1')
+fibo1Color  = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo1')
+fibo1Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo1')
+fibo1Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo1'))
+fibo1Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo1')
+fibo2Value  = input.float(1.5,   '', group = 'Structure Fibonacci', inline = 'Fibo2')
+fibo2Color  = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo2')
+fibo2Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo2')
+fibo2Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo2'))
+fibo2Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo2')
+fibo3Value  = input.float(1.414, '', group = 'Structure Fibonacci', inline = 'Fibo3')
+fibo3Color  = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo3')
+fibo3Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo3')
+fibo3Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo3'))
+fibo3Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo3')
+fibo4Value  = input.float(1.27,  '', group = 'Structure Fibonacci', inline = 'Fibo4')
+fibo4Color  = input(#ea0909,     '', group = 'Structure Fibonacci', inline = 'Fibo4')
+fibo4Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo4')
+fibo4Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo4'))
+fibo4Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo4')
+fibo5Value  = input.float(1.14,  '', group = 'Structure Fibonacci', inline = 'Fibo5')
+fibo5Color  = input(#0dc52f,     '', group = 'Structure Fibonacci', inline = 'Fibo5')
+fibo5Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo5')
+fibo5Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo5'))
+fibo5Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo5')
+fibo6Value  = input.float(0.96,  '', group = 'Structure Fibonacci', inline = 'Fibo6')
+fibo6Color  = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo6')
+fibo6Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo6')
+fibo6Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo6'))
+fibo6Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo6')
+fibo7Value  = input.float(0.9,   '', group = 'Structure Fibonacci', inline = 'Fibo7')
+fibo7Color  = input(#109f00,     '', group = 'Structure Fibonacci', inline = 'Fibo7')
+fibo7Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo7')
+fibo7Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo7'))
+fibo7Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo7')
+fibo8Value  = input.float(0.786, '', group = 'Structure Fibonacci', inline = 'Fibo8')
+fibo8Color  = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo8')
+fibo8Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo8')
+fibo8Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo8'))
+fibo8Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo8')
+fibo9Value  = input.float(0.707, '', group = 'Structure Fibonacci', inline = 'Fibo9')
+fibo9Color  = input(#00cc29,     '', group = 'Structure Fibonacci', inline = 'Fibo9')
+fibo9Show   = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo9')
+fibo9Style  = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo9'))
+fibo9Width  = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo9')
+fibo10Value = input.float(0.614, '', group = 'Structure Fibonacci', inline = 'Fibo10')
+fibo10Color = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo10')
+fibo10Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo10')
+fibo10Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo10'))
+fibo10Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo10')
+fibo11Value = input.float(0.52,  '', group = 'Structure Fibonacci', inline = 'Fibo11')
+fibo11Color = input(#00e5ff,     '', group = 'Structure Fibonacci', inline = 'Fibo11')
+fibo11Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo11')
+fibo11Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo11'))
+fibo11Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo11')
+fibo12Value = input.float(0.44,  '', group = 'Structure Fibonacci', inline = 'Fibo12')
+fibo12Color = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo12')
+fibo12Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo12')
+fibo12Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo12'))
+fibo12Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo12')
+fibo13Value = input.float(0.47,  '', group = 'Structure Fibonacci', inline = 'Fibo13')
+fibo13Color = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo13')
+fibo13Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo13')
+fibo13Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo13'))
+fibo13Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo13')
+fibo14Value = input.float(0.382, '', group = 'Structure Fibonacci', inline = 'Fibo14')
+fibo14Color = input(#ff8400,     '', group = 'Structure Fibonacci', inline = 'Fibo14')
+fibo14Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo14')
+fibo14Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo14'))
+fibo14Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo14')
+fibo15Value = input.float(0.34,  '', group = 'Structure Fibonacci', inline = 'Fibo15')
+fibo15Color = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo15')
+fibo15Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo15')
+fibo15Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo15'))
+fibo15Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo15')
+fibo16Value = input.float(0.285, '', group = 'Structure Fibonacci', inline = 'Fibo16')
+fibo16Color = input(#ff0303,     '', group = 'Structure Fibonacci', inline = 'Fibo16')
+fibo16Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo16')
+fibo16Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo16'))
+fibo16Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo16')
+fibo17Value = input.float(0.27,  '', group = 'Structure Fibonacci', inline = 'Fibo17')
+fibo17Color = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo17')
+fibo17Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo17')
+fibo17Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo17'))
+fibo17Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo17')
+fibo18Value = input.float(0.236, '', group = 'Structure Fibonacci', inline = 'Fibo18')
+fibo18Color = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo18')
+fibo18Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo18')
+fibo18Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo18'))
+fibo18Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo18')
+fibo19Value = input.float(0.162, '', group = 'Structure Fibonacci', inline = 'Fibo19')
+fibo19Color = input(#f6ff00,     '', group = 'Structure Fibonacci', inline = 'Fibo19')
+fibo19Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo19')
+fibo19Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo19'))
+fibo19Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo19')
+fibo20Value = input.float(0.08,  '', group = 'Structure Fibonacci', inline = 'Fibo20')
+fibo20Color = input(#ffffff,     '', group = 'Structure Fibonacci', inline = 'Fibo20')
+fibo20Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo20')
+fibo20Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo20'))
+fibo20Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo20')
+fibo21Value = input.float(0.036, '', group = 'Structure Fibonacci', inline = 'Fibo21')
+fibo21Color = input(#81c784,     '', group = 'Structure Fibonacci', inline = 'Fibo21')
+fibo21Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo21')
+fibo21Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo21'))
+fibo21Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo21')
+fibo22Value = input.float(-0.27, '', group = 'Structure Fibonacci', inline = 'Fibo22')
+fibo22Color = input(#64b5f6,     '', group = 'Structure Fibonacci', inline = 'Fibo22')
+fibo22Show  = input(true,        '', group = 'Structure Fibonacci', inline = 'Fibo22')
+fibo22Style = getLineStyle(input.string('─', '', group = 'Structure Fibonacci', options = ['─','┈','╌'], inline = 'Fibo22'))
+fibo22Width = input.int(1, '', group = 'Structure Fibonacci', minval = 1, maxval = 5, inline = 'Fibo22')
+
+_fvArr  = array.from(fibo1Value,fibo2Value,fibo3Value,fibo4Value,fibo5Value,fibo6Value,fibo7Value,fibo8Value,fibo9Value,fibo10Value,fibo11Value,fibo12Value,fibo13Value,fibo14Value,fibo15Value,fibo16Value,fibo17Value,fibo18Value,fibo19Value,fibo20Value,fibo21Value,fibo22Value)
+_fcArr  = array.from(fibo1Color,fibo2Color,fibo3Color,fibo4Color,fibo5Color,fibo6Color,fibo7Color,fibo8Color,fibo9Color,fibo10Color,fibo11Color,fibo12Color,fibo13Color,fibo14Color,fibo15Color,fibo16Color,fibo17Color,fibo18Color,fibo19Color,fibo20Color,fibo21Color,fibo22Color)
+_fsArr  = array.from(fibo1Show,fibo2Show,fibo3Show,fibo4Show,fibo5Show,fibo6Show,fibo7Show,fibo8Show,fibo9Show,fibo10Show,fibo11Show,fibo12Show,fibo13Show,fibo14Show,fibo15Show,fibo16Show,fibo17Show,fibo18Show,fibo19Show,fibo20Show,fibo21Show,fibo22Show)
+_fstArr = array.from(fibo1Style,fibo2Style,fibo3Style,fibo4Style,fibo5Style,fibo6Style,fibo7Style,fibo8Style,fibo9Style,fibo10Style,fibo11Style,fibo12Style,fibo13Style,fibo14Style,fibo15Style,fibo16Style,fibo17Style,fibo18Style,fibo19Style,fibo20Style,fibo21Style,fibo22Style)
+_fwArr  = array.from(fibo1Width,fibo2Width,fibo3Width,fibo4Width,fibo5Width,fibo6Width,fibo7Width,fibo8Width,fibo9Width,fibo10Width,fibo11Width,fibo12Width,fibo13Width,fibo14Width,fibo15Width,fibo16Width,fibo17Width,fibo18Width,fibo19Width,fibo20Width,fibo21Width,fibo22Width)
+
+// ═══════════════════════════════════════════════════════════════
+//                    DOMINANCE / SYMBOL INPUTS
+// ═══════════════════════════════════════════════════════════════
+domLookback = input.int(20, 'Dominance Lookback', group = 'Dominance Engine', minval = 5)
+liqDecay    = input.float(0.5, 'Liq Memory Decay', group = 'Dominance Engine', minval = 0.0, maxval = 1.0, step = 0.05,
+     tooltip = 'اثر سوییپ لیکوییدیتی روی Bias تا چند کندل می‌ماند. ۱ = رفتار قبلی (محو فوری)')
+
+symTotal   = input.symbol('CRYPTOCAP:TOTAL',   'TOTAL',   group = 'Crypto Symbols')
+symTotal2  = input.symbol('CRYPTOCAP:TOTAL2',  'TOTAL2',  group = 'Crypto Symbols')
+symBtcDom  = input.symbol('CRYPTOCAP:BTC.D',   'BTC.D',   group = 'Crypto Symbols')
+symUsdtDom = input.symbol('CRYPTOCAP:USDT.D',  'USDT.D',  group = 'Crypto Symbols')
+
+symDxy     = input.symbol('TVC:DXY',   'DXY',   group = 'Gold/Forex Symbols')
+symUs10y   = input.symbol('TVC:US10Y', 'US10Y', group = 'Gold/Forex Symbols')
+symVix     = input.symbol('CBOE:VIX',  'VIX',   group = 'Gold/Forex Symbols')
+
+ticker1TFCustom = input.timeframe('3',  'Time 1', display = display.none)
+ticker2TFCustom = input.timeframe('5',  'Time 2', display = display.none)
+ticker3TFCustom = input.timeframe('15', 'Time 3', display = display.none)
+ticker4TFCustom = input.timeframe('1D', 'Time 4', display = display.none)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                       کتابخانهٔ توابع کمکی
+//   نکته: این توابع هیچ متغیر mutable گلوبالی را نمی‌خوانند (فقط ورودی، سری OHLC کانتکست و ورودی‌های ثابت)
+//   و بتوانند داخل کانتکست request.security اجرا شوند.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+get_structure_highest_bar(lookback) =>
+    int idx = 0
+    _lb = math.min(lookback, math.min(bar_index, MAX_HIST))
+    _lb := math.max(_lb, 1)
+    maxBar = ta.highestbars(high, _lb)
+    float bestHigh = na
+    for i = 0 to _lb - 1
+        if i + 2 <= _lb
+            if high[i+1] > high[i+2] and high[i] <= high[i+1] and (i+1)*-1 >= maxBar
+                if na(bestHigh) or high[i+1] >= bestHigh
+                    bestHigh := high[i+1]
+                    idx := (i+1)*-1
+    idx == 0 ? maxBar : idx
+
+get_structure_lowest_bar(lookback) =>
+    int idx = 0
+    _lb = math.min(lookback, math.min(bar_index, MAX_HIST))
+    _lb := math.max(_lb, 1)
+    minBar = ta.lowestbars(low, _lb)
+    float bestLow = na
+    for i = 0 to _lb - 1
+        if i + 2 <= _lb
+            if low[i+1] < low[i+2] and low[i] >= low[i+1] and (i+1)*-1 >= minBar
+                if na(bestLow) or low[i+1] <= bestLow
+                    bestLow := low[i+1]
+                    idx := (i+1)*-1
+    idx == 0 ? minBar : idx
+
+getTFLabel(tf) =>
+    tf == '1' ? '1m' : tf == '3' ? '3m' : tf == '5' ? '5m' : tf == '10' ? '10m' :
+     tf == '2' ? '2m' : tf == '4' ? '4m' : tf == '6' ? '6m' : tf == '7' ? '7m' : tf == '8' ? '8m' : tf == '9' ? '9m' : tf == '20' ? '20m' : tf == '25' ? '25m' : tf == '90' ? '90m' :
+     tf == '15' ? '15m' : tf == '30' ? '30m' : tf == '45' ? '45m' : tf == '60' ? '1H' :
+     tf == '120' ? '2H' : tf == '180' ? '3H' : tf == '240' ? '4H' : tf == '360' ? '6H' :
+     tf == '480' ? '8H' : tf == '720' ? '12H' : tf == '1D' ? '1D' : tf == 'D' ? '1D' :
+     tf == '1W' ? '1W' : tf == 'W' ? '1W' : tf == '1M' ? '1M' : tf == 'M' ? '1M' : tf
+
+currentTF      = timeframe.period
+currentTFLabel = getTFLabel(currentTF)
+
+f_safeHigh(_offset) =>
+    _o = math.min(math.max(_offset, 0), MAX_HIST)
+    _o < bar_index ? high[_o] : high
+
+f_safeLow(_offset) =>
+    _o = math.min(math.max(_offset, 0), MAX_HIST)
+    _o < bar_index ? low[_o] : low
+
+f_clampStartIdx(_idx) =>
+    math.max(_idx, bar_index - MAX_HIST)
+
+_norm(v) => (v - 0.5) * 2.0
+
+// ── قاعدهٔ تعقیب سطح ساختار (قبلاً هاردکد «۳ کندل» بود)
+f_canChaseStructure(int _startIdx) =>
+    _startIdx <= 0 or not isStructBodyCandleBreak or (bar_index - _startIdx) <= structChaseBars
+
+// ═══════════════════════════════════════════════════════════════
+//   قواعد ماکرو — تنها یک‌بار تعریف می‌شوند (ضدّ ناهماهنگی)
+// ═══════════════════════════════════════════════════════════════
+f_goldRiskOff(_dxyUp, _vixUp) => _vixUp and _dxyUp
+f_goldInflation(_dxyUp, _y10Up, _vixUp) => _vixUp and not _dxyUp and _y10Up
+f_goldDollarWeak(_dxyUp, _y10Up) => not _dxyUp and not _y10Up     // ← سخت‌گیرانه (قبلاً فقط not _dxyUp بود)
+f_goldTightUsd(_dxyUp, _y10Up, _vixUp) => _dxyUp and _y10Up and not _vixUp
+
+f_getMacroRegime(_isGold, _ga1, _ga2, _ga3, _ca1, _ca2, _ca3, _ca4) =>
+    string _reg = "Neutral"
+    if _isGold
+        if f_goldRiskOff(_ga1, _ga3)
+            _reg := "RiskOff"
+        else if f_goldInflation(_ga1, _ga2, _ga3)
+            _reg := "Inflation"
+        else if f_goldDollarWeak(_ga1, _ga2)
+            _reg := "Dollar↓"
+        else if f_goldTightUsd(_ga1, _ga2, _ga3)
+            _reg := "TightUSD"
+    else
+        bool _isAlt = _ca1 and _ca4 and not _ca2 and not _ca3
+        bool _isBtc = _ca1 and _ca2 and not _ca3 and not _isAlt
+        bool _isRof = not _ca1 and _ca3
+        bool _isDef = _ca1 and _ca2 and _ca3
+        if _isAlt
+            _reg := "AltSeason"
+        else if _isBtc
+            _reg := "BTCSeason"
+        else if _isRof
+            _reg := "RiskOff"
+        else if _isDef
+            _reg := "DefensiveBTC"
+    _reg
+
+f_macroAllowLong(_isGold, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up, _isBtcSym) =>
+    bool _res = false
+    if _isGold
+        _res := f_goldRiskOff(_dxyUp, _vixUp) or f_goldInflation(_dxyUp, _y10Up, _vixUp) or f_goldDollarWeak(_dxyUp, _y10Up)
+    else
+        bool _alt = _totUp and _tot2Up and not _btcUp and not _usdtUp
+        bool _btc = _totUp and _btcUp and not _usdtUp and not _alt
+        bool _def = _totUp and _btcUp and _usdtUp
+        _res := _alt or (_btc and _isBtcSym) or (_def and _isBtcSym)
+    _res
+
+f_macroAllowShort(_isGold, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up, _isBtcSym) =>
+    bool _res = false
+    if _isGold
+        _res := f_goldTightUsd(_dxyUp, _y10Up, _vixUp)
+    else
+        // (الف) بازار ریزشی و سرمایه به استیبل ⇒ Short
+        // (ب) آلت‌کوین: BTC.D بالا و TOTAL2 (آلت‌ها) ضعیف ⇒ آلت‌ها عقب‌اند ⇒ Short آلت
+        _res := (not _totUp and _usdtUp) or (not _isBtcSym and _btcUp and not _tot2Up)
+    _res
+
+// ═══════════════════════════════════════════════════════════════
+//   محاسبهٔ Bias (ورودی‌ها + سری‌های کانتکست + ورودی‌های ثابت)
+// ═══════════════════════════════════════════════════════════════
+f_computeBias(_sd, _rHH, _rHL, _rLL, _rLH,
+              _isGold, _ga1, _ga2, _ga3,
+              _ca1, _ca2, _ca3, _ca4,
+              _dispBull, _dispBear, _dratio,
+              _lsh, _lsl, _fvgf, _bupsf, _bdnsf) =>
+
+    _sb_b   = _sd == 2
+    _sbr_b  = _sd == 1
+    _sbs_b  = _sb_b  and _rHH and _rHL
+    _sbrs_b = _sbr_b and _rLL and _rLH
+    _ef     = ta.ema(close, emaFastLen)
+    _es     = ta.ema(close, emaSlowLen)
+    _eb     = _ef > _es
+    _eber   = _ef < _es
+    _ecb    = _eb  and _sb_b
+    _ecbr   = _eber and _sbr_b
+    float _lb = 50.0
+
+    // ── حافظهٔ لیکوییدیتی: اثر سوییپ با نرخ liqDecay محو می‌شود (liqDecay=1 → رفتار قبلی)
+    var float _liqMem = 0.5
+    _liqInst = _lsl ? 0.85 : _lsh ? 0.15 : 0.5
+    _liqMem := _liqInst != 0.5 ? _liqInst : _liqMem + (0.5 - _liqMem) * liqDecay
+
+    if _isGold
+        _isRiskG = _ga3 and not _ga1
+        _isDefG  = _ga1 and _ga3
+        _isDollG = _ga1 and not _ga3
+        _sf  = _sbs_b ? 1.0 : _sb_b ? 0.65 : _sbrs_b ? 0.0 : _sbr_b ? 0.35 : 0.5
+        _emf = _eb ? 0.75 : _eber ? 0.25 : 0.5
+        _lf  = _liqMem
+        _mf  = _isRiskG ? 0.85 : _isDefG ? 0.70 : _isDollG ? 0.40 : 0.5
+        _df  = _dispBull ? math.min(0.5 + _dratio * 0.12, 1.0) : _dispBear ? math.max(0.5 - _dratio * 0.12, 0.0) : 0.5
+        _raw = _norm(_sf)*0.25 + _norm(_emf)*0.20 + _norm(_lf)*0.15 + _norm(_mf)*0.25 + _norm(_df)*0.15
+        _lb  := math.max(0.0, math.min(100.0, math.round((_raw + 1.0) / 2.0 * 100.0)))
+    else
+        _isAlt_b = _ca1 and _ca4 and not _ca2 and not _ca3
+        _isBtc_b = _ca1 and _ca2 and not _ca3 and not _isAlt_b
+        _isRof_b = not _ca1 and _ca3
+        _isDef_b = _ca1 and _ca2 and _ca3
+        _sf    = _sbs_b ? 1.0 : _sb_b ? 0.65 : _sbrs_b ? 0.0 : _sbr_b ? 0.35 : 0.5
+        _emf   = _eb ? 0.75 : _eber ? 0.25 : 0.5
+        _emf  := _ecb ? math.min(_emf + 0.1, 1.0) : _ecbr ? math.max(_emf - 0.1, 0.0) : _emf
+        _lf    = _liqMem
+        _mf    = _isAlt_b ? 0.92 : _isBtc_b ? 0.75 : _isDef_b ? 0.60 : _isRof_b ? 0.10 : 0.50
+        _df    = _dispBull ? math.min(0.5 + _dratio * 0.12, 1.0) : _dispBear ? math.max(0.5 - _dratio * 0.12, 0.0) : 0.5
+        _bqf   = _bupsf > _bdnsf ? math.min(0.5 + _bupsf * 0.1, 1.0) : _bdnsf > _bupsf ? math.max(0.5 - _bdnsf * 0.1, 0.0) : 0.5
+        _raw   = _norm(_sf)*0.22 + _norm(_emf)*0.18 + _norm(_lf)*0.16 + _norm(_fvgf)*0.12 + _norm(_mf)*0.15 + _norm(_df)*0.10 + _norm(_bqf)*0.07
+        _lb    := math.max(0.0, math.min(100.0, math.round((_raw + 1.0) / 2.0 * 100.0)))
+
+    [math.round(_lb), 100 - math.round(_lb)]
+
+// ═══════════════════════════════════════════════════════════════
+//   موتور خودکفای تایم‌فریم  (f_tfState)
+//   • هیچ متغیر گلوبالِ mutable چارت را نمی‌خواند
+//   • کل محاسبات روی داده‌های همان کانتکست انجام می‌شود
+//   • خروجی با [1] آفست شده تا همراه lookahead_on ری‌پینت نکند
+// ═══════════════════════════════════════════════════════════════
+f_tfState(bool _isBtc, bool _totUp, bool _btcUp, bool _usdtUp, bool _tot2Up,
+          bool _dxyUp, bool _y10Up, bool _vixUp) =>
+    // ── پیوت‌ها و فلگ‌های چرخشی این کانتکست
+    _swH = ta.pivothigh(high, structLookback, structLookback)
+    _swL = ta.pivotlow(low,   structLookback, structLookback)
+    var float _gH = na
+    var float _gL = na
+    var bool _rHH = false
+    var bool _rHL = false
+    var bool _rLL = false
+    var bool _rLH = false
+    if not na(_swH)
+        _rHH := not na(_gH) and _swH > _gH
+        _rLH := not na(_gH) and _swH < _gH
+        _gH  := _swH
+    if not na(_swL)
+        _rHL := not na(_gL) and _swL > _gL
+        _rLL := not na(_gL) and _swL < _gL
+        _gL  := _swL
+
+    // ── ساختار
+    var float _sHigh = na
+    var float _sLow  = na
+    var int   _sHighIdx = 0
+    var int   _sLowIdx  = 0
+    var int   _sDir = 0
+    if bar_index == 0
+        _sHigh := high
+        _sLow  := low
+
+    _sMaxBar = math.max(bar_index + get_structure_highest_bar(Len), bar_index - MAX_HIST)
+    _sMinBar = math.max(bar_index + get_structure_lowest_bar(Len),  bar_index - MAX_HIST)
+
+    _atr    = ta.atr(atrLen)
+    _bodyHi = math.max(open, close)
+    _bodyLo = math.min(open, close)
+    _hiBrk  = isStructBodyCandleBreak ? _bodyHi : high
+    _loBrk  = isStructBodyCandleBreak ? _bodyLo : low
+
+    _disp   = math.abs(close - open) > _atr * displacementMult
+    _dispB  = _disp and close > open
+    _dispS  = _disp and close < open
+    _dRatio = math.round(math.abs(close - open) / (_atr + 0.0001), 2)
+
+    _vol20 = ta.sma(volume, 20)
+    _rv    = na(volume) or na(_vol20) or _vol20 == 0 ? 1.0 : volume / _vol20
+    _imp   = math.abs(close - open) / (_atr + 1e-6)
+    _upStr = not na(_sHigh) ? math.max(0.0, _hiBrk - _sHigh) / (_atr + 1e-6) * math.min(_rv, 2.0) * math.min(_imp, 2.0) : 0.0
+    _dnStr = not na(_sLow)  ? math.max(0.0, _sLow - _loBrk)  / (_atr + 1e-6) * math.min(_rv, 2.0) * math.min(_imp, 2.0) : 0.0
+
+    _bosOk   = not useDisplacementFilter or _disp
+    _upOk    = not useBreakQuality or _upStr >= breakQualityThresh
+    _dnOk    = not useBreakQuality or _dnStr >= breakQualityThresh
+    _loClean = _loBrk[1] >= _sLow  and _loBrk[2] >= _sLow  and _loBrk[3] >= _sLow
+    _hiClean = _hiBrk[1] <= _sHigh and _hiBrk[2] <= _sHigh and _hiBrk[3] <= _sHigh
+    _brokeDn = not na(_sLow)  and _bosOk and _dnOk and _loBrk < _sLow  and bar_index > _sLowIdx  and _loClean
+    _brokeUp = not na(_sHigh) and _bosOk and _upOk and _hiBrk > _sHigh and bar_index > _sHighIdx and _hiClean
+
+    if _brokeDn
+        _sDir     := 1
+        _sLow     := low
+        _sLowIdx  := bar_index
+        _sHighIdx := _sMaxBar
+        _sHigh    := f_safeHigh(bar_index - _sMaxBar)
+    else if _brokeUp
+        _sDir     := 2
+        _sHigh    := high
+        _sHighIdx := bar_index
+        _sLowIdx  := _sMinBar
+        _sLow     := f_safeLow(bar_index - _sMinBar)
+    else
+        if not na(_sHigh) and high > _sHigh and (_sDir == 0 or _sDir == 2) and f_canChaseStructure(_sHighIdx)
+            _sHigh    := high
+            _sHighIdx := bar_index
+        if not na(_sLow) and low < _sLow and (_sDir == 0 or _sDir == 1) and f_canChaseStructure(_sLowIdx)
+            _sLow    := low
+            _sLowIdx := bar_index
+
+    // ── FVG
+    _fvgEma  = ta.ema(close, 50)
+    _fvgBody = math.abs(close[1] - open[1])
+    _fvgOk   = _fvgBody > _atr * 1.2
+    _bFvg    = high[2] < low[0] and _fvgOk and close[1] > _fvgEma[1]
+    _sFvg    = low[2]  > high[0] and _fvgOk and close[1] < _fvgEma[1]
+    _fvgBc   = math.sum(_bFvg ? 1 : 0, MAX_FVG_CNT)
+    _fvgSc   = math.sum(_sFvg ? 1 : 0, MAX_FVG_CNT)
+    _fvgTt   = _fvgBc + _fvgSc
+    _fvgF    = _fvgTt > 0 ? _fvgBc / (_fvgTt * 1.0) : 0.5
+
+    // ── لیکوییدیتی
+    _h10 = ta.highest(high, eqLen)
+    _l10 = ta.lowest(low,   eqLen)
+    _lsh = high > _h10[1] and close < _h10[1]
+    _lsl = low  < _l10[1] and close > _l10[1]
+
+    // ── روند / اعتماد
+    _sbT   = _sDir == 2
+    _sbrT  = _sDir == 1
+    _sbsT  = _sbT  and _rHH and _rHL
+    _sbrsT = _sbrT and _rLL and _rLH
+    _eF    = ta.ema(close, emaFastLen)
+    _eS    = ta.ema(close, emaSlowLen)
+    _eb    = _eF > _eS
+    _eSr   = _eF < _eS
+    _eCo   = math.abs(_eF - _eS) < _atr * 0.15
+    _eCB   = _eb  and _sbT
+    _eCSr  = _eSr and _sbrT
+    _eCnf  = (_sbsT and _eSr) or (_sbrsT and _eb)
+    _aS    = ta.sma(_atr, 50)
+    _aStd  = ta.stdev(_atr, 50)
+    _aZ    = (_atr - _aS) / (_aStd + 0.0001)
+    _lV    = _aZ < -0.5
+    _nC    = not _sbsT and not _sbrsT
+    _rSc   = (_eCo ? 1 : 0) + (_lV ? 1 : 0) + (_nC ? 1 : 0)
+    _iR    = _rSc >= 2
+    _sDS   = _sDir == _sDir[1] and _sDir == _sDir[2]
+    _sFl   = not _sDS and ((_sDir == 2 and _sDir[3] == 1) or (_sDir == 1 and _sDir[3] == 2))
+    _tCnf  = _dispB or _dispS or not _eCo
+    _iT    = (_sFl or _eCnf) and _tCnf
+
+    string _trend = "Range"
+    if _sbsT and _eCB and not _iT
+        _trend := "Bull"
+    else if _sbrsT and _eCSr and not _iT
+        _trend := "Bear"
+    else if _iT
+        _trend := "Transition"
+    else if _sbT and not _eSr and not _iR
+        _trend := "Bull"
+    else if _sbrT and not _eb and not _iR
+        _trend := "Bear"
+
+    float _conf = 50.0
+    if _trend == "Bull"
+        _rawC = (_sbsT ? 25.0 : _sbT ? 10.0 : 0.0) + (_eCB ? 15.0 : _eCnf ? -8.0 : _eCo ? 3.0 : 0.0) + (_dispB ? 10.0 : _dispS ? -5.0 : 0.0)
+        _conf := math.max(0.0, math.min(100.0, math.round(50.0 + _rawC * 0.6)))
+    else if _trend == "Bear"
+        _rawC = (_sbrsT ? 25.0 : _sbrT ? 10.0 : 0.0) + (_eCSr ? 15.0 : _eCnf ? -8.0 : _eCo ? 3.0 : 0.0) + (_dispS ? 10.0 : _dispB ? -5.0 : 0.0)
+        _conf := math.max(0.0, math.min(100.0, math.round(50.0 + _rawC * 0.6)))
+    else if _trend == "Range"
+        _rcC = (_eCo ? 15.0 : 0.0) + (_lV ? 12.0 : 0.0) + (_nC ? 12.0 : 0.0)
+        _conf := math.max(0.0, math.min(100.0, math.round(50.0 + _rcC * 0.4)))
+    else
+        // ✅ اصلاح: قبلاً این شاخه وجود نداشت و اعتماد Transition همیشه ۵۰ می‌ماند
+        _tcC = ((_lsl or _lsh) ? 15.0 : 0.0) + ((_dispB or _dispS) ? 12.0 : 0.0)
+        _conf := math.max(0.0, math.min(100.0, math.round(35.0 + _tcC * 0.8)))
+
+    // ── رژیم ماکرو، Bias و شمارش هم‌راستایی
+    _macroReg = f_getMacroRegime(isGoldMode, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up)
+    [_biasL, _biasS] = f_computeBias(_sDir, _rHH, _rHL, _rLL, _rLH, isGoldMode,
+         _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up,
+         _dispB, _dispS, _dRatio, _lsh, _lsl, _fvgF, _upStr, _dnStr)
+
+    _macroL = f_macroAllowLong(isGoldMode, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up, _isBtc)
+    _macroS = f_macroAllowShort(isGoldMode, _dxyUp, _y10Up, _vixUp, _totUp, _btcUp, _usdtUp, _tot2Up, _isBtc)
+
+    int _alL = ((_trend == "Bull" or _sbsT) ? 1 : 0) + (_lsl ? 1 : 0) + (_macroL ? 1 : 0) + (_dispB ? 1 : 0)
+    int _alS = ((_trend == "Bear" or _sbrsT) ? 1 : 0) + (_lsh ? 1 : 0) + (_macroS ? 1 : 0) + (_dispS ? 1 : 0)
+
+    float _ra1 = _totUp  ? 1.0 : 0.0
+    float _ra2 = _btcUp  ? 1.0 : 0.0
+    float _ra3 = _usdtUp ? 1.0 : 0.0
+    float _ra4 = _tot2Up ? 1.0 : 0.0
+    if isGoldMode
+        _ra1 := _dxyUp ? 1.0 : 0.0
+        _ra2 := _y10Up ? 1.0 : 0.0
+        _ra3 := _vixUp ? 1.0 : 0.0
+        _ra4 := 0.0
+
+    // خروجی با آفست یک کندل → همراه با lookahead_on ری‌پینت نمی‌کند
+    [_trend[1], math.round(_conf[1]), _biasL[1], _biasS[1], _ra1[1], _ra2[1], _ra3[1], _ra4[1], _macroReg[1], _alL[1], _alS[1]]
+
+// ═══════════════════════════════════════════════════════════════
+//                    PRE-CALCULATIONS (CHART)
+// ═══════════════════════════════════════════════════════════════
+atrValue      = ta.atr(atrLen)
+highest10     = ta.highest(high, eqLen)
+lowest10      = ta.lowest(low,   eqLen)
+_barConfirmed = not confirmOnClose or barstate.isconfirmed
+
+// ═══════════════════════════════════════════════════════════════
+//                    DISPLACEMENT
+// ═══════════════════════════════════════════════════════════════
+isDisplacement = math.abs(close - open) > atrValue * displacementMult
+dispIsBullish  = isDisplacement and close > open
+dispIsBearish  = isDisplacement and close < open
+dispRatio      = math.round(math.abs(close - open) / (atrValue + 0.0001), 2)
+
+// ═══════════════════════════════════════════════════════════════
+//                    LIQUIDITY
+// ═══════════════════════════════════════════════════════════════
+isEqualHigh  = math.abs(high - high[1]) / high[1] <= eqHighTolerance and high >= highest10[1]
+isEqualLow   = math.abs(low  - low[1])  / low[1]  <= eqHighTolerance and low  <= lowest10[1]
+liqSweepHigh = high > highest10[1] and close < highest10[1]
+liqSweepLow  = low  < lowest10[1]  and close > lowest10[1]
+
+var array<box>   liqBoxes   = array.new_box(0)
+var array<float> liqBoxTops = array.new_float(0)
+var array<float> liqBoxBots = array.new_float(0)
+var array<bool>  liqIsHigh  = array.new_bool(0)
+
+if showLiquidity
+    if isEqualHigh
+        b = box.new(bar_index-1, math.max(high,high[1]), bar_index, math.min(high,high[1]), bgcolor = liqColor, border_color = color.orange, border_width = 1)
+        array.push(liqBoxes, b)
+        array.push(liqBoxTops, math.max(high,high[1]))
+        array.push(liqBoxBots, math.min(high,high[1]))
+        array.push(liqIsHigh, true)
+    if isEqualLow
+        b = box.new(bar_index-1, math.max(low,low[1]), bar_index, math.min(low,low[1]), bgcolor = liqColor, border_color = color.orange, border_width = 1)
+        array.push(liqBoxes, b)
+        array.push(liqBoxTops, math.max(low,low[1]))
+        array.push(liqBoxBots, math.min(low,low[1]))
+        array.push(liqIsHigh, false)
+    while array.size(liqBoxes) > liqMaxCount
+        box.delete(array.shift(liqBoxes))
+        array.shift(liqBoxTops)
+        array.shift(liqBoxBots)
+        array.shift(liqIsHigh)
+
+_li = 0
+while _li < array.size(liqBoxes)
+    _b     = array.get(liqBoxes,   _li)
+    _top   = array.get(liqBoxTops, _li)
+    _bot   = array.get(liqBoxBots, _li)
+    _isH   = array.get(liqIsHigh,  _li)
+    _swept = _isH ? (high > _top and close < _top) : (low < _bot and close > _bot)
+    _brkn  = _isH ? close > _top : close < _bot
+    if _swept or _brkn
+        box.delete(_b)
+        array.remove(liqBoxes,   _li)
+        array.remove(liqBoxTops, _li)
+        array.remove(liqBoxBots, _li)
+        array.remove(liqIsHigh,  _li)
+    else
+        box.set_right(_b, bar_index)
+        _li += 1
+
+// ═══════════════════════════════════════════════════════════════
+//                    FVG ENGINE  (بدون محاسبهٔ تکراری EMA)
+// ═══════════════════════════════════════════════════════════════
+_fvgEma      = ta.ema(close, 50)
+_fvgBodySize = math.abs(close[1] - open[1])
+_fvgHasBody  = _fvgBodySize > atrValue * 1.2
+
+isBullishFVG = high[2] < low[0] and _fvgHasBody and close[1] > _fvgEma[1]
+isBearishFVG = low[2]  > high[0] and _fvgHasBody and close[1] < _fvgEma[1]
+
+fvgBullRawCount = math.sum(isBullishFVG ? 1 : 0, MAX_FVG_CNT)
+fvgBearRawCount = math.sum(isBearishFVG ? 1 : 0, MAX_FVG_CNT)
+fvgBullBiasRaw  = fvgBullRawCount > fvgBearRawCount
+fvgBearBiasRaw  = fvgBearRawCount > fvgBullRawCount
+fvgFactor       = fvgBullRawCount + fvgBearRawCount > 0 ? fvgBullRawCount / ((fvgBullRawCount + fvgBearRawCount) * 1.0) : 0.5
+
+var array<box>   fvgBoxes  = array.new_box(0)
+var array<label> fvgLabels = array.new_label(0)
+var array<bool>  fvgTypes  = array.new_bool(0)
+var array<int>   fvgState  = array.new_int(0)
+
+if isBullishFVG and isFvgToShow
+    b   = box.new(bar_index-2, low[0], bar_index, high[2], border_style = line.style_solid, border_width = 1, bgcolor = bullishFvgColor, border_color = color.new(color.green,100))
+    lbl = label.new(bar_index-1, math.avg(high[2], low[0]), 'FVG', style = label.style_none, textcolor = color.new(color.white,60), size = size.large, text_font_family = font.family_monospace)
+    array.push(fvgBoxes, b)
+    array.push(fvgLabels, lbl)
+    array.push(fvgTypes, true)
+    array.push(fvgState, 0)
+
+if isBearishFVG and isFvgToShow
+    b   = box.new(bar_index-2, low[2], bar_index, high[0], border_style = line.style_solid, border_width = 1, bgcolor = bearishFvgColor, border_color = color.new(color.red,100))
+    lbl = label.new(bar_index-1, math.avg(high[0], low[2]), 'FVG', style = label.style_none, textcolor = color.new(color.white,60), size = size.large, text_font_family = font.family_monospace)
+    array.push(fvgBoxes, b)
+    array.push(fvgLabels, lbl)
+    array.push(fvgTypes, false)
+    array.push(fvgState, 0)
+
+while array.size(fvgBoxes) > fvgHistoryNbr
+    box.delete(array.get(fvgBoxes, 0))
+    label.delete(array.get(fvgLabels, 0))
+    array.remove(fvgBoxes, 0)
+    array.remove(fvgLabels, 0)
+    array.remove(fvgTypes, 0)
+    array.remove(fvgState, 0)
+
+// ═══════════════════════════════════════════════════════════════
+//                    PIVOT TRACKING (CHART)
+// ═══════════════════════════════════════════════════════════════
+_swH = ta.pivothigh(high, structLookback, structLookback)
+_swL = ta.pivotlow(low,   structLookback, structLookback)
+
+var float _gLastHigh = na
+var float _gLastLow  = na
+var bool  _rollingHH = false
+var bool  _rollingHL = false
+var bool  _rollingLL = false
+var bool  _rollingLH = false
+
+if not na(_swH)
+    _rollingHH := not na(_gLastHigh) and _swH > _gLastHigh
+    _rollingLH := not na(_gLastHigh) and _swH < _gLastHigh
+    _gLastHigh := _swH
+if not na(_swL)
+    _rollingHL := not na(_gLastLow) and _swL > _gLastLow
+    _rollingLL := not na(_gLastLow) and _swL < _gLastLow
+    _gLastLow  := _swL
+
+// ═══════════════════════════════════════════════════════════════
+//                    STRUCTURE ENGINE (CHART)
+// ═══════════════════════════════════════════════════════════════
+var array<line>  structureLines  = array.new_line(0)
+var array<label> structureLabels = array.new_label(0)
+
+var float structureHigh           = na
+var float structureLow            = na
+var int   structureHighStartIndex = 0
+var int   structureLowStartIndex  = 0
+var int   structureDirection      = 0
+var line  structureHighLine       = na
+var line  structureLowLine        = na
+var label structureHighLabel      = na
+var label structureLowLabel       = na
+var int   lastStructDir           = -999
+var bool  structureJustBroke      = false
+
+calcFib(level) =>
+    if structureDirection == 0
+        float(na)
+    else if structureDirection == 1
+        structureLow + (structureHigh - structureLow) * level
+    else
+        structureHigh - (structureHigh - structureLow) * level
+
+if bar_index == 0
+    structureHighStartIndex := bar_index
+    structureLowStartIndex  := bar_index
+    structureHigh           := high
+    structureLow            := low
+
+structureMaxBar = math.max(bar_index + get_structure_highest_bar(Len), bar_index - MAX_HIST)
+structureMinBar = math.max(bar_index + get_structure_lowest_bar(Len),  bar_index - MAX_HIST)
+
+_bodyHigh = math.max(open, close)
+_bodyLow  = math.min(open, close)
+
+lowStructBreakPrice  = isStructBodyCandleBreak ? _bodyLow  : low
+highStructBreakPrice = isStructBodyCandleBreak ? _bodyHigh : high
+
+bosValid = useDisplacementFilter ? isDisplacement : true
+
+_relVol  = na(volume) ? 1.0 : volume / math.max(ta.sma(volume, 20), 1.0)
+_impulse = math.abs(close - open) / (atrValue + 1e-6)
+
+breakUpStrength = not na(structureHigh) ? math.max(0.0, highStructBreakPrice - structureHigh) / (atrValue + 1e-6) * math.min(_relVol, 2.0) * math.min(_impulse, 2.0) : 0.0
+breakDnStrength = not na(structureLow)  ? math.max(0.0, structureLow - lowStructBreakPrice)  / (atrValue + 1e-6) * math.min(_relVol, 2.0) * math.min(_impulse, 2.0) : 0.0
+
+_breakUpOk = not useBreakQuality or breakUpStrength >= breakQualityThresh
+_breakDnOk = not useBreakQuality or breakDnStrength >= breakQualityThresh
+
+// خوانایی بهتر: شرط «۳ کندل قبل، سطح را نشکسته بودند»
+_chartLowClean  = lowStructBreakPrice[1] >= structureLow  and lowStructBreakPrice[2] >= structureLow  and lowStructBreakPrice[3] >= structureLow
+_chartHighClean = highStructBreakPrice[1] <= structureHigh and highStructBreakPrice[2] <= structureHigh and highStructBreakPrice[3] <= structureHigh
+
+isStructureLowBroken = not na(structureLow) and bosValid and _breakDnOk and
+     lowStructBreakPrice < structureLow and bar_index > structureLowStartIndex and _chartLowClean
+
+isStructureHighBroken = not na(structureHigh) and bosValid and _breakUpOk and
+     highStructBreakPrice > structureHigh and bar_index > structureHighStartIndex and _chartHighClean
+
+structureJustBroke := false
+
+if isStructureLowBroken
+    structureJustBroke := true
+    while array.size(structureLines) >= structHistoryNbr
+        line.delete(array.get(structureLines, 0))
+        label.delete(array.get(structureLabels, 0))
+        array.remove(structureLines, 0)
+        array.remove(structureLabels, 0)
+    _safeStructLowStart = f_clampStartIdx(structureLowStartIndex)
+    if structureDirection == 1
+        array.push(structureLines,  line.new(_safeStructLowStart, structureLow, bar_index, structureLow, xloc = xloc.bar_index, extend = extend.none, color = bearishBosColor,  style = bosLineStyle,   width = bosLineWidth))
+        array.push(structureLabels, label.new(int(math.round((bar_index + _safeStructLowStart) / 2.0)), structureLow, text = 'BOS',   style = label.style_none, textcolor = bearishBosColor))
+    else
+        array.push(structureLines,  line.new(_safeStructLowStart, structureLow, bar_index, structureLow, xloc = xloc.bar_index, extend = extend.none, color = bearishChochColor, style = chochLineStyle, width = chochLineWidth))
+        array.push(structureLabels, label.new(int(math.round((bar_index + _safeStructLowStart) / 2.0)), structureLow, text = 'CHoCH', style = label.style_none, textcolor = bearishChochColor))
+    _newHighStart           = structureMaxBar
+    structureDirection      := 1
+    structureHighStartIndex := f_clampStartIdx(_newHighStart)
+    structureLowStartIndex  := bar_index
+    structureHigh           := f_safeHigh(bar_index - _newHighStart)
+    structureLow            := low
+
+else if isStructureHighBroken
+    structureJustBroke := true
+    while array.size(structureLines) >= structHistoryNbr
+        line.delete(array.get(structureLines, 0))
+        label.delete(array.get(structureLabels, 0))
+        array.remove(structureLines, 0)
+        array.remove(structureLabels, 0)
+    _safeStructHighStart = f_clampStartIdx(structureHighStartIndex)
+    if structureDirection == 2
+        array.push(structureLines,  line.new(_safeStructHighStart, structureHigh, bar_index, structureHigh, xloc = xloc.bar_index, extend = extend.none, color = bullishBosColor,  style = bosLineStyle,   width = bosLineWidth))
+        array.push(structureLabels, label.new(int(math.round((bar_index + _safeStructHighStart) / 2.0)), structureHigh, text = 'BOS',   style = label.style_none, textcolor = bullishBosColor))
+    else
+        array.push(structureLines,  line.new(_safeStructHighStart, structureHigh, bar_index, structureHigh, xloc = xloc.bar_index, extend = extend.none, color = bullishChochColor, style = chochLineStyle, width = chochLineWidth))
+        array.push(structureLabels, label.new(int(math.round((bar_index + _safeStructHighStart) / 2.0)), structureHigh, text = 'CHoCH', style = label.style_none, textcolor = bullishChochColor))
+    _newLowStart            = structureMinBar
+    structureDirection      := 2
+    structureHighStartIndex := bar_index
+    structureLowStartIndex  := f_clampStartIdx(_newLowStart)
+    structureHigh           := high
+    structureLow            := f_safeLow(bar_index - _newLowStart)
+
+else
+    if not na(structureHigh) and high > structureHigh and (structureDirection == 0 or structureDirection == 2) and f_canChaseStructure(structureHighStartIndex)
+        structureHigh           := high
+        structureHighStartIndex := bar_index
+    if not na(structureLow) and low < structureLow and (structureDirection == 0 or structureDirection == 1) and f_canChaseStructure(structureLowStartIndex)
+        structureLow           := low
+        structureLowStartIndex := bar_index
+
+structureChanged = structureDirection != lastStructDir or structureJustBroke
+if structureDirection != lastStructDir
+    lastStructDir := structureDirection
+
+// ═══════════════════════════════════════════════════════════════
+//          TREND ENGINE (CHART)
+// ═══════════════════════════════════════════════════════════════
+_structBull       = structureDirection == 2
+_structBear       = structureDirection == 1
+_structBullStrong = _structBull and _rollingHH and _rollingHL
+_structBearStrong = _structBear and _rollingLL and _rollingLH
+_noClearStruct    = not _structBullStrong and not _structBearStrong
+
+_emaF          = ta.ema(close, emaFastLen)
+_emaS          = ta.ema(close, emaSlowLen)
+_emaBull       = _emaF > _emaS
+_emaBear       = _emaF < _emaS
+_emaGap        = math.abs(_emaF - _emaS)
+_emaCompressed = _emaGap < atrValue * 0.15
+
+_emaCoherentBull = _emaBull and _structBull
+_emaCoherentBear = _emaBear and _structBear
+_emaConflict     = (_structBullStrong and _emaBear) or (_structBearStrong and _emaBull)
+
+_atrSMA  = ta.sma(atrValue, 50)
+_atrStd  = ta.stdev(atrValue, 50)
+_atrZ    = (atrValue - _atrSMA) / (_atrStd + 0.0001)
+_lowVol  = _atrZ < -0.5
+
+_rangeScore = (_emaCompressed ? 1 : 0) + (_lowVol ? 1 : 0) + (_noClearStruct ? 1 : 0)
+_isRange    = _rangeScore >= 2
+
+_structDirStable = structureDirection == structureDirection[1] and structureDirection == structureDirection[2]
+_structureFlip   = not _structDirStable and ((structureDirection == 2 and structureDirection[3] == 1) or (structureDirection == 1 and structureDirection[3] == 2))
+_transitionConfirmed = dispIsBullish or dispIsBearish or (not _emaCompressed)
+_isTransition        = (_structureFlip or _emaConflict) and _transitionConfirmed
+
+getTrendState() =>
+    string _st = "Range"
+    if _structBullStrong and _emaCoherentBull and not _isTransition
+        _st := "Bull"
+    else if _structBearStrong and _emaCoherentBear and not _isTransition
+        _st := "Bear"
+    else if _isTransition
+        _st := "Transition"
+    else if _structBull and not _emaBear and not _isRange
+        _st := "Bull"
+    else if _structBear and not _emaBull and not _isRange
+        _st := "Bear"
+    _st
+
+trendState = getTrendState()
+
+_computeConfidenceIndex(_state) =>
+    float _s = 50.0
+    if _state == "Bull"
+        _raw = (_structBullStrong ? 25.0 : _structBull ? 10.0 : 0.0) +
+               (_emaCoherentBull ? 15.0 : _emaConflict ? -8.0 : _emaCompressed ? 3.0 : 0.0) +
+               (dispIsBullish ? 10.0 : dispIsBearish ? -5.0 : 0.0)
+        _s   := 50.0 + _raw * 0.6
+    else if _state == "Bear"
+        _raw = (_structBearStrong ? 25.0 : _structBear ? 10.0 : 0.0) +
+               (_emaCoherentBear ? 15.0 : _emaConflict ? -8.0 : _emaCompressed ? 3.0 : 0.0) +
+               (dispIsBearish ? 10.0 : dispIsBullish ? -5.0 : 0.0)
+        _s   := 50.0 + _raw * 0.6
+    else if _state == "Range"
+        _rc = (_emaCompressed ? 15.0 : 0.0) + (_lowVol ? 12.0 : 0.0) + (_noClearStruct ? 12.0 : 0.0)
+        _s  := 50.0 + _rc * 0.4
+    else
+        // ✅ اصلاح: سقف قبلی 52.8 بود و آستانهٔ ستاپ 55 → کد مرده
+        _tc = ((liqSweepLow or liqSweepHigh) ? 15.0 : 0.0) +
+              ((dispIsBullish or dispIsBearish) ? 12.0 : 0.0)
+        _s  := 35.0 + _tc * 0.8
+    math.max(0.0, math.min(100.0, math.round(_s)))
+
+confidenceIndex = _computeConfidenceIndex(trendState)
+
+// ═══════════════════════════════════════════════════════════════
+//   MACRO DATA  (۷ درخواست — یک‌بار در کانتکست چارت)
+//   این مقادیر فقط برای ماکرو چارت (ستون «کنونی») استفاده می‌شوند؛ ستون‌های TF پرچم‌های خودشان را دارند
+// ═══════════════════════════════════════════════════════════════
+_totRaw   = request.security(symTotal,   timeframe.period, close)
+_tot2Raw  = request.security(symTotal2,  timeframe.period, close)
+_btcDRaw  = request.security(symBtcDom,  timeframe.period, close)
+_usdtDRaw = request.security(symUsdtDom, timeframe.period, close)
+_dxyRaw   = request.security(symDxy,     timeframe.period, close)
+_us10yRaw = request.security(symUs10y,   timeframe.period, close)
+_vixRaw   = request.security(symVix,     timeframe.period, close)
+
+_totEma   = ta.ema(nz(_totRaw),   domLookback)
+_tot2Ema  = ta.ema(nz(_tot2Raw),  domLookback)
+_btcDEma  = ta.ema(nz(_btcDRaw),  domLookback)
+_usdtDEma = ta.ema(nz(_usdtDRaw), domLookback)
+_dxyEma   = ta.ema(nz(_dxyRaw),   domLookback)
+_us10yEma = ta.ema(nz(_us10yRaw), domLookback)
+_vixEma   = ta.ema(nz(_vixRaw),   domLookback)
+
+tUp_cur = _totRaw   > _totEma   and _totEma   > _totEma[1]
+aUp_cur = _tot2Raw  > _tot2Ema  and _tot2Ema  > _tot2Ema[1]
+bUp_cur = _btcDRaw  > _btcDEma  and _btcDEma  > _btcDEma[1]
+uUp_cur = _usdtDRaw > _usdtDEma and _usdtDEma > _usdtDEma[1]
+dxyUp   = _dxyRaw   > _dxyEma   and _dxyEma   > _dxyEma[1]
+us10yUp = _us10yRaw > _us10yEma and _us10yEma > _us10yEma[1]
+vixUp   = _vixRaw   > _vixEma   and _vixEma   > _vixEma[1]
+
+_tkrUp      = str.upper(syminfo.ticker)
+_isBtcChart = (str.pos(_tkrUp, "BTC") == 0 or str.pos(_tkrUp, "XBT") == 0) and not str.contains(_tkrUp, ".D")
+
+macroRegimeCrypto = f_getMacroRegime(false, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur)
+macroRegimeGold   = f_getMacroRegime(true,  dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur)
+
+_macroAllowLong      = f_macroAllowLong(false, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
+_macroAllowShort     = f_macroAllowShort(false, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
+_macroAllowLongGold  = f_macroAllowLong(true, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
+_macroAllowShortGold = f_macroAllowShort(true, dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur, _isBtcChart)
+
+macro_cur            = isGoldMode ? macroRegimeGold       : macroRegimeCrypto
+_macroAllowLong_cur  = isGoldMode ? _macroAllowLongGold   : _macroAllowLong
+_macroAllowShort_cur = isGoldMode ? _macroAllowShortGold  : _macroAllowShort
+
+// ═══════════════════════════════════════════════════════════════
+//   MACRO FLAGS در هر تایم‌فریم ستون‌ها (۲۸ درخواست مستقل — بدون تودرتو)
+//   هر پرچم روی کندل‌های همان TF محاسبه و با آفست [1] + lookahead_on خوانده می‌شود
+// ═══════════════════════════════════════════════════════════════
+f_upFlag(float _src) =>
+    float _ema = ta.ema(nz(_src), domLookback)
+    _src > _ema and _ema > _ema[1]
+
+up_tot_1 = request.security(symTotal, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_1 = request.security(symTotal2, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_1 = request.security(symBtcDom, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_1 = request.security(symUsdtDom, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_1 = request.security(symDxy, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_1 = request.security(symUs10y, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_1 = request.security(symVix, ticker1TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+up_tot_2 = request.security(symTotal, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_2 = request.security(symTotal2, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_2 = request.security(symBtcDom, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_2 = request.security(symUsdtDom, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_2 = request.security(symDxy, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_2 = request.security(symUs10y, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_2 = request.security(symVix, ticker2TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+up_tot_3 = request.security(symTotal, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_3 = request.security(symTotal2, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_3 = request.security(symBtcDom, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_3 = request.security(symUsdtDom, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_3 = request.security(symDxy, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_3 = request.security(symUs10y, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_3 = request.security(symVix, ticker3TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+up_tot_4 = request.security(symTotal, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_tot2_4 = request.security(symTotal2, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_btc_4 = request.security(symBtcDom, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_usdt_4 = request.security(symUsdtDom, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_dxy_4 = request.security(symDxy, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_us10y_4 = request.security(symUs10y, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+up_vix_4 = request.security(symVix, ticker4TFCustom, f_upFlag(close)[1], lookahead = barmerge.lookahead_on)
+
+
+// ═══════════════════════════════════════════════════════════════
+//   REQUEST.SECURITY  (۴ درخواست — بدون ری‌پینت)
+//   ⚠️ lookahead_on فقط همراه با آفست [1] داخل f_tfState امن است
+// ═══════════════════════════════════════════════════════════════
+// اسلات‌های ماکرو TF: Crypto → slot1=TOTAL, slot2=BTC.D, slot3=USDT.D, slot4=TOTAL2 | Gold → slot1=DXY, slot2=US10Y, slot3=VIX
+[CT1, CONF1, lb_tf1, sb_tf1, ra1_tf1, ra2_tf1, ra3_tf1, ra4_tf1, macro_tf1, alCnt_tf1, alCntB_tf1] =
+     request.security(syminfo.tickerid, ticker1TFCustom, f_tfState(_isBtcChart, up_tot_1, up_btc_1, up_usdt_1, up_tot2_1, up_dxy_1, up_us10y_1, up_vix_1), lookahead = barmerge.lookahead_on)
+[CT2, CONF2, lb_tf2, sb_tf2, ra1_tf2, ra2_tf2, ra3_tf2, ra4_tf2, macro_tf2, alCnt_tf2, alCntB_tf2] =
+     request.security(syminfo.tickerid, ticker2TFCustom, f_tfState(_isBtcChart, up_tot_2, up_btc_2, up_usdt_2, up_tot2_2, up_dxy_2, up_us10y_2, up_vix_2), lookahead = barmerge.lookahead_on)
+[CT3, CONF3, lb_tf3, sb_tf3, ra1_tf3, ra2_tf3, ra3_tf3, ra4_tf3, macro_tf3, alCnt_tf3, alCntB_tf3] =
+     request.security(syminfo.tickerid, ticker3TFCustom, f_tfState(_isBtcChart, up_tot_3, up_btc_3, up_usdt_3, up_tot2_3, up_dxy_3, up_us10y_3, up_vix_3), lookahead = barmerge.lookahead_on)
+[CT4, CONF4, lb_tf4, sb_tf4, ra1_tf4, ra2_tf4, ra3_tf4, ra4_tf4, macro_tf4, alCnt_tf4, alCntB_tf4] =
+     request.security(syminfo.tickerid, ticker4TFCustom, f_tfState(_isBtcChart, up_tot_4, up_btc_4, up_usdt_4, up_tot2_4, up_dxy_4, up_us10y_4, up_vix_4), lookahead = barmerge.lookahead_on)
+
+// ═══════════════════════════════════════════════════════════════
+//   محاسبه TF فعلی
+// ═══════════════════════════════════════════════════════════════
+CTL   = trendState
+CONFL = math.round(confidenceIndex)
+
+[lb_cur, sb_cur] = f_computeBias(
+     structureDirection, _rollingHH, _rollingHL, _rollingLL, _rollingLH, isGoldMode,
+     dxyUp, us10yUp, vixUp, tUp_cur, bUp_cur, uUp_cur, aUp_cur,
+     dispIsBullish, dispIsBearish, dispRatio,
+     liqSweepHigh, liqSweepLow, fvgFactor, breakUpStrength, breakDnStrength)
+
+_alignCount     = ((trendState == "Bull" or _structBullStrong) ? 1 : 0) + (liqSweepLow  ? 1 : 0) + (_macroAllowLong_cur  ? 1 : 0) + (dispIsBullish ? 1 : 0)
+_alignCountBear = ((trendState == "Bear" or _structBearStrong) ? 1 : 0) + (liqSweepHigh ? 1 : 0) + (_macroAllowShort_cur ? 1 : 0) + (dispIsBearish ? 1 : 0)
+
+slot1Up_tf1  = ra1_tf1 > 0.5
+slot2Up_tf1  = ra2_tf1 > 0.5
+slot3Up_tf1  = ra3_tf1 > 0.5
+slot4Up_tf1  = ra4_tf1 > 0.5
+slot1Up_tf2  = ra1_tf2 > 0.5
+slot2Up_tf2  = ra2_tf2 > 0.5
+slot3Up_tf2  = ra3_tf2 > 0.5
+slot4Up_tf2  = ra4_tf2 > 0.5
+slot1Up_tf3  = ra1_tf3 > 0.5
+slot2Up_tf3  = ra2_tf3 > 0.5
+slot3Up_tf3  = ra3_tf3 > 0.5
+slot4Up_tf3  = ra4_tf3 > 0.5
+slot1Up_tf4  = ra1_tf4 > 0.5
+slot2Up_tf4  = ra2_tf4 > 0.5
+slot3Up_tf4  = ra3_tf4 > 0.5
+slot4Up_tf4  = ra4_tf4 > 0.5
+
+// ═══════════════════════════════════════════════════════════════
+//   ZONE
+// ═══════════════════════════════════════════════════════════════
+midPoint   = structureDirection == 0 ? float(na) : calcFib(0.5)
+isPremium  = not na(midPoint) and price > midPoint
+isDiscount = not na(midPoint) and price <= midPoint
+
+// ═══════════════════════════════════════════════════════════════
+//   BIAS TEXT / COLOR
+// ═══════════════════════════════════════════════════════════════
+f_biasText(_lb, _sb)  =>
+    float _l = nz(_lb)
+    float _s = nz(_sb)
+    _l > _s ? "Long "  + str.tostring(_l, "#.#") + "%" : "Short " + str.tostring(_s, "#.#") + "%"
+f_biasColor(_lb, _sb) => nz(_lb) > nz(_sb) ? textColorl : textColors
+
+// ═══════════════════════════════════════════════════════════════
+//   SETUP ENGINE
+// ═══════════════════════════════════════════════════════════════
+_macroAllow = isGoldMode ? (_macroAllowLongGold or _macroAllowShortGold) : (_macroAllowLong or _macroAllowShort)
+
+_setupBullCont   = trendState == "Bull"       and isDiscount  and (liqSweepLow  or fvgBullBiasRaw) and confidenceIndex >= 60 and _macroAllow
+_setupBearCont   = trendState == "Bear"       and isPremium   and (liqSweepHigh or fvgBearBiasRaw) and confidenceIndex >= 60 and _macroAllow
+_setupRangeLong  = trendState == "Range"      and liqSweepLow  and isDiscount  and confidenceIndex >= 52
+_setupRangeShort = trendState == "Range"      and liqSweepHigh and isPremium   and confidenceIndex >= 52
+// ✅ اصلاح: با مقیاس جدید اعتماد Transition بیشینه 56.6 است، پس آستانهٔ 55 قابل دسترس است
+_setupTransBull  = trendState == "Transition" and dispIsBullish and liqSweepLow  and confidenceIndex >= 55
+_setupTransBear  = trendState == "Transition" and dispIsBearish and liqSweepHigh and confidenceIndex >= 55
+
+_anyLongRaw  = _setupBullCont or _setupRangeLong or _setupTransBull
+_anyShortRaw = _setupBearCont or _setupRangeShort or _setupTransBear
+
+// ═══════════════════════════════════════════════════════════════
+//   AI DECISION
+// ═══════════════════════════════════════════════════════════════
+_aiLongRaw  = lb_cur >= 62 and _alignCount     >= 3 and _macroAllowLong_cur  and not _anyShortRaw
+_aiShortRaw = sb_cur >= 62 and _alignCountBear >= 3 and _macroAllowShort_cur and not _anyLongRaw
+_aiLong     = _aiLongRaw  and _barConfirmed
+_aiShort    = _aiShortRaw and _barConfirmed
+
+// ═══════════════════════════════════════════════════════════════
+//   HTF CONFLICT / ALIGNMENT
+// ═══════════════════════════════════════════════════════════════
+f_isHTFConflict(_lbLow, _sbLow, _htf1Trend, _htf2Trend) =>
+    bool _lowLong  = nz(_lbLow) > nz(_sbLow)
+    bool _lowShort = nz(_sbLow) > nz(_lbLow)
+    (_lowLong  and _htf1Trend == "Bear" and _htf2Trend == "Bear") or (_lowShort and _htf1Trend == "Bull" and _htf2Trend == "Bull")
+
+htfConflict_tf1 = f_isHTFConflict(lb_tf1, sb_tf1, CT2, CT3)
+htfConflict_tf2 = f_isHTFConflict(lb_tf2, sb_tf2, CT3, CT4)
+htfConflict_tf3 = f_isHTFConflict(lb_tf3, sb_tf3, CT4, CTL)
+htfConflict_cur = f_isHTFConflict(lb_cur, sb_cur, CT3, CT4)
+
+f_isHTFAligned(_lbLow, _sbLow, _htf1Trend, _htf2Trend) =>
+    bool _lowLong  = nz(_lbLow) > nz(_sbLow)
+    bool _lowShort = nz(_sbLow) > nz(_lbLow)
+    (_lowLong  and _htf1Trend == "Bull" and _htf2Trend == "Bull") or (_lowShort and _htf1Trend == "Bear" and _htf2Trend == "Bear")
+
+htfAligned_tf1 = f_isHTFAligned(lb_tf1, sb_tf1, CT2, CT3)
+htfAligned_tf2 = f_isHTFAligned(lb_tf2, sb_tf2, CT3, CT4)
+htfAligned_tf3 = f_isHTFAligned(lb_tf3, sb_tf3, CT4, CTL)
+htfAligned_cur = f_isHTFAligned(lb_cur, sb_cur, CT3, CT4)
+
+// ── ثابت‌های موتور سیگنال (تنظیم آستانه‌ها فقط از همین‌جا)
+SP_T1        = 30      // اسپرد Bias ≥ این → امتیاز +40
+SP_T2        = 20      // → +28
+SP_T3        = 12      // → +18
+SP_T4        = 6       // → +8
+NET_STRONG   = 52.0    // امتیاز خالص برای 🟢 LONG / 🔴 SHORT
+NET_WEAK     = 28.0    // امتیاز خالص برای 🟡 LONG? / 🟡 SHORT?
+NET_CONFLICT = 30.0    // آستانهٔ تبدیل تعارض به 🟡 LONG? / 🟡 SHORT?
+CONF_SPREAD  = 8.0     // آستانهٔ اسپرد برای تشخیص تعارض
+CONF_MACRO   = 18.0    // آستانهٔ امتیاز ماکرو برای تشخیص تعارض
+
+// ═══════════════════════════════════════════════════════════════
+//   SIGNAL ENGINE
+// ═══════════════════════════════════════════════════════════════
+f_getSignalFinal(_trend, _lb, _sb, _conf, _macro, _alCnt, _alCntB, _htfConflict, _htfAligned, _isGold, _isBtcSym) =>
+    string signal      = "⚪ WAIT"
+    color  signalColor = color.rgb(160, 160, 180)
+    color  signalBg    = color.rgb(40,  40,  50)
+
+    int _spread = int(nz(_lb) - nz(_sb))
+    bool _isLongBias = nz(_lb) > nz(_sb)
+
+    // ── 1) Bias Spread Score
+    float _spreadScore = 0.0
+    if _spread >= SP_T1
+        _spreadScore := 40.0
+    else if _spread >= SP_T2
+        _spreadScore := 28.0
+    else if _spread >= SP_T3
+        _spreadScore := 18.0
+    else if _spread >= SP_T4
+        _spreadScore := 8.0
+    else if _spread <= -SP_T1
+        _spreadScore := -40.0
+    else if _spread <= -SP_T2
+        _spreadScore := -28.0
+    else if _spread <= -SP_T3
+        _spreadScore := -18.0
+    else if _spread <= -SP_T4
+        _spreadScore := -8.0
+
+    // ── 2) Trend Score
+    float _trendScore = 0.0
+    if _trend == "Bull"
+        _trendScore := _alCnt >= 4 ? 28.0 : _alCnt >= 3 ? 20.0 : 12.0
+    else if _trend == "Bear"
+        _trendScore := _alCntB >= 4 ? -28.0 : _alCntB >= 3 ? -20.0 : -12.0
+    else if _trend == "Transition"
+        _trendScore := _spreadScore > 0.0 ? 4.0 : _spreadScore < 0.0 ? -4.0 : 0.0
+
+    // ── 3) Confidence Score
+    float _confScore = 0.0
+    if _trend == "Bull" or _trend == "Bear"
+        if _conf >= 78
+            _confScore := _trendScore >= 0.0 ? 22.0 : -22.0
+        else if _conf >= 68
+            _confScore := _trendScore >= 0.0 ? 14.0 : -14.0
+        else if _conf >= 58
+            _confScore := _trendScore >= 0.0 ?  7.0 :  -7.0
+        else if _conf < 50
+            _confScore := _trendScore >= 0.0 ? -6.0 :   6.0
+
+    // ── 4) Macro Score/Penalty
+    float _macroScore = 0.0
+    if _isGold
+        if _macro == "RiskOff"
+            _macroScore := _isLongBias ?  20.0 : -5.0
+        else if _macro == "Inflation"
+            _macroScore := _isLongBias ?  14.0 : -3.0
+        else if _macro == "Dollar↓"
+            _macroScore := _isLongBias ?   9.0 :  0.0
+        else if _macro == "TightUSD"
+            _macroScore := _isLongBias ? -22.0 : 20.0
+    else
+        if _macro == "AltSeason"
+            _macroScore := _isLongBias ?  20.0 : -5.0
+        else if _macro == "BTCSeason"
+            _macroScore := _isLongBias ? (_isBtcSym ? 11.0 : -8.0) : (_isBtcSym ? -3.0 : 5.0)
+        else if _macro == "DefensiveBTC"
+            _macroScore := _isLongBias ?   4.0 :  0.0
+        else if _macro == "RiskOff"
+            _macroScore := _isLongBias ? -25.0 : 20.0
+
+    // ── 5) HTF Score
+    float _htfScore = 0.0
+    if _htfConflict
+        _htfScore := _isLongBias ? -18.0 : 18.0
+    else if _htfAligned
+        _htfScore := _isLongBias ? 12.0 : -12.0
+
+    // ── 6) Net Score
+    float _net = _spreadScore + _trendScore + _confScore + _macroScore + _htfScore
+
+    // ── 7) Conflict Detection
+    bool _macroConflict = (_spreadScore > CONF_SPREAD and _macroScore <= -CONF_MACRO) or (_spreadScore < -CONF_SPREAD and _macroScore >= CONF_MACRO)
+    bool _trendConflict = (_spreadScore > CONF_SPREAD and _trendScore < 0.0) or (_spreadScore < -CONF_SPREAD and _trendScore > 0.0)
+    bool _hasConflict   = _macroConflict or _trendConflict
+
+    // ── 8) تصمیم نهایی
+    if _hasConflict
+        if _net >= NET_CONFLICT
+            signal      := "🟡 LONG?"
+            signalColor := color.rgb(255, 220, 100)
+            signalBg    := color.rgb(60, 50, 0)
+        else if _net <= -NET_CONFLICT
+            signal      := "🟡 SHORT?"
+            signalColor := color.rgb(255, 180, 100)
+            signalBg    := color.rgb(60, 30, 0)
+        else
+            signal      := "⚠️ CONFLICT"
+            signalColor := color.rgb(255, 165, 0)
+            signalBg    := color.rgb(55, 35, 0)
+    else
+        if _net >= NET_STRONG
+            signal      := "🟢 LONG"
+            signalColor := textColorl
+            signalBg    := color.rgb(0, 80, 30)
+        else if _net >= NET_WEAK
+            signal      := "🟡 LONG?"
+            signalColor := color.rgb(255, 220, 100)
+            signalBg    := color.rgb(60, 50, 0)
+        else if _net <= -NET_STRONG
+            signal      := "🔴 SHORT"
+            signalColor := textColors
+            signalBg    := color.rgb(80, 0, 0)
+        else if _net <= -NET_WEAK
+            signal      := "🟡 SHORT?"
+            signalColor := color.rgb(255, 180, 100)
+            signalBg    := color.rgb(60, 30, 0)
+
+    [signal, signalColor, signalBg]
+
+[sig_tf1, sigCol_tf1, sigBg_tf1] = f_getSignalFinal(CT1, lb_tf1, sb_tf1, CONF1, macro_tf1, alCnt_tf1, alCntB_tf1, htfConflict_tf1, htfAligned_tf1, isGoldMode, _isBtcChart)
+[sig_tf2, sigCol_tf2, sigBg_tf2] = f_getSignalFinal(CT2, lb_tf2, sb_tf2, CONF2, macro_tf2, alCnt_tf2, alCntB_tf2, htfConflict_tf2, htfAligned_tf2, isGoldMode, _isBtcChart)
+[sig_tf3, sigCol_tf3, sigBg_tf3] = f_getSignalFinal(CT3, lb_tf3, sb_tf3, CONF3, macro_tf3, alCnt_tf3, alCntB_tf3, htfConflict_tf3, htfAligned_tf3, isGoldMode, _isBtcChart)
+// TF4 بالاترین تایم‌فریم است؛ بالاتر از آن چیزی برای مقایسه وجود ندارد → false/false
+[sig_tf4, sigCol_tf4, sigBg_tf4] = f_getSignalFinal(CT4, lb_tf4, sb_tf4, CONF4, macro_tf4, alCnt_tf4, alCntB_tf4, false,            false,            isGoldMode, _isBtcChart)
+[sig_cur, sigCol_cur, sigBg_cur] = f_getSignalFinal(CTL, lb_cur, sb_cur, CONFL, macro_cur, _alignCount, _alignCountBear, htfConflict_cur, htfAligned_cur, isGoldMode, _isBtcChart)
+
+sig_cur_confirmed    = _barConfirmed ? sig_cur    : "⏳ " + sig_cur
+sigCol_cur_confirmed = _barConfirmed ? sigCol_cur : color.rgb(120, 120, 120)
+sigBg_cur_confirmed  = _barConfirmed ? sigBg_cur  : color.rgb(30, 30, 40)
+
+// ═══════════════════════════════════════════════════════════════
+//   RECOMMENDATION
+// ═══════════════════════════════════════════════════════════════
+f_getRecommendationCrypto(_macro, _bias, _biasShort) =>
+    string rec      = "⚖️ Neutral"
+    color  recColor = color.rgb(160, 160, 180)
+    if _macro == "RiskOff"
+        rec      := "❌ Risk Off"
+        recColor := textColors
+    else if _macro == "AltSeason" and _bias >= 58
+        rec      := "✅✅ AltSeason"
+        recColor := textColorl
+    else if _macro == "AltSeason"
+        rec      := "✅ AltSeason"
+        recColor := color.rgb(100, 200, 100)
+    else if _macro == "BTCSeason" and _bias >= 55
+        rec      := "✅ BTC Strong"
+        recColor := color.rgb(255, 165, 0)
+    else if _macro == "BTCSeason"
+        rec      := "🟠 BTC Season"
+        recColor := color.rgb(255, 180, 100)
+    else if _macro == "DefensiveBTC"
+        rec      := "🛡️ Defensive"
+        recColor := color.rgb(100, 149, 237)
+    else if _biasShort >= 55
+        rec      := "⬇️ Short Bias"
+        recColor := color.rgb(255, 100, 100)
+    [rec, recColor]
+
+f_getRecommendationGold(_macro, _bias, _biasShort) =>
+    string rec      = "⚖️ Neutral"
+    color  recColor = color.rgb(160, 160, 180)
+    if _macro == "TightUSD"
+        rec      := "❌ USD↑ + Yields↑"
+        recColor := textColors
+    else if _macro == "RiskOff" and _bias >= 62
+        rec      := "✅✅ RiskOff"
+        recColor := textColorl
+    else if _macro == "RiskOff"
+        rec      := "✅ RiskOff"
+        recColor := color.rgb(100, 200, 100)
+    else if _macro == "Inflation" and _bias >= 58
+        rec      := "✅ Inflation"
+        recColor := color.rgb(255, 165, 0)
+    else if _macro == "Inflation"
+        rec      := "🟠 Inflation"
+        recColor := color.rgb(255, 180, 100)
+    else if _macro == "Dollar↓"
+        rec      := "✅ Dollar Weak"
+        recColor := textColorl
+    else if _bias >= 60
+        rec      := "📈 Strong Bias"
+        recColor := color.rgb(0, 200, 100)
+    else if _biasShort >= 55
+        rec      := "⬇️ Short Bias"
+        recColor := color.rgb(255, 100, 100)
+    [rec, recColor]
+
+f_getRecByMode(_macro, _bias, _biasShort) =>
+    string _rr = na
+    color  _rc = na
+    if isGoldMode
+        [gr, gc] = f_getRecommendationGold(_macro, _bias, _biasShort)
+        _rr := gr
+        _rc := gc
+    else
+        [cr, cc] = f_getRecommendationCrypto(_macro, _bias, _biasShort)
+        _rr := cr
+        _rc := cc
+    [_rr, _rc]
+
+[rec_tf1, col_tf1] = f_getRecByMode(macro_tf1, lb_tf1, sb_tf1)
+[rec_tf2, col_tf2] = f_getRecByMode(macro_tf2, lb_tf2, sb_tf2)
+[rec_tf3, col_tf3] = f_getRecByMode(macro_tf3, lb_tf3, sb_tf3)
+[rec_tf4, col_tf4] = f_getRecByMode(macro_tf4, lb_tf4, sb_tf4)
+[rec_cur, col_cur] = f_getRecByMode(macro_cur, lb_cur, sb_cur)
+
+// ═══════════════════════════════════════════════════════════════
+//   OVERALL RECOMMENDATION  (با شمارش رژیم‌ها برای ردیف «کلی»)
+// ═══════════════════════════════════════════════════════════════
+// شمارش تعداد تایم‌فریم‌هایی که یک رژیم مشخص را نشان می‌دهند
+f_countMacro(_m1, _m2, _m3, _m4, _m5, _target) =>
+    (_m1 == _target ? 1 : 0) + (_m2 == _target ? 1 : 0) + (_m3 == _target ? 1 : 0) + (_m4 == _target ? 1 : 0) + (_m5 == _target ? 1 : 0)
+
+f_overallRecommendationCrypto() =>
+    int altCount  = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "AltSeason")
+    int btcCount  = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "BTCSeason")
+    int riskCount = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "RiskOff")
+    int defCount  = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "DefensiveBTC")
+
+    string rec      = "⚖️ Neutral"
+    color  recColor = color.rgb(160, 160, 180)
+    if riskCount >= 3
+        rec      := "❌ Risk Off"
+        recColor := textColors
+    else if altCount >= 2 and lb_cur >= 58
+        rec      := "✅✅ AltSeason"
+        recColor := textColorl
+    else if btcCount >= 3 and lb_cur >= 55
+        rec      := "✅ BTC Strong"
+        recColor := color.rgb(255, 165, 0)
+    else if defCount >= 2 and lb_cur >= 50
+        rec      := "🛡️ Defensive"
+        recColor := color.rgb(100, 149, 237)
+    else if riskCount >= 1 and lb_cur >= 55
+        rec      := "⚡ Be Careful"
+        recColor := color.rgb(255, 100, 0)
+    else if lb_cur <= 40
+        rec      := "⬇️ Short Bias"
+        recColor := textColors
+
+    [rec, recColor, "Alt " + str.tostring(altCount), "BTC " + str.tostring(btcCount), "Rsk " + str.tostring(riskCount), "Def " + str.tostring(defCount)]
+
+f_overallRecommendationGold() =>
+    int riskOffCount   = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "RiskOff")
+    int inflationCount = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "Inflation")
+    int dollarCount    = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "Dollar↓")
+    int tightUsdCount    = f_countMacro(macro_tf1, macro_tf2, macro_tf3, macro_tf4, macro_cur, "TightUSD")
+
+    string rec      = "⚖️ Neutral"
+    color  recColor = color.rgb(160, 160, 180)
+    if tightUsdCount >= 3
+        rec      := "❌ RiskOn"
+        recColor := textColors
+    else if riskOffCount >= 2 and lb_cur >= 62
+        rec      := "✅✅ RiskOff"
+        recColor := textColorl
+    else if riskOffCount >= 2
+        rec      := "✅ RiskOff"
+        recColor := color.rgb(100, 200, 100)
+    else if inflationCount >= 2 and lb_cur >= 58
+        rec      := "✅ Inflation"
+        recColor := color.rgb(255, 165, 0)
+    else if dollarCount >= 2
+        rec      := "✅ Dollar↓"
+        recColor := textColorl
+    else if tightUsdCount >= 1 and sb_cur >= 55
+        rec      := "⚡ Be Careful"
+        recColor := color.rgb(255, 100, 0)
+    else if sb_cur >= 60
+        rec      := "⬇️ Strong Short"
+        recColor := textColors
+
+    [rec, recColor, "RkOf " + str.tostring(riskOffCount), "Infl " + str.tostring(inflationCount), "$↓ " + str.tostring(dollarCount), "USD↑ " + str.tostring(tightUsdCount)]
+
+f_overallByMode() =>
+    if isGoldMode
+        f_overallRecommendationGold()
+    else
+        f_overallRecommendationCrypto()
+
+[overallRec, overallColor, cnt1, cnt2, cnt3, cnt4] = f_overallByMode()
+
+// ═══════════════════════════════════════════════════════════════
+//   FIBONACCI DRAW ENGINE
+// ═══════════════════════════════════════════════════════════════
+var array<line>  poolFiboLines  = array.new_line(0)
+var array<label> poolFiboLabels = array.new_label(0)
+var bool         poolInit       = false
+
+f_drawFiboLines(startIdx) =>
+    for _fi = 0 to 21
+        if array.size(poolFiboLines) > _fi
+            _ln  = array.get(poolFiboLines,  _fi)
+            _lb2 = array.get(poolFiboLabels, _fi)
+            _sho = array.get(_fsArr,  _fi)
+            _lvl = array.get(_fvArr,  _fi)
+            _clr = array.get(_fcArr,  _fi)
+            _sty = array.get(_fstArr, _fi)
+            _wdt = array.get(_fwArr,  _fi)
+            _prc = calcFib(_lvl)
+            if _sho and not na(_prc)
+                line.set_xy1(_ln, startIdx, _prc)
+                line.set_xy2(_ln, bar_index, _prc)
+                line.set_color(_ln, _clr)
+                line.set_style(_ln, _sty)
+                line.set_width(_ln, _wdt)
+                label.set_xy(_lb2, bar_index + nn, _prc)
+                label.set_text(_lb2, str.tostring(_lvl) + " (" + str.tostring(_prc, format.mintick) + ")")
+                label.set_textcolor(_lb2, _clr)
+            else
+                line.set_color(_ln, color.new(color.white, 100))
+                label.set_text(_lb2, "")
+
+if isCurrentStructToShow and structureDirection != 0
+    if not poolInit
+        for _pi = 0 to 21
+            array.push(poolFiboLines,  line.new(bar_index, close, bar_index+1, close, color = color.new(color.white,100)))
+            array.push(poolFiboLabels, label.new(bar_index, close, '', style = label.style_none, textcolor = color.new(color.white,100)))
+        poolInit := true
+
+    _safeHighStart = f_clampStartIdx(structureHighStartIndex)
+    _safeLowStart  = f_clampStartIdx(structureLowStartIndex)
+    startIdx = structureDirection == 1 ? _safeHighStart : _safeLowStart
+
+    if structureChanged or barstate.islast
+        if not na(structureHighLine)
+            line.delete(structureHighLine)
+        if not na(structureLowLine)
+            line.delete(structureLowLine)
+        if not na(structureHighLabel)
+            label.delete(structureHighLabel)
+        if not na(structureLowLabel)
+            label.delete(structureLowLabel)
+        structureHighLine  := line.new(_safeHighStart, structureHigh, bar_index, structureHigh, xloc.bar_index, color = currentStructColor, style = currentStructLineStyle, width = currentStructLineWidth)
+        structureLowLine   := line.new(_safeLowStart,  structureLow,  bar_index, structureLow,  xloc.bar_index, color = currentStructColor, style = currentStructLineStyle, width = currentStructLineWidth)
+        structureHighLabel := label.new(bar_index+nn, structureHigh, text = str.tostring(structureHigh, format.mintick), style = label.style_none, textcolor = color.white)
+        structureLowLabel  := label.new(bar_index+nn, structureLow,  text = str.tostring(structureLow,  format.mintick), style = label.style_none, textcolor = color.white)
+        f_drawFiboLines(startIdx)
+    else
+        if not na(structureHighLine)
+            line.set_x2(structureHighLine, bar_index)
+            label.set_x(structureHighLabel, bar_index+nn)
+        if not na(structureLowLine)
+            line.set_x2(structureLowLine, bar_index)
+            label.set_x(structureLowLabel, bar_index+nn)
+        for _fi = 0 to 21
+            if array.size(poolFiboLines) > _fi
+                line.set_x2(array.get(poolFiboLines, _fi), bar_index)
+                label.set_x(array.get(poolFiboLabels, _fi), bar_index + nn)
+
+// ═══════════════════════════════════════════════════════════════
+//          FVG DRAW
+// ═══════════════════════════════════════════════════════════════
+_fvgI = 0
+while _fvgI < array.size(fvgBoxes)
+    _b      = array.get(fvgBoxes,  _fvgI)
+    _lbl    = array.get(fvgLabels, _fvgI)
+    _isBull = array.get(fvgTypes,  _fvgI)
+    _st     = array.get(fvgState,  _fvgI)
+    _top    = box.get_top(_b)
+    _bot    = box.get_bottom(_b)
+    _mid    = (_top + _bot) / 2
+    _left   = box.get_left(_b)
+    _rem    = false
+    if _isBull
+        if low <= _bot
+            box.delete(_b)
+            label.delete(_lbl)
+            array.remove(fvgBoxes, _fvgI)
+            array.remove(fvgLabels, _fvgI)
+            array.remove(fvgTypes,  _fvgI)
+            array.remove(fvgState,  _fvgI)
+            _rem := true
+        else
+            if low <= _mid and _st < 2
+                box.set_bgcolor(_b, color.new(color.orange, 60))
+                array.set(fvgState, _fvgI, 2)
+            if isMitigatedFvgToReduce and _st >= 1
+                box.set_top(_b, low)
+            box.set_right(_b, bar_index)
+            label.set_xy(_lbl, int(math.round((_left + bar_index) / 2.0)), _mid)
+    else
+        if high >= _top
+            box.delete(_b)
+            label.delete(_lbl)
+            array.remove(fvgBoxes, _fvgI)
+            array.remove(fvgLabels, _fvgI)
+            array.remove(fvgTypes,  _fvgI)
+            array.remove(fvgState,  _fvgI)
+            _rem := true
+        else
+            if high >= _mid and _st < 2
+                box.set_bgcolor(_b, color.new(color.orange, 60))
+                array.set(fvgState, _fvgI, 2)
+            if isMitigatedFvgToReduce and _st >= 1
+                box.set_bottom(_b, high)
+            box.set_right(_b, bar_index)
+            label.set_xy(_lbl, int(math.round((_left + bar_index) / 2.0)), _mid)
+    if not _rem
+        _fvgI += 1
+
+// ═══════════════════════════════════════════════════════════════
+//          ORDER BLOCK ENGINE
+// ═══════════════════════════════════════════════════════════════
+ob_get_line_style(style) =>
+    switch style
+        '⎯⎯⎯' => line.style_solid
+        '----' => line.style_dashed
+        '····' => line.style_dotted
+        =>        line.style_solid          // ✅ default: جلوگیری از na
+
+ob_get_coordinates(condition, top, btm, ob_val) =>
+    var ob_top  = array.new_float(0)
+    var ob_btm  = array.new_float(0)
+    var ob_avg  = array.new_float(0)
+    var ob_left = array.new_int(0)
+    var ob_lbl  = array.new_label(0)
+    float ob = na
+    if condition
+        avg = math.avg(top, btm)
+        array.unshift(ob_top,  top)
+        array.unshift(ob_btm,  btm)
+        array.unshift(ob_avg,  avg)
+        array.unshift(ob_left, bar_index)
+        lbl = label.new(bar_index, avg, 'OB', style = label.style_none, textcolor = color.new(color.white,60), size = size.large, text_font_family = font.family_monospace)
+        array.unshift(ob_lbl, lbl)
+        ob := ob_val
+    [ob_top, ob_btm, ob_avg, ob_left, ob_lbl, ob]
+
+ob_remove_mitigated(ob_top, ob_btm, ob_left, ob_avg, ob_lbl, target, bull) =>
+    mitigated = false
+    target_array = bull ? ob_btm : ob_top
+    i = array.size(target_array) - 1
+    while i >= 0
+        element = array.get(target_array, i)
+        if bull ? target < element : target > element
+            mitigated := true
+            array.remove(ob_top,  i)
+            array.remove(ob_btm,  i)
+            array.remove(ob_avg,  i)
+            array.remove(ob_left, i)
+            label.delete(array.get(ob_lbl, i))
+            array.remove(ob_lbl,  i)
+        i -= 1
+    mitigated
+
+ob_set_order_blocks(ob_top, ob_btm, ob_left, ob_avg, ob_lbl, ext_last, bg_css, border_css, lvl_css) =>
+    var ob_box = array.new_box(0)
+    var ob_lvl = array.new_line(0)
+    if barstate.isfirst
+        for i = 0 to ext_last - 1 by 1
+            array.unshift(ob_box, box.new(na, na, na, na, xloc = xloc.bar_index, extend = extend.right, bgcolor = bg_css, border_color = color.new(border_css, 70)))
+            array.unshift(ob_lvl, line.new(na, na, na, na, xloc = xloc.bar_index, extend = extend.right, color = lvl_css, style = ob_get_line_style(ob_line_style), width = ob_line_width))
+    if barstate.islast
+        // ✅ حذف واقعی OB های اضافی: قدیمی‌ترین‌ها انتهای آرایه‌اند؛ هر پنج آرایه همگام می‌مانند
+        while array.size(ob_lbl) > ext_last
+            label.delete(array.pop(ob_lbl))
+            array.pop(ob_top)
+            array.pop(ob_btm)
+            array.pop(ob_avg)
+            array.pop(ob_left)
+        for i = 0 to ext_last - 1 by 1
+            if i < array.size(ob_top)
+                get_box  = array.get(ob_box,  i)
+                get_lvl  = array.get(ob_lvl,  i)
+                get_lbl  = array.get(ob_lbl,  i)
+                _left    = array.get(ob_left, i)
+                _top_val = array.get(ob_top,  i)
+                _btm_val = array.get(ob_btm,  i)
+                _avg_val = array.get(ob_avg,  i)
+                _safeLeft = math.max(_left, bar_index - MAX_HIST)
+                box.set_lefttop    (get_box, _safeLeft, _top_val)
+                box.set_rightbottom(get_box, bar_index, _btm_val)
+                box.set_bgcolor    (get_box, bg_css)
+                box.set_border_color(get_box, color.new(border_css, 70))
+                line.set_xy1(get_lvl, _safeLeft, _avg_val)
+                line.set_xy2(get_lvl, bar_index, _avg_val)
+                line.set_color(get_lvl, lvl_css)
+                label.set_xy(get_lbl, int(math.round((_safeLeft + bar_index) / 2.0)), _avg_val)
+            else
+                // ✅ پول‌های بی‌استفاده پنهان می‌شوند (قبلاً مختصات قدیمی روی چارت می‌ماند)
+                box.set_bgcolor(array.get(ob_box, i), color.new(color.white, 100))
+                box.set_border_color(array.get(ob_box, i), color.new(color.white, 100))
+                line.set_color(array.get(ob_lvl, i), color.new(color.white, 100))
+
+var ob_os       = 0
+var target_bull = 0.
+var target_bear = 0.
+
+// ✅ فالبک حجم برای نمادهای بدون Volume (فارکس/فلزات)
+volSrc = na(volume) ? (high - low) : volume
+
+upper = ta.highest(ob_length)
+lower = ta.lowest(ob_length)
+
+if ob_mitigation == 'Close'
+    target_bull := ta.lowest(close, ob_length)
+    target_bear := ta.highest(close, ob_length)
+else
+    target_bull := lower
+    target_bear := upper
+
+ob_os := high[ob_length] > upper ? 0 : low[ob_length] < lower ? 1 : ob_os[1]
+phv   = ta.pivothigh(volSrc, ob_length, ob_length)
+
+[bull_top, bull_btm, bull_avg, bull_left, bull_lbl, bull_ob] = ob_get_coordinates(bool(phv) and ob_os == 1, hl2[ob_length], low[ob_length],  low[ob_length])
+[bear_top, bear_btm, bear_avg, bear_left, bear_lbl, bear_ob] = ob_get_coordinates(bool(phv) and ob_os == 0, high[ob_length], hl2[ob_length], high[ob_length])
+
+mitigated_bull = ob_remove_mitigated(bull_top, bull_btm, bull_left, bull_avg, bull_lbl, target_bull, true)
+mitigated_bear = ob_remove_mitigated(bear_top, bear_btm, bear_left, bear_avg, bear_lbl, target_bear, false)
+
+ob_set_order_blocks(bull_top, bull_btm, bull_left, bull_avg, bull_lbl, bull_ext_last, bg_bull_css, bull_css, bull_avg_css)
+ob_set_order_blocks(bear_top, bear_btm, bear_left, bear_avg, bear_lbl, bear_ext_last, bg_bear_css, bear_css, bear_avg_css)
+
+plot(bull_ob, 'Bull OB', bull_css, 2, plot.style_linebr, offset = -ob_length, display = display.none)
+plot(bear_ob, 'Bear OB', bear_css, 2, plot.style_linebr, offset = -ob_length, display = display.none)
+
+alertcondition(not na(bull_ob), 'Bullish OB Formed',    'Bullish order block detected')
+alertcondition(not na(bear_ob), 'Bearish OB Formed',    'Bearish order block detected')
+alertcondition(mitigated_bull,  'Bullish OB Mitigated', 'Bullish order block mitigated')
+alertcondition(mitigated_bear,  'Bearish OB Mitigated', 'Bearish order block mitigated')
+
+// ═══════════════════════════════════════════════════════════════
+//   TABLE HELPERS
+// ═══════════════════════════════════════════════════════════════
+f_getAltStatusCrypto(_r) =>
+    _r == "AltSeason"    ? "Bull 🟢"     :
+     _r == "BTCSeason"   ? "Weak 🟠"     :
+     _r == "RiskOff"     ? "Bear 🔴"     :
+     _r == "DefensiveBTC"? "Caution 🔵"  : "Neutral ⚪"
+
+f_getAltStatusGold(_r) =>
+    _r == "RiskOff"   ? "Bull 🟢"  :
+     _r == "Inflation" ? "Bull 🟠"  :
+     _r == "Dollar↓"  ? "Bull 🟢"  :
+     _r == "TightUSD"   ? "Bear 🔴"  : "Neutral ⚪"
+
+f_getRegimeColorCrypto(_r) =>
+    _r == "AltSeason"    ? color.rgb(0,230,80)   :
+     _r == "BTCSeason"   ? color.rgb(255,165,0)  :
+     _r == "RiskOff"     ? color.rgb(255,65,65)  :
+     _r == "DefensiveBTC"? color.rgb(100,149,237): color.rgb(160,160,180)
+
+f_getRegimeColorGold(_r) =>
+    _r == "RiskOff"   ? color.rgb(0,230,80)   :
+     _r == "Inflation" ? color.rgb(255,165,0)  :
+     _r == "Dollar↓"  ? color.rgb(100,200,100):
+     _r == "TightUSD"   ? color.rgb(255,65,65)  : color.rgb(160,160,180)
+
+f_getMacroTextCrypto(_r) =>
+    _r == "AltSeason"    ? "AltSeason ✅"  :
+     _r == "BTCSeason"   ? "BTCSeason 🔥"  :
+     _r == "RiskOff"     ? "RiskOff ⚠️"    :
+     _r == "DefensiveBTC"? "Def BTC 🛡️"    : "Neutral ⚪"
+
+f_getMacroTextGold(_r) =>
+    _r == "RiskOff"   ? "Risk-Off ✅"  :
+     _r == "Inflation" ? "Inflation 🔥" :
+     _r == "Dollar↓"  ? "Weak $ 💵"    :
+     _r == "TightUSD"   ? "USD↑ ⚠️"   : "Neutral ⚪"
+
+getTrendColor(_tv) =>
+    _tv == "Bull"        ? textColorl           :
+     _tv == "Bear"       ? textColors           :
+     _tv == "Range"      ? color.rgb(160,160,180) :
+     _tv == "Transition" ? color.rgb(255,165,0)   : color.rgb(160,160,180)
+
+getTrendBg(_tv) =>
+    _tv == "Bull"        ? color.rgb(0,60,20)   :
+     _tv == "Bear"       ? color.rgb(70,10,10)  :
+     _tv == "Range"      ? color.rgb(30,30,45)  :
+     _tv == "Transition" ? color.rgb(55,35,0)   : color.rgb(30,30,45)
+
+getTrendLabel(_tv) =>
+    _tv == "Bull"        ? "Bull 🟢"  :
+     _tv == "Bear"       ? "Bear 🔴"  :
+     _tv == "Range"      ? "Range ⬜" :
+     _tv == "Transition" ? "Trans 🟠" : "? ⚪"
+
+// ✅ رنگ‌دهی به رشته‌های وضعیت (قبلاً getTrendColor روی اینها همیشه خاکستری می‌داد)
+getBoolColor(_s) =>
+    str.contains(_s, "🟢") or str.contains(_s, "Bull")  ? textColorl :
+     str.contains(_s, "🔴") or str.contains(_s, "Bear") ? textColors : color.rgb(160,160,180)
+
+f_shortTrend(_tv) =>
+    _tv == "Bull" ? "🟢B" : _tv == "Bear" ? "🔴Be" : _tv == "Range" ? "⬜R" : _tv == "Transition" ? "🟠T" : "⚪"
+
+f_shortMacroGold(_r) =>
+    _r == "RiskOff" ? "RkOf🟢" : _r == "Inflation" ? "Infl🟠" : _r == "Dollar↓" ? "$↓🟢" : _r == "TightUSD" ? "$↑🔴" : "Ntrl⚪"
+
+f_shortMacroCrypto(_r) =>
+    _r == "AltSeason" ? "Alt🟢" : _r == "BTCSeason" ? "BTC🟠" : _r == "RiskOff" ? "RkOf🔴" : _r == "DefensiveBTC" ? "Def🔵" : "Ntrl⚪"
+
+f_shortMacro(_r) =>
+    isGoldMode ? f_shortMacroGold(_r) : f_shortMacroCrypto(_r)
+
+f_shortBias(_lb, _sb) =>
+    float _l = nz(_lb)
+    float _s = nz(_sb)
+    _l > _s ? "L" + str.tostring(_l, "#.#") + "%" : "S" + str.tostring(_s, "#.#") + "%"
+
+f_shortBiasColor(_lb, _sb) =>
+    nz(_lb) > nz(_sb) ? textColorl : textColors
+
+f_shortConf(_c) =>
+    int _v = int(nz(_c))
+    _v >= 75 ? str.tostring(_v) + "🔥" : _v >= 60 ? str.tostring(_v) + "✓" : str.tostring(_v) + "~"
+
+f_shortConfColor(_c) =>
+    nz(_c) >= 75 ? textColorl : nz(_c) >= 60 ? color.rgb(255,215,0) : color.rgb(160,160,180)
+
+f_bullBear(_up) => _up ? "Bull 🟢" : "Bear 🔴"
+
+btcd_cur  = f_bullBear(bUp_cur)
+totl_cur  = f_bullBear(tUp_cur)
+tot2_cur  = f_bullBear(aUp_cur)
+usdtd_cur = f_bullBear(uUp_cur)
+
+btcd_tf1 = f_bullBear(slot2Up_tf1)
+btcd_tf2 = f_bullBear(slot2Up_tf2)
+btcd_tf3 = f_bullBear(slot2Up_tf3)
+btcd_tf4 = f_bullBear(slot2Up_tf4)
+
+totl_tf1 = f_bullBear(slot1Up_tf1)
+totl_tf2 = f_bullBear(slot1Up_tf2)
+totl_tf3 = f_bullBear(slot1Up_tf3)
+totl_tf4 = f_bullBear(slot1Up_tf4)
+
+tot2_tf1 = f_bullBear(slot4Up_tf1)
+tot2_tf2 = f_bullBear(slot4Up_tf2)
+tot2_tf3 = f_bullBear(slot4Up_tf3)
+tot2_tf4 = f_bullBear(slot4Up_tf4)
+
+usdtd_tf1 = f_bullBear(slot3Up_tf1)
+usdtd_tf2 = f_bullBear(slot3Up_tf2)
+usdtd_tf3 = f_bullBear(slot3Up_tf3)
+usdtd_tf4 = f_bullBear(slot3Up_tf4)
+
+dxy_tf1 = slot1Up_tf1 ? "Strong 🟢" : "Weak 🔴"
+dxy_tf2 = slot1Up_tf2 ? "Strong 🟢" : "Weak 🔴"
+dxy_tf3 = slot1Up_tf3 ? "Strong 🟢" : "Weak 🔴"
+dxy_tf4 = slot1Up_tf4 ? "Strong 🟢" : "Weak 🔴"
+dxy_cur = dxyUp ? "Strong 🟢" : "Weak 🔴"
+
+us10y_tf1 = slot2Up_tf1 ? "Rising 📈" : "Falling 📉"
+us10y_tf2 = slot2Up_tf2 ? "Rising 📈" : "Falling 📉"
+us10y_tf3 = slot2Up_tf3 ? "Rising 📈" : "Falling 📉"
+us10y_tf4 = slot2Up_tf4 ? "Rising 📈" : "Falling 📉"
+us10y_cur = us10yUp ? "Rising 📈" : "Falling 📉"
+
+vix_tf1 = slot3Up_tf1 ? "High 🔴" : "Low 🟢"
+vix_tf2 = slot3Up_tf2 ? "High 🔴" : "Low 🟢"
+vix_tf3 = slot3Up_tf3 ? "High 🔴" : "Low 🟢"
+vix_tf4 = slot3Up_tf4 ? "High 🔴" : "Low 🟢"
+vix_cur = vixUp ? "High 🔴" : "Low 🟢"
+
+_zoneTxt = na(midPoint) ? "—" : isPremium ? "🔺 Premium" : "🔻 Discount"
+
+shouldRender = barstate.islast
+
+// ═══════════════════════════════════════════════════════════════
+//          TABLE
+// ═══════════════════════════════════════════════════════════════
+pos1  = posInput1 == 'Bottom Left' ? position.bottom_left : posInput1 == 'Bottom Right' ? position.bottom_right : posInput1 == 'Top Left' ? position.top_left : position.top_right
+size1 = isMobile ? size.tiny : (sizefont1 == 'size auto' ? size.auto : sizefont1 == 'size tiny' ? size.tiny : sizefont1 == 'size small' ? size.small : sizefont1 == 'size normal' ? size.normal : sizefont1 == 'size large' ? size.large : size.huge)
+
+var table  tableInfo1 = na
+var string prevPos1   = ''
+var string prevMode   = ''
+
+_tblCols = 6
+_tblRows = isMobile ? 6 : 13
+
+if prevPos1 != posInput1 or prevMode != displayMode or na(tableInfo1)
+    if not na(tableInfo1)
+        table.delete(tableInfo1)
+    tableInfo1 := table.new(pos1, _tblCols, _tblRows,
+         bgcolor      = tblBg,
+         frame_width  = 2,
+         frame_color  = frameColor,
+         border_width = 1,
+         border_color = borderColor)
+    prevPos1 := posInput1
+    prevMode := displayMode
+
+f_cell(_col, _row, _txt, _clr, _bg) =>
+    table.cell(tableInfo1, _col, _row, _txt, text_color = _clr, bgcolor = _bg, text_size = size1)
+
+f_cellnb(_col, _row, _txt, _clr) =>
+    table.cell(tableInfo1, _col, _row, _txt, text_color = _clr, bgcolor = cellBg, text_size = size1)
+
+_curTxt = getTrendColor(CTL)
+_curBg  = getTrendBg(CTL)
+
+if shouldRender and Stable1
+    if isMobile
+        table.clear(tableInfo1, 0, 0, 5, 5)
+
+        f_cell(0, 0, isGoldMode ? "🏆" : "🐺",   hdrTxt, hdrBg)
+        f_cell(1, 0, getTFLabel(ticker1TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell(2, 0, getTFLabel(ticker2TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell(3, 0, getTFLabel(ticker3TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell(4, 0, getTFLabel(ticker4TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell(5, 0, currentTFLabel,              _curTxt, _curBg)
+
+        f_cell(0, 1, "Tr", nameTxt, nameBg)
+        f_cell(1, 1, f_shortTrend(CT1), getTrendColor(CT1), cellBg)
+        f_cell(2, 1, f_shortTrend(CT2), getTrendColor(CT2), cellBg)
+        f_cell(3, 1, f_shortTrend(CT3), getTrendColor(CT3), cellBg)
+        f_cell(4, 1, f_shortTrend(CT4), getTrendColor(CT4), cellBg)
+        f_cell(5, 1, f_shortTrend(CTL), getTrendColor(CTL), getTrendBg(CTL))
+
+        f_cell(0, 2, "Mc", nameTxt, nameBg)
+        f_cell(1, 2, f_shortMacro(macro_tf1), getBoolColor(f_shortMacro(macro_tf1)), cellBg)
+        f_cell(2, 2, f_shortMacro(macro_tf2), getBoolColor(f_shortMacro(macro_tf2)), cellBg)
+        f_cell(3, 2, f_shortMacro(macro_tf3), getBoolColor(f_shortMacro(macro_tf3)), cellBg)
+        f_cell(4, 2, f_shortMacro(macro_tf4), getBoolColor(f_shortMacro(macro_tf4)), cellBg)
+        f_cell(5, 2, f_shortMacro(macro_cur), getBoolColor(f_shortMacro(macro_cur)), cellBg)
+
+        f_cell(0, 3, "Bi", nameTxt, nameBg)
+        f_cell(1, 3, f_shortBias(lb_tf1, sb_tf1), f_shortBiasColor(lb_tf1, sb_tf1), cellBg)
+        f_cell(2, 3, f_shortBias(lb_tf2, sb_tf2), f_shortBiasColor(lb_tf2, sb_tf2), cellBg)
+        f_cell(3, 3, f_shortBias(lb_tf3, sb_tf3), f_shortBiasColor(lb_tf3, sb_tf3), cellBg)
+        f_cell(4, 3, f_shortBias(lb_tf4, sb_tf4), f_shortBiasColor(lb_tf4, sb_tf4), cellBg)
+        f_cell(5, 3, f_shortBias(lb_cur, sb_cur),  f_shortBiasColor(lb_cur, sb_cur),  cellBg)
+
+        f_cell(0, 4, "Cf", nameTxt, nameBg)
+        f_cell(1, 4, f_shortConf(CONF1), f_shortConfColor(CONF1), cellBg)
+        f_cell(2, 4, f_shortConf(CONF2), f_shortConfColor(CONF2), cellBg)
+        f_cell(3, 4, f_shortConf(CONF3), f_shortConfColor(CONF3), cellBg)
+        f_cell(4, 4, f_shortConf(CONF4), f_shortConfColor(CONF4), cellBg)
+        f_cell(5, 4, f_shortConf(CONFL), f_shortConfColor(CONFL), cellBg)
+
+        f_cell(0, 5, "📍", hdrTxt, color.rgb(20,15,40))
+        f_cell(1, 5, sig_tf1, sigCol_tf1, sigBg_tf1)
+        f_cell(2, 5, sig_tf2, sigCol_tf2, sigBg_tf2)
+        f_cell(3, 5, sig_tf3, sigCol_tf3, sigBg_tf3)
+        f_cell(4, 5, sig_tf4, sigCol_tf4, sigBg_tf4)
+        f_cell(5, 5, sig_cur_confirmed, sigCol_cur_confirmed, sigBg_cur_confirmed)
+
+    else if isGoldMode
+        table.clear(tableInfo1, 0, 0, 5, 12)
+
+        f_cell  (0, 0, "🏆 Wolf Gold v4.1",                hdrTxt, hdrBg)
+        f_cell  (1, 0, "⏱ " + getTFLabel(ticker1TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (2, 0, "⏱ " + getTFLabel(ticker2TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (3, 0, "⏱ " + getTFLabel(ticker3TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (4, 0, "⏱ " + getTFLabel(ticker4TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (5, 0, currentTFLabel,                      _curTxt, _curBg)
+
+        f_cell  (0, 1, syminfo.ticker, nameTxt, nameBg)
+        f_cell  (1, 1, getTrendLabel(CT1), getTrendColor(CT1), getTrendBg(CT1))
+        f_cell  (2, 1, getTrendLabel(CT2), getTrendColor(CT2), getTrendBg(CT2))
+        f_cell  (3, 1, getTrendLabel(CT3), getTrendColor(CT3), getTrendBg(CT3))
+        f_cell  (4, 1, getTrendLabel(CT4), getTrendColor(CT4), getTrendBg(CT4))
+        f_cell  (5, 1, getTrendLabel(CTL), getTrendColor(CTL), getTrendBg(CTL))
+
+        f_cell  (0, 2, "DXY 💵",   nameTxt, nameBg)
+        f_cellnb(1, 2, dxy_tf1, getBoolColor(dxy_tf1))
+        f_cellnb(2, 2, dxy_tf2, getBoolColor(dxy_tf2))
+        f_cellnb(3, 2, dxy_tf3, getBoolColor(dxy_tf3))
+        f_cellnb(4, 2, dxy_tf4, getBoolColor(dxy_tf4))
+        f_cellnb(5, 2, dxy_cur, getBoolColor(dxy_cur))
+
+        f_cell  (0, 3, "US10Y 📊", nameTxt, nameBg)
+        f_cellnb(1, 3, us10y_tf1, getBoolColor(us10y_tf1))
+        f_cellnb(2, 3, us10y_tf2, getBoolColor(us10y_tf2))
+        f_cellnb(3, 3, us10y_tf3, getBoolColor(us10y_tf3))
+        f_cellnb(4, 3, us10y_tf4, getBoolColor(us10y_tf4))
+        f_cellnb(5, 3, us10y_cur, getBoolColor(us10y_cur))
+
+        f_cell  (0, 4, "VIX 😨",   nameTxt, nameBg)
+        f_cellnb(1, 4, vix_tf1, getBoolColor(vix_tf1))
+        f_cellnb(2, 4, vix_tf2, getBoolColor(vix_tf2))
+        f_cellnb(3, 4, vix_tf3, getBoolColor(vix_tf3))
+        f_cellnb(4, 4, vix_tf4, getBoolColor(vix_tf4))
+        f_cellnb(5, 4, vix_cur, getBoolColor(vix_cur))
+
+        f_cell  (0, 5, "Macro 🌍", nameTxt, nameBg)
+        f_cellnb(1, 5, f_getMacroTextGold(macro_tf1), f_getRegimeColorGold(macro_tf1))
+        f_cellnb(2, 5, f_getMacroTextGold(macro_tf2), f_getRegimeColorGold(macro_tf2))
+        f_cellnb(3, 5, f_getMacroTextGold(macro_tf3), f_getRegimeColorGold(macro_tf3))
+        f_cellnb(4, 5, f_getMacroTextGold(macro_tf4), f_getRegimeColorGold(macro_tf4))
+        f_cellnb(5, 5, f_getMacroTextGold(macro_cur), f_getRegimeColorGold(macro_cur))
+
+        f_cell  (0, 6, "Regime 🎯", nameTxt, nameBg)
+        f_cellnb(1, 6, f_getAltStatusGold(macro_tf1), f_getRegimeColorGold(macro_tf1))
+        f_cellnb(2, 6, f_getAltStatusGold(macro_tf2), f_getRegimeColorGold(macro_tf2))
+        f_cellnb(3, 6, f_getAltStatusGold(macro_tf3), f_getRegimeColorGold(macro_tf3))
+        f_cellnb(4, 6, f_getAltStatusGold(macro_tf4), f_getRegimeColorGold(macro_tf4))
+        f_cellnb(5, 6, f_getAltStatusGold(macro_cur), f_getRegimeColorGold(macro_cur))
+
+        f_cell  (0, 7, "Zone 🧭", nameTxt, nameBg)
+        f_cell  (1, 7, _zoneTxt, isPremium ? color.rgb(255,140,140) : textColorl, cellBg)
+        f_cell  (2, 7, "BOS " + (bosValid ? "✔" : "—"), color.rgb(140,140,170), cellBg)
+        f_cell  (3, 7, "FVG " + str.tostring(fvgBullRawCount) + "/" + str.tostring(fvgBearRawCount), color.rgb(140,140,170), cellBg)
+        f_cell  (4, 7, "Macro " + (_macroAllowLongGold ? "✔" : "✗") + "/" + (_macroAllowShortGold ? "✔" : "✗"), color.rgb(140,140,170), cellBg)
+        f_cell  (5, 7, "Ali " + str.tostring(_alignCount) + "/" + str.tostring(_alignCountBear), color.rgb(140,140,170), cellBg)
+
+        f_cell  (0, 8, "Bias 🎯",  nameTxt, nameBg)
+        f_cellnb(1, 8, f_biasText(lb_tf1, sb_tf1), f_biasColor(lb_tf1, sb_tf1))
+        f_cellnb(2, 8, f_biasText(lb_tf2, sb_tf2), f_biasColor(lb_tf2, sb_tf2))
+        f_cellnb(3, 8, f_biasText(lb_tf3, sb_tf3), f_biasColor(lb_tf3, sb_tf3))
+        f_cellnb(4, 8, f_biasText(lb_tf4, sb_tf4), f_biasColor(lb_tf4, sb_tf4))
+        f_cellnb(5, 8, f_biasText(lb_cur, sb_cur), f_biasColor(lb_cur, sb_cur))
+
+        f_cell  (0, 9, "Conf 🧠",  nameTxt, nameBg)
+        f_cellnb(1, 9, f_shortConf(CONF1), f_shortConfColor(CONF1))
+        f_cellnb(2, 9, f_shortConf(CONF2), f_shortConfColor(CONF2))
+        f_cellnb(3, 9, f_shortConf(CONF3), f_shortConfColor(CONF3))
+        f_cellnb(4, 9, f_shortConf(CONF4), f_shortConfColor(CONF4))
+        f_cellnb(5, 9, f_shortConf(CONFL), f_shortConfColor(CONFL))
+
+        f_cell  (0, 10, "کلی 🏆",  nameTxt, nameBg)
+        f_cell  (1, 10, overallRec, overallColor, color.new(overallColor, 80))
+        f_cell  (2, 10, cnt1, color.rgb(200,200,220), cellBg)
+        f_cell  (3, 10, cnt2, color.rgb(200,200,220), cellBg)
+        f_cell  (4, 10, cnt3, color.rgb(200,200,220), cellBg)
+        f_cell  (5, 10, cnt4, color.rgb(200,200,220), cellBg)
+
+        f_cell  (0, 11, "───", sepColor, cellBg)
+        f_cell  (1, 11, "───", sepColor, cellBg)
+        f_cell  (2, 11, "───", sepColor, cellBg)
+        f_cell  (3, 11, "───", sepColor, cellBg)
+        f_cell  (4, 11, "───", sepColor, cellBg)
+        f_cell  (5, 11, "───", sepColor, cellBg)
+
+        f_cell  (0, 12, "📍 سیگنال", hdrTxt, color.rgb(20,15,40))
+        f_cell  (1, 12, sig_tf1, sigCol_tf1, sigBg_tf1)
+        f_cell  (2, 12, sig_tf2, sigCol_tf2, sigBg_tf2)
+        f_cell  (3, 12, sig_tf3, sigCol_tf3, sigBg_tf3)
+        f_cell  (4, 12, sig_tf4, sigCol_tf4, sigBg_tf4)
+        f_cell  (5, 12, sig_cur_confirmed, sigCol_cur_confirmed, sigBg_cur_confirmed)
+
+    else
+        table.clear(tableInfo1, 0, 0, 5, 12)
+
+        f_cell  (0, 0, "🐺 Wolf v4.1",                      hdrTxt, hdrBg)
+        f_cell  (1, 0, "⏱ " + getTFLabel(ticker1TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (2, 0, "⏱ " + getTFLabel(ticker2TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (3, 0, "⏱ " + getTFLabel(ticker3TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (4, 0, "⏱ " + getTFLabel(ticker4TFCustom), color.rgb(140,200,255), hdrBg)
+        f_cell  (5, 0, currentTFLabel,                      _curTxt, _curBg)
+
+        f_cell  (0, 1, syminfo.ticker, nameTxt, nameBg)
+        f_cell  (1, 1, getTrendLabel(CT1), getTrendColor(CT1), getTrendBg(CT1))
+        f_cell  (2, 1, getTrendLabel(CT2), getTrendColor(CT2), getTrendBg(CT2))
+        f_cell  (3, 1, getTrendLabel(CT3), getTrendColor(CT3), getTrendBg(CT3))
+        f_cell  (4, 1, getTrendLabel(CT4), getTrendColor(CT4), getTrendBg(CT4))
+        f_cell  (5, 1, getTrendLabel(CTL), getTrendColor(CTL), getTrendBg(CTL))
+
+        f_cell  (0, 2, "ALT 🪙",   nameTxt, nameBg)
+        f_cellnb(1, 2, f_getAltStatusCrypto(macro_tf1), f_getRegimeColorCrypto(macro_tf1))
+        f_cellnb(2, 2, f_getAltStatusCrypto(macro_tf2), f_getRegimeColorCrypto(macro_tf2))
+        f_cellnb(3, 2, f_getAltStatusCrypto(macro_tf3), f_getRegimeColorCrypto(macro_tf3))
+        f_cellnb(4, 2, f_getAltStatusCrypto(macro_tf4), f_getRegimeColorCrypto(macro_tf4))
+        f_cellnb(5, 2, f_getAltStatusCrypto(macro_cur), f_getRegimeColorCrypto(macro_cur))
+
+        f_cell  (0, 3, "BTC.D 🔗", nameTxt, nameBg)
+        f_cellnb(1, 3, btcd_tf1, getBoolColor(btcd_tf1))
+        f_cellnb(2, 3, btcd_tf2, getBoolColor(btcd_tf2))
+        f_cellnb(3, 3, btcd_tf3, getBoolColor(btcd_tf3))
+        f_cellnb(4, 3, btcd_tf4, getBoolColor(btcd_tf4))
+        f_cellnb(5, 3, btcd_cur, getBoolColor(btcd_cur))
+
+        f_cell  (0, 4, "TOTAL 📊", nameTxt, nameBg)
+        f_cellnb(1, 4, totl_tf1, getBoolColor(totl_tf1))
+        f_cellnb(2, 4, totl_tf2, getBoolColor(totl_tf2))
+        f_cellnb(3, 4, totl_tf3, getBoolColor(totl_tf3))
+        f_cellnb(4, 4, totl_tf4, getBoolColor(totl_tf4))
+        f_cellnb(5, 4, totl_cur, getBoolColor(totl_cur))
+
+        f_cell  (0, 5, "TOTAL2 📈", nameTxt, nameBg)
+        f_cellnb(1, 5, tot2_tf1, getBoolColor(tot2_tf1))
+        f_cellnb(2, 5, tot2_tf2, getBoolColor(tot2_tf2))
+        f_cellnb(3, 5, tot2_tf3, getBoolColor(tot2_tf3))
+        f_cellnb(4, 5, tot2_tf4, getBoolColor(tot2_tf4))
+        f_cellnb(5, 5, tot2_cur, getBoolColor(tot2_cur))
+
+        f_cell  (0, 6, "USDT.D 💵", nameTxt, nameBg)
+        f_cellnb(1, 6, usdtd_tf1, getBoolColor(usdtd_tf1))
+        f_cellnb(2, 6, usdtd_tf2, getBoolColor(usdtd_tf2))
+        f_cellnb(3, 6, usdtd_tf3, getBoolColor(usdtd_tf3))
+        f_cellnb(4, 6, usdtd_tf4, getBoolColor(usdtd_tf4))
+        f_cellnb(5, 6, usdtd_cur, getBoolColor(usdtd_cur))
+
+        f_cell  (0, 7, "Macro 🌍", nameTxt, nameBg)
+        f_cellnb(1, 7, f_getMacroTextCrypto(macro_tf1), f_getRegimeColorCrypto(macro_tf1))
+        f_cellnb(2, 7, f_getMacroTextCrypto(macro_tf2), f_getRegimeColorCrypto(macro_tf2))
+        f_cellnb(3, 7, f_getMacroTextCrypto(macro_tf3), f_getRegimeColorCrypto(macro_tf3))
+        f_cellnb(4, 7, f_getMacroTextCrypto(macro_tf4), f_getRegimeColorCrypto(macro_tf4))
+        f_cellnb(5, 7, f_getMacroTextCrypto(macro_cur), f_getRegimeColorCrypto(macro_cur))
+
+        f_cell  (0, 8, "Bias 🎯",  nameTxt, nameBg)
+        f_cellnb(1, 8, f_biasText(lb_tf1, sb_tf1), f_biasColor(lb_tf1, sb_tf1))
+        f_cellnb(2, 8, f_biasText(lb_tf2, sb_tf2), f_biasColor(lb_tf2, sb_tf2))
+        f_cellnb(3, 8, f_biasText(lb_tf3, sb_tf3), f_biasColor(lb_tf3, sb_tf3))
+        f_cellnb(4, 8, f_biasText(lb_tf4, sb_tf4), f_biasColor(lb_tf4, sb_tf4))
+        f_cellnb(5, 8, f_biasText(lb_cur, sb_cur), f_biasColor(lb_cur, sb_cur))
+
+        f_cell  (0, 9, "Conf 🧠",  nameTxt, nameBg)
+        f_cellnb(1, 9, f_shortConf(CONF1), f_shortConfColor(CONF1))
+        f_cellnb(2, 9, f_shortConf(CONF2), f_shortConfColor(CONF2))
+        f_cellnb(3, 9, f_shortConf(CONF3), f_shortConfColor(CONF3))
+        f_cellnb(4, 9, f_shortConf(CONF4), f_shortConfColor(CONF4))
+        f_cellnb(5, 9, f_shortConf(CONFL), f_shortConfColor(CONFL))
+
+        f_cell  (0, 10, "کلی 🎯",  nameTxt, nameBg)
+        f_cell  (1, 10, overallRec, overallColor, color.new(overallColor, 80))
+        f_cell  (2, 10, cnt1, color.rgb(200,200,220), cellBg)
+        f_cell  (3, 10, cnt2, color.rgb(200,200,220), cellBg)
+        f_cell  (4, 10, cnt3, color.rgb(200,200,220), cellBg)
+        f_cell  (5, 10, cnt4, color.rgb(200,200,220), cellBg)
+
+        f_cell  (0, 11, "───", sepColor, cellBg)
+        f_cell  (1, 11, "───", sepColor, cellBg)
+        f_cell  (2, 11, "───", sepColor, cellBg)
+        f_cell  (3, 11, "───", sepColor, cellBg)
+        f_cell  (4, 11, "───", sepColor, cellBg)
+        f_cell  (5, 11, "───", sepColor, cellBg)
+
+        f_cell  (0, 12, "📍 سیگنال", hdrTxt, color.rgb(20,15,40))
+        f_cell  (1, 12, sig_tf1, sigCol_tf1, sigBg_tf1)
+        f_cell  (2, 12, sig_tf2, sigCol_tf2, sigBg_tf2)
+        f_cell  (3, 12, sig_tf3, sigCol_tf3, sigBg_tf3)
+        f_cell  (4, 12, sig_tf4, sigCol_tf4, sigBg_tf4)
+        f_cell  (5, 12, sig_cur_confirmed, sigCol_cur_confirmed, sigBg_cur_confirmed)
+
+// ═══════════════════════════════════════════════════════════════
+//          ALERTS
+// ═══════════════════════════════════════════════════════════════
+alertcondition(_aiLong,  'AI Long Signal',  'Strong Buy Signal - AI Confirmed')
+alertcondition(_aiShort, 'AI Short Signal', 'Strong Sell Signal - AI Confirmed')
+alertcondition(sig_cur == "🟢 LONG"  and _barConfirmed, 'Signal Long Current TF',  'سیگنال LONG در TF فعلی')
+alertcondition(sig_cur == "🔴 SHORT" and _barConfirmed, 'Signal Short Current TF', 'سیگنال SHORT در TF فعلی')
+
+// آلرت‌های آماده (فقط روی کندل تأییدشده — ضد ری‌پینت)
+// ── طرح معامله: استاپ بیرون ساختار با بافر ۰.۵ ATR؛ حداقل ریسک ۰.۵ ATR
+_riskL = math.max(close - (nz(structureLow, low) - 0.5 * atrValue), 0.5 * atrValue)
+_riskS = math.max((nz(structureHigh, high) + 0.5 * atrValue) - close, 0.5 * atrValue)
+
+if _aiLong
+    alert('🐺 AI LONG | ' + syminfo.ticker + ' | ' + currentTFLabel + ' | entry≈' + str.tostring(close, format.mintick) + ' | SL=' + str.tostring(close - _riskL, format.mintick) + ' | TP1=' + str.tostring(close + _riskL, format.mintick) + ' | TP2=' + str.tostring(close + 2 * _riskL, format.mintick), alert.freq_once_per_bar_close)
+if _aiShort
+    alert('🐺 AI SHORT | ' + syminfo.ticker + ' | ' + currentTFLabel + ' | entry≈' + str.tostring(close, format.mintick) + ' | SL=' + str.tostring(close + _riskS, format.mintick) + ' | TP1=' + str.tostring(close - _riskS, format.mintick) + ' | TP2=' + str.tostring(close - 2 * _riskS, format.mintick), alert.freq_once_per_bar_close)
+
+// ════════════════════════════════════════════════════════════════════
+//  لایهٔ اجرا (Strategy) — طبق BACKTEST-PROTOCOL.md
+//  • ورود: سیگنال روی کندل تأییدشده → ورود در open کندل بعد (پیش‌فرض Pine)
+//  • SL: ساختار کندل سیگنال (فریز شده). TP1 = 1R (۵۰٪)، TP2 = 2R
+//  • بعد از TP1: SL باقی‌مانده به نقطهٔ ورود (BE)
+//  • خروج زمانی: ex_timeBars کندل بعد از ورود
+//  • حجم: ریسک ثابت % از equity؛ یک پوزیشن هم‌زمان (pyramiding = 0)
+//  • تگ setup: CONT > RANGE > TRANS > OTHER (اولویت اول)
+//  • سقف ضرر روزانه (اختیاری، پیش‌فرض خاموش)
+// ════════════════════════════════════════════════════════════════════
+grp_bt = 'Backtest'
+ex_riskPct   = input.float(0.5,  'ریسک هر معامله (% equity)', minval = 0.01, group = grp_bt)
+ex_timeBars  = input.int(24,     'خروج زمانی (کندل)', minval = 1, group = grp_bt)
+ex_useDayCap = input.bool(false, 'فعال‌سازی سقف ضرر روزانه', group = grp_bt)
+ex_dayCapPct = input.float(2.0,  'سقف ضرر روزانه (% equity)', minval = 0.1, group = grp_bt)
+
+// ── وضعیت معامله (فریز‌شده از کندل سیگنال)
+var float ex_pendSL   = na
+var float ex_pendQty  = na
+var string ex_pendTag = na
+var float ex_entryPx  = na
+var float ex_sl       = na
+var float ex_qty0     = na
+var float ex_q1       = na
+var int   ex_entryBar = na
+var int   ex_dir      = 0
+var string ex_tag     = ''
+var float ex_dayStart = na
+
+// ── سقف ضرر روزانه
+if na(ex_dayStart) or timeframe.change('D')
+    ex_dayStart := strategy.equity
+dayLossHit = ex_useDayCap and (strategy.equity - ex_dayStart) / ex_dayStart * 100.0 <= -ex_dayCapPct
+
+// ── تگ setup (اولویت: CONT > RANGE > TRANS)
+ex_tagL = _setupBullCont ? 'CONT' : _setupRangeLong ? 'RANGE' : _setupTransBull ? 'TRANS' : 'OTHER'
+ex_tagS = _setupBearCont ? 'CONT' : _setupRangeShort ? 'RANGE' : _setupTransBear ? 'TRANS' : 'OTHER'
+
+flat = strategy.position_size == 0
+
+// ── ورود: فقط وقتی پوزیشنی باز نیست و سقف روزانه نخورده
+canEnter = flat and not dayLossHit and not na(_riskL) and not na(_riskS)
+if _aiLong and canEnter and _riskL > 0
+    ex_pendSL   := close - _riskL
+    ex_pendQty  := strategy.equity * ex_riskPct / 100.0 / _riskL
+    ex_pendTag  := ex_tagL
+    strategy.entry('Long', strategy.long, qty = ex_pendQty, comment = ex_pendTag)
+if _aiShort and canEnter and _riskS > 0
+    ex_pendSL   := close + _riskS
+    ex_pendQty  := strategy.equity * ex_riskPct / 100.0 / _riskS
+    ex_pendTag  := ex_tagS
+    strategy.entry('Short', strategy.short, qty = ex_pendQty, comment = ex_pendTag)
+
+// ── ثبت مشخصات معامله در کندل پر شدن (اولین کندل با پوزیشن باز)
+if strategy.position_size != 0 and strategy.position_size[1] == 0
+    ex_dir      := strategy.position_size > 0 ? 1 : -1
+    ex_entryPx  := strategy.position_avg_price
+    ex_sl       := ex_pendSL
+    ex_qty0     := math.abs(strategy.position_size)
+    ex_q1       := ex_qty0 / 2.0
+    ex_entryBar := bar_index
+    ex_tag      := ex_pendTag
+
+// ── مدیریت خروج (فقط وقتی پوزیشن باز است)
+if strategy.position_size != 0 and not na(ex_entryPx)
+    rr        = math.abs(ex_entryPx - ex_sl)
+    tp1      = ex_entryPx + ex_dir * rr
+    tp2      = ex_entryPx + ex_dir * 2.0 * rr
+    tp1Done  = math.abs(strategy.position_size) < ex_qty0 - 1e-9
+    stopRem  = tp1Done ? ex_entryPx : ex_sl
+    fromId   = ex_dir > 0 ? 'Long' : 'Short'
+    // TP1: فقط تا وقتی زده نشده
+    if not tp1Done
+        strategy.exit('TP1', fromId, qty = ex_q1, stop = ex_sl, limit = tp1)
+    // TP2 (یا SL/BE برای باقی‌مانده)
+    strategy.exit('TP2', fromId, qty = ex_qty0 - ex_q1, stop = stopRem, limit = tp2)
+    // خروج زمانی
+    if bar_index - ex_entryBar >= ex_timeBars
+        strategy.close_all(comment = 'TIME')
+
+// ── ریست وضعیت بعد از بسته‌شدن کامل
+if strategy.position_size == 0 and strategy.position_size[1] != 0
+    ex_entryPx := na
+    ex_sl      := na
+    ex_qty0    := na
+    ex_q1      := na
+    ex_dir     := 0
