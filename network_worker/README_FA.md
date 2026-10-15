@@ -14,4 +14,4 @@ Worker ترمینال یا اجرای دستور آزاد نیست. هیچ Comma
 - فایل نمونهٔ فاقد Credential: `worker.example.json`
 - فایل واقعی `worker.json` و همهٔ `*.dpapi` طبق `.gitignore` محلی Worker هرگز نباید وارد repository شوند.
 
-Worker می‌تواند روی همان سرور FAM/IIS باشد، ولی باید با حساب Windows مستقل از IIS/FAM اجرا و خارج از مسیر public نصب شود. ارتباط کنترل‌پلین FAM همیشه مستقیم و بدون Proxy/PAC است؛ در صورت گواهی خصوصی، `caFile` می‌تواند گواهی عمومی PEM یا Windows DER `.cer` تأییدشدهٔ FAM باشد.
+Worker فقط یک سرویس داخلی روی همان سرور FAM/IIS است؛ سرور دوم، Agent روی Workstation کاربران یا حساب نام‌دار `FAMNetworkWorker` لازم نیست. آن را خارج از مسیر public و با هویت Built-in غیرتعاملی `NT AUTHORITY\LOCAL SERVICE` اجرا کنید؛ این هویت Password یا Desktop Login ندارد و از هویت Application Pool/IIS جدا می‌ماند. ارتباط کنترل‌پلین FAM همیشه مستقیم و بدون Proxy/PAC است؛ در صورت گواهی خصوصی، `caFile` می‌تواند گواهی عمومی PEM یا Windows DER `.cer` تأییدشدهٔ FAM باشد.
