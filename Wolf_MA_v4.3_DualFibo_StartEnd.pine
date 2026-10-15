@@ -1,7 +1,7 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 //@version=6
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Wolf M-A  v4.3  |  Crypto & Gold        (Dual Fibonacci — Start & End Selectable)
+//  Wolf M-A  v4.3.1|  Crypto & Gold        (Dual Start+End — Classic Wick Fix)
 // ───────────────────────────────────────────────────────────────────────────────
 //  وضعیت نسخهٔ ۴.۱.۱ (نسبت به v4):
 //   • ماکرو ستون‌های TF: هر ستون پرچم‌های ماکرو خودِ تایم‌فریم را دارد
@@ -23,7 +23,7 @@
 //  هیچ متغیر mutable گلوبالی را نمی‌خوانند (شرط Pine برای درخواست‌های TF).
 
 // ═══════════════════════════════════════════════════════════════════════════════
-indicator('Wolf M-A v4.3 | Crypto & Gold — Dual Fibo (Start+End)', overlay = true, max_bars_back = 700,
+indicator('Wolf M-A v4.3.1 | Crypto & Gold — Dual Fibo (Start+End) Fix',, overlay = true, max_bars_back = 700,
      max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500,
      dynamic_requests = false)
 
@@ -953,13 +953,12 @@ else
         structureHighLocked := false
         structureLowLocked  := false
 
-    // ── تعقیب سقف (انتهای فیبو در لگ صعودی)
-    if not na(structureHigh) and high > structureHigh and (structureDirection == 0 or structureDirection == 2)
+    // ── تعقیب سقف — کلاسیک: بدون توجه به جهت، هر شدوی بالاتر را دنبال کن (جلوگیری از فریز 4064)
+    if not na(structureHigh) and high > structureHigh and (isClassicMode and fibWickTrailClassic ? true : (structureDirection == 0 or structureDirection == 2))
         bool canChaseHigh = false
         if isClassicMode
             canChaseHigh := fibWickTrailClassic ? true : f_canChaseStructure(structureHighStartIndex)
         else
-            // پیوت: اگر قفل است ولی شدوی جدید بالاتر زده، اجازه بده؛ در غیر این صورت فقط تا ChaseBars
             canChaseHigh := f_canChaseStructure(structureHighStartIndex)
         if canChaseHigh
             structureHigh           := high
@@ -967,8 +966,8 @@ else
             if not isClassicMode
                 structureHighLocked := false
 
-    // ── تعقیب کف (انتهای فیبو در لگ نزولی)
-    if not na(structureLow) and low < structureLow and (structureDirection == 0 or structureDirection == 1)
+    // ── تعقیب کف — کلاسیک: بدون توجه به جهت، هر شدوی پایین‌تر را دنبال کن
+    if not na(structureLow) and low < structureLow and (isClassicMode and fibWickTrailClassic ? true : (structureDirection == 0 or structureDirection == 1))
         bool canChaseLow = false
         if isClassicMode
             canChaseLow := fibWickTrailClassic ? true : f_canChaseStructure(structureLowStartIndex)
