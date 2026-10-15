@@ -10,7 +10,7 @@ if ($TestHostName -notmatch '^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A
 $dotnet=Get-Command dotnet -ErrorAction SilentlyContinue
 if (!$dotnet) { throw 'Install the organisation-approved .NET LTS SDK and Hosting Bundle before building FAM Next.' }
 $sdks=@(& dotnet --list-sdks)
-if (!$sdks.Count -or !($sdks | Where-Object { $_ -match '^10\.' })) { throw 'Install the approved .NET 10 LTS SDK; FAM Next targets net10.0.' }
+if (!$sdks.Count -or !($sdks | Where-Object { $_ -match '^10\.0\.402(?:\s|$)' })) { throw 'Install .NET SDK 10.0.402 x64; global.json pins this FAM Next build SDK.' }
 $web=Get-WindowsFeature Web-Server -ErrorAction SilentlyContinue
 if (!$web -or !$web.Installed) { throw 'Install IIS Web Server before FAM Next deployment.' }
 if (!(Get-Service | Where-Object { $_.Name -like 'MSSQL*' })) { throw 'Install SQL Server Developer/Express for the VM before schema deployment.' }

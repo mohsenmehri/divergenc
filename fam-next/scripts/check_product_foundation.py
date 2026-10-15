@@ -4,7 +4,7 @@ import re
 
 root=Path(__file__).resolve().parents[1]
 required=[
-    'README_FA.md','FamNext.sln','Directory.Build.props',
+    'README_FA.md','FamNext.sln','Directory.Build.props','global.json',
     'src/FamNext.Domain/ProductContracts.cs',
     'src/FamNext.Application/ImportPolicy.cs',
     'deploy/sql/001_initial.sql',
@@ -13,6 +13,8 @@ required=[
 ]
 for item in required:
     assert (root/item).is_file(),item
+sdk=(root/'global.json').read_text(encoding='utf8')
+assert '10.0.402' in sdk and 'latestPatch' in sdk
 schema=(root/'deploy/sql/001_initial.sql').read_text(encoding='utf8')
 for token in ('dbo.Tenants','TenantId','dbo.ApplicationUsers','dbo.WorksheetRows','dbo.ImportBatches','dbo.AuditEvents','dbo.Licenses'):
     assert token in schema,token

@@ -9,8 +9,9 @@
 ## 2. پیش‌نیازهای Administrator VM
 
 1. Snapshot بگیرید.
-2. IIS، SQL Server Developer یا Express، و .NET LTS SDK + Hosting Bundle مورد
-   تأیید سازمان را از رسانه/Feed تأییدشده نصب کنید.
+2. IIS، SQL Server Developer یا Express، .NET SDK **10.0.402 x64** و ASP.NET
+   Core Hosting Bundle **10.0.13 x64** را از رسانه/Feed تأییدشده نصب کنید.
+   نسخهٔ SDK در `global.json` قفل شده است؛ Visual Studio باید Stable باشد، نه Preview/Insiders.
 3. SQL را فقط Local یا شبکهٔ مدیریت VM نگه دارید؛ Port 1433 را برای کاربران باز
    نکنید.
 4. Script زیر را با Administrator اجرا کنید:
