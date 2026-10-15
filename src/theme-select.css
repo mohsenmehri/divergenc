@@ -1,0 +1,16 @@
+/* Theme 2 uses a controlled select surface rather than the Windows native
+   popup, whose active row can ignore CSS and return to navy. The original
+   select remains the source of truth and returns unchanged in Theme 1. */
+.fam-light-select{display:none;position:relative;width:100%;min-width:0;direction:rtl;}
+html[data-ui-theme="light"] select.fam-select-native{display:none!important;}
+html[data-ui-theme="light"] .fam-light-select{display:block;}
+.fam-light-select-toggle{width:100%;min-height:42px;padding:0 14px;border:1px solid #b7cad8;border-radius:11px;background-color:#fff;color:#203c52;font:inherit;font-size:12.5px;text-align:right;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;box-shadow:none;}
+.fam-light-select-toggle::after{content:"";width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid #668399;flex:0 0 auto;}
+.fam-light-select.open .fam-light-select-toggle{border-color:#299a96;box-shadow:0 0 0 3px #087f8320;background-color:#fff;color:#203c52;}
+.fam-light-select.open .fam-light-select-toggle::after{transform:rotate(180deg);}
+.fam-light-select-menu{position:absolute;z-index:4200;top:calc(100% + 5px);inset-inline:0;max-height:min(300px,45vh);overflow:auto;padding:5px;border:1px solid #b7cad8;border-radius:11px;background-color:#fff;color:#203c52;box-shadow:0 16px 36px -18px #13204380;}
+.fam-light-select-menu[hidden]{display:none!important;}
+.fam-light-select-group{display:block;padding:7px 10px 4px;color:#537188;font-size:10px;font-weight:900;}
+.fam-light-select-option{display:block;width:100%;border:0;border-radius:7px;padding:8px 10px;background-color:#fff;color:#203c52;font:inherit;font-size:12px;line-height:1.45;text-align:right;cursor:pointer;}
+.fam-light-select-option:hover,.fam-light-select-option:focus-visible,.fam-light-select-option[aria-selected="true"]{background-color:#edf7f5;color:#075f61;outline:none;}
+.fam-light-select-option:disabled{opacity:.52;cursor:not-allowed;}

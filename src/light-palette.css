@@ -1,0 +1,216 @@
+/* Palette only. No box geometry, typography or DOM changes. FX opacity is paint-only. */
+:root{color-scheme:light;--bg-0:#f3f6fa;--bg-1:#fff;--bg-2:#edf3f7;--glass:#f7f9fc;--glass-2:#eaf3f3;--stroke:#dce4ec;--stroke-2:#a5b9c8;--txt-0:#192d42;--txt-1:#465d73;--txt-2:#667b8e;--cyan:#087f83;--blue:#276bb7;--green:#167750;--red:#bf3548;--amber:#916315;--violet:#6a56a4;--grad-main:linear-gradient(135deg,#087f83,#075e67);--grad-btn:linear-gradient(135deg,#087f83,#075e67);--grad-green:linear-gradient(135deg,#168060,#11664d);--grad-red:linear-gradient(135deg,#c74454,#ac3040);--grad-amber:linear-gradient(135deg,#93691e,#785416);--shadow-1:0 10px 30px -12px #182c400d;--shadow-2:0 22px 50px -18px #182c401f;}
+body{background-color:var(--bg-0);color:var(--txt-0);}
+/* Clear the original dark gradient too; a white color alone sits underneath it. */
+#sidebar{background-color:#fff;background-image:none;border-color:#dce4ec;box-shadow:0 18px 48px -20px #23384e30,0 0 0 1px #dce4ec40;}
+#sidebar-scroll{scrollbar-color:#bccbd5 transparent;}
+#sidebar-scroll::-webkit-scrollbar-thumb{background-color:#bccbd5;}
+#sidebar-scroll::-webkit-scrollbar-thumb:hover{background-color:#91a8b8;}
+.brand{background-color:#fff;border-bottom-color:#e1e8ef;}
+.brand-logo{background-color:#edf4f8;border-color:#dbe7ef;}
+.brand-name{color:#1c3448;}
+.brand-name span{background-image:none;color:var(--cyan);}
+.side-sect{color:#61778b;}
+.nav-item{color:#465d73;}
+.nav-item:hover,.nav-item.active{background-color:#eaf5f3;background-image:none;color:#066d70;border-color:#d8ece8;}
+.nav-item.active{box-shadow:inset 0 0 0 1px #d8ece840;}
+.nav-item.active::before{background-color:#087f83;background-image:none;box-shadow:0 0 8px #087f8320;}
+.nav-badge{background-color:#e9eff4;color:#496479;}
+.side-status{color:var(--txt-2);}
+.quick-panel .fold-inner>*{background-color:#f5f8fa;border-color:var(--stroke);}
+#topbar{background-color:#fff;}
+#topbar .page-title{color:#20354b;}
+#topbar .page-title small{color:#7c8c9e;}
+.top-search{background-color:#f4f7fa;border-color:#e1e8ef;}
+.top-search input{color:var(--txt-0);}
+.top-search input::placeholder{color:#7c8e9f;}
+.icon-btn{background-color:#f6f8fb;color:#516a7f;}
+.icon-btn.accent{color:#087f83;background-color:#eff8f6;border-color:#d3e8e3;}
+#stat-line{color:#456379!important;}
+#save-indicator{background-color:#f1f7f4;color:#4b7561;border-color:#dcebe2;}
+.hero{background-image:none;}
+.hero-tag{color:#61778b;background-image:none;}
+.hero-tag svg{color:#087f83;}
+.hero h1{color:#738598;}
+.hero h1 em{background-image:none;color:#526b7c;-webkit-text-fill-color:currentColor;}
+.card,.macro-mod{background-color:#fff;border-color:#dce5ed;}
+.card:hover{border-color:#c8d5df;}
+.dashboard-section>.card-head h3{color:#234159;}
+.g-cyan{background-color:#e7f4f2;color:#0d8281;}
+.g-green{background-color:#eaf6ef;color:#21805c;}
+.g-red{background-color:#fcedef;color:#b74455;}
+.g-violet{background-color:#f1edf9;color:#8062b3;}
+.g-blue{background-color:#ebf1fa;color:#356da5;}
+.g-amber{background-color:#fbf3e3;color:#916e2c;}
+.fold-btn{background-color:#f8fafc;color:#688294;border-color:#e4ebf2;}
+#fold-ops .grid-add>.card:first-child{background-color:#fbfdfd;}
+.field label,.exact-label{color:#50677d;}
+/* Native Windows select popups honour color-scheme more reliably than option
+   paint alone. Apply the light scheme directly to every form control so an
+   opened list never falls back to the original navy palette. */
+html[data-ui-theme="light"],html[data-ui-theme="light"] select,html[data-ui-theme="light"] option,html[data-ui-theme="light"] optgroup,html[data-ui-theme="light"] input,html[data-ui-theme="light"] textarea{color-scheme:light!important;}
+.inp,input.inp,select.inp,.field input,.field select,.field textarea,#fx-theme{background-color:#fff!important;color:#263f54!important;}
+.inp:focus,.field input:focus,.field select:focus{border-color:#299a96;}
+.inp option,.inp optgroup,#fx-theme option{background-color:#fff!important;color:#233e53!important;color-scheme:light!important;}
+.inp option:checked,#fx-theme option:checked{background-color:#e7f4f1!important;color:#163b50!important;}
+.hint,.dash-note{color:#76889a;}
+.btn-primary{background-color:#087f83;color:#fff;}
+.btn-green{background-color:#147b5b;color:#fff;}
+.btn-red{background-color:#bd4050;color:#fff;}
+/* «برگشت» must be a true yellow surface in Theme 2. The dark-theme gradient
+   is an image, so explicitly remove it rather than merely changing its colour. */
+.btn-amber{background-color:#facc15!important;background-image:none!important;color:#be123c!important;border-color:#d7a70b;}
+.btn-amber:hover,.btn-amber:focus-visible{background-color:#eab308!important;background-image:none!important;color:#9f1239!important;}
+.btn-amber svg{stroke:currentColor;}
+.btn-ghost{background-color:#fff;color:#536c80;}
+.btn-ghost:hover{background-color:#f3f8fa;color:#087f83;}
+.switch.on{background-color:#11857e;border-color:#11857e;}
+.switch.off{background-color:#9aaaba;border-color:#9aaaba;}
+.switch .txt{color:#fff!important;}
+#dash-cats .cat-tile{background-color:#fff;border-color:#e0e8ef;}
+#dash-cats .cat-tile:hover{background-color:#f5faf9;border-color:#99c8be;}
+.cat-tile .ct-val{color:#284960;}
+.nav-card{background-color:#fff;border-color:#dce5ed;color:#284960;}
+.nav-card::before{box-shadow:0 0 12px -2px var(--category-color,#087f83);}
+#dash-cats .ct-val{color:#526b7c;}
+.empty-state{color:var(--txt-2);background-color:#fafcfd;}
+.empty-state h3{color:#29485f;}
+.empty-state p{color:#73889b;}
+.tool-tile{background-color:#f8fafc;color:#49667d;}
+.tool-tile:hover{background-color:#eef6f5;}
+.view-head{background-color:#fff;}
+.view-head h2{color:#1d3d55;}
+.view-head .sub{color:#73899a;}
+.sheet-card,.sheet-card:hover{background-color:#fff!important;border-color:#dde7ef;color:#253e52;}
+.sheet-card h3,.sheet-card .sc-name{color:#284960;}
+.sheet-chip,.cat-pill,.region-tab,.province-card{background-color:#fff;color:#4e6b80;border-color:#d9e4ec;}
+.sheet-chip.active,.cat-pill.active,.region-tab.active{background-color:#e7f4f1!important;color:#076e70;border-color:#9dccbf;}
+.province-selection{background-color:#fff;border-color:#d8e5ec;}
+.province-selection h4{color:#284d61;}
+.grid-wrap{background-color:#fff;border-color:#dbe5ed;}
+.xl th,.xl td{border-color:#e5ebf1!important;}
+table.xl td{color:#324b60;background-color:#fff;}
+table.xl tbody tr:nth-child(even) td{background-color:#f8fafc;}
+table.xl th,table.xl .rn,table.xl thead .rn{background-color:#edf3f7;color:#5e778b;}
+table.xl td[contenteditable]:focus{background-color:#f0faf6;}
+.logtable th{background-color:#eaf1f6;color:#3a5e77;}
+.logtable td{border-color:#e4ebf1;}
+.match-title{background-color:#e8f3f1;color:#176d67;}
+.remove-results-banner .match-title{background-color:#a8253a;background-image:none;border-color:#8e1d31;color:#fff;}
+.remove-results-key{background-color:#fff2f4;border-color:#efc3cb;color:#7d2634;}
+.block-scroll{background-color:#fff;border-color:#dbe5ed;}
+.block-table td{background-color:#fff;color:#263f54;}
+.block-table tr:hover td{background-color:#eff9f6;}
+.block-table td .cell-in{color:#263f54;}
+.block-sep{background-color:#f2f6f8;}
+/* ModalBox starts life with a navy gradient. In Theme 2, clearing only its
+   background colour leaves that gradient visible underneath, so clear every
+   background image and make all message copy explicitly dark-on-white. */
+.mbox{background-color:#fff!important;background-image:none!important;color:#203c52!important;border-color:#d5e2ec;}
+.mbox .t{background-color:#f6f9fb!important;background-image:none!important;color:#203c52!important;border-color:#e0e9f0;}
+.mbox .t .x,.mbox .c,.mbox .c p,.mbox .c label,.mbox .c .hint{color:#2b465a!important;}
+.shared-box{background-color:#fff!important;background-image:none!important;color:#203c52!important;}
+.shared-box h3,.shared-box p,.shared-box .hint{color:#2b465a!important;}
+.remove-choice-intro{color:#203d52;}
+.remove-choice-help{color:#5e7486;}
+.remove-choice-meta{color:#687f91;}
+.remove-match-field{color:#405f76;}
+.remove-service-button.telecom{background-color:#17699d;background-image:none;border-color:#0e5b8d;color:#fff;}
+.remove-service-button.mabinnet{background-color:#147b5b;background-image:none;border-color:#0e674a;color:#fff;}
+.remove-service-button.asiatek{background-color:#76509a;background-image:none;border-color:#5f3e82;color:#fff;}
+.remove-service-button:hover,.remove-service-button:focus-visible{color:#fff;}
+#modal-overlay{background-color:#23384965;}
+.category-choice,.access-scopes{background-color:#f7fafb;border-color:#dbe5ec;color:#3e5b70;}
+.access-field input,.access-login input,#user-form select,.own-password-dialog .access-field input{background-color:#fff;color:#203c52;border-color:#cfdee9;}
+.user-editor-mode{background-color:#edf7f4;border-color:#c9e6dc;}
+.user-editor-mode h3{color:#186f65;}
+#users-status{color:#157450;}
+/* The account-form cancel action must remain visibly filled in Theme 2. */
+#user-cancel{background-color:#dce8ef!important;background-image:none!important;color:#29485f!important;border-color:#b7cad7!important;}
+#user-cancel:hover,#user-cancel:focus-visible{background-color:#cbdde7!important;background-image:none!important;color:#1d3d55!important;}
+/* Footer buttons inherit white text from the dark modal rule. Give the user
+   manager's close action its own light filled surface and dark readable copy. */
+#users-done{background-color:#dce8ef!important;background-image:none!important;color:#29485f!important;border-color:#b7cad7!important;}
+#users-done:hover,#users-done:focus-visible{background-color:#cbdde7!important;background-image:none!important;color:#1d3d55!important;}
+#user-delete{background-color:#e55c66!important;background-image:none!important;color:#111!important;border-color:#cf3d49!important;}
+#user-error,#auth-error,#password-error{color:#b42f44;}
+#auth-screen{background-color:#eef3f7;background-image:none;}
+.access-login{background-color:#fff;color:#233f54;border-color:#d8e4ed;}
+.access-login h2{color:#176e72;}
+.access-login .hint{color:#768b9d;}
+/* Every Theme-2 announcement is light as well: transient toast, central
+   update notice and blocking shared-server message all use black-on-white. */
+.toast,#live-update-notice{background-color:#fff!important;background-image:none!important;color:#203c52!important;border-color:#c9d9e4!important;}
+.toast *,#live-update-notice .live-update-message{color:#203c52!important;}
+#live-update-notice .btn-ghost{background-color:#f8fafc;color:#1e3850;}
+#live-update-notice .btn-ghost:hover,#live-update-notice .btn-ghost:focus-visible{background-color:#dcebf0;color:#102c43;}
+.act-badge{color:#466274;}
+.act-ADD{color:#147d50;}
+.act-REMOVE,.act-ERROR{color:#b03545;}
+.act-EDIT{color:#246db0;}
+#access-viewer{color:#263f54;}
+#operations-demo{color:#57778a;}
+.btn-primary svg{stroke:currentColor;}
+.grid-add .exact-wrap,.action-card .hint{background-color:#f4f8fa;border-color:#e0e9f0;}
+.tool-tile svg{color:#377b84!important;}
+select.inp{background-image:linear-gradient(45deg,transparent 50%,#6c889a 50%),linear-gradient(135deg,#6c889a 50%,transparent 50%);}
+.block-table th{background-color:#edf3f7;color:#536d82;}
+.block-table td{border-color:#e3eaf0;background-color:#fff;}
+.block-table td .cell-in:focus{background-color:#eff9f6;}
+.match-title .tag{background-color:#fff;border-color:#b9d7d0;color:#296d64;}
+.match-block.remove .match-title{background-color:#fbedef;color:#ad3548;border-color:#eed0d6;}
+.category-choice{color:#34556c;}
+.category-error{color:#b83348;}
+.access-login input:focus,.access-field input:focus,#user-form select:focus,.own-password-dialog .access-field input:focus,.mbox input.m-in:focus,.wf input:focus{background-color:#fff;color:#203c52;border-color:#299a96;}
+.wf{background-color:#f5f9fb;border-color:#e0e9f0;}
+.wf label{color:#536d82;}
+.wf input,.mbox input.m-in{background-color:#fff;border-color:#ccdce7;color:#263f54;}
+.sheet-card .sc-rows{background-color:#edf3f7;color:#536e83;border-color:#dce6ee;}
+.sheet-card .sc-tag{background-color:#edf6f3;color:#3d786d;border-color:#d5e9e2;}
+.sheet-card.active{border-color:#6fb7ae;}
+.cat-pill.active{color:#087f83;}
+table.xl thead th{background-color:#edf3f7;color:#536d82;}
+
+/* Keep background layers in place, but do not paint dark imagery in light mode. */
+#fx-stage,#fx-plate,#fx-flare,#fx-leak,#fx-ghost,body::before,body::after{opacity:0!important;}
+.hero{background-color:#f3f8fa;border-color:#d6e5e9;}
+.hero::before,.hero::after{background-image:radial-gradient(circle,rgba(8,127,131,.06),transparent 65%);}
+.hero-tag{border-color:#c5dedf;background-color:#edf6f5;}
+
+/* Interactive states must not fall back to the original dark input fill. */
+.inp:focus,.inp:active,.field input:focus,.field select:focus,.field textarea:focus,
+.quick-panel .inp:focus,.quick-panel .inp:active,
+.access-field input:focus,.access-login input:focus,#user-form select:focus,
+.own-password-dialog .access-field input:focus,.mbox input.m-in:focus,.wf input:focus{
+  background-color:#fff;color:#203c52;border-color:#299a96;box-shadow:0 0 0 3px #087f8320;
+}
+.inp::placeholder,.field input::placeholder,.field textarea::placeholder,.mbox input.m-in::placeholder{color:#687f91;}
+.btn:focus-visible,.icon-btn:focus-visible,.nav-item:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.cat-pill:focus-visible,.sheet-card:focus-visible{outline-color:#087f83;}
+.top-search:focus-within{background-color:#fff;border-color:#299a96;box-shadow:0 0 0 3px #087f8320;}
+.icon-btn:hover,.icon-btn:active,.icon-btn.accent:hover,.icon-btn.accent:active{background-color:#e7f4f1;color:#076e70;border-color:#9dccbf;}
+.btn-ghost:active{background-color:#e7f4f1;color:#076e70;}
+.category-choice.active,.region-choice.active,.province-card.active,.province-sections [aria-pressed="true"]{background-color:#e7f4f1;color:#076e70;border-color:#9dccbf;}
+.sheet-chip.active,.cat-pill.active,.region-tab.active{background-image:none;box-shadow:0 6px 16px -10px #087f8340;}
+.empty-state:hover{background-color:#f3f8fa;border-color:#bcd9d5;}
+.hero-chips span:hover{background-color:#e7f4f1;color:#076e70;}
+.macro-run,.macro-run:hover{background-color:#edf6f5;color:#076e70;border-color:#c5dedf;}
+.sheet-card:hover,.cat-tile:hover,.nav-card:hover{box-shadow:0 14px 32px -18px #23384e30;}
+table.xl td[contenteditable]:focus,.block-table td .cell-in:focus{background-color:#eff9f6;box-shadow:inset 0 0 0 1.5px #299a96;}
+[data-tip]::after{background-color:#fff;color:#203c52;border-color:#cfdee9;box-shadow:0 10px 24px -10px #23384e30;}
+select.inp:focus,select.inp:active{background-image:linear-gradient(45deg,transparent 50%,#6c889a 50%),linear-gradient(135deg,#6c889a 50%,transparent 50%);}
+
+/* Apply this to every native select, including dynamically-created account
+   selectors. Windows paints its popup separately, so the scheme, field and
+   every selected/hovered option must all be declared light. */
+html[data-ui-theme="light"] select,
+html[data-ui-theme="light"] select:focus,
+html[data-ui-theme="light"] select:active{
+  color-scheme:light!important;background-color:#fff!important;color:#203c52!important;
+}
+html[data-ui-theme="light"] select option,
+html[data-ui-theme="light"] select optgroup,
+html[data-ui-theme="light"] select option:checked,
+html[data-ui-theme="light"] select option:hover,
+html[data-ui-theme="light"] select option:focus{
+  color-scheme:light!important;background-color:#fff!important;color:#203c52!important;
+}

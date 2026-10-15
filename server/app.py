@@ -1,0 +1,666 @@
+"""Central FAM service. Run behind HTTPS IIS; SQLite must be on a local disk.
+All authorisation is server-side. Browser snapshots use optimistic revisions and
+idempotent receipts; no last-writer-wins or automatic conflict overwrite.
+"""
+import copy
+import hashlib
+import hmac
+import json
+import math
+import os
+from pathlib import Path
+import re
+import secrets
+import sqlite3
+import time
+import uuid
+from contextlib import contextmanager
+from datetime import datetime
+from flask import Flask, request, jsonify, g, send_file
+
+try:
+    from .manage import backup as verified_backup
+    from .network_operations import (NetworkOperationError, configured_networks,
+        execute as execute_network_operation, paramiko_available, parse_request,
+        request_digest)
+except ImportError:  # Running directly from C:\FAM\server\app.py.
+    from manage import backup as verified_backup
+    from network_operations import (NetworkOperationError, configured_networks,
+        execute as execute_network_operation, paramiko_available, parse_request,
+        request_digest)
+
+ROOT = Path(__file__).resolve().parent
+SYSTEM = {'CONTROL_PANEL','SYSTEM_SEARCH_INDEX','SYSTEM_SHEET_CONFIG','SYSTEM_DATA_DICTIONARY','CHANGE_LOG','SEARCH_RESULTS','SYSTEM_KEYS','SYSTEM_UNDO_BUFFER','SYSTEM_NAVIGATOR'}
+EPHEMERAL = SYSTEM - {'SYSTEM_SHEET_CONFIG', 'SYSTEM_KEYS'}
+META = {'SYSTEM_SHEET_CONFIG', 'SYSTEM_KEYS'}
+ARCHIVES = {'لیست جمع آوری سرویس','جمع آوری مبین نت','جمع آوری آسیاتک'}
+FORBIDDEN = {'__proto__','constructor','prototype'}
+REGIONS = [
+ ['خراسان رضوی','خراسان شمالی','خراسان جنوبی','سیستان و بلوچستان','گلستان'],
+ ['تهران'],
+ ['اردبیل','آذربایجان غربی','آذربایجان شرقی','خوزستان','قم','کردستان','لرستان','همدان','مرکزی','کرمانشاه','قزوین','زنجان','البرز','کهگیلویه و بویراحمد'],
+ ['فارس','ایلام','اصفهان','بوشهر','چهارمحال و بختیاری','سمنان','یزد','گیلان','مازندران','هرمزگان','کرمان']]
+ALIASES={'آذربایجان غربی':['آذرغربی','آذربایجانغربی'],'آذربایجان شرقی':['آذرشرقی','آذربایجانشرقی'],'کهگیلویه و بویراحمد':['کهکلویه','کهکیلویه','کهگیلویه','کهکیلویه و بویر احمد']}
+EMPTY={'v':2,'order':[],'sheets':{},'lockedSheets':{},'categoryConfig':None,'regionConfig':None,'panelProtected':True}
+
+def packed(value):
+    return json.dumps(value, ensure_ascii=False, separators=(',', ':'), sort_keys=True, allow_nan=False)
+
+def norm(s):
+    return str(s).replace('ي','ی').replace('ى','ی').replace('ك','ک').strip().lower()
+
+def province_key(s):
+    s=re.sub(r'^(?:خودپرداز|شعبه|شعب)\s+', '', norm(s))
+    s=re.sub(r'^استان\s*', '', s)
+    return re.sub(r'[\s\u200c\u200d\u0640]', '', s)
+
+def province(name):
+    key=province_key(name)
+    for r,names in enumerate(REGIONS,1):
+        for i,n in enumerate(names,1):
+            if key in [province_key(a) for a in [n]+ALIASES.get(n,[])]:return (f'{r}-{i}',str(r))
+    return None
+
+def assigned_region(name, state):
+    """Return the current managed-region ID for a provincial sheet, if any."""
+    p=province(name)
+    if not p:return None
+    assignments=dict((state.get('regionConfig') or {}).get('assignments',[]))
+    return assignments.get(p[0],p[1] if not state.get('regionConfig') else 'unassigned')
+
+def can_access_data(user, name, state):
+    """Fail-closed regional scope used by both reads and level-3 writes.
+    Region selections automatically cover all provincial sheets in those regions.
+    A non-regional data sheet remains unavailable unless it has an explicit legacy
+    sheet grant, so choosing a region can never expose unrelated national data.
+    """
+    if name in SYSTEM:return False
+    region=assigned_region(name,state)
+    return region in user['regions'] if region is not None else name in user['sheets']
+
+def can_read(user, name, state):
+    if name not in state['sheets']:return False
+    if user['role']<=2:return True
+    return can_access_data(user,name,state)
+
+class Problem(Exception):
+    def __init__(self,status,message):self.status=status;self.message=message
+
+def fail(status,message):raise Problem(status,message)
+
+def safe_tree(obj,depth=0):
+    if isinstance(obj,float) and not math.isfinite(obj):fail(400,'عدد نامعتبر است.')
+    if depth>30:fail(400,'ساختار داده بیش از حد تو در تو است.')
+    if isinstance(obj,dict):
+        for k,v in obj.items():
+            if k in FORBIDDEN:fail(400,'کلید نامعتبر در داده.')
+            safe_tree(v,depth+1)
+    elif isinstance(obj,list):
+        for v in obj:safe_tree(v,depth+1)
+
+def validate_category_config(value):
+    """Validate only grouping metadata; it never changes worksheet contents.
+
+    Logical category sections are server-persisted records.  Their IDs and
+    worksheet assignments are bounded and canonicalised here, so a malformed
+    browser payload cannot turn a section-title change into a workbook change.
+    Older deployments that predate sections remain compatible because the new
+    three fields are optional on input and are emitted as empty arrays.
+    """
+    if value is None:return None
+    if not isinstance(value,dict) or value.get('version')!=1 or not isinstance(value.get('categories'),list) or not isinstance(value.get('assignments'),list):
+        fail(400,'پیکربندی دسته‌بندی نامعتبر است.')
+    if len(value['categories'])>100 or len(value['assignments'])>1000:fail(400,'پیکربندی دسته‌بندی بیش از حد بزرگ است.')
+    ids=set();titles={norm(x) for x in ('همه بخش‌ها','سایر','سیستم')};categories=[]
+    for item in value['categories']:
+        if not isinstance(item,dict):fail(400,'دسته نامعتبر است.')
+        ident=item.get('id');title=item.get('name')
+        if not isinstance(ident,str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,79}',ident) or ident in {'all','other','system'} or ident in ids:
+            fail(400,'شناسهٔ دسته نامعتبر است.')
+        if not isinstance(title,str) or not (1<=len(title.strip())<=80) or norm(title) in titles:fail(400,'نام دسته نامعتبر است.')
+        sub=item.get('sub','');color=item.get('color','#2fd4c4');icon=item.get('icon','layers')
+        if not isinstance(sub,str) or not isinstance(color,str) or not isinstance(icon,str):fail(400,'جزئیات دسته نامعتبر است.')
+        ids.add(ident);titles.add(norm(title));categories.append({'id':ident,'name':title.strip(),'sub':sub[:100],
+          'color':color if re.fullmatch(r'#[0-9a-fA-F]{6}',color) else '#2fd4c4','icon':icon[:40]})
+    assignments={}
+    for pair in value['assignments']:
+        if not isinstance(pair,list) or len(pair)!=2 or not all(isinstance(v,str) for v in pair):fail(400,'انتساب دسته نامعتبر است.')
+        sheet,ident=pair
+        if not (1<=len(sheet)<=31) or sheet in SYSTEM or (ident!='other' and ident not in ids):fail(400,'انتساب دسته نامعتبر است.')
+        assignments[sheet]=ident
+    # Keep section assignment metadata consistent with the category that the
+    # browser will render. Custom categories are explicitly assigned; built-in
+    # names use the same priority as the client-side category matcher.
+    def category_for_sheet(sheet):
+        if sheet in assignments:return assignments[sheet]
+        if province(sheet):candidate='provinces'
+        elif re.search(r'تجهیزات|EOL|EOS',sheet):candidate='equipment'
+        elif re.search(r'جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک',sheet):candidate='carriers'
+        elif 'هزینه' in sheet:candidate='costs'
+        elif re.search(r'مرکز داده|ساختمان|سازمان',sheet):candidate='datacenters'
+        elif re.search(r'شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری',sheet):candidate='services'
+        else:candidate='other'
+        return candidate if candidate in ids else 'other'
+    raw_sections=value.get('sections',[]);raw_section_assignments=value.get('sectionAssignments',[]);raw_initialized=value.get('sectionInitialized',[])
+    if not isinstance(raw_sections,list) or not isinstance(raw_section_assignments,list) or not isinstance(raw_initialized,list) or len(raw_sections)>500 or len(raw_section_assignments)>1000 or len(raw_initialized)>100:
+        fail(400,'پیکربندی بخش‌ها نامعتبر است.')
+    section_ids=set();section_titles=set();sections=[]
+    for item in raw_sections:
+        if not isinstance(item,dict):fail(400,'بخش نامعتبر است.')
+        ident=item.get('id');category=item.get('category');title=item.get('name')
+        if not isinstance(ident,str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,99}',ident) or ident in section_ids or category not in ids or category=='provinces':
+            fail(400,'شناسهٔ بخش نامعتبر است.')
+        if not isinstance(title,str) or not (1<=len(title.strip())<=80) or norm(title)=='بدون بخش' or (category,norm(title)) in section_titles:
+            fail(400,'نام بخش نامعتبر است.')
+        section_ids.add(ident);section_titles.add((category,norm(title)));sections.append({'id':ident,'category':category,'name':title.strip()})
+    section_by_id={section['id']:section for section in sections};section_assignments={}
+    for pair in raw_section_assignments:
+        if not isinstance(pair,list) or len(pair)!=2 or not all(isinstance(v,str) for v in pair):fail(400,'انتساب بخش نامعتبر است.')
+        sheet,ident=pair;section=section_by_id.get(ident)
+        if not (1<=len(sheet)<=31) or sheet in SYSTEM or not section or category_for_sheet(sheet)!=section['category']:
+            fail(400,'انتساب بخش نامعتبر است.')
+        section_assignments[sheet]=ident
+    initialized=[]
+    for ident in raw_initialized:
+        if not isinstance(ident,str) or ident not in ids:fail(400,'وضعیت اولیهٔ بخش نامعتبر است.')
+        if ident not in initialized:initialized.append(ident)
+    return {'version':1,'categories':categories,'assignments':[[sheet,ident] for sheet,ident in assignments.items()],
+      'sections':sections,'sectionAssignments':[[sheet,ident] for sheet,ident in section_assignments.items()],
+      'sectionInitialized':initialized}
+
+def validate_state(raw):
+    if not isinstance(raw,dict):fail(400,'داده معتبر نیست.')
+    safe_tree(raw)
+    order=raw.get('order');sheets=raw.get('sheets')
+    if not isinstance(order,list) or not all(isinstance(n,str) for n in order) or not isinstance(sheets,dict) or len(order)>500:fail(400,'فهرست بخش‌ها معتبر نیست.')
+    if len(order)!=len(set(order)) or set(order)!=set(sheets):fail(400,'نام بخش‌ها تکراری یا ناقص است.')
+    names=set();clean={}
+    for name in order:
+        if not isinstance(name,str) or not name.strip() or len(name)>31 or re.search(r'[\x00-\x1f\\/*?:\[\]]',name) or norm(name) in names:fail(400,'نام بخش نامعتبر است.')
+        names.add(norm(name));sh=sheets[name]
+        if not isinstance(sh,dict) or not isinstance(sh.get('rows'),list) or not isinstance(sh.get('merges'),list):fail(400,'ساختار شیت نامعتبر است.')
+        if len(sh['rows'])>250000 or len(sh['merges'])>20000:fail(413,'داده از سقف این نسخه بیشتر است.')
+        for row in sh['rows']:
+            if not isinstance(row,list) or len(row)>200:fail(400,'ستون‌های شیت نامعتبر است.')
+            for cell in row:
+                if cell is not None and type(cell) not in (str,int,float,bool):fail(400,'نوع سلول نامعتبر است.')
+                if isinstance(cell,str) and len(cell)>100000:fail(413,'متن سلول بیش از حد بلند است.')
+        for m in sh['merges']:
+            if not isinstance(m,dict) or set(m)!={'r1','c1','r2','c2'} or any(type(v)!=int for v in m.values()) or not (1<=m['r1']<=m['r2']<=250000 and 1<=m['c1']<=m['c2']<=200):fail(400,'ادغام سلول نامعتبر است.')
+        if name not in EPHEMERAL:clean[name]={'rows':sh['rows'],'merges':sh['merges']}
+    locks=raw.get('lockedSheets') or {}
+    if not isinstance(locks,dict) or any(type(v)!=bool for v in locks.values()):fail(400,'قفل شیت‌ها نامعتبر است.')
+    category=validate_category_config(raw.get('categoryConfig'))
+    if raw.get('regionConfig') is not None and not isinstance(raw['regionConfig'],dict):fail(400,'پیکربندی نامعتبر است.')
+    region=raw.get('regionConfig')
+    if region is not None:
+        if region.get('version')!=1 or not isinstance(region.get('regions'),list) or not isinstance(region.get('assignments'),list):fail(400,'پیکربندی مناطق نامعتبر است.')
+        ids=[]
+        for r in region['regions']:
+            if not isinstance(r,dict) or not isinstance(r.get('id'),str) or not isinstance(r.get('name'),str):fail(400,'منطقه نامعتبر است.')
+            ids.append(r['id'])
+        seen=set();valid={f'{r}-{i}' for r,ns in enumerate(REGIONS,1) for i,_ in enumerate(ns,1)}
+        for pair in region['assignments']:
+            if not isinstance(pair,list) or len(pair)!=2 or not all(isinstance(v,str) for v in pair) or pair[0] not in valid or pair[0] in seen or pair[1] not in ids+['unassigned']:fail(400,'انتساب استان نامعتبر است.')
+            seen.add(pair[0])
+        if seen!=valid or len(ids)!=len(set(ids)):fail(400,'همهٔ استان‌ها باید یک انتساب مشخص داشته باشند.')
+    return {'v':2,'order':[n for n in order if n in clean],'sheets':clean,'lockedSheets':locks,'categoryConfig':category,'regionConfig':region,'panelProtected':raw.get('panelProtected',True) is not False}
+
+def sequence_delta(old,new):
+    """Only insertion OR deletion, never replacement/reordering. Preserve exact types."""
+    a=[packed(x) for x in old];b=[packed(x) for x in new]
+    small,large=(a,b) if len(a)<=len(b) else (b,a)
+    i=0
+    for row in large:
+        if i<len(small) and row==small[i]:i+=1
+    return i==len(small)
+
+def trim_rows(rows):
+    end=len(rows)
+    while end>1 and all(v is None or (isinstance(v,str) and not v.strip()) for v in rows[end-1]):end-=1
+    return rows[:end]
+
+def valid_merge_shift(before,after,archive=False):
+    """Mirror FAM shiftMerges; no independent merge edits by level 3.
+    Both greedy alignments permit identical repeated rows at either edge.
+    Ambiguous interior duplicate/merged deletions fail closed for admin review.
+    """
+    a=[packed(r) for r in trim_rows(before['rows'])[1:]]
+    b=[packed(r) for r in trim_rows(after['rows'])[1:]]
+    if a==b:return before['merges']==after['merges']
+    if archive and b[:len(a)]==a and before['merges']==after['merges']:return True
+    inserting=len(a)<len(b);small,large=(a,b) if inserting else (b,a)
+    for reverse in (False,True):
+        si=list(range(len(small)));li=list(range(len(large)))
+        if reverse:si.reverse();li.reverse()
+        pos=0;edits=[]
+        for i in li:
+            if pos<len(si) and small[si[pos]]==large[i]:pos+=1
+            else:edits.append(i+2)
+        if pos!=len(small):continue
+        merges=copy.deepcopy(before['merges'])
+        for at in sorted(edits,reverse=not inserting):
+            for m in merges:
+                for edge in ('r1','r2'):
+                    if inserting and m[edge]>=at:m[edge]+=1
+                    elif not inserting and m[edge]>at:m[edge]-=1
+        if merges==after['merges']:return True
+    return False
+
+def authorise_change(user,old,new):
+    if user['role']<=2:
+        for n,locked in old['lockedSheets'].items():
+            if locked and new['lockedSheets'].get(n) and packed(old['sheets'].get(n))!=packed(new['sheets'].get(n)):fail(403,'بخش قفل است؛ ابتدا قفل را باز کنید.')
+        return
+    if user['role']!=3:fail(403,'این حساب فقط اجازهٔ مشاهده دارد.')
+    for key in ('lockedSheets','categoryConfig','regionConfig','panelProtected'):
+        if packed(old.get(key))!=packed(new.get(key)):fail(403,'تغییر تنظیمات برای سطح ۳ مجاز نیست.')
+
+    # A scoped account receives only its own data sheets. Reject a crafted
+    # request that names another region, then merge untouched server-side data
+    # back before persisting so an ordinary scoped save never deletes it.
+    old_names=[n for n in old['order'] if n not in SYSTEM]
+    permitted_old=[n for n in old_names if can_access_data(user,n,old)]
+    new_names=[n for n in new['order'] if n not in SYSTEM]
+    if any(not can_access_data(user,n,old) for n in new_names):fail(403,'این بخش خارج از محدودهٔ مناطق مجاز شما است.')
+    if [n for n in new_names if n in old_names]!=permitted_old:fail(403,'حذف یا جابه‌جایی بخش مجاز نیست.')
+
+    for name in new_names:
+        after=new['sheets'][name];before=old['sheets'].get(name)
+        if before is None:fail(403,'افزودن بخش یا رکورد برای سطح ۳ مجاز نیست.')
+        if packed(before)==packed(after):continue
+        if old['lockedSheets'].get(name):fail(403,'بخش قفل است.')
+        if not before['rows'] or not after['rows'] or packed(before['rows'][0])!=packed(after['rows'][0]):fail(403,'ویرایش عنوان ستون برای سطح ۳ مجاز نیست.')
+        # Level 3 may edit cells in an authorised region, but cannot add or
+        # remove records, create sheets, or alter merge/layout structure.
+        if len(trim_rows(before['rows']))!=len(trim_rows(after['rows'])):fail(403,'افزودن یا حذف رکورد برای سطح ۳ مجاز نیست.')
+        if before['merges']!=after['merges']:fail(403,'تغییر ساختار ادغام برای سطح ۳ مجاز نیست.')
+
+    # Keep every inaccessible data sheet byte-for-byte as it is on the server.
+    for name in old_names:
+        if name not in permitted_old:new['sheets'][name]=old['sheets'][name]
+    additions=[n for n in new_names if n not in old_names]
+    new['order']=old_names+additions
+
+    # Mapping/key metadata is server-owned for level 3; local reindexing is derived.
+    for n in META:
+        if n in old['sheets']:new['sheets'][n]=old['sheets'][n]
+        else:new['sheets'].pop(n,None)
+    for n in old['order']:
+        if n in META and n not in new['order']:new['order'].append(n)
+
+def public_user(row):
+    return {k:row[k] for k in ['id','username','name','role','enabled','revision']} | {'enabled':bool(row['enabled']),'regions':json.loads(row['regions']),'sheets':json.loads(row['sheets'])}
+
+def credentials(password,salt=None):
+    if not isinstance(password,str) or not 4<=len(password)<=128:fail(400,'رمز باید بین ۴ تا ۱۲۸ نویسه باشد.')
+    salt=salt or secrets.token_hex(16)
+    return salt,hashlib.pbkdf2_hmac('sha256',password.encode(),bytes.fromhex(salt),210000).hex()
+
+class ClosingConnection(sqlite3.Connection):
+    def __exit__(self,*args):
+        try:return super().__exit__(*args)
+        finally:self.close()
+
+def create_app(config=None):
+    app=Flask(__name__,static_folder=None)
+    app.json.ensure_ascii=False
+    app.json.sort_keys=False
+    app.config.update(DB_PATH=os.environ.get('FAM_DB',str(ROOT/'private'/'fam.sqlite3')),
+      PUBLIC_ORIGIN=os.environ.get('FAM_PUBLIC_ORIGIN',''), COOKIE_SECURE=True,
+      MAX_CONTENT_LENGTH=32*1024*1024, TESTING=False,
+      NETWORK_OPERATIONS_ENABLED=os.environ.get('FAM_NETWORK_OPERATIONS_ENABLED','').strip().lower() in {'1','true','yes'},
+      DEVICE_NETWORKS=os.environ.get('FAM_DEVICE_NETWORKS',''), SSH_EXECUTOR=None)
+    if config:app.config.update(config)
+    if not app.config['PUBLIC_ORIGIN']:raise RuntimeError('Set FAM_PUBLIC_ORIGIN to the HTTPS origin (no trailing slash).')
+    if not app.config['TESTING'] and not app.config['PUBLIC_ORIGIN'].startswith('https://'):raise RuntimeError('Production requires HTTPS.')
+    device_networks=configured_networks(app.config['DEVICE_NETWORKS'])
+    network_operations_enabled=bool(app.config['NETWORK_OPERATIONS_ENABLED'])
+    if network_operations_enabled and not device_networks:raise RuntimeError('Network operations require a non-empty FAM_DEVICE_NETWORKS IPv4 CIDR allowlist.')
+    network_operations_ready=network_operations_enabled and bool(device_networks) and (app.config['SSH_EXECUTOR'] is not None or paramiko_available())
+    dbpath=Path(app.config['DB_PATH']).resolve()
+    if dbpath.is_relative_to(ROOT/'www'):raise RuntimeError('The database must be outside the public www directory.')
+    # Full SQLite backups are private server files, never browser downloads or
+    # IIS content. The local server timezone is deliberately used in their
+    # visible names so an administrator can find a date quickly in Explorer.
+    backupdir=Path(app.config.get('BACKUP_DIR') or dbpath.parent/'backups').resolve()
+    if backupdir.is_relative_to(ROOT/'www'):raise RuntimeError('The backup directory must be outside the public www directory.')
+    dbpath.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+    backupdir.mkdir(parents=True,exist_ok=True,mode=0o700)
+    try:
+        fd=os.open(dbpath,os.O_CREAT|os.O_EXCL|os.O_RDWR,0o600);os.close(fd)
+    except FileExistsError:pass
+    def connect():
+        db=sqlite3.connect(dbpath,timeout=15,isolation_level=None,factory=ClosingConnection);db.row_factory=sqlite3.Row
+        db.execute('PRAGMA foreign_keys=ON');db.execute('PRAGMA busy_timeout=15000');db.execute('PRAGMA synchronous=FULL')
+        return db
+    @contextmanager
+    def transaction():
+        db=connect()
+        try:
+            db.execute('BEGIN IMMEDIATE');yield db;db.commit()
+        except BaseException:db.rollback();raise
+        finally:db.close()
+    with connect() as db:
+        existing={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        fresh=not existing
+        required={'state','users','settings','sessions','receipts','audit','undo','attempts'}
+        if existing and not required<=existing:raise RuntimeError('Existing database has an incomplete/unknown schema; restore a verified backup.')
+        db.execute('PRAGMA journal_mode=WAL')
+        db.executescript('''
+        CREATE TABLE IF NOT EXISTS state(id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, epoch TEXT NOT NULL, payload TEXT NOT NULL, saved_at INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, name TEXT NOT NULL, role INTEGER NOT NULL, enabled INTEGER NOT NULL, regions TEXT NOT NULL, sheets TEXT NOT NULL, revision TEXT NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS settings(id INTEGER PRIMARY KEY CHECK(id=1), users_revision INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, user_revision TEXT NOT NULL, csrf TEXT NOT NULL, expires INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS receipts(user_id TEXT NOT NULL, request_id TEXT NOT NULL, digest TEXT NOT NULL, response TEXT NOT NULL, PRIMARY KEY(user_id,request_id));
+        CREATE TABLE IF NOT EXISTS audit(revision INTEGER PRIMARY KEY, at INTEGER NOT NULL, actor TEXT NOT NULL, names TEXT NOT NULL, snapshot TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS undo(user_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT);
+        CREATE TABLE IF NOT EXISTS attempts(bucket TEXT PRIMARY KEY, started INTEGER NOT NULL, failures INTEGER NOT NULL);
+        -- Network credentials and raw commands are never stored here.  This
+        -- audit table contains only the fixed operation's non-secret target,
+        -- interface, outcome, and a bounded device transcript.
+        CREATE TABLE IF NOT EXISTS network_operations(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          operator_name TEXT NOT NULL,
+          request_id TEXT NOT NULL,
+          request_digest TEXT NOT NULL,
+          action TEXT NOT NULL,
+          device_type TEXT NOT NULL,
+          target TEXT NOT NULL,
+          interface TEXT NOT NULL,
+          status TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          completed_at INTEGER,
+          result TEXT,
+          UNIQUE(user_id,request_id)
+        );
+        CREATE INDEX IF NOT EXISTS network_operations_recent ON network_operations(user_id,created_at DESC);
+        ''')
+    with transaction() as db:
+        if not db.execute('SELECT 1 FROM state').fetchone():
+            if not fresh:raise RuntimeError('Existing database has lost its state; refusing to reseed accounts.')
+            salt,digest=credentials(os.environ.get('FAM_INITIAL_PASSWORD','1109'))
+            db.execute('INSERT INTO state VALUES(1,0,?,?,0)',(str(uuid.uuid4()),packed(EMPTY)))
+            db.execute('INSERT INTO settings VALUES(1,0)')
+            db.execute('INSERT INTO users VALUES(?,?,?,?,?,?,?,?,?,?)',(str(uuid.uuid4()),'admin','admin',1,1,'[]','[]',str(uuid.uuid4()),salt,digest))
+        if not db.execute('SELECT 1 FROM settings WHERE id=1').fetchone():raise RuntimeError('Database settings missing; restore a verified backup.')
+        validate_state(json.loads(db.execute('SELECT payload FROM state WHERE id=1').fetchone()[0]))
+        if not db.execute('SELECT 1 FROM users WHERE role=1 AND enabled=1').fetchone():raise RuntimeError('No active administrator: restore a verified backup, do not reseed.')
+    def user_and_session(db):
+        token=hashlib.sha256(request.cookies.get('fam_session','').encode()).hexdigest()
+        session=db.execute('SELECT * FROM sessions WHERE token=? AND expires>?',(token,int(time.time()))).fetchone()
+        if not session:fail(401,'نشست معتبر نیست؛ دوباره وارد شوید.')
+        user=db.execute('SELECT * FROM users WHERE id=? AND enabled=1',(session['user_id'],)).fetchone()
+        if not user or user['revision']!=session['user_revision']:fail(401,'مجوز یا رمز حساب تغییر کرده است؛ دوباره وارد شوید.')
+        return public_user(user),session
+    @app.before_request
+    def guard():
+        if not request.path.startswith('/api/'):return
+        if request.method not in ('GET','HEAD','OPTIONS'):
+            if request.headers.get('Origin')!=app.config['PUBLIC_ORIGIN']:fail(403,'مبدأ درخواست مجاز نیست.')
+            if not request.is_json:fail(415,'بدنهٔ JSON لازم است.')
+        if request.path=='/api/login':return
+        with connect() as db:g.user,g.session=user_and_session(db)
+        if request.method not in ('GET','HEAD') and not hmac.compare_digest(request.headers.get('X-FAM-CSRF',''),g.session['csrf']):fail(403,'توکن درخواست معتبر نیست.')
+    @app.after_request
+    def headers(response):
+        response.headers['Cache-Control']='no-store'
+        response.headers['X-Content-Type-Options']='nosniff'
+        response.headers['Referrer-Policy']='same-origin'
+        return response
+    @app.errorhandler(Problem)
+    def problem(e):return jsonify(error=e.message),e.status
+    @app.errorhandler(sqlite3.IntegrityError)
+    def integrity(e):return jsonify(error='نام یا شناسهٔ تکراری؛ درخواست ثبت نشد.'),400
+    @app.errorhandler(400)
+    def malformed(e):return jsonify(error='بدنهٔ JSON نامعتبر است.'),400
+    @app.errorhandler(413)
+    def too_large(e):return jsonify(error='حجم درخواست بیش از ۳۲ مگابایت است.'),413
+    def data():
+        value=request.get_json()
+        if not isinstance(value,dict):fail(400,'بدنهٔ JSON نامعتبر است.')
+        safe_tree(value);return value
+    def admin(user):
+        if user['role']!=1:fail(403,'این عملیات فقط برای مدیر سطح ۱ است.')
+    def backup_allowed(user):
+        if user['role']>3:fail(403,'این عملیات برای این سطح دسترسی مجاز نیست.')
+    def undo_summary(db,revision):
+        row=db.execute('SELECT at FROM audit WHERE revision=? AND snapshot!=?',(revision,'')).fetchone()
+        return {'valid':True,'serverRevision':revision,'blockCount':1,'blocks':[],'ts':row['at']} if row else None
+    @app.get('/api/undo-state')
+    def undo_state():
+        if g.user['role']>2:fail(403,'بازگشت فقط برای مدیر مجاز است.')
+        with connect() as db:
+            db.execute('BEGIN');u,_=user_and_session(db)
+            if u['role']>2:fail(403,'مجوز تغییر کرده است.')
+            current=db.execute('SELECT revision,epoch FROM state WHERE id=1').fetchone()
+            old=db.execute('SELECT * FROM audit WHERE revision=?',(current['revision'],)).fetchone()
+            if not old or not old['snapshot']:fail(404,'نسخه‌ای برای بازگشت موجود نیست.')
+            return jsonify(state=json.loads(old['snapshot']),revision=current['revision'],epoch=current['epoch'],user=u,actor=old['actor'],sheets=old['names'])
+    def envelope(db,user,session=None):
+        row=db.execute('SELECT * FROM state WHERE id=1').fetchone();p=json.loads(row['payload'])
+        allowed=[n for n in p['order'] if can_read(user,n,p)]
+        p['order']=allowed;p['sheets']={n:p['sheets'][n] for n in allowed}
+        if user['role']==4:p['categoryConfig']=None;p['lockedSheets']={n:True for n in allowed}
+        p['undo']=undo_summary(db,row['revision']) if user['role']<=2 else None
+        p['savedAt']=row['saved_at']
+        if user['role']<=2:
+            logs=db.execute('SELECT revision,at,actor,names FROM audit ORDER BY revision DESC LIMIT 200').fetchall()
+            p['sheets']['CHANGE_LOG']={'rows':[['Time','Action','Sheets','Revision','User','Status','Notes']]+[[time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(a['at']/1000)),'SERVER_COMMIT',a['names'],a['revision'],a['actor'],'SUCCESS','ثبت قطعی سرور'] for a in reversed(logs)],'merges':[]}
+            p['order'].append('CHANGE_LOG')
+        return {'revision':row['revision'],'epoch':row['epoch'],'state':p,'user':user}
+    @app.get('/')
+    @app.get('/FAM.html')
+    def index():return send_file(ROOT/'www'/'FAM.html',mimetype='text/html')
+    @app.post('/api/login')
+    def login():
+        value=data();name=str(value.get('username','')).strip().lower();pw=value.get('password','')
+        bucket=hashlib.sha256((name+'|'+(request.remote_addr or '')).encode()).hexdigest();now=int(time.time())
+        with transaction() as db:
+            attempt=db.execute('SELECT * FROM attempts WHERE bucket=?',(bucket,)).fetchone()
+            if attempt and now-attempt['started']<900 and attempt['failures']>=10:fail(429,'تلاش‌های ورود زیاد است؛ ۱۵ دقیقه بعد امتحان کنید.')
+            row=db.execute('SELECT * FROM users WHERE username=? AND enabled=1',(name,)).fetchone()
+            valid=False
+            if isinstance(pw,str) and 4<=len(pw)<=128:
+                _,hashed=credentials(pw,row['salt'] if row else '0'*32)
+                valid=bool(row and hmac.compare_digest(hashed,row['hash']))
+            if not valid:
+                start=attempt['started'] if attempt and now-attempt['started']<900 else now
+                count=attempt['failures']+1 if attempt and now-attempt['started']<900 else 1
+                db.execute('INSERT OR REPLACE INTO attempts VALUES(?,?,?)',(bucket,start,count))
+                # Commit failure accounting before returning, not raising/rolling back.
+                return jsonify(error='نام کاربری یا رمز عبور نادرست است.'),401
+            db.execute('DELETE FROM attempts WHERE bucket=?',(bucket,));db.execute('DELETE FROM sessions WHERE expires<?',(now,))
+            token=secrets.token_urlsafe(32);csrf=secrets.token_urlsafe(32)
+            db.execute('INSERT INTO sessions VALUES(?,?,?,?,?)',(hashlib.sha256(token.encode()).hexdigest(),row['id'],row['revision'],csrf,now+8*3600))
+            response=jsonify(user=public_user(row),csrf=csrf)
+            response.set_cookie('fam_session',token,httponly=True,secure=app.config['COOKIE_SECURE'],samesite='Strict',max_age=8*3600,path='/')
+            return response
+    @app.get('/api/session')
+    def session():return jsonify(user=g.user,csrf=g.session['csrf'])
+    @app.post('/api/logout')
+    def logout():
+        with transaction() as db:db.execute('DELETE FROM sessions WHERE token=?',(g.session['token'],))
+        r=jsonify(ok=True);r.delete_cookie('fam_session',path='/');return r
+    @app.post('/api/reauth')
+    def reauth():
+        value=data()
+        if g.user['role']>2:fail(403,'تأیید مدیر لازم است.')
+        with connect() as db:row=db.execute('SELECT * FROM users WHERE id=?',(g.user['id'],)).fetchone()
+        _,hashed=credentials(value.get('password',''),row['salt'])
+        if not hmac.compare_digest(hashed,row['hash']):fail(403,'رمز نادرست است.')
+        return jsonify(ok=True)
+    def network_operator(user):
+        if user['role']>2:fail(403,'عملیات شبکه فقط برای مدیر یا اپراتور سطح ۱ و ۲ مجاز است.')
+    def network_operation_public(row):
+        try:result=json.loads(row['result'] or '{}')
+        except (TypeError,json.JSONDecodeError):result={'status':'failed','message':'نتیجهٔ ثبت‌شدهٔ عملیات معتبر نیست.','output':''}
+        return {'id':row['id'],'requestId':row['request_id'],'operator':row['operator_name'],
+          'action':row['action'],'deviceType':row['device_type'],'target':row['target'],
+          'interface':row['interface'],'status':row['status'],'createdAt':row['created_at'],
+          'completedAt':row['completed_at'],'result':result}
+    def network_operation_capabilities(user):
+        network_operator(user)
+        if not network_operations_enabled:return {'enabled':False,'message':'عملیات شبکه در تنظیمات سرویس سرور فعال نشده است.'}
+        if not network_operations_ready:return {'enabled':False,'message':'ماژول SSH امن روی سرویس سرور آماده نیست؛ مسئول سرور باید نصب را تکمیل کند.'}
+        return {'enabled':True,'message':'اتصال SSH فقط از سرویس فام روی سرور انجام می‌شود؛ مرورگر هیچ اتصال مستقیمی به تجهیز ندارد.'}
+    @app.get('/api/network-operations/capabilities')
+    def network_operations_capabilities():return jsonify(network_operation_capabilities(g.user))
+    @app.get('/api/network-operations')
+    def list_network_operations():
+        network_operator(g.user)
+        with connect() as db:
+            rows=db.execute('SELECT * FROM network_operations ORDER BY id DESC LIMIT 50').fetchall()
+        return jsonify(operations=[network_operation_public(row) for row in rows])
+    @app.post('/api/network-operations')
+    def create_network_operation():
+        network_operator(g.user)
+        if not network_operations_enabled:fail(503,'عملیات شبکه در تنظیمات سرویس سرور فعال نشده است.')
+        if not network_operations_ready:fail(503,'ماژول SSH امن روی سرویس سرور آماده نیست؛ مسئول سرور باید نصب را تکمیل کند.')
+        try:operation=parse_request(data(),device_networks)
+        except NetworkOperationError as err:fail(err.status,err.message)
+        digest=request_digest(operation);now=int(time.time()*1000)
+        with transaction() as db:
+            user,_=user_and_session(db);network_operator(user)
+            existing=db.execute('SELECT * FROM network_operations WHERE user_id=? AND request_id=?',(user['id'],operation.request_id)).fetchone()
+            if existing:
+                if not hmac.compare_digest(existing['request_digest'],digest):fail(409,'شناسهٔ عملیات با جزئیات متفاوت تکرار شده است.')
+                if existing['status']=='running':fail(409,'این عملیات هنوز در حال اجرا است؛ درخواست تکراری ارسال نشد.')
+                return jsonify(operation=network_operation_public(existing))
+            recent=db.execute('SELECT COUNT(*) FROM network_operations WHERE user_id=? AND created_at>?',(user['id'],now-60_000)).fetchone()[0]
+            if recent>=5:fail(429,'تعداد عملیات شبکه برای این حساب زیاد است؛ یک دقیقه بعد دوباره امتحان کنید.')
+            db.execute('''INSERT INTO network_operations(user_id,operator_name,request_id,request_digest,action,device_type,target,interface,status,created_at)
+              VALUES(?,?,?,?,?,?,?,?,?,?)''',(user['id'],user['name'],operation.request_id,digest,operation.action,operation.device_type,operation.target,operation.interface,'running',now))
+            operation_id=db.execute('SELECT last_insert_rowid()').fetchone()[0]
+        # The SSH exchange occurs outside the write transaction.  A durable
+        # "running" record prevents a lost browser response from replaying the
+        # shutdown/no-shutdown sequence with the same request ID.
+        try:
+            result=execute_network_operation(operation,app.config['SSH_EXECUTOR'])
+        except NetworkOperationError as err:
+            result={'status':'failed','message':err.message,'output':''}
+        except Exception:
+            app.logger.exception('Network operation failed for %s interface %s',operation.target,operation.interface)
+            result={'status':'failed','message':'عملیات شبکه روی سرور ناموفق بود؛ گزارش خصوصی سرور را بررسی کنید.','output':''}
+        completed=int(time.time()*1000)
+        with transaction() as db:
+            # The job was already authorised before its SSH session began.  Do
+            # not leave a durable job stuck as "running" if an administrator
+            # disables that browser account while the device is responding.
+            db.execute('UPDATE network_operations SET status=?,completed_at=?,result=? WHERE id=? AND status=?',
+              (result['status'],completed,packed(result),operation_id,'running'))
+            row=db.execute('SELECT * FROM network_operations WHERE id=?',(operation_id,)).fetchone()
+        app.logger.info('Network operation %s on %s %s completed with %s by %s',operation.action,operation.target,operation.interface,result['status'],g.user['username'])
+        return jsonify(operation=network_operation_public(row))
+    @app.get('/api/status')
+    def status():
+        # This intentionally exposes only a small, permission-safe change
+        # notice. The browser uses it to announce a new central revision;
+        # business data itself remains available only through /api/state.
+        with connect() as db:
+            row=db.execute('SELECT revision,epoch FROM state WHERE id=1').fetchone()
+            audit=db.execute('SELECT actor,at FROM audit WHERE revision=?',(row['revision'],)).fetchone()
+        change={'revision':row['revision'],'at':audit['at'] if audit else None}
+        # Level 4 accounts may receive redacted state, so do not disclose the
+        # name of a colleague who changed data outside their permitted scope.
+        if audit and g.user['role']<=3:change['actor']=audit['actor']
+        return jsonify(revision=row['revision'],epoch=row['epoch'],userRevision=g.user['revision'],change=change)
+    @app.post('/api/backups')
+    def create_manual_backup():
+        # A browser may request a backup, but it never receives database bytes
+        # or a filesystem path. Levels 1–3 may create it; the result stays private.
+        data();backup_allowed(g.user)
+        now=datetime.now().astimezone()
+        stamp=now.strftime('%Y-%m-%d_%H-%M-%S-')+f'{now.microsecond//1000:03d}'
+        filename=f'FAM-manual-{stamp}-{uuid.uuid4().hex[:6]}.sqlite3'
+        try:
+            verified_backup(dbpath,backupdir/filename)
+        except (OSError,ValueError,sqlite3.Error):
+            app.logger.exception('Manual FAM backup failed')
+            fail(500,'پشتیبان‌گیری روی سرور ناموفق بود؛ گزارش خصوصی سرور را بررسی کنید.')
+        app.logger.info('Verified manual FAM backup %s created by administrator %s',filename,g.user['username'])
+        return jsonify(filename=filename,createdAt=now.isoformat(timespec='seconds'))
+    @app.get('/api/state')
+    def state():
+        with connect() as db:
+            db.execute('BEGIN');u,_=user_and_session(db);return jsonify(envelope(db,u))
+    @app.post('/api/state')
+    def commit():
+        if g.user['role']==4:fail(403,'این حساب فقط مشاهده می‌کند.')
+        body=data();rid=body.get('requestId');base=body.get('revision')
+        if not isinstance(rid,str) or not re.fullmatch(r'[a-f0-9-]{36}',rid) or type(base)!=int:fail(400,'شناسه یا نسخهٔ درخواست نامعتبر است.')
+        proposed=validate_state(body.get('state'));digest=hashlib.sha256(packed(body).encode()).hexdigest()
+        with transaction() as db:
+            u,_=user_and_session(db) # Re-authorise after acquiring the write lock.
+            if u['role']==4:fail(403,'این حساب فقط مشاهده می‌کند.')
+            receipt=db.execute('SELECT * FROM receipts WHERE user_id=? AND request_id=?',(u['id'],rid)).fetchone()
+            if receipt:
+                if receipt['digest']!=digest:fail(409,'شناسهٔ درخواست با محتوای متفاوت تکرار شده است.')
+                return jsonify(json.loads(receipt['response']))
+            row=db.execute('SELECT * FROM state WHERE id=1').fetchone()
+            if body.get('epoch')!=row['epoch'] or base!=row['revision']:fail(409,'کاربر دیگری داده‌ها را تغییر داده است. تغییر شما ثبت نشد؛ نسخهٔ تازه را دریافت و تغییر را دوباره اعمال کنید.')
+            old=json.loads(row['payload']);authorise_change(u,old,proposed)
+            revision=row['revision']+1;stamp=int(time.time()*1000)
+            names=','.join(n for n in set(old['sheets'])|set(proposed['sheets']) if packed(old['sheets'].get(n))!=packed(proposed['sheets'].get(n)))[:1000]
+            db.execute('UPDATE state SET payload=?,revision=?,saved_at=? WHERE id=1',(packed(proposed),revision,stamp))
+            db.execute('INSERT INTO audit VALUES(?,?,?,?,?)',(revision,stamp,u['name'],names,row['payload']))
+            db.execute("UPDATE audit SET snapshot='' WHERE revision<=? AND snapshot!=''",(revision-50,))
+            result={'revision':revision,'epoch':row['epoch'],'savedAt':stamp,'undo':undo_summary(db,revision) if u['role']<=2 else None}
+            db.execute('INSERT INTO receipts VALUES(?,?,?,?)',(u['id'],rid,digest,packed(result)))
+            return jsonify(result)
+    def users_result(db):
+        return {'revision':db.execute('SELECT users_revision FROM settings WHERE id=1').fetchone()[0], 'users':[public_user(r) for r in db.execute('SELECT * FROM users ORDER BY username')]}
+    @app.get('/api/users')
+    def users():
+        admin(g.user)
+        with connect() as db:
+            db.execute('BEGIN');u,_=user_and_session(db);admin(u);return jsonify(users_result(db))
+    @app.post('/api/users')
+    def save_users():
+        body=data();admin(g.user);values=body.get('users')
+        if not isinstance(values,list) or not 1<=len(values)<=200:fail(400,'فهرست کاربران نامعتبر است.')
+        with transaction() as db:
+            u,session=user_and_session(db);admin(u)
+            if body.get('revision')!=db.execute('SELECT users_revision FROM settings WHERE id=1').fetchone()[0]:fail(409,'فهرست کاربران تغییر کرده است؛ دوباره باز کنید.')
+            old={r['id']:dict(r) for r in db.execute('SELECT * FROM users')};ids=set();names=set();normal=[]
+            for x in values:
+                if not isinstance(x,dict):fail(400,'کاربر نامعتبر است.')
+                uid=x.get('id');name=x.get('username','');display=x.get('name','');role=x.get('role');enabled=x.get('enabled')
+                if not isinstance(uid,str) or not re.fullmatch(r'[a-zA-Z0-9-]{10,60}',uid) or uid in ids or not isinstance(name,str) or not re.fullmatch(r'[a-z0-9_.-]{3,40}',name) or name in names or not isinstance(display,str) or not 1<=len(display.strip())<=60 or type(role)!=int or role not in [1,2,3,4] or type(enabled)!=bool:fail(400,'مشخصات کاربر معتبر نیست.')
+                ids.add(uid);names.add(name)
+                for field in ['regions','sheets']:
+                    if not isinstance(x.get(field),list) or len(x[field])>500 or any(not isinstance(v,str) or len(v)>100 for v in x[field]):fail(400,'محدودهٔ کاربر نامعتبر است.')
+                previous=old.get(uid);password=x.get('password')
+                if previous is None and not password:fail(400,'رمز کاربر جدید لازم است.')
+                salt,digest=credentials(password) if password else (previous['salt'],previous['hash'])
+                pub={'id':uid,'username':name,'name':display.strip(),'role':role,'enabled':enabled,'regions':x['regions'],'sheets':x['sheets']}
+                changed=not previous or password or any(public_user(previous)[k]!=pub[k] for k in pub)
+                revision=str(uuid.uuid4()) if changed else previous['revision']
+                normal.append((uid,name,display.strip(),role,int(enabled),packed(x['regions']),packed(x['sheets']),revision,salt,digest))
+            if not any(v[3]==1 and v[4] for v in normal):fail(400,'حداقل یک مدیر فعال سطح ۱ لازم است.')
+            for uid in set(old)-ids:db.execute('DELETE FROM users WHERE id=?',(uid,))
+            # Update in-place: REPLACE would cascade-delete active sessions.
+            for v in normal:
+                db.execute('''INSERT INTO users VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET username=excluded.username,name=excluded.name,role=excluded.role,enabled=excluded.enabled,regions=excluded.regions,sheets=excluded.sheets,revision=excluded.revision,salt=excluded.salt,hash=excluded.hash''',v)
+                if v[0]==u['id'] and v[3]==1 and v[4]:db.execute('UPDATE sessions SET user_revision=? WHERE token=?',(v[7],session['token']))
+            db.execute('UPDATE settings SET users_revision=users_revision+1 WHERE id=1')
+            return jsonify(users_result(db))
+    @app.post('/api/password')
+    def change_password():
+        value=data()
+        if set(value)!={'currentPassword','newPassword'}:fail(400,'فقط تغییر رمز حساب جاری مجاز است.')
+        with transaction() as db:
+            u,session=user_and_session(db);old=db.execute('SELECT * FROM users WHERE id=?',(u['id'],)).fetchone()
+            _,hashed=credentials(value['currentPassword'],old['salt'])
+            if not hmac.compare_digest(hashed,old['hash']):fail(403,'رمز فعلی نادرست است.')
+            salt,digest=credentials(value['newPassword']);rev=str(uuid.uuid4())
+            db.execute('UPDATE users SET salt=?,hash=?,revision=? WHERE id=?',(salt,digest,rev,u['id']))
+            db.execute('UPDATE sessions SET user_revision=? WHERE token=?',(rev,session['token']))
+            db.execute('UPDATE settings SET users_revision=users_revision+1 WHERE id=1')
+            return jsonify(user=public_user(db.execute('SELECT * FROM users WHERE id=?',(u['id'],)).fetchone()))
+    return app
+
+if __name__=='__main__':
+    from waitress import serve
+    serve(create_app(),host=os.environ.get('FAM_BIND','127.0.0.1'),port=int(os.environ.get('FAM_PORT','8765')),threads=16,max_request_body_size=32*1024*1024)
