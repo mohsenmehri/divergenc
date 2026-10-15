@@ -9,8 +9,8 @@ WINDOWS=ROOT/'server/windows'
 class OfflineKitChecks(unittest.TestCase):
     def setUp(self):self.manifest=json.loads((WINDOWS/'offline-wheels.json').read_text())
     def test_pinned_files_and_origins(self):
-        files=self.manifest['files'];self.assertEqual(len(files),20)
-        self.assertEqual(len({s['file'] for s in files}),20)
+        files=self.manifest['files'];self.assertEqual(len(files),11)
+        self.assertEqual(len({s['file'] for s in files}),11)
         for s in files:
             self.assertEqual(Path(s['file']).name,s['file']);self.assertNotIn('\\',s['file'])
             self.assertTrue(s['url'].startswith('https://files.pythonhosted.org/'))
@@ -20,14 +20,6 @@ class OfflineKitChecks(unittest.TestCase):
         for abi in ('cp312','cp313','cp314'):
             self.assertIn(f'markupsafe-3.0.4-{abi}-{abi}-win_amd64.whl',names)
         self.assertIn('colorama-0.4.6-py2.py3-none-any.whl',names)
-        # Paramiko's native dependencies are pinned for every supported Windows
-        # Python ABI; no source build is allowed on the offline server.
-        self.assertIn('paramiko-5.0.0-py3-none-any.whl',names)
-        self.assertIn('bcrypt-5.0.0-cp39-abi3-win_amd64.whl',names)
-        self.assertIn('cryptography-50.0.2-cp39-abi3-win_amd64.whl',names)
-        self.assertIn('pynacl-1.6.2-cp38-abi3-win_amd64.whl',names)
-        for abi in ('cp312','cp313','cp314'):
-            self.assertIn(f'cffi-2.1.1-{abi}-{abi}-win_amd64.whl',names)
     def test_carried_wheel_hashes(self):
         if not (WINDOWS/'payload/wheels').exists():self.skipTest('Run scripts/fetch_offline_wheels.py to test carried wheel bytes')
         for s in self.manifest['files']:

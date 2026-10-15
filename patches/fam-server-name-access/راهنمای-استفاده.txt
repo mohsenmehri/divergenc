@@ -1,0 +1,31 @@
+تغییر آدرس FAM به نام قبلی سرور
+
+این بسته، نصب کامل و تأییدشدهٔ FAM را از آدرس موقت ertebatat-fam به آدرس زیر تغییر می‌دهد:
+https://communication-02.toosbank.corp
+
+پیش‌نیازها
+- فقط روی همان سروری اجرا شود که FAM روی آن نصب شده است (10.16.243.18).
+- پوشه‌های C:\FAM و C:\FAMData باید همان نصب موفق فعلی باشند.
+- نام communication-02.toosbank.corp باید روی خود سرور به 10.16.243.18 resolve شود. این نام از قبل نام کامل سرور است؛ این بسته DNS یا hosts را تغییر نمی‌دهد.
+
+روش اجرا
+1) فایل ZIP را روی همان سرور Extract کنید.
+2) روی FAM-Use-Communication-02.cmd راست‌کلیک کنید و Run as administrator را بزنید.
+3) تا پایان پنجره را نبندید.
+4) تنها نتیجهٔ معتبر، خط سبز زیر است:
+   SERVER HTTPS + API VERIFIED: https://communication-02.toosbank.corp
+
+این بسته چه چیزهایی را انجام می‌دهد
+- قبل از تغییر، settings.json و IIS را backup می‌گیرد.
+- گواهی معتبر موجود برای نام سرور را استفاده می‌کند؛ اگر وجود نداشته باشد، گواهی self-signed مخصوص همین نام می‌سازد.
+- HTTPS binding، تنظیم PUBLIC_ORIGIN و فایل FAM.url کلاینت را به نام کامل سرور تغییر می‌دهد.
+- API و HTTPS را با گواهی انتخاب‌شده واقعاً بررسی می‌کند.
+- به دیتابیس یا حساب‌های FAM دست نمی‌زند.
+
+برای کاربران
+پس از تأیید سبز، آدرس درست این است:
+https://communication-02.toosbank.corp
+
+اگر گواهی سازمانیِ مورد اعتماد پیدا نشده و گواهی self-signed ساخته شده باشد، هر کاربر بدون Local Administrator هم می‌تواند از پوشهٔ زیر فایل TRUST-FAM.cmd را اجرا کند:
+C:\FAMData\client-setup
+این کار گواهی را فقط برای همان Windows user در Current User store نصب می‌کند و نیاز به Local Admin ندارد.

@@ -1,0 +1,17 @@
+{
+  "controlPlaneUrl": "https://fam.example.invalid",
+  "workerId": "worker-fam-01",
+  "tokenEnv": "FAM_NETWORK_WORKER_TOKEN",
+  "pollSeconds": 15,
+  "maxParallel": 1,
+  "caFile": "C:\\FAM-NetworkWorker\\private\\fam-ca.cer",
+  "secretStore": {
+    "type": "windows-dpapi",
+    "path": "C:\\FAM-NetworkWorker\\private\\secrets.json.dpapi"
+  },
+  "probeKeyStore": {
+    "type": "windows-dpapi",
+    "path": "C:\\FAM-NetworkWorker\\private\\interactive-probe-key.dpapi"
+  },
+  "devices": []
+}

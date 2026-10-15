@@ -74,7 +74,6 @@ window.FamShared=(()=>{
   }
   function queue(){
     if(!ready||applying)return true;
-    if(Access.current()?.role===4)return false;
     savePanelDraft();
     if(signature()===clean&&!pending())return true;
     queued=true;text('در انتظار تأیید سرور…');
@@ -157,10 +156,10 @@ window.FamShared=(()=>{
       if(err.status===401||err.status===403){failure=err;freeze(err.message,err);}
     }finally{polling=false;}
   }
-  function start(){ready=true;clean=signature();unfreeze();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');window.dispatchEvent(new Event('fam-shared-ready'));setInterval(poll,2000);}
+  function start(){ready=true;clean=signature();unfreeze();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');setInterval(poll,2000);}
   // Trusted previous server snapshot, not a client-supplied Undo buffer.
   modUndo.UndoLastRemove=async()=>{
-    if(!Access.require('admin'))return false;
+    if(!Access.require('undo'))return false;
     const previous=await api('undo-state');
     const yes=await originalMessage('بازگردانی کامل آخرین ثبت سرور (نسخهٔ '+previous.revision+') توسط «'+previous.actor+'»؟\nبخش‌ها: '+(previous.sheets||'تنظیمات')+'\nاین عملیات فقط حذف ردیف نیست؛ کل همان ثبت برگردانده می‌شود.',vbYesNo|vbQuestion,'بازگشت آخرین ثبت سرور');
     if(yes!==IDYES)return false;

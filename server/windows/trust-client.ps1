@@ -2,7 +2,7 @@
 # Run as the ACTUAL browser user. No Administrator/RDP needed for CurrentUser trust.
 $ErrorActionPreference='Stop'
 $Config=Get-Content -Raw (Join-Path $PSScriptRoot 'certificate.json') | ConvertFrom-Json
-$Path=Join-Path $PSScriptRoot 'ertebatat-fam.cer'
+$Path=Join-Path $PSScriptRoot 'fam-server.cer'
 if ((Get-FileHash $Path -Algorithm SHA256).Hash -ine $Config.sha256) { throw 'Certificate file was modified. Obtain this folder again from the server administrator.' }
 $Cert=[Security.Cryptography.X509Certificates.X509Certificate2]::new($Path)
 if ($Cert.Thumbprint -ine $Config.thumbprint -or $Cert.NotAfter -le (Get-Date)) { throw 'Certificate mismatch or expiry.' }

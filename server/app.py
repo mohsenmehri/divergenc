@@ -6,6 +6,7 @@ import copy
 import hashlib
 import hmac
 import json
+import logging
 import math
 import os
 from pathlib import Path
@@ -16,23 +17,31 @@ import time
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
-from flask import Flask, request, jsonify, g, send_file
+from flask import Flask, request, jsonify, g, redirect, send_file
 
 try:
     from .manage import backup as verified_backup
-    from .network_operations import (NetworkOperationError, configured_networks,
-        execute as execute_network_operation, paramiko_available, parse_request,
-        request_digest)
 except ImportError:  # Running directly from C:\FAM\server\app.py.
     from manage import backup as verified_backup
-    from network_operations import (NetworkOperationError, configured_networks,
-        execute as execute_network_operation, paramiko_available, parse_request,
-        request_digest)
+
+# The independently deployable Network Operations subsystem is present in the
+# full central release.  Older narrow custom-access patches deliberately remain
+# usable without it; they retain the hardened core but expose no Network API.
+try:
+    from .network_ops import register_network_ops
+except ImportError:
+    try:
+        from network_ops import register_network_ops
+    except ImportError:
+        register_network_ops=None
 
 ROOT = Path(__file__).resolve().parent
 SYSTEM = {'CONTROL_PANEL','SYSTEM_SEARCH_INDEX','SYSTEM_SHEET_CONFIG','SYSTEM_DATA_DICTIONARY','CHANGE_LOG','SEARCH_RESULTS','SYSTEM_KEYS','SYSTEM_UNDO_BUFFER','SYSTEM_NAVIGATOR'}
 EPHEMERAL = SYSTEM - {'SYSTEM_SHEET_CONFIG', 'SYSTEM_KEYS'}
 META = {'SYSTEM_SHEET_CONFIG', 'SYSTEM_KEYS'}
+# `/api/state` may append this display-only log for authorised history users.
+# It is accepted then discarded by validate_state, never persisted from a client.
+CLIENT_TRANSIENT = {'CHANGE_LOG'}
 ARCHIVES = {'لیست جمع آوری سرویس','جمع آوری مبین نت','جمع آوری آسیاتک'}
 FORBIDDEN = {'__proto__','constructor','prototype'}
 REGIONS = [
@@ -42,6 +51,16 @@ REGIONS = [
  ['فارس','ایلام','اصفهان','بوشهر','چهارمحال و بختیاری','سمنان','یزد','گیلان','مازندران','هرمزگان','کرمان']]
 ALIASES={'آذربایجان غربی':['آذرغربی','آذربایجانغربی'],'آذربایجان شرقی':['آذرشرقی','آذربایجانشرقی'],'کهگیلویه و بویراحمد':['کهکلویه','کهکیلویه','کهگیلویه','کهکیلویه و بویر احمد']}
 EMPTY={'v':2,'order':[],'sheets':{},'lockedSheets':{},'categoryConfig':None,'regionConfig':None,'panelProtected':True}
+# Central accounts use the same explicit product capabilities as the local
+# client. `role` remains only for legacy rows during the safe, gradual migration.
+PERMISSIONS={
+    'view-sheets','search','view-history','edit-cells','save-results','add-record','remove-record','undo-remove',
+    'refresh-panel','refresh-index','import-data','export-xlsx','backup-server','restore-data','empty-data','reset-data',
+    'manage-regions','manage-categories','manage-users'
+}
+DATA_PERMISSIONS={'view-sheets','search','edit-cells','save-results','add-record','remove-record','undo-remove','export-xlsx'}
+FULL_REWRITE_PERMISSIONS={'import-data','empty-data','reset-data','restore-data'}
+BUILTIN_CATEGORIES={'provinces','datacenters','services','carriers','equipment','costs','other'}
 
 def packed(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'), sort_keys=True, allow_nan=False)
@@ -68,20 +87,64 @@ def assigned_region(name, state):
     assignments=dict((state.get('regionConfig') or {}).get('assignments',[]))
     return assignments.get(p[0],p[1] if not state.get('regionConfig') else 'unassigned')
 
+def is_custom_user(user):
+    """Custom access records have both explicit lists; legacy role rows do not."""
+    return isinstance(user.get('categories'),list) and isinstance(user.get('permissions'),list)
+
+def category_ids(state):
+    config=state.get('categoryConfig') or {}
+    configured=[item.get('id') for item in config.get('categories',[]) if isinstance(item,dict) and isinstance(item.get('id'),str)]
+    return set(configured) | {'other'} if configured else set(BUILTIN_CATEGORIES)
+
+def category_of_sheet(name,state):
+    assignments=dict((state.get('categoryConfig') or {}).get('assignments',[]))
+    if name in assignments:return assignments[name]
+    if province(name) or re.search(r'ادغامی|تخریب',name):candidate='provinces'
+    elif re.search(r'تجهیزات|EOL|EOS',name):candidate='equipment'
+    elif re.search(r'جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک',name):candidate='carriers'
+    elif 'هزینه' in name:candidate='costs'
+    elif re.search(r'مرکز داده|ساختمان|سازمان',name):candidate='datacenters'
+    elif re.search(r'شبکه|VSAT|SIP|VPN|اینترنت|MPLS|آنتی|دور کاری|نوری|PIN PAD|گزارش آماری',name):candidate='services'
+    else:candidate='other'
+    return candidate if candidate in category_ids(state) else 'other'
+
+def has_permission(user, permission):
+    return is_custom_user(user) and permission in user['permissions']
+
 def can_access_data(user, name, state):
-    """Fail-closed regional scope used by both reads and level-3 writes.
-    Region selections automatically cover all provincial sheets in those regions.
-    A non-regional data sheet remains unavailable unless it has an explicit legacy
-    sheet grant, so choosing a region can never expose unrelated national data.
-    """
+    """Fail-closed sheet scope for both legacy and explicit-access accounts."""
     if name in SYSTEM:return False
+    if is_custom_user(user):
+        category=category_of_sheet(name,state)
+        if category not in user['categories']:return False
+        if category!='provinces':return True
+        region=assigned_region(name,state)
+        return region is not None and region in user['regions']
     region=assigned_region(name,state)
     return region in user['regions'] if region is not None else name in user['sheets']
 
 def can_read(user, name, state):
     if name not in state['sheets']:return False
+    if is_custom_user(user):return has_permission(user,'view-sheets') and can_access_data(user,name,state)
     if user['role']<=2:return True
     return can_access_data(user,name,state)
+
+def can_receive_data(user,name,state):
+    if is_custom_user(user):return can_access_data(user,name,state) and bool((DATA_PERMISSIONS|FULL_REWRITE_PERMISSIONS) & set(user['permissions']))
+    return can_read(user,name,state)
+
+def has_full_data_scope(user,state):
+    if not is_custom_user(user):return user['role']<=2
+    return category_ids(state) <= set(user['categories']) and all(
+        assigned_region(name,state) in user['regions'] for name in state['order'] if province(name)
+    )
+
+def may_manage_users(user):
+    return has_permission(user,'manage-users') if is_custom_user(user) else user['role']==1
+
+def may_manage_metadata(user,key):
+    if not is_custom_user(user):return user['role']<=2
+    return has_permission(user,'manage-categories' if key=='categoryConfig' else 'manage-regions')
 
 class Problem(Exception):
     def __init__(self,status,message):self.status=status;self.message=message
@@ -133,7 +196,7 @@ def validate_category_config(value):
     # names use the same priority as the client-side category matcher.
     def category_for_sheet(sheet):
         if sheet in assignments:return assignments[sheet]
-        if province(sheet):candidate='provinces'
+        if province(sheet) or re.search(r'ادغامی|تخریب',sheet):candidate='provinces'
         elif re.search(r'تجهیزات|EOL|EOS',sheet):candidate='equipment'
         elif re.search(r'جمع ?آ?اوری|جمع آوری|جمع اوری|PSP|مبین|آسیاتک|اسیاتک',sheet):candidate='carriers'
         elif 'هزینه' in sheet:candidate='costs'
@@ -177,6 +240,10 @@ def validate_state(raw):
     names=set();clean={}
     for name in order:
         if not isinstance(name,str) or not name.strip() or len(name)>31 or re.search(r'[\x00-\x1f\\/*?:\[\]]',name) or norm(name) in names:fail(400,'نام بخش نامعتبر است.')
+        # Browser snapshots may include persisted metadata plus the display-only
+        # CHANGE_LOG returned by `/api/state`; all other system sheets are
+        # derived/server-owned and never valid input to a state commit.
+        if name in SYSTEM and name not in META and name not in CLIENT_TRANSIENT:fail(400,'نام بخش سیستمی در داده‌های کاربر مجاز نیست.')
         names.add(norm(name));sh=sheets[name]
         if not isinstance(sh,dict) or not isinstance(sh.get('rows'),list) or not isinstance(sh.get('merges'),list):fail(400,'ساختار شیت نامعتبر است.')
         if len(sh['rows'])>250000 or len(sh['merges'])>20000:fail(413,'داده از سقف این نسخه بیشتر است.')
@@ -247,7 +314,77 @@ def valid_merge_shift(before,after,archive=False):
         if merges==after['merges']:return True
     return False
 
+def authorise_custom_change(user,old,new):
+    """Server enforcement for the same capability/scope model exposed in UI."""
+    # The migrated administrator has every explicit capability and complete
+    # scope. Preserve its existing full-administration behavior without a UI
+    # level selector or a hidden special case in the browser.
+    if PERMISSIONS <= set(user['permissions']) and has_full_data_scope(user,old):
+        for name,locked in old['lockedSheets'].items():
+            if locked and new['lockedSheets'].get(name) and packed(old['sheets'].get(name))!=packed(new['sheets'].get(name)):
+                fail(403,'بخش قفل است؛ ابتدا قفل را باز کنید.')
+        return
+    # A full-scope import/restore/reset permission deliberately authorises a
+    # workbook-wide replacement: the corresponding client feature can replace
+    # every record, so requiring unrelated cell permissions would only break a
+    # legitimate import while not reducing its inherent authority.
+    if has_full_data_scope(user,old) and FULL_REWRITE_PERMISSIONS & set(user['permissions']):return
+    for key in ('categoryConfig','regionConfig'):
+        if packed(old.get(key))!=packed(new.get(key)) and not may_manage_metadata(user,key):
+            fail(403,'مجوز مدیریت تنظیمات مربوطه را ندارید.')
+    for key in ('lockedSheets','panelProtected'):
+        if packed(old.get(key))!=packed(new.get(key)):
+            fail(403,'تغییر این تنظیمات برای این حساب مجاز نیست.')
+
+    old_names=[name for name in old['order'] if name not in SYSTEM]
+    permitted=[name for name in old_names if can_access_data(user,name,old)]
+    new_names=[name for name in new['order'] if name not in SYSTEM]
+    existing=[name for name in new_names if name in old_names]
+    metadata_catalog=may_manage_metadata(user,'categoryConfig')
+    if metadata_catalog:
+        # Category managers receive name-only worksheet stubs so assignments
+        # can be edited without disclosing cells. They must carry that catalog
+        # through unchanged; the server restores its real content below.
+        if existing!=old_names:fail(403,'حذف یا جابه‌جایی بخش برای این حساب مجاز نیست.')
+    else:
+        if any(name not in permitted for name in existing):
+            fail(403,'این بخش خارج از محدودهٔ دادهٔ مجاز است.')
+        if existing != permitted:
+            fail(403,'حذف یا جابه‌جایی بخش برای این حساب مجاز نیست.')
+    additions=[name for name in new_names if name not in old_names]
+    if additions:
+        if not (has_permission(user,'import-data') and has_full_data_scope(user,old)):
+            fail(403,'افزودن بخش فقط با مجوز ورود فایل و محدودهٔ کامل داده مجاز است.')
+    for name in permitted:
+        before=old['sheets'][name];after=new['sheets'].get(name)
+        if after is None:fail(403,'بخش مجاز از درخواست حذف شده است.')
+        if packed(before)==packed(after):continue
+        if old['lockedSheets'].get(name):fail(403,'بخش قفل است.')
+        if not before['rows'] or not after['rows'] or packed(before['rows'][0])!=packed(after['rows'][0]):
+            fail(403,'تغییر عنوان ستون مجاز نیست.')
+        before_rows,after_rows=trim_rows(before['rows']),trim_rows(after['rows'])
+        if len(before_rows)==len(after_rows):
+            if not has_permission(user,'edit-cells'):fail(403,'مجوز ویرایش سلول ندارید.')
+            if before['merges']!=after['merges']:fail(403,'تغییر ساختار ادغام مجاز نیست.')
+        elif len(before_rows)<len(after_rows):
+            if not has_permission(user,'add-record') or not sequence_delta(before_rows,after_rows) or not valid_merge_shift(before,after):
+                fail(403,'افزودن رکورد مجاز یا معتبر نیست.')
+        else:
+            if not has_permission(user,'remove-record') or not sequence_delta(before_rows,after_rows) or not valid_merge_shift(before,after):
+                fail(403,'حذف رکورد مجاز یا معتبر نیست.')
+
+    # Restore every inaccessible sheet byte-for-byte. A scoped browser never
+    # receives them and can therefore never delete or overwrite them.
+    for name in old_names:
+        if name not in permitted:new['sheets'][name]=old['sheets'][name]
+    for name in old['order']:
+        if name in META:
+            new['sheets'][name]=old['sheets'][name]
+    new['order']=old_names+additions+[name for name in old['order'] if name in META]
+
 def authorise_change(user,old,new):
+    if is_custom_user(user):
+        return authorise_custom_change(user,old,new)
     if user['role']<=2:
         for n,locked in old['lockedSheets'].items():
             if locked and new['lockedSheets'].get(n) and packed(old['sheets'].get(n))!=packed(new['sheets'].get(n)):fail(403,'بخش قفل است؛ ابتدا قفل را باز کنید.')
@@ -290,7 +427,26 @@ def authorise_change(user,old,new):
         if n in META and n not in new['order']:new['order'].append(n)
 
 def public_user(row):
-    return {k:row[k] for k in ['id','username','name','role','enabled','revision']} | {'enabled':bool(row['enabled']),'regions':json.loads(row['regions']),'sheets':json.loads(row['sheets'])}
+    """Return only safe, structurally valid account fields.
+
+    These JSON columns are normally written only through validated code. If an
+    operator has manually damaged SQLite, fail closed with an application error
+    rather than leaking a raw parser exception to a browser.
+    """
+    def load_list(column):
+        try:
+            value=json.loads(row[column])
+            if not isinstance(value,list):raise ValueError('expected list')
+            return value
+        except (json.JSONDecodeError,TypeError,ValueError) as error:
+            logging.getLogger(__name__).error('Malformed users.%s for account id=%s: %s',column,row['id'],error)
+            fail(500,'داده‌های حساب کاربری آسیب دیده است؛ لاگ سرور را بررسی کنید.')
+    value={k:row[k] for k in ['id','username','name','role','enabled','revision']} | {'enabled':bool(row['enabled']),'regions':load_list('regions'),'sheets':load_list('sheets')}
+    # Omit absent fields so older rows remain legacy-role accounts until their
+    # first save through the new custom-access editor.
+    if row['categories'] is not None and row['permissions'] is not None:
+        value['categories']=load_list('categories');value['permissions']=load_list('permissions')
+    return value
 
 def credentials(password,salt=None):
     if not isinstance(password,str) or not 4<=len(password)<=128:fail(400,'رمز باید بین ۴ تا ۱۲۸ نویسه باشد.')
@@ -309,15 +465,14 @@ def create_app(config=None):
     app.config.update(DB_PATH=os.environ.get('FAM_DB',str(ROOT/'private'/'fam.sqlite3')),
       PUBLIC_ORIGIN=os.environ.get('FAM_PUBLIC_ORIGIN',''), COOKIE_SECURE=True,
       MAX_CONTENT_LENGTH=32*1024*1024, TESTING=False,
-      NETWORK_OPERATIONS_ENABLED=os.environ.get('FAM_NETWORK_OPERATIONS_ENABLED','').strip().lower() in {'1','true','yes'},
-      DEVICE_NETWORKS=os.environ.get('FAM_DEVICE_NETWORKS',''), SSH_EXECUTOR=None)
+      # Network Operations remains opt-in until its independent Worker has
+      # been installed, paired and lab-validated under its own Windows account.
+      NETWORK_OPS_ENABLED=os.environ.get('FAM_NETWORK_OPS_ENABLED','0')=='1',
+      NETWORK_OPS_MAX_LAB_DEVICES=int(os.environ.get('FAM_NETWORK_OPS_MAX_LAB_DEVICES','10')),
+      NETWORK_OPS_JOB_LEASE_SECONDS=int(os.environ.get('FAM_NETWORK_OPS_JOB_LEASE_SECONDS','600')))
     if config:app.config.update(config)
     if not app.config['PUBLIC_ORIGIN']:raise RuntimeError('Set FAM_PUBLIC_ORIGIN to the HTTPS origin (no trailing slash).')
     if not app.config['TESTING'] and not app.config['PUBLIC_ORIGIN'].startswith('https://'):raise RuntimeError('Production requires HTTPS.')
-    device_networks=configured_networks(app.config['DEVICE_NETWORKS'])
-    network_operations_enabled=bool(app.config['NETWORK_OPERATIONS_ENABLED'])
-    if network_operations_enabled and not device_networks:raise RuntimeError('Network operations require a non-empty FAM_DEVICE_NETWORKS IPv4 CIDR allowlist.')
-    network_operations_ready=network_operations_enabled and bool(device_networks) and (app.config['SSH_EXECUTOR'] is not None or paramiko_available())
     dbpath=Path(app.config['DB_PATH']).resolve()
     if dbpath.is_relative_to(ROOT/'www'):raise RuntimeError('The database must be outside the public www directory.')
     # Full SQLite backups are private server files, never browser downloads or
@@ -349,44 +504,31 @@ def create_app(config=None):
         db.execute('PRAGMA journal_mode=WAL')
         db.executescript('''
         CREATE TABLE IF NOT EXISTS state(id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, epoch TEXT NOT NULL, payload TEXT NOT NULL, saved_at INTEGER NOT NULL);
-        CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, name TEXT NOT NULL, role INTEGER NOT NULL, enabled INTEGER NOT NULL, regions TEXT NOT NULL, sheets TEXT NOT NULL, revision TEXT NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, name TEXT NOT NULL, role INTEGER NOT NULL, enabled INTEGER NOT NULL, regions TEXT NOT NULL, sheets TEXT NOT NULL, categories TEXT, permissions TEXT, revision TEXT NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS settings(id INTEGER PRIMARY KEY CHECK(id=1), users_revision INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, user_revision TEXT NOT NULL, csrf TEXT NOT NULL, expires INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS receipts(user_id TEXT NOT NULL, request_id TEXT NOT NULL, digest TEXT NOT NULL, response TEXT NOT NULL, PRIMARY KEY(user_id,request_id));
         CREATE TABLE IF NOT EXISTS audit(revision INTEGER PRIMARY KEY, at INTEGER NOT NULL, actor TEXT NOT NULL, names TEXT NOT NULL, snapshot TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS undo(user_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, payload TEXT);
         CREATE TABLE IF NOT EXISTS attempts(bucket TEXT PRIMARY KEY, started INTEGER NOT NULL, failures INTEGER NOT NULL);
-        -- Network credentials and raw commands are never stored here.  This
-        -- audit table contains only the fixed operation's non-secret target,
-        -- interface, outcome, and a bounded device transcript.
-        CREATE TABLE IF NOT EXISTS network_operations(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          operator_name TEXT NOT NULL,
-          request_id TEXT NOT NULL,
-          request_digest TEXT NOT NULL,
-          action TEXT NOT NULL,
-          device_type TEXT NOT NULL,
-          target TEXT NOT NULL,
-          interface TEXT NOT NULL,
-          status TEXT NOT NULL,
-          created_at INTEGER NOT NULL,
-          completed_at INTEGER,
-          result TEXT,
-          UNIQUE(user_id,request_id)
-        );
-        CREATE INDEX IF NOT EXISTS network_operations_recent ON network_operations(user_id,created_at DESC);
         ''')
+        # SQLite only supports additive migrations. NULL deliberately means an
+        # untouched legacy role account; custom rows always carry both arrays.
+        columns={row['name'] for row in db.execute('PRAGMA table_info(users)')}
+        if 'categories' not in columns:db.execute('ALTER TABLE users ADD COLUMN categories TEXT')
+        if 'permissions' not in columns:db.execute('ALTER TABLE users ADD COLUMN permissions TEXT')
     with transaction() as db:
         if not db.execute('SELECT 1 FROM state').fetchone():
             if not fresh:raise RuntimeError('Existing database has lost its state; refusing to reseed accounts.')
             salt,digest=credentials(os.environ.get('FAM_INITIAL_PASSWORD','1109'))
             db.execute('INSERT INTO state VALUES(1,0,?,?,0)',(str(uuid.uuid4()),packed(EMPTY)))
             db.execute('INSERT INTO settings VALUES(1,0)')
-            db.execute('INSERT INTO users VALUES(?,?,?,?,?,?,?,?,?,?)',(str(uuid.uuid4()),'admin','admin',1,1,'[]','[]',str(uuid.uuid4()),salt,digest))
+            db.execute('INSERT INTO users(id,username,name,role,enabled,regions,sheets,categories,permissions,revision,salt,hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+              (str(uuid.uuid4()),'admin','admin',1,1,packed([str(index) for index in range(1,len(REGIONS)+1)]),'[]',packed(sorted(BUILTIN_CATEGORIES)),packed(sorted(PERMISSIONS)),str(uuid.uuid4()),salt,digest))
         if not db.execute('SELECT 1 FROM settings WHERE id=1').fetchone():raise RuntimeError('Database settings missing; restore a verified backup.')
         validate_state(json.loads(db.execute('SELECT payload FROM state WHERE id=1').fetchone()[0]))
-        if not db.execute('SELECT 1 FROM users WHERE role=1 AND enabled=1').fetchone():raise RuntimeError('No active administrator: restore a verified backup, do not reseed.')
+        active=[public_user(row) for row in db.execute('SELECT * FROM users WHERE enabled=1')]
+        if not any(may_manage_users(user) for user in active):raise RuntimeError('No active user-access manager: restore a verified backup, do not reseed.')
     def user_and_session(db):
         token=hashlib.sha256(request.cookies.get('fam_session','').encode()).hexdigest()
         session=db.execute('SELECT * FROM sessions WHERE token=? AND expires>?',(token,int(time.time()))).fetchone()
@@ -397,6 +539,17 @@ def create_app(config=None):
     @app.before_request
     def guard():
         if not request.path.startswith('/api/'):return
+        # A separately deployed Worker cannot carry a browser session or CSRF
+        # token. Its narrow write endpoints are authenticated later by a scoped,
+        # revocable Worker bearer token; they never accept browser requests or
+        # expose FAM session data. All normal browser API routes keep the
+        # existing Origin + CSRF protections below.
+        worker_endpoint=(request.path=='/api/network/worker/claim' or
+                         re.fullmatch(r'/api/network/worker/jobs/[a-zA-Z0-9_-]{1,100}/complete',request.path) or
+                         (request.method=='POST' and re.fullmatch(r'/api/network/workers/[a-z][a-z0-9._-]{1,63}/probe-key',request.path)))
+        if worker_endpoint:
+            if request.method not in ('GET','HEAD','OPTIONS') and not request.is_json:fail(415,'بدنهٔ JSON لازم است.')
+            return
         if request.method not in ('GET','HEAD','OPTIONS'):
             if request.headers.get('Origin')!=app.config['PUBLIC_ORIGIN']:fail(403,'مبدأ درخواست مجاز نیست.')
             if not request.is_json:fail(415,'بدنهٔ JSON لازم است.')
@@ -422,37 +575,68 @@ def create_app(config=None):
         if not isinstance(value,dict):fail(400,'بدنهٔ JSON نامعتبر است.')
         safe_tree(value);return value
     def admin(user):
-        if user['role']!=1:fail(403,'این عملیات فقط برای مدیر سطح ۱ است.')
+        if not may_manage_users(user):fail(403,'مجوز مدیریت کاربران و دسترسی‌ها لازم است.')
+    def network_read_allowed(user):
+        # Network reports are a central operational audit surface.  Custom
+        # accounts need an explicit existing read-audit capability; the user
+        # manager can always inspect the subsystem it provisions.
+        return (may_manage_users(user) or has_permission(user,'view-history')) if is_custom_user(user) else user['role']<=2
+    def network_write_allowed(user):
+        # Pairing a Worker and queuing device jobs are control-plane changes,
+        # reserved for the existing explicit access-manager capability.
+        return may_manage_users(user)
     def backup_allowed(user):
-        if user['role']>3:fail(403,'این عملیات برای این سطح دسترسی مجاز نیست.')
+        if is_custom_user(user):
+            if not has_permission(user,'backup-server'):fail(403,'مجوز پشتیبان‌گیری لازم است.')
+        elif user['role']>3:fail(403,'این عملیات برای این سطح دسترسی مجاز نیست.')
     def undo_summary(db,revision):
         row=db.execute('SELECT at FROM audit WHERE revision=? AND snapshot!=?',(revision,'')).fetchone()
         return {'valid':True,'serverRevision':revision,'blockCount':1,'blocks':[],'ts':row['at']} if row else None
     @app.get('/api/undo-state')
     def undo_state():
-        if g.user['role']>2:fail(403,'بازگشت فقط برای مدیر مجاز است.')
+        if (is_custom_user(g.user) and not has_permission(g.user,'undo-remove')) or (not is_custom_user(g.user) and g.user['role']>2):fail(403,'مجوز بازگردانی لازم است.')
         with connect() as db:
             db.execute('BEGIN');u,_=user_and_session(db)
-            if u['role']>2:fail(403,'مجوز تغییر کرده است.')
+            if (is_custom_user(u) and not has_permission(u,'undo-remove')) or (not is_custom_user(u) and u['role']>2):fail(403,'مجوز تغییر کرده است.')
             current=db.execute('SELECT revision,epoch FROM state WHERE id=1').fetchone()
             old=db.execute('SELECT * FROM audit WHERE revision=?',(current['revision'],)).fetchone()
             if not old or not old['snapshot']:fail(404,'نسخه‌ای برای بازگشت موجود نیست.')
             return jsonify(state=json.loads(old['snapshot']),revision=current['revision'],epoch=current['epoch'],user=u,actor=old['actor'],sheets=old['names'])
     def envelope(db,user,session=None):
         row=db.execute('SELECT * FROM state WHERE id=1').fetchone();p=json.loads(row['payload'])
-        allowed=[n for n in p['order'] if can_read(user,n,p)]
-        p['order']=allowed;p['sheets']={n:p['sheets'][n] for n in allowed}
-        if user['role']==4:p['categoryConfig']=None;p['lockedSheets']={n:True for n in allowed}
-        p['undo']=undo_summary(db,row['revision']) if user['role']<=2 else None
+        allowed=[n for n in p['order'] if can_receive_data(user,n,p)]
+        # A category editor needs worksheet *names* to assign them, not their
+        # cells. Supply immutable-looking stubs for the catalog; commit restores
+        # their authoritative content before persistence.
+        catalog=[n for n in p['order'] if n not in SYSTEM] if may_manage_metadata(user,'categoryConfig') else []
+        visible=[n for n in p['order'] if n in set(allowed)|set(catalog)]
+        p['order']=visible;p['sheets']={n:(p['sheets'][n] if n in allowed else {'rows':[],'merges':[]}) for n in visible}
+        if not is_custom_user(user) and user['role']==4:p['categoryConfig']=None;p['lockedSheets']={n:True for n in allowed}
+        p['undo']=undo_summary(db,row['revision']) if (has_permission(user,'undo-remove') if is_custom_user(user) else user['role']<=2) else None
         p['savedAt']=row['saved_at']
-        if user['role']<=2:
+        may_see_log=has_permission(user,'view-history') if is_custom_user(user) else user['role']<=2
+        if may_see_log:
             logs=db.execute('SELECT revision,at,actor,names FROM audit ORDER BY revision DESC LIMIT 200').fetchall()
             p['sheets']['CHANGE_LOG']={'rows':[['Time','Action','Sheets','Revision','User','Status','Notes']]+[[time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(a['at']/1000)),'SERVER_COMMIT',a['names'],a['revision'],a['actor'],'SUCCESS','ثبت قطعی سرور'] for a in reversed(logs)],'merges':[]}
             p['order'].append('CHANGE_LOG')
         return {'revision':row['revision'],'epoch':row['epoch'],'state':p,'user':user}
     @app.get('/')
+    def root():
+        # IIS serves this small public login document. Keep the loopback root
+        # consistent for direct health checks without publishing the full UI.
+        return send_file(ROOT/'www'/'login.html',mimetype='text/html',max_age=0,conditional=False)
+
+    @app.get('/app')
     @app.get('/FAM.html')
-    def index():return send_file(ROOT/'www'/'FAM.html',mimetype='text/html')
+    def index():
+        # The interactive spreadsheet client is not an IIS static asset.  A
+        # user must first hold an active FAM session before its UI code can be
+        # sent.  The business/data engine and the private workbook remain on
+        # the server in every case; browsers receive only authorised API data.
+        with connect() as db:
+            try:user_and_session(db)
+            except Problem:return redirect('/login.html',code=302)
+        return send_file(ROOT/'private_ui'/'FAM.html',mimetype='text/html',max_age=0,conditional=False)
     @app.post('/api/login')
     def login():
         value=data();name=str(value.get('username','')).strip().lower();pw=value.get('password','')
@@ -486,73 +670,11 @@ def create_app(config=None):
     @app.post('/api/reauth')
     def reauth():
         value=data()
-        if g.user['role']>2:fail(403,'تأیید مدیر لازم است.')
+        if (is_custom_user(g.user) and not has_permission(g.user,'manage-users')) or (not is_custom_user(g.user) and g.user['role']>2):fail(403,'تأیید مدیر لازم است.')
         with connect() as db:row=db.execute('SELECT * FROM users WHERE id=?',(g.user['id'],)).fetchone()
         _,hashed=credentials(value.get('password',''),row['salt'])
         if not hmac.compare_digest(hashed,row['hash']):fail(403,'رمز نادرست است.')
         return jsonify(ok=True)
-    def network_operator(user):
-        if user['role']>2:fail(403,'عملیات شبکه فقط برای مدیر یا اپراتور سطح ۱ و ۲ مجاز است.')
-    def network_operation_public(row):
-        try:result=json.loads(row['result'] or '{}')
-        except (TypeError,json.JSONDecodeError):result={'status':'failed','message':'نتیجهٔ ثبت‌شدهٔ عملیات معتبر نیست.','output':''}
-        return {'id':row['id'],'requestId':row['request_id'],'operator':row['operator_name'],
-          'action':row['action'],'deviceType':row['device_type'],'target':row['target'],
-          'interface':row['interface'],'status':row['status'],'createdAt':row['created_at'],
-          'completedAt':row['completed_at'],'result':result}
-    def network_operation_capabilities(user):
-        network_operator(user)
-        if not network_operations_enabled:return {'enabled':False,'message':'عملیات شبکه در تنظیمات سرویس سرور فعال نشده است.'}
-        if not network_operations_ready:return {'enabled':False,'message':'ماژول SSH امن روی سرویس سرور آماده نیست؛ مسئول سرور باید نصب را تکمیل کند.'}
-        return {'enabled':True,'message':'اتصال SSH فقط از سرویس فام روی سرور انجام می‌شود؛ مرورگر هیچ اتصال مستقیمی به تجهیز ندارد.'}
-    @app.get('/api/network-operations/capabilities')
-    def network_operations_capabilities():return jsonify(network_operation_capabilities(g.user))
-    @app.get('/api/network-operations')
-    def list_network_operations():
-        network_operator(g.user)
-        with connect() as db:
-            rows=db.execute('SELECT * FROM network_operations ORDER BY id DESC LIMIT 50').fetchall()
-        return jsonify(operations=[network_operation_public(row) for row in rows])
-    @app.post('/api/network-operations')
-    def create_network_operation():
-        network_operator(g.user)
-        if not network_operations_enabled:fail(503,'عملیات شبکه در تنظیمات سرویس سرور فعال نشده است.')
-        if not network_operations_ready:fail(503,'ماژول SSH امن روی سرویس سرور آماده نیست؛ مسئول سرور باید نصب را تکمیل کند.')
-        try:operation=parse_request(data(),device_networks)
-        except NetworkOperationError as err:fail(err.status,err.message)
-        digest=request_digest(operation);now=int(time.time()*1000)
-        with transaction() as db:
-            user,_=user_and_session(db);network_operator(user)
-            existing=db.execute('SELECT * FROM network_operations WHERE user_id=? AND request_id=?',(user['id'],operation.request_id)).fetchone()
-            if existing:
-                if not hmac.compare_digest(existing['request_digest'],digest):fail(409,'شناسهٔ عملیات با جزئیات متفاوت تکرار شده است.')
-                if existing['status']=='running':fail(409,'این عملیات هنوز در حال اجرا است؛ درخواست تکراری ارسال نشد.')
-                return jsonify(operation=network_operation_public(existing))
-            recent=db.execute('SELECT COUNT(*) FROM network_operations WHERE user_id=? AND created_at>?',(user['id'],now-60_000)).fetchone()[0]
-            if recent>=5:fail(429,'تعداد عملیات شبکه برای این حساب زیاد است؛ یک دقیقه بعد دوباره امتحان کنید.')
-            db.execute('''INSERT INTO network_operations(user_id,operator_name,request_id,request_digest,action,device_type,target,interface,status,created_at)
-              VALUES(?,?,?,?,?,?,?,?,?,?)''',(user['id'],user['name'],operation.request_id,digest,operation.action,operation.device_type,operation.target,operation.interface,'running',now))
-            operation_id=db.execute('SELECT last_insert_rowid()').fetchone()[0]
-        # The SSH exchange occurs outside the write transaction.  A durable
-        # "running" record prevents a lost browser response from replaying the
-        # shutdown/no-shutdown sequence with the same request ID.
-        try:
-            result=execute_network_operation(operation,app.config['SSH_EXECUTOR'])
-        except NetworkOperationError as err:
-            result={'status':'failed','message':err.message,'output':''}
-        except Exception:
-            app.logger.exception('Network operation failed for %s interface %s',operation.target,operation.interface)
-            result={'status':'failed','message':'عملیات شبکه روی سرور ناموفق بود؛ گزارش خصوصی سرور را بررسی کنید.','output':''}
-        completed=int(time.time()*1000)
-        with transaction() as db:
-            # The job was already authorised before its SSH session began.  Do
-            # not leave a durable job stuck as "running" if an administrator
-            # disables that browser account while the device is responding.
-            db.execute('UPDATE network_operations SET status=?,completed_at=?,result=? WHERE id=? AND status=?',
-              (result['status'],completed,packed(result),operation_id,'running'))
-            row=db.execute('SELECT * FROM network_operations WHERE id=?',(operation_id,)).fetchone()
-        app.logger.info('Network operation %s on %s %s completed with %s by %s',operation.action,operation.target,operation.interface,result['status'],g.user['username'])
-        return jsonify(operation=network_operation_public(row))
     @app.get('/api/status')
     def status():
         # This intentionally exposes only a small, permission-safe change
@@ -562,9 +684,9 @@ def create_app(config=None):
             row=db.execute('SELECT revision,epoch FROM state WHERE id=1').fetchone()
             audit=db.execute('SELECT actor,at FROM audit WHERE revision=?',(row['revision'],)).fetchone()
         change={'revision':row['revision'],'at':audit['at'] if audit else None}
-        # Level 4 accounts may receive redacted state, so do not disclose the
-        # name of a colleague who changed data outside their permitted scope.
-        if audit and g.user['role']<=3:change['actor']=audit['actor']
+        # Scoped accounts do not receive the name of a colleague who changed
+        # data outside their permitted scope.
+        if audit and ((has_permission(g.user,'view-history')) if is_custom_user(g.user) else g.user['role']<=3):change['actor']=audit['actor']
         return jsonify(revision=row['revision'],epoch=row['epoch'],userRevision=g.user['revision'],change=change)
     @app.post('/api/backups')
     def create_manual_backup():
@@ -587,13 +709,13 @@ def create_app(config=None):
             db.execute('BEGIN');u,_=user_and_session(db);return jsonify(envelope(db,u))
     @app.post('/api/state')
     def commit():
-        if g.user['role']==4:fail(403,'این حساب فقط مشاهده می‌کند.')
+        if not is_custom_user(g.user) and g.user['role']==4:fail(403,'این حساب فقط مشاهده می‌کند.')
         body=data();rid=body.get('requestId');base=body.get('revision')
         if not isinstance(rid,str) or not re.fullmatch(r'[a-f0-9-]{36}',rid) or type(base)!=int:fail(400,'شناسه یا نسخهٔ درخواست نامعتبر است.')
         proposed=validate_state(body.get('state'));digest=hashlib.sha256(packed(body).encode()).hexdigest()
         with transaction() as db:
             u,_=user_and_session(db) # Re-authorise after acquiring the write lock.
-            if u['role']==4:fail(403,'این حساب فقط مشاهده می‌کند.')
+            if not is_custom_user(u) and u['role']==4:fail(403,'این حساب فقط مشاهده می‌کند.')
             receipt=db.execute('SELECT * FROM receipts WHERE user_id=? AND request_id=?',(u['id'],rid)).fetchone()
             if receipt:
                 if receipt['digest']!=digest:fail(409,'شناسهٔ درخواست با محتوای متفاوت تکرار شده است.')
@@ -606,7 +728,7 @@ def create_app(config=None):
             db.execute('UPDATE state SET payload=?,revision=?,saved_at=? WHERE id=1',(packed(proposed),revision,stamp))
             db.execute('INSERT INTO audit VALUES(?,?,?,?,?)',(revision,stamp,u['name'],names,row['payload']))
             db.execute("UPDATE audit SET snapshot='' WHERE revision<=? AND snapshot!=''",(revision-50,))
-            result={'revision':revision,'epoch':row['epoch'],'savedAt':stamp,'undo':undo_summary(db,revision) if u['role']<=2 else None}
+            result={'revision':revision,'epoch':row['epoch'],'savedAt':stamp,'undo':undo_summary(db,revision) if (has_permission(u,'undo-remove') if is_custom_user(u) else u['role']<=2) else None}
             db.execute('INSERT INTO receipts VALUES(?,?,?,?)',(u['id'],rid,digest,packed(result)))
             return jsonify(result)
     def users_result(db):
@@ -623,27 +745,46 @@ def create_app(config=None):
         with transaction() as db:
             u,session=user_and_session(db);admin(u)
             if body.get('revision')!=db.execute('SELECT users_revision FROM settings WHERE id=1').fetchone()[0]:fail(409,'فهرست کاربران تغییر کرده است؛ دوباره باز کنید.')
-            old={r['id']:dict(r) for r in db.execute('SELECT * FROM users')};ids=set();names=set();normal=[]
+            old={row['id']:dict(row) for row in db.execute('SELECT * FROM users')};ids=set();names=set();normal=[]
             for x in values:
                 if not isinstance(x,dict):fail(400,'کاربر نامعتبر است.')
-                uid=x.get('id');name=x.get('username','');display=x.get('name','');role=x.get('role');enabled=x.get('enabled')
-                if not isinstance(uid,str) or not re.fullmatch(r'[a-zA-Z0-9-]{10,60}',uid) or uid in ids or not isinstance(name,str) or not re.fullmatch(r'[a-z0-9_.-]{3,40}',name) or name in names or not isinstance(display,str) or not 1<=len(display.strip())<=60 or type(role)!=int or role not in [1,2,3,4] or type(enabled)!=bool:fail(400,'مشخصات کاربر معتبر نیست.')
+                uid=x.get('id');name=x.get('username','');display=x.get('name','');enabled=x.get('enabled')
+                if not isinstance(uid,str) or not re.fullmatch(r'[a-zA-Z0-9-]{10,60}',uid) or uid in ids or not isinstance(name,str) or not re.fullmatch(r'[a-z0-9_.-]{3,40}',name) or name in names or not isinstance(display,str) or not 1<=len(display.strip())<=60 or type(enabled)!=bool:
+                    fail(400,'مشخصات کاربر معتبر نیست.')
                 ids.add(uid);names.add(name)
                 for field in ['regions','sheets']:
                     if not isinstance(x.get(field),list) or len(x[field])>500 or any(not isinstance(v,str) or len(v)>100 for v in x[field]):fail(400,'محدودهٔ کاربر نامعتبر است.')
-                previous=old.get(uid);password=x.get('password')
+                previous=old.get(uid);custom=('categories' in x or 'permissions' in x)
+                if custom:
+                    categories=x.get('categories');permissions=x.get('permissions')
+                    if not isinstance(categories,list) or not isinstance(permissions,list) or len(categories)>100 or len(permissions)>len(PERMISSIONS) or any(not isinstance(v,str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,79}',v) for v in categories) or any(v not in PERMISSIONS for v in permissions):
+                        fail(400,'دسترسی‌های سفارشی کاربر معتبر نیست.')
+                    categories=list(dict.fromkeys(categories));permissions=list(dict.fromkeys(permissions))
+                    # Kept only for legacy compatibility. It is never exposed in
+                    # the custom-access editor and does not grant capabilities.
+                    role=previous['role'] if previous else 4
+                    cat_value,perm_value=packed(categories),packed(permissions)
+                else:
+                    if previous and previous['categories'] is not None:fail(400,'حساب دسترسی سفارشی باید دسته‌ها و مجوزهای خود را حفظ کند.')
+                    role=x.get('role')
+                    if type(role)!=int or role not in [1,2,3,4]:fail(400,'سطح دسترسی قدیمی معتبر نیست.')
+                    categories=permissions=None;cat_value=perm_value=None
+                password=x.get('password')
                 if previous is None and not password:fail(400,'رمز کاربر جدید لازم است.')
                 salt,digest=credentials(password) if password else (previous['salt'],previous['hash'])
                 pub={'id':uid,'username':name,'name':display.strip(),'role':role,'enabled':enabled,'regions':x['regions'],'sheets':x['sheets']}
-                changed=not previous or password or any(public_user(previous)[k]!=pub[k] for k in pub)
+                if custom:pub['categories']=categories;pub['permissions']=permissions
+                changed=not previous or password or any(public_user(previous).get(key)!=value for key,value in pub.items()) or (previous and (previous['categories']!=cat_value or previous['permissions']!=perm_value))
                 revision=str(uuid.uuid4()) if changed else previous['revision']
-                normal.append((uid,name,display.strip(),role,int(enabled),packed(x['regions']),packed(x['sheets']),revision,salt,digest))
-            if not any(v[3]==1 and v[4] for v in normal):fail(400,'حداقل یک مدیر فعال سطح ۱ لازم است.')
+                normal.append({'id':uid,'username':name,'name':display.strip(),'role':role,'enabled':enabled,'regions':x['regions'],'sheets':x['sheets'],'categories':cat_value,'permissions':perm_value,'revision':revision,'salt':salt,'hash':digest,'public':pub})
+            if not any(item['enabled'] and may_manage_users(item['public']) for item in normal):fail(400,'حداقل یک مدیر فعال مدیریت کاربران لازم است.')
             for uid in set(old)-ids:db.execute('DELETE FROM users WHERE id=?',(uid,))
             # Update in-place: REPLACE would cascade-delete active sessions.
-            for v in normal:
-                db.execute('''INSERT INTO users VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET username=excluded.username,name=excluded.name,role=excluded.role,enabled=excluded.enabled,regions=excluded.regions,sheets=excluded.sheets,revision=excluded.revision,salt=excluded.salt,hash=excluded.hash''',v)
-                if v[0]==u['id'] and v[3]==1 and v[4]:db.execute('UPDATE sessions SET user_revision=? WHERE token=?',(v[7],session['token']))
+            for item in normal:
+                db.execute('''INSERT INTO users(id,username,name,role,enabled,regions,sheets,categories,permissions,revision,salt,hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+                  ON CONFLICT(id) DO UPDATE SET username=excluded.username,name=excluded.name,role=excluded.role,enabled=excluded.enabled,regions=excluded.regions,sheets=excluded.sheets,categories=excluded.categories,permissions=excluded.permissions,revision=excluded.revision,salt=excluded.salt,hash=excluded.hash''',
+                  (item['id'],item['username'],item['name'],item['role'],int(item['enabled']),packed(item['regions']),packed(item['sheets']),item['categories'],item['permissions'],item['revision'],item['salt'],item['hash']))
+                if item['id']==u['id'] and item['enabled'] and may_manage_users(item['public']):db.execute('UPDATE sessions SET user_revision=? WHERE token=?',(item['revision'],session['token']))
             db.execute('UPDATE settings SET users_revision=users_revision+1 WHERE id=1')
             return jsonify(users_result(db))
     @app.post('/api/password')
@@ -659,6 +800,17 @@ def create_app(config=None):
             db.execute('UPDATE sessions SET user_revision=? WHERE token=?',(rev,session['token']))
             db.execute('UPDATE settings SET users_revision=users_revision+1 WHERE id=1')
             return jsonify(user=public_user(db.execute('SELECT * FROM users WHERE id=?',(u['id'],)).fetchone()))
+
+    def page_session():
+        with connect() as db:
+            try:user_and_session(db)
+            except Problem:return False
+        return True
+
+    if register_network_ops is not None:
+        register_network_ops(app, connect=connect, transaction=transaction, data=data,
+                             fail=fail, can_read_network=network_read_allowed,
+                             can_write_network=network_write_allowed, page_session=page_session)
     return app
 
 if __name__=='__main__':
