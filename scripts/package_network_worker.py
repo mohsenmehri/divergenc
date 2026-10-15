@@ -22,8 +22,8 @@ entries["START_HERE.txt"] = (
     "FAM Network Worker — Phase 1\n\n"
     "This is a Cisco IOS Worker. It may be co-hosted with FAM only under a "
     "built-in NT AUTHORITY\\LOCAL SERVICE identity on the same FAM server, outside the IIS path. No named Worker account or password is required. "
-    "It supports browser-encrypted Err-disabled checks and one pre-checked, "
-    "human-approved port recovery. Start with docs/NETWORK_OPERATIONS_PHASE1_FA.md. "
+    "It supports browser-encrypted Router/Switch Err-disabled checks and one pre-checked, "
+    "human-approved port recovery without enable or write memory. Start with docs/NETWORK_OPERATIONS_PHASE1_FA.md. "
     "This ZIP contains no credential, token, device address, or raw device configuration.\n"
 ).encode("utf-8")
 entries["SHA256SUMS.txt"] = "".join(

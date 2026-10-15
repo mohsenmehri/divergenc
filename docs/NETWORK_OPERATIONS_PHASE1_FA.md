@@ -3,9 +3,12 @@
 این قابلیت برای معماری زیر طراحی شده است:
 
 ```text
-مرورگر کاربر ── HTTPS/443 ──> FAM/IIS روی سرور مرکزی
+مرورگر کاربر ── HTTPS/443 ──> communication-02.toosbank.corp
                                    │
-                                   └── سرویس داخلی Worker با هویت Built-in Local Service ── SSH/22 ──> سوئیچ Cisco IOS
+                                   ▼
+                         سرور اصلی FAM / IIS — 10.16.243.18
+                                   │
+                                   └── سرویس داخلی Worker با هویت Built-in Local Service ── SSH/22 ──> Router / Switch Cisco IOS
 ```
 
 کاربر فقط با مرورگر به صفحهٔ FAM متصل می‌شود؛ هیچ اتصال SSH از رایانهٔ کاربر به تجهیزات لازم نیست. اتصال SSH و تمام عملیات شبکه فقط از Worker نصب‌شده روی سرور مرکزی انجام می‌شود. Worker هیچ پورت ورودی جدیدی باز نمی‌کند.
@@ -14,7 +17,7 @@
 
 ### ۱. بررسی مستقیم Err-disabled
 
-کاربر مجاز در FAM، Worker، IP/hostname سوئیچ، username و password SSH را وارد می‌کند. مرورگر این داده‌ها را قبل از ارسال با کلید عمومی Worker رمز می‌کند. FAM/IIS فقط ciphertext موقت را در صف Job حمل می‌کند؛ IP و Credential متن‌واضح را نمی‌بیند، لاگ نمی‌کند و ذخیره نمی‌کند. Worker زیر هویت داخلی غیرتعاملی `NT AUTHORITY\LOCAL SERVICE` و با کلید خصوصی DPAPI همان هویت آن را فقط در حافظه باز می‌کند. این هویت Password، Desktop Login یا حساب FAM برای اپراتورها ندارد.
+کاربر مجاز در FAM، Worker، IP/hostname همان Router یا Switch، username و password SSH را وارد می‌کند. برای Router، کاربر نام کاربری/رمز RADIUS خودش را وارد می‌کند؛ برای Switch، حساب Local همان Switch را. مرورگر این داده‌ها را قبل از ارسال با کلید عمومی Worker رمز می‌کند. FAM/IIS فقط ciphertext موقت را در صف Job حمل می‌کند؛ IP و Credential متن‌واضح را نمی‌بیند، لاگ نمی‌کند و ذخیره نمی‌کند. Worker زیر هویت داخلی غیرتعاملی `NT AUTHORITY\LOCAL SERVICE` و با کلید خصوصی DPAPI همان هویت آن را فقط در حافظه باز می‌کند. این هویت Password، Desktop Login یا حساب FAM برای اپراتورها ندارد. هیچ اتصال SSH از سیستم کاربران ساخته نمی‌شود؛ تمام SSH فقط از IP سرور `10.16.243.18` برقرار است.
 
 Worker فقط دستورهای ثابت زیر را اجرا می‌کند:
 
@@ -46,7 +49,7 @@ shutdown
 no shutdown
 ```
 
-سپس Worker دوباره وضعیت را بررسی و فقط نتیجهٔ ساخت‌یافتهٔ `recovered`، `precheck_failed` یا `recovery_failed` را برمی‌گرداند. هیچ `write memory`، تغییر global configuration، Command آزاد، backup/restore یا auto-remediation وجود ندارد.
+سپس Worker دوباره وضعیت را بررسی و فقط نتیجهٔ ساخت‌یافتهٔ `recovered`، `precheck_failed` یا `recovery_failed` را برمی‌گرداند. هیچ `enable`، Enable Secret، `write memory`، تغییر global configuration، Command آزاد، backup/restore یا auto-remediation وجود ندارد.
 
 > Err-disabled یک مکانیزم حفاظتی است. ابتدا علت را رفع کنید: Loop/BPDU Guard، Port Security، Link flap، UDLD، Storm Control یا اشکال کابل/Optic. بازیابی بدون رفع علت می‌تواند سرویس را قطع یا Loop را بازگرداند.
 

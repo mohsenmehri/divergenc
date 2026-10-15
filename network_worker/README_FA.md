@@ -5,8 +5,8 @@ Worker روی سرور مرکزی FAM اجرا می‌شود و اتصال SSH �
 قابلیت‌ها:
 
 - Inventory فقط‌خواندنی Cisco IOS با commandهای ثابت `show`.
-- بررسی مستقیم Err-disabled: کاربر IP/hostname، username و password را در مرورگر وارد می‌کند؛ مرورگر آن‌ها را برای کلید DPAPI/RSA Worker رمز می‌کند و FAM هیچ متن‌واضحی نمی‌بیند.
-- رفع کنترل‌شدهٔ یک Interface Err-disabled: فقط پورت گزارش‌شده از بررسی موفق، با pre-check، توالی محدود `shutdown` / `no shutdown`، post-check و بدون `write memory`.
+- بررسی مستقیم Err-disabled برای Router یا Switch Cisco IOS: کاربر IP/hostname، username و password را در مرورگر وارد می‌کند؛ برای Router از RADIUS خودش و برای Switch از حساب Local همان تجهیز. مرورگر آن‌ها را برای کلید DPAPI/RSA Worker رمز می‌کند و FAM هیچ متن‌واضحی نمی‌بیند.
+- رفع کنترل‌شدهٔ یک Interface Err-disabled: فقط پورت گزارش‌شده از بررسی موفق، با pre-check، توالی محدود `shutdown` / `no shutdown`، post-check و بدون `enable`، Enable Secret یا `write memory`.
 
 Worker ترمینال یا اجرای دستور آزاد نیست. هیچ Command عمومی، تغییر global configuration، backup/restore یا auto-remediation ندارد.
 
