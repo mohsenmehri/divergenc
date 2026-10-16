@@ -189,3 +189,17 @@
 .eq-smart-cards .eq-notice{grid-column:1/-1}
 @media(max-width:1150px){.eq-smart-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.eq-smart-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.eq-smart-cards .eq-card-main{min-height:70px;padding:10px 10px 5px}.eq-shortcut-title strong{font-size:12px}}
+/* Compact actual category cards, with direct catalog CRUD on each card. */
+.eq-smart-groups{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.eq-smart-groups .eq-card{border-radius:12px}
+.eq-smart-groups .eq-card::before{width:75px;height:75px;top:-38px;inset-inline-end:-30px}
+.eq-smart-groups .eq-card-main{min-height:48px;padding:8px 10px 4px;gap:2px}
+.eq-group-title{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;min-width:0}
+.eq-group-title strong{font-size:12px;line-height:1.65;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.eq-smart-groups .eq-badge{font-size:9px;padding:1px 6px;flex-shrink:0}
+.eq-smart-groups .eq-muted{font-size:9px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-smart-groups .eq-tools{margin:0;padding:2px 8px 6px;gap:8px;justify-content:flex-start}
+.eq-smart-groups .eq-mini-action{min-height:24px;font-size:10px;padding:1px 2px}
+.eq-smart-groups>.eq-notice{grid-column:1/-1}
+@media(max-width:1000px){.eq-smart-groups{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.eq-smart-groups{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.eq-smart-groups .eq-tools{gap:5px;padding-inline:6px}}

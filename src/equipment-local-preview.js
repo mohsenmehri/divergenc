@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',OLD_KEY='fam.equipment.inventory.v2',CARDS_KEY='fam.equipment.cards.v1';
   let inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
   let scenario='clean',result=null,tab='overview',search='',busy=false,facet='overview',filters={},activeField=null,onlyReview=false;
-  let cardSettings=M.defaultCards(),cardsIssue='';
+  let cardSettings=M.defaultCards(),cardsIssue='',groupIssue='';
   const checks=new Map(),uid=()=>crypto.randomUUID();
   const can=()=>typeof Access!=='undefined'&&Access.can('equipment');
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function save(next){
     if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
     if(storageIssue)throw Error(storageIssue);
-    const clean=M.validate(next);localStorage.setItem(KEY,JSON.stringify(clean));inventory=clean;
+    const clean=M.validate(next);localStorage.setItem(KEY,JSON.stringify(clean));inventory=clean;groupIssue='';
     for(const [field,key]of Object.entries(lookup))if(filters[field]&&!find(key,filters[field])){delete filters[field];if(activeField===field)activeField=null;}
   }
   const navigate=next=>{epoch++;path=next;result=null;tab='overview';busy=false;render();};
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
     dialog.append(form);dialog.showModal();name.focus();
   }
-  function manageCatalog(initialKey='types'){
+  function manageCatalog(initialKey='types',initialItem=null,preset={}){
     if(!can()||storageIssue)return;
     const {dialog,close}=dialogShell('مدیریت دسته‌بندی‌ها','نوع‌ها، مدل‌ها، مناطق و محل‌ها را خودتان تعریف کنید. دستهٔ استفاده‌شده بدون تعیین تکلیف نودها حذف نمی‌شود.',true);
     const shell=el('div','eq-catalog-shell'),keySelect=selectField(shell,'eq-catalog-dimension','بخش موردنظر',Object.entries(M.dimensions).map(([id,name])=>({id,name})),initialKey);
@@ -144,9 +144,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       body.replaceChildren();const key=keySelect.value,editor=el('form','eq-editor'),list=el('div','eq-catalog-list');
       const name=textField(editor,'eq-catalog-name','نام '+M.dimensions[key],target?.name||'').input;
       let parent=null,kind=null;
-      if(key==='models')parent=selectField(editor,'eq-catalog-parent','نوع تجهیز',catalog('types'),target?.typeId);
-      if(key==='sites')parent=selectField(editor,'eq-catalog-parent','نوع محل',catalog('siteKinds'),target?.siteKindId);
-      if(key==='types'||key==='siteKinds')kind=selectField(editor,'eq-catalog-kind','الگوی نمایش',key==='types'?[{id:'router',name:'روتر'},{id:'switch',name:'سوئیچ'},{id:'other',name:'سایر'}]:[{id:'branch',name:'شعبه'},{id:'building',name:'ساختمان'},{id:'datacenter',name:'دیتا سنتر'},{id:'other',name:'سایر'}],target?.kind||'other');
+      if(key==='models')parent=selectField(editor,'eq-catalog-parent','نوع تجهیز',catalog('types'),target?.typeId||preset.typeId);
+      if(key==='sites')parent=selectField(editor,'eq-catalog-parent','نوع محل',catalog('siteKinds'),target?.siteKindId||preset.siteKindId);
+      if(key==='types'||key==='siteKinds')kind=selectField(editor,'eq-catalog-kind','الگوی نمایش',key==='types'?[{id:'router',name:'روتر'},{id:'switch',name:'سوئیچ'},{id:'other',name:'سایر'}]:[{id:'branch',name:'شعبه'},{id:'building',name:'ساختمان'},{id:'datacenter',name:'دیتا سنتر'},{id:'other',name:'سایر'}],target?.kind||preset.kind||'other');
       const error=el('div','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary',target?'ذخیره تغییرات':'افزودن دسته');submit.type='submit';
       editor.append(error,tools(submit,button('فرم جدید',()=>draw())));
       editor.addEventListener('submit',event=>{event.preventDefault();try{
@@ -165,7 +165,18 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
       if(!catalog(key).length)list.append(notice('هنوز موردی تعریف نشده است.'));body.append(editor,list);
     }
-    keySelect.addEventListener('change',()=>draw());dialog.append(shell,tools(button('بستن',close)));draw();dialog.showModal();
+    keySelect.addEventListener('change',()=>draw());dialog.append(shell,tools(button('بستن',close)));draw(initialItem);dialog.showModal();
+  }
+  function groupCatalogKey(){return ['buildings','datacenters'].includes(facet)?'sites':facet;}
+  function groupPreset(){
+    if(facet==='models')return {typeId:filters.typeId};
+    if(facet==='buildings'||facet==='datacenters')return {siteKindId:catalog('siteKinds').find(item=>item.kind===(facet==='buildings'?'building':'datacenter'))?.id};
+    return {};
+  }
+  function removeGroup(key,item){
+    if(!confirm('دستهٔ «'+item.name+'» حذف شود؟ نودها حذف نمی‌شوند؛ دستهٔ دارای نود یا زیرمجموعه قابل حذف نیست.'))return;
+    try{save(M.removeCategory(inventory,key,item.id));render();}
+    catch(e){groupIssue=e.name==='QuotaExceededError'?'دسته حذف نشد؛ فضای ذخیره‌سازی مرورگر کافی نیست.':e.message;render();}
   }
   function removeNode(node){
     if(!confirm('نود «'+node.name+'» از کل فهرست و همهٔ دسته‌ها حذف شود؟ این کار روی تجهیز واقعی اثری ندارد.'))return;
@@ -279,12 +290,20 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(!cardSettings.cards.length)cards.append(notice('کارتی ندارید؛ با «افزودن کارت» میان‌بُر دلخواه بسازید. دسته‌ها از تب‌های بالا همچنان در دسترس‌اند.'));
       main.append(cards);
     }else{
-      const headingRow=el('div','eq-table-toolbar');headingRow.append(el('h4','',facets.find(f=>f[0]===facet)[1]),button('مدیریت این دسته‌ها',()=>manageCatalog(['buildings','datacenters'].includes(facet)?'sites':facet)));main.append(headingRow);
+      const key=groupCatalogKey(),headingRow=el('div','eq-table-toolbar');
+      const addCategory=button('＋ افزودن زیرمجموعه',()=>manageCatalog(key,null,groupPreset()));addCategory.disabled=!!storageIssue;
+      headingRow.append(el('h4','',facets.find(f=>f[0]===facet)[1]),tools(addCategory,button('مدیریت این دسته‌ها',()=>manageCatalog(key))));main.append(headingRow);
+      if(groupIssue)main.append(notice(groupIssue,'warning'));
       const grid=el('div','eq-card-grid eq-smart-groups eq-groups-'+facet);for(const {item,field,count}of groupItems()){
         const box=el('article','eq-card'+(filters[field]===item.id?' eq-group-selected':'')),go=button('',()=>applyFilter(field,item.id),'eq-card-main');
-        go.append(el('strong','',item.name));if(item.typeId)go.append(el('span','eq-muted',nameOf('types',item.typeId)));if(item.siteKindId)go.append(el('span','eq-muted',nameOf('siteKinds',item.siteKindId)));go.append(el('span','eq-badge',count+' نود'));
-        const add=button('＋ نود در این دسته',()=>{applyFilter(field,item.id);editNode();},'eq-mini-action');box.append(go,tools(add));grid.append(box);
-      }if(!groupItems().length)grid.append(notice('هنوز دسته‌ای تعریف نشده؛ از «مدیریت این دسته‌ها» استفاده کنید.'));main.append(grid);
+        const title=el('div','eq-group-title');title.append(el('strong','',item.name),el('span','eq-badge',count+' نود'));go.append(title);go.title=item.name;
+        if(item.typeId)go.append(el('span','eq-muted',nameOf('types',item.typeId)));if(item.siteKindId)go.append(el('span','eq-muted',nameOf('siteKinds',item.siteKindId)));
+        const add=button('＋ نود',()=>{applyFilter(field,item.id);editNode();},'eq-mini-action');add.setAttribute('aria-label','＋ نود در این دسته');
+        const edit=button('ویرایش',()=>manageCatalog(key,item),'eq-mini-action');edit.setAttribute('aria-label','ویرایش دسته '+item.name);
+        const remove=button('حذف',()=>removeGroup(key,item),'eq-mini-action eq-danger');remove.setAttribute('aria-label','حذف دسته '+item.name);
+        add.disabled=edit.disabled=remove.disabled=!!storageIssue;
+        box.append(go,tools(add,edit,remove));grid.append(box);
+      }if(!groupItems().length)grid.append(notice('هنوز دسته‌ای تعریف نشده؛ از «افزودن زیرمجموعه» استفاده کنید.'));main.append(grid);
     }
     main.append(filtersBar());
     const context=el('div','eq-active-filters');for(const field of M.fields)if(filters[field])context.append(button(nameOf(lookup[field],filters[field])+' ×',()=>applyFilter(field,''),'eq-filter-chip'));

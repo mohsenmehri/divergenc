@@ -8,7 +8,11 @@ const root=path.resolve(__dirname,'..');let browser,server,page,url,errors=[];
 
 async function login(user='admin',password='1109'){
   await page.locator('#auth-username').fill(user);await page.locator('#auth-password').fill(password);await page.locator('#auth-submit').click();
-  await page.waitForFunction(()=>Access.current()&&!document.documentElement.classList.contains('auth-pending'));
+  await page.waitForFunction(()=>Access.current()&&document.documentElement.dataset.famReady==='true');
+  if(await page.locator('#workspace-launcher[open]').count()){
+    if(await page.locator('#workspace-enter-panel').isEnabled())await page.locator('#workspace-enter-panel').click();
+    else if(await page.locator('#workspace-enter-equipment').isEnabled())await page.locator('#workspace-enter-equipment').click();
+  }
 }
 async function manager(){await page.locator('#stat-line').click();await page.locator('#account-manage').click();}
 
@@ -105,7 +109,7 @@ test('each denied dashboard operation hides its fields and displays only the acc
   // Remove all capabilities from the active account while retaining the current
   // revision/session, then reload as that account.
   await page.evaluate(()=>{const all=JSON.parse(localStorage.getItem('fam.accounts.v1'));const user=all.users.find(u=>u.username==='ops-only');user.permissions=[];user.categories=[];user.regions=[];localStorage.setItem('fam.accounts.v1',JSON.stringify(all));});
-  await page.reload();await page.waitForFunction(()=>Access.current()&&Access.current().username==='ops-only');
+  await page.reload();await page.waitForFunction(()=>Access.current()&&Access.current().username==='ops-only'&&document.documentElement.dataset.famReady==='true');
   const denied=await page.evaluate(()=>[...document.querySelectorAll('#fold-ops .grid-add > .card')].map(card=>({title:card.querySelector('h3')?.textContent,note:card.querySelector('.access-denied-note')?.textContent,visibleInputs:[...card.querySelectorAll('.card-body input,.card-body select,.card-body button')].filter(node=>node.getClientRects().length>0).length})));
   assert.equal(denied.length,3);for(const card of denied){assert.equal(card.note,'شما دسترسی به این بخش ندارید.');assert.equal(card.visibleInputs,0,card.title);}
   const panels=await page.evaluate(()=>({categories:document.querySelector('#fold-cats .access-denied-note')?.textContent,navigation:document.querySelector('#fold-nav .access-denied-note')?.textContent,tools:document.querySelector('#fold-tools .access-denied-note')?.textContent,events:document.querySelector('#fold-status .grid-2 > .card:first-child .access-denied-note')?.textContent}));
@@ -133,7 +137,7 @@ test('full custom permission matrix exposes only each granted dashboard capabili
       user.regions=managedRegions().filter(r=>r.id!=='unassigned').map(r=>r.id);
       localStorage.setItem('fam.accounts.v1',JSON.stringify(accounts));
     },permission);
-    await page.reload();await page.waitForFunction(()=>Access.current()?.username==='ops-only');
+    await page.reload();await page.waitForFunction(()=>Access.current()?.username==='ops-only'&&document.documentElement.dataset.famReady==='true');
     const snapshot=await page.evaluate(()=>({
       permission:Access.current().permissions[0],
       cards:[...document.querySelectorAll('#fold-ops .grid-add > .card')].map(card=>!card.classList.contains('access-denied-card')),

@@ -19,8 +19,7 @@ before(async()=>{
   await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');
   await page.locator('#auth-submit').click();
   await page.waitForFunction(()=>Access.current()&&document.documentElement.dataset.famReady==='true');
-  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();
-  await page.locator('.tab-btn[data-view="equipment"]').click();
+  await page.locator('#workspace-launcher[open]').waitFor();
 });
 after(async()=>{await browser?.close();});
 const workspace=()=>page.locator('#equipment-workspace');
@@ -30,6 +29,7 @@ async function radius(){
   await page.getByRole('button',{name:'ورود به فضای تجهیزات',exact:true}).click();
 }
 async function openEquipment(){
+  if(await page.locator('#workspace-launcher[open]').count()){await page.locator('#workspace-enter-equipment').click();return;}
   if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();
   await page.locator('.tab-btn[data-view="equipment"]').click();
 }
@@ -42,13 +42,45 @@ const table=()=>workspace().locator('.eq-table');
 async function viewFacet(name){await workspace().getByRole('navigation',{name:'روش دسته‌بندی'}).getByRole('button',{name,exact:true}).click();}
 async function chooseGroup(name){await workspace().locator('.eq-smart-groups .eq-card-main').filter({has:page.locator('strong',{hasText:new RegExp('^'+name+'$')})}).click();}
 async function nodeSubmit(){await page.locator('.eq-dialog').getByRole('button',{name:'ذخیره نود',exact:true}).click();}
+test('login opens an animated two-workspace chooser; each choice routes to the existing section',async()=>{
+  assert.ok(await page.locator('#workspace-launcher').isVisible());
+  assert.equal(await page.locator('.workspace-option').count(),2);
+  await page.keyboard.press('Escape');assert.ok(await page.locator('#workspace-launcher').isVisible());
+  await page.locator('#workspace-logout').focus();await page.locator('#workspace-enter-equipment').hover();
+  await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('#workspace-enter-equipment')).transform.split('(')[1].split(',')[0])>1.04);
+  await page.screenshot({path:'/tmp/fam-workspace-choice-dark.png',fullPage:false});
+  await page.evaluate(()=>FamTheme.set('light'));await page.screenshot({path:'/tmp/fam-workspace-choice-light.png',fullPage:false});
+  await page.evaluate(()=>FamTheme.set('original'));
+  await page.locator('#workspace-enter-panel').focus();await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#workspace-launcher[open]').count(),0);assert.ok(await page.locator('#view-panel').evaluate(n=>n.classList.contains('active')));
+  assert.ok(await page.locator('#fold-ops').isVisible());await page.locator('#workspace-to-equipment').click();
+  assert.ok(await page.locator('#view-equipment').evaluate(n=>n.classList.contains('active')));
+  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();
+});
 test('RADIUS gate precedes six independent classification axes',async()=>{
   assert.ok(await page.locator('#equipment-radius-password').isVisible());await radius();
   assert.equal(await workspace().locator('.eq-smart-cards .eq-card-main').count(),6);
   assert.match(await workspace().innerText(),/یک نود؛ چند دسته/);
+  await page.waitForFunction(()=>document.querySelector('#equipment-workspace').getBoundingClientRect().width<1150);
   const boxes=await workspace().locator('.eq-smart-cards .eq-card').evaluateAll(cards=>cards.map(card=>({width:card.getBoundingClientRect().width,height:card.getBoundingClientRect().height})));
   assert.ok(boxes.every(box=>box.height<=115&&box.width<=200),JSON.stringify(boxes));
   await page.screenshot({path:'/tmp/fam-compact-cards.png',fullPage:true});
+});
+test('compact subcategory cards have direct add/edit/delete with stable IDs and safe parent protection',async()=>{
+  await viewFacet('نوع تجهیز');
+  const sizes=await workspace().locator('.eq-smart-groups .eq-card').evaluateAll(cards=>cards.map(c=>c.getBoundingClientRect().height));assert.ok(sizes.every(h=>h<=90),JSON.stringify(sizes));
+  await page.screenshot({path:'/tmp/fam-compact-subcategories.png',fullPage:true});
+  page.once('dialog',d=>d.accept());await workspace().getByRole('button',{name:'حذف دسته روتر',exact:true}).click();assert.match(await workspace().innerText(),/مدل‌های وابسته/);
+  await workspace().getByRole('button',{name:'＋ افزودن زیرمجموعه',exact:true}).click();
+  assert.equal(await page.locator('#eq-catalog-dimension').inputValue(),'types');await page.locator('#eq-catalog-name').fill('تجهیز آزمایشی');
+  await page.locator('.eq-dialog').getByRole('button',{name:'افزودن دسته',exact:true}).click();await page.locator('.eq-dialog').getByRole('button',{name:'بستن',exact:true}).click();
+  const id=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.equipment.inventory.v3')).catalog.types.find(t=>t.name==='تجهیز آزمایشی').id);
+  await workspace().getByRole('button',{name:'ویرایش دسته تجهیز آزمایشی',exact:true}).click();assert.equal(await page.locator('#eq-catalog-name').inputValue(),'تجهیز آزمایشی');
+  await page.locator('#eq-catalog-name').fill('تجهیز ویرایش‌شده');await page.locator('.eq-dialog').getByRole('button',{name:'ذخیره تغییرات',exact:true}).click();await page.locator('.eq-dialog').getByRole('button',{name:'بستن',exact:true}).click();
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.equipment.inventory.v3')).catalog.types.find(t=>t.name==='تجهیز ویرایش‌شده').id),id);
+  page.once('dialog',d=>d.dismiss());await workspace().getByRole('button',{name:'حذف دسته تجهیز ویرایش‌شده',exact:true}).click();assert.equal(await workspace().locator('.eq-smart-groups .eq-card').count(),3);
+  page.once('dialog',d=>d.accept());await workspace().getByRole('button',{name:'حذف دسته تجهیز ویرایش‌شده',exact:true}).click();assert.equal(await workspace().locator('.eq-smart-groups .eq-card').count(),2);
+  await viewFacet('همهٔ نودها');
 });
 test('node form asks all metadata; saves a single canonical node with automatic memberships',async()=>{
   await openNodeForm();
@@ -60,6 +92,20 @@ test('node form asks all metadata; saves a single canonical node with automatic 
   const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.equipment.inventory.v3')));assert.equal(data.nodes.length,1);
   const node=data.nodes[0];assert.equal(node.typeId,'type-router');assert.equal(node.modelId,'model-1841');assert.equal(node.regionId,'region-1');assert.equal(node.siteId,'building-0');
   assert.match(await table().innerText(),/روتر رضوان/);assert.match(await table().innerText(),/ساختمان مرکزی رضوان/);
+});
+test('the same inline subcategory CRUD works for models, regions, location kinds, buildings and datacenters',async()=>{
+  for(const [facet,key,parent]of [['مدل تجهیز','models','type-router'],['منطقه','regions',null],['نوع محل','siteKinds',null],['ساختمان‌ها','sites','kind-building'],['دیتا سنتر','sites','kind-datacenter']]){
+    await clearFilters();await viewFacet(facet);const count=await workspace().locator('.eq-smart-groups .eq-card').count();
+    await workspace().getByRole('button',{name:'＋ افزودن زیرمجموعه',exact:true}).click();
+    assert.equal(await page.locator('#eq-catalog-dimension').inputValue(),key);
+    if(key==='models')await page.locator('#eq-catalog-parent').selectOption(parent);
+    if(key==='sites')assert.equal(await page.locator('#eq-catalog-parent').inputValue(),parent);
+    await page.locator('#eq-catalog-name').fill('زیرمجموعه تست');await page.locator('.eq-dialog').getByRole('button',{name:'افزودن دسته',exact:true}).click();await page.locator('.eq-dialog').getByRole('button',{name:'بستن',exact:true}).click();
+    assert.equal(await workspace().locator('.eq-smart-groups .eq-card').count(),count+1);
+    await workspace().getByRole('button',{name:'ویرایش دسته زیرمجموعه تست',exact:true}).click();await page.locator('#eq-catalog-name').fill('زیرمجموعه جدید');await page.locator('.eq-dialog').getByRole('button',{name:'ذخیره تغییرات',exact:true}).click();await page.locator('.eq-dialog').getByRole('button',{name:'بستن',exact:true}).click();
+    page.once('dialog',d=>d.accept());await workspace().getByRole('button',{name:'حذف دسته زیرمجموعه جدید',exact:true}).click();assert.equal(await workspace().locator('.eq-smart-groups .eq-card').count(),count);
+  }
+  await viewFacet('همهٔ نودها');
 });
 test('overview cards can be renamed, added for a category, deleted and persisted without changing inventory',async()=>{
   const snapshot=await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3'));
@@ -142,7 +188,9 @@ test('global node deletion requires confirmation and removes only the selected c
 });
 test('clicking a node still auto-checks; RADIUS survives dashboard but main logout resets it',async()=>{
   await table().getByRole('button',{name:'روتر رضوان',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#equipment-check-submit').disabled);assert.match(await page.locator('#equipment-status').innerText(),/وضعیت پاک/);
-  await page.getByRole('button',{name:'← داشبورد FAM',exact:true}).click();await openEquipment();assert.equal(await page.locator('#equipment-radius-password').count(),0);
+  await page.locator('#workspace-to-database').click();await page.locator('#workspace-to-equipment').click();assert.equal(await page.locator('#equipment-radius-password').count(),0);
+  await page.locator('#view-equipment [data-workspace-picker]').click();assert.ok(await page.locator('#workspace-launcher').isVisible());
+  await page.locator('#workspace-enter-panel').click();await page.locator('#workspace-to-equipment').click();assert.equal(await page.locator('#equipment-radius-password').count(),0);
   const storage=await page.evaluate(()=>JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)]));for(const secret of ['fake-radius-user-987','fake-radius-secret-987'])assert.ok(!storage.includes(secret));
   await page.locator('#stat-line').click();await page.locator('#account-logout').click();await page.locator('#auth-username').waitFor();await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await openEquipment();assert.ok(await page.locator('#equipment-radius-password').isVisible());await radius();
 });
@@ -188,5 +236,23 @@ test('failed migration write keeps legacy data and exposes a read-only preview w
   assert.match(await workspace().innerText(),/تغییرات غیرفعال است/);assert.match(await table().innerText(),/روتر قدیمی/);
   assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3')),null);
   assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v2')),old);
+  assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
+});
+
+test('workspace chooser is responsive, supports reduced motion, and does not bypass account permissions',async()=>{
+  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>setSidebarOpen(false));
+  await page.locator('#view-equipment [data-workspace-picker]').click();
+  assert.equal(await page.locator('#workspace-launcher').evaluate(n=>n.scrollWidth<=n.clientWidth),true);
+  assert.equal(await page.locator('.workspace-options').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length),1);
+  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#workspace-enter-equipment').hover();
+  assert.equal(await page.locator('#workspace-enter-equipment').evaluate(n=>getComputedStyle(n).transform),'none');
+  await page.screenshot({path:'/tmp/fam-workspace-choice-mobile.png',fullPage:false});
+  await page.locator('#workspace-enter-equipment').click();await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.evaluate(()=>{const accounts=JSON.parse(localStorage.getItem('fam.accounts.v1')),user={...accounts.users.find(u=>u.username==='admin'),id:crypto.randomUUID(),revision:crypto.randomUUID(),username:'equipment-only',name:'Equipment only',role:4,permissions:['equipment-operations'],categories:[],regions:[],sheets:[]};accounts.users.push(user);localStorage.setItem('fam.accounts.v1',JSON.stringify(accounts));sessionStorage.setItem('fam.session.v1',JSON.stringify({id:user.id,revision:user.revision}));});
+  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');
+  assert.ok(await page.locator('#workspace-enter-panel').isDisabled());assert.ok(await page.locator('#workspace-enter-equipment').isEnabled());
+  assert.equal(await page.evaluate(()=>FamWorkspaceLauncher.choose('panel')),false);assert.ok(await page.locator('#workspace-launcher').isVisible());
+  await page.locator('#workspace-enter-equipment').click();assert.ok(await page.locator('#view-equipment').evaluate(n=>n.classList.contains('active')));
+  assert.ok(await page.locator('#workspace-to-database').evaluate(n=>n.classList.contains('access-hidden')));
   assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
 });

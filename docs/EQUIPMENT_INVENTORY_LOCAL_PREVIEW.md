@@ -53,6 +53,22 @@ Preferences use a separate validated localStorage key, `fam.equipment.cards.v1` 
 
 Pure tests cover schema bounds/types, empty/custom cards and stripping unrelated fields. Browser tests cover compact desktop/mobile sizing, add/edit/confirmed and cancelled deletion, reload persistence, specific-category navigation, unchanged inventory, malformed preference handling and failed writes.
 
+## Direct compact category controls
+
+Actual category cards (types, models, regions, site kinds, buildings and datacenters) are now roughly 80–90px high instead of 160–170px, with four columns on wide screens and two on mobile. Each has direct add-node/edit/delete controls; the header has **add subcategory** and the existing full catalog manager.
+
+Edit opens the catalog form with the actual stable-ID record preloaded. New buildings/datacenters preselect the appropriate site kind; new models inherit a selected type filter. Rename/save continues to validate all parent relationships. Direct deletion uses the same non-cascading `removeCategory` model operation: explicit confirmation, in-use/dependency rejection, visible localized error, no node removal. Storage-error/read-only mode disables these actions.
+
+## Post-login workspace selection
+
+`src/workspace-launcher.js` / `.css` provide a full-screen native modal dialog, shown **after** normal authenticated application bootstrap and before the user enters either workspace. It has two choices: database (`panel`, the existing dashboard) and equipment (`equipment`, the existing equipment page). The chosen view is explicit even if an old sheet/view was restored in the background. No separate application account, network endpoint or new persistent session is introduced.
+
+The choices have hover/focus growth, accent glow, native keyboard focus containment, visible labels, mobile stacking and reduced-motion support. Unavailable choices are disabled according to `Access.viewAllowed`; navigation rechecks permissions and uses the application's existing tab handlers. Escape does not bypass the initial choice; logout remains available even when neither section is authorized. Opening the chooser locks background page scrolling; choosing a section restores it. On mobile, selecting a workspace closes the sidebar so it does not obscure the page.
+
+The database dashboard now has an explicit equipment switch and equipment has an explicit database switch. Both include a return-to-chooser button. Navigation stays within the current FAM account and does not clear the equipment RADIUS closure. Main logout and refresh still clear that RAM-only credential state. SERVER is not rebuilt or modified for this local UI change.
+
+Browser coverage exercises both entry choices, hover/keyboard/escape behavior, mobile/reduced motion, account restrictions, direct category CRUD for all six axes, dependency protection, persistence, and RADIUS retention across direct/chooser round trips. The complete local suite passes 60 tests.
+
 ## Safe migration / persistence
 
 If v3 is absent, the UI reads `fam.equipment.inventory.v2`, migrates into v3, validates and writes the new key. The original v2 value is not modified or deleted.
