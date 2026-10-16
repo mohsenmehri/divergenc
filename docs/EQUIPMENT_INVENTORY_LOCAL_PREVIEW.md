@@ -1,45 +1,64 @@
-# Equipment inventory / Device 360 — local UI preview
+# LOCAL equipment inventory — attribute-based groups (v3)
 
-Source inspiration: Cisco Prime Infrastructure's Device Groups, Network Devices inventory and Device 360 interaction pattern. This is an independently implemented FAM UI, not Cisco software or a complete replacement for Prime.
+## Scope
 
-Official references consulted:
-- https://www.cisco.com/c/en/us/td/docs/net_mgmt/prime/infrastructure/3-10/user/guide/ciscoprimeinfrastructure_3_10_userguide/user_interface_reference.html
-- https://www.cisco.com/c/en/us/td/docs/net_mgmt/prime/infrastructure/3-0/user/guide/pi_ug/monitor_network.html
+Offline UI only, embedded into root `FAM.html`. SERVER builds, SSH, real authentication and device/recovery implementations are unchanged. Never enter real RADIUS credentials into this preview.
 
-## Implemented
+This replaces the previous fixed nested hierarchy. A node is stored **once**; overlapping group memberships derive from independent attributes, not duplicated records or a single nested path.
 
-- Full standalone FAM, with existing local FAM login (fresh profile admin / 1109).
-- Enter Equipment: first show a RADIUS credential gate. In the preview this accepts **fake test values only**, with a clear notice that no actual authentication occurs.
-- Credentials stay in closure RAM, not local/session storage or any global API. Password input is cleared on submit. Navigation to the dashboard, other FAM views or back to Equipment preserves this RAM-only credential session. Main FAM logout, a different main account or permission revocation clears it. Manual RADIUS-change and refresh/pagehide also clear it; no credentials are persisted to support refresh.
-- Router and switch cards; CRUD for device types, categories and subsections.
-- Each default type independently receives the exact requested branch/area, six-building and Tehran/Semnan datacenter hierarchy.
-- Inventory nodes contain only UUID, display name and RFC1918 IPv4. Names/IPs persist in `fam.equipment.inventory.v2` in the local browser. No workbook/data-sheet modifications.
-- Duplicate IPs within a device type rejected. Maximum field lengths/tree sizes validated. Data rendered with textContent, never user HTML. Corrupt/unreadable local inventory is not silently overwritten.
-- Redesigned horizontal device-family navigation (replacing the old side tree), large router/switch cards, color-coded location folders with inline subsection previews, compact location tiles, breadcrumbs, compact counts, standalone inventory table/search, blue primary buttons, small card management controls, add/edit dialogs and explicit delete confirmation (including subtree warning).
-- Clicking a node name opens its Device 360-style workspace and automatically starts a **simulated** check for that node.
-- Overview, ports/errors and future favorites tabs. Uncollected model, software, CPU, memory and uptime are labeled unavailable, not fabricated as real telemetry.
-- Err-disabled recovery remains simulated and requires confirmation naming the node, IP and exact Gi0/1 interface. Pre/post outcomes, authentication failure, timeout and connection failure have explicit demo labels.
-- RADIUS auth failure does not imply local-account detection. Local username/password and Enable workflow is deferred and inactive. No Enable command, free-form command or real SSH was added.
-- Layout supports existing FAM themes and mobile widths.
+## Model
 
-## Tests
+`src/equipment-inventory.js` exposes the pure `FamEquipmentInventory` API. `src/equipment-local-preview.js` owns UI state, persistence, the RAM-only RADIUS gate and simulated Device 360. Sources and CSS are embedded by `scripts/embed_local_access.py`, with the inventory model before its UI consumer.
 
-- `npm test`: **37 passed**, including eight full local-file Equipment workspace tests.
-- `python -m unittest discover -s server/tests -p 'test_*.py'`: **97 tests, 96 passed / 1 skipped** (offline wheel-byte test; no wheels imported).
-- All 12 local inline scripts parse with Node vm.Script; equipment source passes node --check.
-- Final ZIP allowlist and FAM.html SHA256SUMS verified; root/release ZIP copies match.
-- Source server files and server ZIP are unchanged by this UI work. Server ZIP SHA-256 remains `3d0247974f5ee5cae179ca65ea09cd45fb0b1bd739b4c05241a4eccc2b0ee71a`.
+Persistence key: `fam.equipment.inventory.v3`.
 
-Local-file browser coverage includes FAM login, gate-before-inventory, exact hierarchy for both types, adding a node, click-to-open/auto-check, tabs, recovery confirmation cancellation/approval, deferred Local/Enable messaging, invalid/duplicate IP, node editing/deletion, safe rendering of HTML-like names, type/category/subsection creation, search, inventory survival after reload, credential expiration, no credential persistence, zero HTTP requests and mobile overflow checks.
+- Catalogs: `types`, `models` (parent `typeId`), `regions`, `siteKinds`, `sites` (parent `siteKindId`).
+- Canonical nodes: stable `id`, `name`, private IPv4 `host`, `typeId`, `modelId`, `regionId`, `siteKindId`, `siteId`; migrated nodes may also retain `legacyPath`.
+- No authentication fields, commands, network state or simulated credentials are persisted in this schema.
+- Add/edit requires every attribute. Nullable references exist only for migrated or intentionally unassigned nodes; they are shown as needing completion.
+- A model must belong to the selected type; a site must belong to the selected site kind.
+- Duplicate IP is blocked globally on add/edit. Pre-existing legacy duplicates are preserved, not merged or discarded.
+- Names and private IPs are validated; catalog IDs and parent references are checked; UI renders user content as text, never raw HTML.
 
-## Not implemented / boundaries
+Defaults:
 
-No real RADIUS, SSH, SNMP, monitoring, scheduled polling, configuration deployment, topology discovery or favorite-command execution. No network calls from this module. Only local inventory editing is functional. The RADIUS gate is a UI simulation, not a security boundary. Local inventory is shared by equipment-authorized users of the same browser profile; production needs authenticated server-backed inventory and permissions.
+- Types: router / switch.
+- Models: router 1841, router 1300, switch 2960 (editable user-requested examples, not device detection).
+- Regions: 1–4, editable; users can define a different region for locations outside those areas.
+- Site kinds include branch, office building and datacenter, plus legacy area/storage/other defaults.
+- Buildings: «ساختمان مرکزی رضوان», «ساختمان 68 شرقی فام», «ساختمان 68 شرقی ملل», «ساختمان 68 شرقی شرکت ها», «ساختمان مرکزی فام», «ساختمان ملاصدرا فام».
+- Datacenters: تهران / سمنان. Actual branch sites are user-defined, not guessed.
 
-Existing server payload remains a separate, previously built artifact; this local UI has not been deployed to that payload. Preserve existing local browser data; there is no automatic destructive migration or reset. To test with a fresh FAM account, use a separate browser profile rather than clearing existing data.
+## UI behavior
 
-## Build / artifacts
+Six group views: type, model, region, site kind, buildings and datacenters; plus all nodes. Category cards show total membership. Selecting cards applies intersecting (AND) filters. Global filter reset returns to the entire inventory.
 
-Edit `src/equipment-local-preview.js` and `.css`, then run `python scripts/embed_local_access.py` to embed them in FAM.html. The workspace shell lives in FAM.html. Run `python scripts/package_custom_access_updates.py` to rebuild deterministic patches. For root download mirror, copy releases/FAM-Custom-Access-LOCAL-Patch.zip to the repository root.
+Node creation from a category preselects that category and its parent references, while prompting for every remaining attribute. General creation can also inherit selected filters. Users can define a model or a specific site inline; both catalog and node are validated/saved together.
 
-Local ZIP has exactly FAM.html, README_FA.txt, SHA256SUMS.txt and START-FAM.cmd. No passwords entered by an operator, topology data, logs, database, private keys or runtime environment are packaged.
+The catalog dialog provides create/rename/delete. Stable IDs make renames visible everywhere without rewriting nodes. Removal is rejected while a category is referenced by nodes or dependent models/sites. There is no cascading deletion of equipment.
+
+Node edit automatically reclassifies the existing node. **Remove from category** clears only the active category reference and dependent reference where necessary (type→model, site kind→site), retaining the node in needs-completion. **Delete node** requires confirmation and removes it globally. Neither action changes real equipment.
+
+Clicking a node name opens Device 360 and starts its bounded **simulated** check automatically. Simulated recovery still requires explicit device/port confirmation. Real Local/Enable commands, command favorites and free-form execution remain inactive.
+
+## Safe migration / persistence
+
+If v3 is absent, the UI reads `fam.equipment.inventory.v2`, migrates into v3, validates and writes the new key. The original v2 value is not modified or deleted.
+
+Migration preserves node IDs, names, IPs, known locations and the legacy path. Unknown model/region are not guessed. Unknown attributes stay nullable and are flagged for completion. Legacy duplicate IPs are retained; the user must resolve any conflict before resaving an affected node.
+
+Malformed data or a storage exception yields a visible read-only state instead of silently resetting/overwriting an existing inventory. The original storage keys remain available for recovery. Storage is local to the same browser profile/origin and shared by local FAM accounts; this preview is not a server-side authorization boundary.
+
+## Credentials / lifecycle
+
+RADIUS credentials live only in a closure in RAM. They survive in-page navigation (equipment → dashboard → equipment) for the current FAM account. They are cleared by main FAM logout/account change/permission revocation, manual RADIUS change and page unload/refresh. They are never added to localStorage, sessionStorage, IndexedDB, URLs or node data. The preview does not validate real credentials or contact any network endpoint.
+
+## Validation and packaging
+
+- `node --test tests/equipment-inventory.test.cjs`: pure schema, defaults, required fields, parent relationships, IP uniqueness, reclassification, catalog deletion safety, unassignment and migration.
+- `node --test tests/equipment-local.test.cjs`: browser add/edit/groups/filter intersections/category-prefill/inline models and sites/catalog CRUD/unassignment/Device360/RADIUS lifecycle/migration/read-only corrupt data/storage failure/mobile themes/no secret persistence/no network.
+- `npm test`: full local UI/access/config regression suite, including the pure inventory tests.
+- `python3 scripts/embed_local_access.py`: embed sources without touching SERVER.
+- `python3 scripts/package_custom_access_updates.py`: allowlisted LOCAL/SERVER packages; verify the SERVER artifact remains unchanged.
+
+LOCAL ZIP contains exactly `FAM.html`, `README_FA.txt`, `SHA256SUMS.txt`, `START-FAM.cmd`. No user inventory, real credentials, tokens, databases, private keys, logs or environments are packaged. Root LOCAL ZIP is a mirror of `releases/FAM-Custom-Access-LOCAL-Patch.zip`.
