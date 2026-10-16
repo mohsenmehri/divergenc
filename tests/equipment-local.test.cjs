@@ -46,11 +46,13 @@ test('clicking Equipment requires transient RADIUS before showing inventory',asy
   await radius();
   assert.equal(await workspace().locator('.eq-card-main').count(),2);
   assert.equal(await page.locator('#equipment-radius-password').count(),0);
-  assert.match(await workspace().innerText(),/نشست موقت RADIUS/);
+  assert.match(await workspace().innerText(),/RADIUS آماده است/);
+  await page.screenshot({path:'/tmp/fam-equipment-home-redesign.png',fullPage:true});
 });
 test('router and switch each have requested editable geographic hierarchy',async()=>{
   for(const type of ['روتر','سوئیچ']){
     await card(type);
+    if(type==='سوئیچ')await page.screenshot({path:'/tmp/fam-equipment-groups-redesign.png',fullPage:true});
     for(const name of ['شعبه و حوزه','ساختمان‌ها','دیتا سنتر'])assert.ok((await workspace().innerText()).includes(name));
     await card('ساختمان‌ها');
     assert.equal(await workspace().locator('.eq-card-main').count(),6);
@@ -118,16 +120,43 @@ test('inventory CRUD, validation, search and safe rendering work without storing
   for(const secret of ['fake-radius-user-987','fake-radius-secret-987'])assert.ok(!storage.includes(secret));
   assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
 });
-test('credentials expire on leaving equipment; persisted inventory survives reload; mobile fits',async()=>{
+async function openEquipment(){
+  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();
+  await page.locator('.tab-btn[data-view="equipment"]').click();
+}
+test('RADIUS stays active across dashboard, other tabs and repeated equipment clicks',async()=>{
   await page.getByRole('button',{name:'← داشبورد FAM',exact:true}).click();
-  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();await page.locator('.tab-btn[data-view="equipment"]').click();
-  assert.ok(await page.locator('#equipment-radius-password').isVisible());
-  await radius();await card('فایروال');await card('سایت آزمایشی');await card('اتاق شبکه');
+  await openEquipment();
+  assert.equal(await page.locator('#equipment-radius-password').count(),0);
+  assert.match(await workspace().innerText(),/RADIUS آماده است/);
   assert.match(await workspace().innerText(),/نود تست فایروال/);
-  await page.reload();await page.waitForFunction(()=>Access.current()&&document.documentElement.dataset.famReady==='true');
-  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();await page.locator('.tab-btn[data-view="equipment"]').click();
+  await page.locator('.tab-btn[data-view="equipment"]').click();
+  assert.equal(await page.locator('#equipment-radius-password').count(),0);
+  await page.locator('.tab-btn[data-view="log"]').click();await openEquipment();
+  assert.equal(await page.locator('#equipment-radius-password').count(),0);
+  const storage=await page.evaluate(()=>JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)]));
+  for(const secret of ['fake-radius-user-987','fake-radius-secret-987'])assert.ok(!storage.includes(secret));
+});
+test('main FAM logout ends RADIUS; inventory survives a fresh main login',async()=>{
+  await page.locator('#stat-line').click();
+  await page.locator('#account-logout').click();
+  await page.locator('#auth-username').waitFor();
+  await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();
+  await page.waitForFunction(()=>Access.current()&&document.documentElement.dataset.famReady==='true');await openEquipment();
+  assert.ok(await page.locator('#equipment-radius-password').isVisible());
+  assert.equal(await workspace().locator('.eq-card-main').count(),0);
+  await radius();assert.ok((await workspace().innerText()).includes('فایروال'));
+});
+test('refresh forgets RAM-only credentials; dark and light mobile layouts fit',async()=>{
+  await page.reload();await page.waitForFunction(()=>Access.current()&&document.documentElement.dataset.famReady==='true');await openEquipment();
   assert.ok(await page.locator('#equipment-radius-password').isVisible());await radius();
   assert.ok((await workspace().innerText()).includes('فایروال'));
   await page.setViewportSize({width:390,height:844});
-  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  for(const theme of ['original','light']){
+    await page.evaluate(theme=>FamTheme.set(theme),theme);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    assert.equal(await page.locator('#equipment-radius-password').count(),0);
+  }
+  await page.screenshot({path:'/tmp/fam-equipment-mobile-light.png',fullPage:true});
+  assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
 });

@@ -10,12 +10,12 @@ Official references consulted:
 
 - Full standalone FAM, with existing local FAM login (fresh profile admin / 1109).
 - Enter Equipment: first show a RADIUS credential gate. In the preview this accepts **fake test values only**, with a clear notice that no actual authentication occurs.
-- Credentials stay in closure RAM, not local/session storage or any global API. Password input is cleared on submit. Leaving Equipment, FAM logout/auth revocation or refreshing ends the transient credential session.
+- Credentials stay in closure RAM, not local/session storage or any global API. Password input is cleared on submit. Navigation to the dashboard, other FAM views or back to Equipment preserves this RAM-only credential session. Main FAM logout, a different main account or permission revocation clears it. Manual RADIUS-change and refresh/pagehide also clear it; no credentials are persisted to support refresh.
 - Router and switch cards; CRUD for device types, categories and subsections.
 - Each default type independently receives the exact requested branch/area, six-building and Tehran/Semnan datacenter hierarchy.
 - Inventory nodes contain only UUID, display name and RFC1918 IPv4. Names/IPs persist in `fam.equipment.inventory.v2` in the local browser. No workbook/data-sheet modifications.
 - Duplicate IPs within a device type rejected. Maximum field lengths/tree sizes validated. Data rendered with textContent, never user HTML. Corrupt/unreadable local inventory is not silently overwritten.
-- Right-side group tree, breadcrumbs, counts, search by name/IP, inventory table, add/edit dialogs and explicit delete confirmation (including subtree warning).
+- Redesigned horizontal device-family navigation (replacing the old side tree), large router/switch cards, color-coded location folders with inline subsection previews, compact location tiles, breadcrumbs, compact counts, standalone inventory table/search, blue primary buttons, small card management controls, add/edit dialogs and explicit delete confirmation (including subtree warning).
 - Clicking a node name opens its Device 360-style workspace and automatically starts a **simulated** check for that node.
 - Overview, ports/errors and future favorites tabs. Uncollected model, software, CPU, memory and uptime are labeled unavailable, not fabricated as real telemetry.
 - Err-disabled recovery remains simulated and requires confirmation naming the node, IP and exact Gi0/1 interface. Pre/post outcomes, authentication failure, timeout and connection failure have explicit demo labels.
@@ -24,7 +24,7 @@ Official references consulted:
 
 ## Tests
 
-- `npm test`: **35 passed**, including six full local-file Equipment workspace tests.
+- `npm test`: **37 passed**, including eight full local-file Equipment workspace tests.
 - `python -m unittest discover -s server/tests -p 'test_*.py'`: **97 tests, 96 passed / 1 skipped** (offline wheel-byte test; no wheels imported).
 - All 12 local inline scripts parse with Node vm.Script; equipment source passes node --check.
 - Final ZIP allowlist and FAM.html SHA256SUMS verified; root/release ZIP copies match.
