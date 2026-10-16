@@ -31,6 +31,6 @@ Browser کاربر → HTTPS → FAM روی 10.16.243.18
 ## پیش‌نیاز VDI
 
 - دسترسی خروجی HTTPS به `https://communication-02.toosbank.corp` و SSH/22 به تجهیزات لازم است.
-- Python 3.12، 3.13 یا 3.14 باید برای کاربر VDI قابل اجرا باشد؛ Administrator لازم نیست. Connector venv را زیر `%LOCALAPPDATA%` می‌سازد و فقط wheelهای hash-verified همراه ZIP را نصب می‌کند.
+- Windows PowerShell و OpenSSH Client (`ssh.exe`) باید روی VDI موجود باشند؛ Python، pip و Administrator لازم نیست. Connector هیچ نصب یا venv ایجاد نمی‌کند.
 - اگر VDI Sign-out/Restart شود یا Session FAM تمام شود، Connector را دوباره اجرا کنید.
 - برای بهره‌برداری دائمی، بهتر است تیم VDI همین Connector را روی VDI یا Jump Host مدیریت‌شده به‌صورت سرویس ثبت کند. این نسخهٔ آزمایشی عمداً user-mode و بدون Administrator است.

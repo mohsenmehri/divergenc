@@ -1,4 +1,4 @@
-"""Build the direct Equipment Management deployment ZIP (no Worker package)."""
+"""Build the outbound VDI Connector Equipment Management deployment ZIP."""
 from pathlib import Path
 import hashlib
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -15,7 +15,7 @@ entries = {
 
 این بسته صفحهٔ مستقل عملیات شبکه، Worker Token و Pairing را ندارد. ابتدا Patch را روی سرور مرکزی اعمال کنید. سپس روی VDI دارای دسترسی SSH، ZIP به نام FAM-Equipment-Connector-Portable.zip را Extract و START-FAM-EQUIPMENT-CONNECTOR.cmd را بدون نیاز به Administrator اجرا کنید. کاربر مجاز در تب «تجهیزات» داخل FAM، IP خصوصی تجهیز و credential موقت SSH/RADIUS را وارد می‌کند.
 
-Connector فقط از VDI به FAM اتصال HTTPS خروجی دارد؛ پورت ورودی، Windows Service، Token یا Pairing لازم نیست. Netmiko و وابستگی‌ها فقط در venv کاربر VDI نصب می‌شوند. Scheduled Task قدیمی FAM-NetworkWorker غیرفعال می‌شود.
+Connector فقط از VDI به FAM اتصال HTTPS خروجی دارد؛ پورت ورودی، Windows Service، Token، Pairing، Python، pip یا venv لازم نیست. Connector از Windows PowerShell و OpenSSH Client خود VDI استفاده می‌کند. Scheduled Task قدیمی FAM-NetworkWorker غیرفعال می‌شود.
 
 فایل HTML همراه صرفاً پیش‌نمایش محلی UI است و هیچ اتصال واقعی ایجاد نمی‌کند.
 """.encode("utf-8"),

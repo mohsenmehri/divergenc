@@ -7,7 +7,7 @@
 روش اجرا
 1) ZIP Patch را روی خود سرور Extract کنید.
 2) APPLY-CUSTOM-ACCESS-UPDATE.cmd را با Run as administrator اجرا کنید.
-3) ZIP جداگانهٔ `FAM-Equipment-Connector-Portable.zip` را روی VDI دارای SSH Extract و `START-FAM-EQUIPMENT-CONNECTOR.cmd` را بدون Administrator اجرا کنید. در Connector با همان حساب FAM وارد شوید.
+3) ZIP جداگانهٔ `FAM-Equipment-Connector-Portable.zip` را روی VDI دارای SSH Extract و `START-FAM-EQUIPMENT-CONNECTOR.cmd` را بدون Administrator، Python یا pip اجرا کنید. در Connector با همان حساب FAM وارد شوید.
 4) فقط پیام سبز `CUSTOM ACCESS + PRIVATE FAM UI UPDATE APPLIED.` معتبر است. سپس FAM را refresh کنید و تب «تجهیزات» را باز کنید.
 
 ایمنی و بازگشت

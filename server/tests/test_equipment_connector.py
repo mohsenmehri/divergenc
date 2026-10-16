@@ -1,4 +1,4 @@
-"""Static and in-memory checks for the user-mode VDI Equipment Connector."""
+"""Static checks for the user-mode, no-Python VDI Equipment Connector."""
 from pathlib import Path
 import unittest
 
@@ -6,14 +6,16 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ConnectorPackageChecks(unittest.TestCase):
-    def test_connector_needs_no_administrator_or_inbound_listener(self):
-        connector = (ROOT / "equipment_connector" / "connector.py").read_text(encoding="utf8")
+    def test_connector_needs_no_administrator_python_or_inbound_listener(self):
+        connector = (ROOT / "equipment_connector" / "connector.ps1").read_text(encoding="utf8")
         launcher = (ROOT / "equipment_connector" / "START-FAM-EQUIPMENT-CONNECTOR.cmd").read_text(encoding="utf8")
-        self.assertIn("%LOCALAPPDATA%", launcher)
+        self.assertIn("powershell.exe", launcher.lower())
+        self.assertNotIn("python", launcher.lower())
         self.assertNotIn("schtasks", launcher.lower())
-        self.assertNotIn("_create_unverified_context", connector)
         self.assertNotIn("CERT_NONE", connector)
+        self.assertNotIn("ServerCertificateValidationCallback", connector)
         self.assertNotIn("socket.bind", connector)
+        self.assertIn("Get-Command ssh.exe", connector)
         self.assertIn("/api/equipment/connector/claim", connector)
         self.assertIn("/api/equipment/connector/complete", connector)
 
