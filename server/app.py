@@ -24,14 +24,16 @@ try:
 except ImportError:  # Running directly from C:\FAM\server\app.py.
     from manage import backup as verified_backup
 
-# Equipment Management uses a one-shot local SSH helper.  It has no browser
-# Worker API, bearer token, pairing process, or persistent equipment credentials.
+# Equipment Management brokers bounded jobs to a VDI Connector over outbound
+# HTTPS. It has no browser Worker API, bearer token, pairing process, or
+# persistent equipment credentials.
 try:
-    from .equipment_ops import register_equipment_ops
+    from .equipment_ops import EquipmentBroker, register_equipment_ops
 except ImportError:
     try:
-        from equipment_ops import register_equipment_ops
+        from equipment_ops import EquipmentBroker, register_equipment_ops
     except ImportError:
+        EquipmentBroker=None
         register_equipment_ops=None
 
 ROOT = Path(__file__).resolve().parent
@@ -464,12 +466,14 @@ def create_app(config=None):
     app.config.update(DB_PATH=os.environ.get('FAM_DB',str(ROOT/'private'/'fam.sqlite3')),
       PUBLIC_ORIGIN=os.environ.get('FAM_PUBLIC_ORIGIN',''), COOKIE_SECURE=True,
       MAX_CONTENT_LENGTH=32*1024*1024, TESTING=False,
-      # Equipment Management is an explicit FAM capability. Its isolated helper
-      # uses the FAM virtual environment; there is no Worker process/runtime.
+      # Equipment Management is an explicit FAM capability. In connector mode,
+      # the SSH helper runs only on the approved VDI; FAM only brokers memory-only jobs.
       EQUIPMENT_OPS_ENABLED=os.environ.get('FAM_EQUIPMENT_OPS_ENABLED','0')=='1',
+      EQUIPMENT_CONNECTOR_ENABLED=os.environ.get('FAM_EQUIPMENT_CONNECTOR_ENABLED','0')=='1',
       EQUIPMENT_PYTHON=os.environ.get('FAM_EQUIPMENT_PYTHON',str(ROOT/'.venv'/'Scripts'/'python.exe')),
       EQUIPMENT_HELPER=str(ROOT/'equipment_probe.py'),
-      EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32))
+      EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32),
+      EQUIPMENT_BROKER=EquipmentBroker() if EquipmentBroker is not None else None)
     if config:app.config.update(config)
     if not app.config['PUBLIC_ORIGIN']:raise RuntimeError('Set FAM_PUBLIC_ORIGIN to the HTTPS origin (no trailing slash).')
     if not app.config['TESTING'] and not app.config['PUBLIC_ORIGIN'].startswith('https://'):raise RuntimeError('Production requires HTTPS.')

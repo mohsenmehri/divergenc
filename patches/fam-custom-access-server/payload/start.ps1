@@ -6,9 +6,10 @@ $env:FAM_PUBLIC_ORIGIN=$Config.PUBLIC_ORIGIN
 $env:FAM_DB=$Config.DB
 $env:FAM_BIND='127.0.0.1'
 $env:FAM_PORT='8765'
-# Direct Equipment Management runs a bounded one-shot Netmiko helper from the
-# FAM runtime. It is not a Worker service or a credential store.
+# Equipment Management hands bounded one-shot jobs to the approved VDI Connector
+# over outbound HTTPS. It is not a Worker service or a credential store.
 $env:FAM_EQUIPMENT_OPS_ENABLED='1'
+$env:FAM_EQUIPMENT_CONNECTOR_ENABLED='1'
 $env:FAM_EQUIPMENT_PYTHON=Join-Path $Root '.venv\Scripts\python.exe'
 $env:PYTHONUTF8='1'
 $env:PYTHONUNBUFFERED='1'

@@ -48,10 +48,10 @@ curl.exe --noproxy "*" -I https://communication-02.toosbank.corp/
 ## مدیریت تجهیزات
 
 پس از Login، کاربر مجاز در تب **تجهیزات** داخل همان صفحهٔ اصلی FAM، IP خصوصی
-Switch/Router و username/password موقت SSH یا RADIUS را وارد می‌کند. FAM برای
-همان درخواست از `10.16.243.18` به SSH/22 تجهیز وصل می‌شود و فقط وضعیت
-Err-disabled را گزارش می‌دهد. هیچ Worker Token، Pairing، Agent Workstation یا
-سرویس Worker جداگانه در UI وجود ندارد.
+Switch/Router و username/password موقت SSH یا RADIUS را وارد می‌کند. Connector
+پرتابل روی VDI دارای دسترسی SSH، فقط با اتصال HTTPS خروجی به FAM همان درخواست را
+به SSH/22 تجهیز می‌رساند و فقط وضعیت Err-disabled را گزارش می‌دهد. هیچ Worker
+Token، Pairing یا صفحه/سرویس Worker جداگانه در UI وجود ندارد.
 
 - Router: کاربر RADIUS username/password خودش را وارد می‌کند.
 - Switch: کاربر local username/password خودش را وارد می‌کند.

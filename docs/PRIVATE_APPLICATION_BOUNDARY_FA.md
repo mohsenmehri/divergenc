@@ -74,7 +74,8 @@ Patch هیچ فایل SQLite، حساب، Password، Sheet یا Backup را حذ
    ```
 
 5. بعد از Session معتبر، تب «تجهیزات» داخل `/app` قابل استفاده است؛ SSH فقط
-   از سرور مرکزی انجام می‌شود و صفحهٔ مستقل `/network-operations` وجود ندارد.
+   از Connector موقتِ VDI که HTTPS خروجی به FAM دارد انجام می‌شود و صفحهٔ مستقل
+   `/network-operations` وجود ندارد.
 
 ## محدودیت مدیریتی
 

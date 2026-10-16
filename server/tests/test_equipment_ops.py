@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import tempfile
+import threading
+import time
 import unittest
 
 from server.app import create_app
@@ -81,6 +83,41 @@ class EquipmentOpsTests(unittest.TestCase):
         self.assertEqual(self.calls[-1]["operation"], "recover")
         self.assertEqual(self.calls[-1]["interface"], "Gi0/1")
         self.assertEqual(self.calls[-1]["password"], "second")
+
+    def test_vdi_connector_uses_ordinary_same_user_session_and_never_persists_job(self):
+        self.app.config.update(EQUIPMENT_CONNECTOR_ENABLED=True, EQUIPMENT_EXECUTOR=None)
+        connector = self.app.test_client()
+        login = connector.post("/api/login", json={"username": "admin", "password": "1109"}, headers={"Origin": ORIGIN})
+        connector_csrf = login.json["csrf"]
+        connector_user_id = login.json["user"]["id"]
+        received = []
+
+        def run_connector():
+            claimed = connector.post("/api/equipment/connector/claim", json={}, headers={"Origin": ORIGIN, "X-FAM-CSRF": connector_csrf})
+            self.assertEqual(claimed.status_code, 200)
+            job = claimed.json["job"]
+            received.append(job)
+            completed = connector.post("/api/equipment/connector/complete", json={
+                "jobId": job["jobId"],
+                "result": {"ok": True, "ports": [{"interface": "Gi0/9", "description": "VDI test port"}]},
+            }, headers={"Origin": ORIGIN, "X-FAM-CSRF": connector_csrf})
+            self.assertEqual(completed.status_code, 200)
+
+        thread = threading.Thread(target=run_connector)
+        thread.start()
+        broker = self.app.config["EQUIPMENT_BROKER"]
+        deadline = time.monotonic() + 2
+        while not broker.online(connector_user_id) and time.monotonic() < deadline:
+            time.sleep(.01)
+        self.assertTrue(broker.online(connector_user_id))
+        result = self.post("/api/equipment/check", {"host": "10.2.52.2", "username": "radius.user", "password": "transient"})
+        thread.join(2)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(result.status_code, 200, result.json)
+        self.assertEqual(result.json["errDisabledPorts"], [{"interface": "Gi0/9", "description": "VDI test port"}])
+        self.assertEqual(received[0]["operation"], "status")
+        self.assertEqual(received[0]["password"], "transient")
+        self.assertFalse(broker._jobs)
 
     def test_rejects_non_private_targets_extra_fields_and_missing_csrf(self):
         base = {"host": "8.8.8.8", "username": "u", "password": "p"}

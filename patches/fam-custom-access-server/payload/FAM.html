@@ -2619,7 +2619,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const current=values(); if(!current.password){show('برای تأیید رفع، رمز SSH را دوباره وارد کنید.','error');by('equipment-password').focus();return;}
     show('در حال بررسی و رفع کنترل‌شدهٔ '+port+'…');
     try{
-      const result=await FamShared.api('equipment/recover',{...current,interface:port,ticket},60000);
+      const result=await FamShared.api('equipment/recover',{...current,interface:port,ticket},110000);
       by('equipment-password').value='';
       const text={recovered:'پورت '+port+' بازیابی شد و در بررسی پس از عملیات دیگر Err-disabled نبود.',still_errdisabled:'پورت '+port+' همچنان Err-disabled است؛ علت خطا را روی تجهیز بررسی کنید.',not_errdisabled:'پورت '+port+' پیش از اعمال تغییر دیگر Err-disabled نبود؛ تغییری اعمال نشد.'}[result.recovery]||'عملیات پایان یافت.';
       show(text,result.recovery==='recovered'?'ok':'error');
@@ -2629,7 +2629,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     event.preventDefault();
     const current=values(); submit.disabled=true;show('سرور FAM در حال بررسی وضعیت تجهیز است…');
     try{
-      const result=await FamShared.api('equipment/check',current,60000), ports=result.errDisabledPorts||[];
+      const result=await FamShared.api('equipment/check',current,110000), ports=result.errDisabledPorts||[];
       by('equipment-password').value='';
       if(!ports.length){show('Err-disabled در این تجهیز گزارش نشد.','ok');return;}
       status.className='equipment-status error';status.replaceChildren(document.createTextNode('پورت‌های Err-disabled یافت شد. برای هر پورت، در صورت تأیید شما فقط همان پورت رفع می‌شود.'));

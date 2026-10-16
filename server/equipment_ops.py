@@ -1,11 +1,10 @@
-"""Small, direct Equipment Management API for FAM.
+"""Bounded Equipment Management API and ephemeral VDI connector broker for FAM.
 
-This replaces the browser-visible Worker/pairing workflow.  A signed-in FAM
-user submits a private IPv4 address and transient SSH credentials over the
-existing HTTPS session.  FAM starts one local, bounded SSH helper process,
-keeps the credentials only in process/pipe memory, and returns structured port
-status.  There is no token, queued Worker, credential table, device inventory,
-or raw CLI output persistence.
+The browser submits device credentials over its existing HTTPS FAM session.
+When connector mode is enabled, a user-mode Connector on an approved VDI polls
+FAM over outbound HTTPS, receives one transient bounded job, and returns only
+sanitized status.  No device credential, job, connector token, or CLI output
+is stored in FAM's database, files, URL, command line, or normal logs.
 """
 from __future__ import annotations
 
@@ -16,13 +15,81 @@ import ipaddress
 import json
 from pathlib import Path
 import re
+import secrets
 import subprocess
+import threading
 import time
 
-from flask import current_app, g, jsonify
+from flask import g, jsonify
 
 INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
+JOB_ID = re.compile(r"[A-Za-z0-9_-]{20,100}\Z")
 RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
+
+
+class EquipmentBroker:
+    """Memory-only, same-user job hand-off to a Connector polling over HTTPS."""
+
+    def __init__(self):
+        self._condition = threading.Condition()
+        self._jobs = {}
+        self._active_until = {}
+
+    def _purge(self, now):
+        self._active_until = {user: until for user, until in self._active_until.items() if until > now}
+        self._jobs = {job_id: job for job_id, job in self._jobs.items() if job["expires"] > now}
+
+    def submit(self, user_id, payload, timeout=100):
+        now = time.monotonic()
+        with self._condition:
+            self._purge(now)
+            if user_id not in self._active_until:
+                return {"ok": False, "error": "connector_offline"}
+            job_id = secrets.token_urlsafe(24)
+            job = {"user": user_id, "payload": payload, "expires": now + timeout, "claimed": False,
+                   "done": threading.Event(), "result": None}
+            self._jobs[job_id] = job
+            self._condition.notify_all()
+        if not job["done"].wait(timeout):
+            with self._condition:
+                self._jobs.pop(job_id, None)
+            return {"ok": False, "error": "connector_timeout"}
+        with self._condition:
+            self._jobs.pop(job_id, None)
+        return job["result"] if isinstance(job["result"], dict) else {"ok": False, "error": "connector_failed"}
+
+    def claim(self, user_id, timeout=25):
+        deadline = time.monotonic() + timeout
+        with self._condition:
+            while True:
+                now = time.monotonic()
+                self._purge(now)
+                # A connector must refresh this short heartbeat continuously;
+                # a disconnected VDI cannot be selected for a browser request.
+                self._active_until[user_id] = now + 35
+                for job_id, job in self._jobs.items():
+                    if job["user"] == user_id and not job["claimed"]:
+                        job["claimed"] = True
+                        return {"jobId": job_id, **job["payload"]}
+                remaining = deadline - now
+                if remaining <= 0:
+                    return None
+                self._condition.wait(remaining)
+
+    def online(self, user_id):
+        with self._condition:
+            self._purge(time.monotonic())
+            return user_id in self._active_until
+
+    def complete(self, user_id, job_id, result):
+        with self._condition:
+            job = self._jobs.get(job_id)
+            if not job or job["user"] != user_id or not job["claimed"] or job["expires"] <= time.monotonic():
+                return False
+            job["result"] = result
+            job["done"].set()
+            self._condition.notify_all()
+            return True
 
 
 def _b64(value: bytes) -> str:
@@ -44,9 +111,6 @@ def _input(value, *, recovery=False):
         address = ipaddress.ip_address(host.strip())
     except ValueError as exc:
         raise ValueError from exc
-    # This release is intentionally an intranet equipment tool, not a generic
-    # outbound SSH proxy.  Only private, non-loopback IPv4 management targets
-    # may be selected.
     if not isinstance(address, ipaddress.IPv4Address) or not any(address in network for network in RFC1918_NETWORKS):
         raise ValueError
     username = username.strip()
@@ -87,6 +151,8 @@ def _execute(app, payload):
     override = app.config.get("EQUIPMENT_EXECUTOR")
     if override is not None:
         return override(payload)
+    if app.config["EQUIPMENT_CONNECTOR_ENABLED"]:
+        return app.config["EQUIPMENT_BROKER"].submit(g.user["id"], payload)
     executable = Path(app.config["EQUIPMENT_PYTHON"])
     helper = Path(app.config["EQUIPMENT_HELPER"])
     if not executable.is_file() or not helper.is_file():
@@ -109,11 +175,32 @@ def _failure(value):
         "connection_timeout": "اتصال SSH به تجهیز در زمان مجاز پاسخ نداد.",
         "connection_failed": "بررسی تجهیز انجام نشد؛ دسترسی SSH و وضعیت تجهیز را بررسی کنید.",
         "executor_unavailable": "موتور داخلی بررسی تجهیز روی سرور آماده نیست.",
+        "connector_offline": "Connector تجهیزات روی VDI شما متصل نیست؛ ابتدا START-FAM-EQUIPMENT-CONNECTOR را اجرا کنید.",
+        "connector_timeout": "Connector تجهیزات در زمان مجاز پاسخ نداد؛ اتصال VDI و SSH تجهیز را بررسی کنید.",
+        "connector_failed": "Connector تجهیزات نتیجهٔ معتبر ارسال نکرد.",
     }.get(code, "بررسی تجهیز انجام نشد.")
 
 
+def _ports_or_fail(result, fail):
+    raw_ports = result.get("ports") if isinstance(result, dict) else None
+    if not isinstance(result, dict) or result.get("ok") is not True or not isinstance(raw_ports, list):
+        fail(502, _failure(result))
+    ports = []
+    seen = set()
+    for item in raw_ports:
+        if (not isinstance(item, dict) or set(item) != {"interface", "description"} or
+                not isinstance(item["interface"], str) or not INTERFACE.fullmatch(item["interface"]) or
+                not isinstance(item["description"], str) or len(item["description"]) > 128 or
+                "\r" in item["description"] or "\n" in item["description"] or item["interface"] in seen):
+            fail(502, _failure(result))
+        seen.add(item["interface"])
+        ports.append({"interface": item["interface"], "description": item["description"]})
+    return sorted(ports, key=lambda item: item["interface"])
+
+
 def register_equipment_ops(app, *, data, fail, allowed):
-    """Register the only browser-facing equipment operations routes."""
+    """Register authenticated browser and same-user Connector endpoints."""
+    broker = app.config["EQUIPMENT_BROKER"]
 
     def authorize():
         if not app.config["EQUIPMENT_OPS_ENABLED"]:
@@ -129,20 +216,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
         except ValueError:
             fail(400, "IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.")
         result = _execute(app, {"operation": "status", **value})
-        raw_ports = result.get("ports") if isinstance(result, dict) else None
-        if not isinstance(result, dict) or result.get("ok") is not True or not isinstance(raw_ports, list):
-            fail(502, _failure(result))
-        ports = []
-        seen = set()
-        for item in raw_ports:
-            if (not isinstance(item, dict) or set(item) != {"interface", "description"} or
-                    not isinstance(item["interface"], str) or not INTERFACE.fullmatch(item["interface"]) or
-                    not isinstance(item["description"], str) or len(item["description"]) > 128 or
-                    "\r" in item["description"] or "\n" in item["description"] or item["interface"] in seen):
-                fail(502, _failure(result))
-            seen.add(item["interface"])
-            ports.append({"interface": item["interface"], "description": item["description"]})
-        ports.sort(key=lambda item: item["interface"])
+        ports = _ports_or_fail(result, fail)
         tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
         return jsonify(host=value["host"], errDisabledPorts=ports, recoveryTickets=tickets)
 
@@ -156,6 +230,28 @@ def register_equipment_ops(app, *, data, fail, allowed):
         if not _verify_ticket(app, value.pop("ticket"), user_id=g.user["id"], host=value["host"], username=value["username"], interface=value["interface"]):
             fail(409, "تأیید بررسی این پورت منقضی شده است؛ ابتدا وضعیت را دوباره بررسی کنید.")
         result = _execute(app, {"operation": "recover", **value})
-        if result.get("ok") is not True or result.get("recovery") not in {"recovered", "still_errdisabled", "not_errdisabled"}:
+        if not isinstance(result, dict) or result.get("ok") is not True or result.get("recovery") not in {"recovered", "still_errdisabled", "not_errdisabled"}:
             fail(502, _failure(result))
         return jsonify(host=value["host"], interface=value["interface"], recovery=result["recovery"])
+
+    @app.post("/api/equipment/connector/claim")
+    def equipment_connector_claim():
+        authorize()
+        if not app.config["EQUIPMENT_CONNECTOR_ENABLED"]:
+            fail(404, "Connector تجهیزات فعال نشده است.")
+        if data() != {}:
+            fail(400, "درخواست Connector معتبر نیست.")
+        return jsonify(job=broker.claim(g.user["id"]))
+
+    @app.post("/api/equipment/connector/complete")
+    def equipment_connector_complete():
+        authorize()
+        if not app.config["EQUIPMENT_CONNECTOR_ENABLED"]:
+            fail(404, "Connector تجهیزات فعال نشده است.")
+        value = data()
+        if (not isinstance(value, dict) or set(value) != {"jobId", "result"} or
+                not isinstance(value["jobId"], str) or not JOB_ID.fullmatch(value["jobId"]) or not isinstance(value["result"], dict)):
+            fail(400, "نتیجهٔ Connector معتبر نیست.")
+        if not broker.complete(g.user["id"], value["jobId"], value["result"]):
+            fail(409, "درخواست Connector منقضی شده است.")
+        return jsonify(ok=True)

@@ -2,12 +2,12 @@
 
 این پچ برای نصب مرکزی FAM در C:\FAM و C:\FAMData است. رابط مدیریت کاربران را با نسخهٔ محلی یکسان می‌کند: محدودهٔ دسته‌ها، زیرمحدودهٔ مناطق برای استان‌ها، و مجوزهای ریزعملیاتی. «سطح کاربر» در فرم نمایش داده نمی‌شود.
 
-این revision صفحهٔ مستقل عملیات شبکه و Worker Token را حذف می‌کند و تب «تجهیزات» را داخل صفحهٔ اصلی FAM اضافه می‌کند. کاربر مجاز IP خصوصی تجهیز و نام کاربری/رمز موقت SSH یا RADIUS را وارد می‌کند؛ سرور FAM آن‌ها را فقط در حافظهٔ همان درخواست برای اتصال SSH/22 استفاده می‌کند. گزارش فقط پورت‌های Err-disabled است. برای رفع، کاربر همان پورت را تأیید می‌کند؛ سرور pre-check، `shutdown` / `no shutdown` محدود و post-check انجام می‌دهد. command آزاد، Enable، ذخیرهٔ تنظیمات، Worker Pairing و Token وجود ندارد. Netmiko به‌صورت آفلاین و hash-verified داخل venv خود FAM نصب می‌شود و Scheduled Task قدیمی Worker غیرفعال می‌شود.
+این revision صفحهٔ مستقل عملیات شبکه و Worker Token را حذف می‌کند و تب «تجهیزات» را داخل صفحهٔ اصلی FAM اضافه می‌کند. وقتی FAM Server به تجهیزات SSH دسترسی ندارد، Connector پرتابل روی VDI دارای SSH، فقط از طریق HTTPS خروجی به FAM متصل می‌شود. کاربر مجاز IP خصوصی تجهیز و نام کاربری/رمز موقت SSH یا RADIUS را وارد می‌کند؛ این اطلاعات فقط در RAM همان درخواست می‌مانند. گزارش پورت‌های Err-disabled و Description پورت است. برای رفع، کاربر همان پورت را تأیید می‌کند؛ Connector pre-check، `shutdown` / `no shutdown` محدود و post-check انجام می‌دهد. command آزاد، Enable، ذخیرهٔ تنظیمات، Worker Pairing و Token وجود ندارد.
 
 روش اجرا
-1) ZIP را روی خود سرور Extract کنید.
-2) Patch به‌صورت آفلاین و hash-verified، Netmiko را در `C:\\FAM\\server\\.venv` نصب می‌کند؛ اینترنت و venv قدیمی Worker لازم نیست.
-3) APPLY-CUSTOM-ACCESS-UPDATE.cmd را با Run as administrator اجرا کنید.
+1) ZIP Patch را روی خود سرور Extract کنید.
+2) APPLY-CUSTOM-ACCESS-UPDATE.cmd را با Run as administrator اجرا کنید.
+3) ZIP جداگانهٔ `FAM-Equipment-Connector-Portable.zip` را روی VDI دارای SSH Extract و `START-FAM-EQUIPMENT-CONNECTOR.cmd` را بدون Administrator اجرا کنید. در Connector با همان حساب FAM وارد شوید.
 4) فقط پیام سبز `CUSTOM ACCESS + PRIVATE FAM UI UPDATE APPLIED.` معتبر است. سپس FAM را refresh کنید و تب «تجهیزات» را باز کنید.
 
 ایمنی و بازگشت

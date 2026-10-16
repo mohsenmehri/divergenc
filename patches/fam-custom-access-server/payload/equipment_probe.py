@@ -6,11 +6,13 @@ logs, database, or output.  It deliberately exposes no terminal/command API.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
 import sys
 
 INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
+RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
 
 
 def respond(value):
@@ -90,30 +92,38 @@ def recover(value):
         connection.disconnect()
 
 
-def main():
+def execute(value):
+    """Run one already-decoded, bounded job and return only its safe result."""
+    if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}):
+        return {"ok": False, "error": "invalid_request"}
+    if value.get("operation") not in {"status", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
+        return {"ok": False, "error": "invalid_request"}
     try:
-        value = json.loads(sys.stdin.buffer.read(4096).decode("utf-8"))
-        if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}):
-            raise ValueError
-        if value.get("operation") not in {"status", "recover"}:
-            raise ValueError
-        if not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
-            raise ValueError
-        if value["operation"] == "recover" and (not isinstance(value.get("interface"), str) or not INTERFACE.fullmatch(value["interface"])):
-            raise ValueError
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
-        respond({"ok": False, "error": "invalid_request"})
-        return
+        address = ipaddress.ip_address(value["host"])
+    except ValueError:
+        return {"ok": False, "error": "invalid_request"}
+    if not isinstance(address, ipaddress.IPv4Address) or not any(address in network for network in RFC1918_NETWORKS):
+        return {"ok": False, "error": "invalid_request"}
+    if value["operation"] == "recover" and (not isinstance(value.get("interface"), str) or not INTERFACE.fullmatch(value["interface"])):
+        return {"ok": False, "error": "invalid_request"}
     try:
-        respond(status(value) if value["operation"] == "status" else recover(value))
+        return status(value) if value["operation"] == "status" else recover(value)
     except Exception as exc:  # Map all library/device details to stable codes.
         name = type(exc).__name__
         if name == "NetmikoAuthenticationException":
-            respond({"ok": False, "error": "authentication_failed"})
-        elif name in {"NetmikoTimeoutException", "ReadTimeout"}:
-            respond({"ok": False, "error": "connection_timeout"})
-        else:
-            respond({"ok": False, "error": "connection_failed"})
+            return {"ok": False, "error": "authentication_failed"}
+        if name in {"NetmikoTimeoutException", "ReadTimeout"}:
+            return {"ok": False, "error": "connection_timeout"}
+        return {"ok": False, "error": "connection_failed"}
+
+
+def main():
+    try:
+        value = json.loads(sys.stdin.buffer.read(4096).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        respond({"ok": False, "error": "invalid_request"})
+        return
+    respond(execute(value))
 
 
 if __name__ == "__main__":

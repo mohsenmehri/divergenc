@@ -5,15 +5,17 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 patch = ROOT / "releases" / "FAM-Custom-Access-SERVER-Patch.zip"
+connector = ROOT / "releases" / "FAM-Equipment-Connector-Portable.zip"
 preview = ROOT / "releases" / "FAM-Equipment-Management-LOCAL-PREVIEW.html"
 entries = {
     "FAM-Custom-Access-SERVER-Patch.zip": patch.read_bytes(),
+    "FAM-Equipment-Connector-Portable.zip": connector.read_bytes(),
     "FAM-Equipment-Management-LOCAL-PREVIEW.html": preview.read_bytes(),
     "START-HERE_FA.txt": """بستهٔ مدیریت تجهیزات FAM
 
-این بسته صفحهٔ مستقل عملیات شبکه، Worker Token و Pairing را ندارد. Patch را روی سرور مرکزی اعمال کنید؛ سپس کاربر مجاز در تب «تجهیزات» داخل خود FAM، IP خصوصی تجهیز و credential موقت SSH/RADIUS را وارد می‌کند.
+این بسته صفحهٔ مستقل عملیات شبکه، Worker Token و Pairing را ندارد. ابتدا Patch را روی سرور مرکزی اعمال کنید. سپس روی VDI دارای دسترسی SSH، ZIP به نام FAM-Equipment-Connector-Portable.zip را Extract و START-FAM-EQUIPMENT-CONNECTOR.cmd را بدون نیاز به Administrator اجرا کنید. کاربر مجاز در تب «تجهیزات» داخل FAM، IP خصوصی تجهیز و credential موقت SSH/RADIUS را وارد می‌کند.
 
-Patch، Netmiko و وابستگی‌های آن را از wheelهای همراه و hash-verified داخل venv خود FAM نصب می‌کند. Scheduled Task قدیمی FAM-NetworkWorker غیرفعال می‌شود؛ برای اجرای مستقیم هیچ venv یا سرویس Worker لازم نیست.
+Connector فقط از VDI به FAM اتصال HTTPS خروجی دارد؛ پورت ورودی، Windows Service، Token یا Pairing لازم نیست. Netmiko و وابستگی‌ها فقط در venv کاربر VDI نصب می‌شوند. Scheduled Task قدیمی FAM-NetworkWorker غیرفعال می‌شود.
 
 فایل HTML همراه صرفاً پیش‌نمایش محلی UI است و هیچ اتصال واقعی ایجاد نمی‌کند.
 """.encode("utf-8"),
