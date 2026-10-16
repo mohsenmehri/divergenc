@@ -3687,9 +3687,9 @@ function renderLogView() {
   body.appendChild(table);
 }
 function clearLog() {
-  if (!Access.require("admin")) return false;
+  if (!Access.require("clear-history")) return false;
   ConfirmBox("پاک‌سازی لاگ", "همه ردیف‌های CHANGE_LOG پاک شوند؟", () => {
-    if (!Access.require("admin")) return;
+    if (!Access.require("clear-history")) return;
     const sh = ensureSheet(LOG_SHEET, true);
     const header = sh.rows[0] || ["Date/Time", "Action", "Sheet", "Record ID", "User", "Status", "Notes"];
     sh.rows = [header];
@@ -8754,11 +8754,12 @@ const Access = (() => {
   // capabilities are stored separately from the category data scope.
   const PERMISSION_GROUPS=[
     {title:'مشاهده و جست‌وجو',items:[
-      ['view-sheets','مشاهدهٔ شیت‌ها و داشبورد'],['search','جست‌وجو در داده‌ها'],['view-history','مشاهدهٔ تاریخچهٔ تغییرات']]},
+      ['view-sheets','مشاهدهٔ شیت‌ها و داشبورد'],['search','جست‌وجو در داده‌ها'],['view-history','مشاهدهٔ تاریخچهٔ تغییرات'],['clear-history','پاک‌سازی تاریخچهٔ تغییرات']]},
     {title:'کار با داده‌ها',items:[
       ['edit-cells','ویرایش مستقیم سلول‌ها'],['save-results','ذخیرهٔ تغییرات نتایج جست‌وجو'],['add-record','افزودن رکورد'],['remove-record','حذف رکورد'],['undo-remove','بازگردانی آخرین حذف']]},
     {title:'ابزارها و عملیات‌ها',items:[
       ['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
+    {title:'عملیات تجهیزات',items:[['equipment-add','افزودن نود'],['equipment-edit','ویرایش و خروج از دسته'],['equipment-delete','حذف نود'],['equipment-catalog','مدیریت دسته‌های تجهیزات'],['equipment-cards','مدیریت کارت‌های تجهیزات'],['equipment-import','ورود اکسل تجهیزات'],['equipment-export','خروجی اکسل تجهیزات'],['equipment-configuration','پیکربندی نمایشی گروهی'],['equipment-standards','تعریف و ویرایش استانداردها'],['equipment-audit','بررسی و خروجی چک‌لیست'],['equipment-scan','بررسی پورت‌های سوئیچ'],['equipment-repair','رفع نمایشی خطای پورت']]},
     {title:'مدیریت',items:[
       ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','مدیریت تجهیزات (پیش‌نمایش)']]}
   ];
@@ -8766,7 +8767,7 @@ const Access = (() => {
   const allPermissions=()=>[...PERMISSIONS];
   const legacyPermissions=role=>{
     if(role===1)return allPermissions();
-    if(role===2)return allPermissions().filter(p=>!['save-results','refresh-panel','import-data','empty-data','restore-data','reset-data','manage-users'].includes(p));
+    if(role===2)return allPermissions().filter(p=>!['save-results','refresh-panel','import-data','empty-data','restore-data','reset-data','manage-users','clear-history'].includes(p));
     if(role===3)return ['view-sheets','search','view-history','edit-cells','refresh-index','export-xlsx','backup-server'];
     return ['view-sheets','search'];
   };
@@ -8780,9 +8781,14 @@ const Access = (() => {
     const regions=legacy&&u?.role<=2&&typeof managedRegions==='function'
       ?managedRegions().filter(r=>r.id!=='unassigned').map(r=>r.id)
       :(Array.isArray(u?.regions)?u.regions.filter(v=>typeof v==='string'):[]);
-    return {...u,sheets,regions:[...new Set(regions)],
+    const migrated=u?.equipmentPolicyVersion!==1;
+    const permissions=Array.isArray(u?.permissions)?[...new Set(u.permissions.filter(v=>PERMISSIONS.has(v)))]:legacyPermissions(u?.role);
+    if(migrated&&(permissions.includes('equipment-operations')||permissions.includes('manage-users')))for(const id of PERMISSIONS)if(id.startsWith('equipment-')&&!permissions.includes(id))permissions.push(id);
+    if(migrated&&permissions.includes('manage-users')&&!permissions.includes('clear-history'))permissions.push('clear-history');
+    const equipmentScope={};for(const key of ['types','models','regions','siteKinds','sites']){const value=u?.equipmentScope?.[key];equipmentScope[key]=Array.isArray(value)?[...new Set(value.filter(x=>typeof x==='string'&&(/^[\w-]{1,80}$/.test(x)||x==='*')))]:migrated&&(permissions.includes('equipment-operations')||permissions.includes('manage-users'))?['*']:[];}
+    return {...u,equipmentPolicyVersion:1,equipmentScope,sheets,regions:[...new Set(regions)],
       categories:[...new Set(supplied.includes('*')?allKnownCategoryIds():supplied)],
-      permissions:Array.isArray(u?.permissions)?[...new Set(u.permissions.filter(v=>PERMISSIONS.has(v)))]:legacyPermissions(u?.role)
+      permissions
     };
   };
   function validate(value) {
@@ -8813,7 +8819,7 @@ const Access = (() => {
   }
   function current(){
     const u=db?.users.find(u=>u.id===activeId && u.enabled);
-    return u ? {id:u.id,username:u.username,name:u.name,role:u.role,enabled:u.enabled,regions:[...u.regions],sheets:[...u.sheets],categories:[...u.categories],permissions:[...u.permissions]} : null;
+    return u ? {id:u.id,username:u.username,name:u.name,role:u.role,enabled:u.enabled,regions:[...u.regions],sheets:[...u.sheets],categories:[...u.categories],permissions:[...u.permissions],equipmentScope:structuredClone(u.equipmentScope)} : null;
   }
   function establish(user){
     const normalized=normalizeAccessUser(user);
@@ -8823,6 +8829,7 @@ const Access = (() => {
     state.user=normalized.name;
     document.documentElement.dataset.role='custom';
     document.documentElement.classList.remove('auth-pending');
+    document.dispatchEvent(new Event('fam-access-changed'));
   }
   async function hashPassword(password,salt){
     if(!crypto?.subtle)throw Error('برای ورود از فایل مستقیم یا HTTPS استفاده کنید.');
@@ -8857,6 +8864,8 @@ const Access = (() => {
   function can(operation,sheet){
     const u=current();if(!u)return false;
     if(operation==='own-password')return true;
+    if(operation==='clear-history')return has(u,'clear-history')&&has(u,'view-history');
+    if(operation.startsWith('equipment-'))return can('equipment')&&has(u,operation);
     if(operation==='equipment')return has(u,'equipment-operations')||has(u,'manage-users');
     const scoped={read:'view-sheets','search-read':'search',manual:'edit-cells','export':'export-xlsx',backup:'backup-server',add:'add-record',remove:'remove-record','save-results':'save-results','view-history':'view-history',undo:'undo-remove'}[operation];
     if(scoped&&sheet!==undefined)return has(u,scoped)&&scopeAllowsSheet(u,sheet);
@@ -8874,6 +8883,31 @@ const Access = (() => {
       'manage-regions':'manage-regions','manage-categories':'manage-categories','view-history':'view-history'}[operation];
     if(['import','refresh-index','empty-data','restore','reset'].includes(operation))return !!capability&&has(u,capability)&&hasFullDataScope(u);
     return capability?has(u,capability):false;
+  }
+  const equipmentFields={types:'typeId',models:'modelId',regions:'regionId',siteKinds:'siteKindId',sites:'siteId'};
+  function equipmentRef(key,id){const user=db?.users.find(u=>u.id===activeId&&u.enabled),list=user?.equipmentScope?.[key]||[];return list.includes('*')||typeof id==='string'&&list.includes(id);}
+  function equipmentNode(node){return !!node&&Object.entries(equipmentFields).every(([key,field])=>equipmentRef(key,node[field]));}
+  function equipmentView(value){
+    const d=FamEquipmentInventory.validate(value);if(!can('equipment'))return {version:3,catalog:Object.fromEntries(Object.keys(equipmentFields).map(k=>[k,[]])),nodes:[]};
+    for(const key of Object.keys(equipmentFields))d.catalog[key]=d.catalog[key].filter(item=>equipmentRef(key,item.id)&&(key!=='models'||equipmentRef('types',item.typeId))&&(key!=='sites'||equipmentRef('siteKinds',item.siteKindId)));
+    d.nodes=d.nodes.filter(equipmentNode);return FamEquipmentInventory.validate(d);
+  }
+  function equipmentMerge(full,value){
+    if(!can('equipment'))throw Error('مجوز تجهیزات ندارید.');
+    const old=FamEquipmentInventory.validate(full),visible=equipmentView(old),next=FamEquipmentInventory.validate(value),out=structuredClone(old);
+    for(const key of ['nodes',...Object.keys(equipmentFields)]){
+      const before=key==='nodes'?visible.nodes:visible.catalog[key],after=key==='nodes'?next.nodes:next.catalog[key],whole=key==='nodes'?old.nodes:old.catalog[key];
+      const changed=new Set([...before,...after].map(x=>x.id));
+      for(const id of changed){const a=before.find(x=>x.id===id),b=after.find(x=>x.id===id),hidden=whole.find(x=>x.id===id);if(JSON.stringify(a)===JSON.stringify(b))continue;
+        if(!a&&hidden)throw Error('رکورد خارج از محدودهٔ مجاز است.');
+        const permission=key==='nodes'?(!a?'equipment-add':!b?'equipment-delete':'equipment-edit'):'equipment-catalog';
+        if(!can(permission))throw Error('مجوز این تغییر تجهیزات را ندارید.');
+        if(key==='nodes'){if(b&&whole.some(n=>n.id!==id&&n.host===b.host))throw Error('این IP در کل موجودی استفاده شده است.');if(a&&!equipmentNode(a)||b&&!equipmentNode(b))throw Error('نود خارج از محدودهٔ مجاز است.');}
+        else if(!equipmentRef(key,id)||b&&key==='models'&&!equipmentRef('types',b.typeId)||b&&key==='sites'&&!equipmentRef('siteKinds',b.siteKindId))throw Error('دسته خارج از محدودهٔ مجاز است.');
+        const target=key==='nodes'?out.nodes:out.catalog[key],index=target.findIndex(x=>x.id===id);if(!b)target.splice(index,1);else if(index<0)target.push(b);else target[index]=b;
+      }
+    }
+    return FamEquipmentInventory.validate(out);
   }
   function requirePermission(operation,sheet){
     if(can(operation,sheet))return true;
@@ -8896,6 +8930,7 @@ const Access = (() => {
     const a=node.dataset.act;
     if(['edit-user','logout'].includes(a))return !!current();
     if(a==='manage-users')return can('users');
+    if(a==='clear-log')return can('clear-history');
     if(['show-vba','download-module'].includes(a))return can('source');
     if(a==='run-macro')return macroAllowed(node.dataset.arg);
     if(a==='run-macro-index')return macroAllowed(node.dataset.mod+'.'+node.dataset.name);
@@ -9101,8 +9136,10 @@ const Access = (() => {
     const status=el('p',{id:'users-status',role:'status','aria-live':'polite'});
     // Creation is the default and remains separate from an explicitly selected
     // account. The submitter decides whether to keep editing or start another.
-    let selected=null, saving=false;
-    const close=()=>{if(saving)return;ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
+    let selected=null, saving=false,equipmentScopeRefresh=null;
+    const equipmentChanged=event=>{if(event.type==='fam-equipment-changed'||event.key==='fam.equipment.inventory.v3')equipmentScopeRefresh?.();};
+    window.addEventListener('storage',equipmentChanged);document.addEventListener('fam-equipment-changed',equipmentChanged);
+    const close=()=>{if(saving)return;window.removeEventListener('storage',equipmentChanged);document.removeEventListener('fam-equipment-changed',equipmentChanged);ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
     const button=(text,id,fn)=>el('button',{type:'button',id,class:'btn btn-ghost btn-sm',text,onclick:fn});
     const drawList=()=>{
       summary.textContent=db.users.length.toLocaleString('fa-IR')+' کاربر ذخیره‌شده · '+db.users.filter(u=>u.enabled&&u.permissions.includes('manage-users')).length.toLocaleString('fa-IR')+' مدیر فعال کاربران';
@@ -9118,7 +9155,7 @@ const Access = (() => {
     const drawEditor=()=>{
       clear(area);
       const original=db.users.find(u=>u.id===selected);
-      const draft=normalizeAccessUser(original?JSON.parse(JSON.stringify(original)):{id:crypto.randomUUID(),username:'',name:'',role:4,enabled:true,regions:[],sheets:[],categories:[],permissions:[]});
+      const draft=normalizeAccessUser(original?JSON.parse(JSON.stringify(original)):{id:crypto.randomUUID(),username:'',name:'',role:4,enabled:true,regions:[],sheets:[],categories:[],permissions:[],equipmentPolicyVersion:1});
       const form=el('form',{id:'user-form','data-mode':original?'edit':'create','data-user-id':draft.id}),error=el('p',{id:'user-error',role:'alert',class:'category-error'});
       const mode=el('div',{class:'user-editor-mode'},
         el('h3',{id:'user-mode-title',text:original?'ویرایش کاربر: '+original.username:'افزودن کاربر جدید'}),
@@ -9171,6 +9208,19 @@ const Access = (() => {
       }
       scopes.appendChild(categories);syncRegions();
 
+      const equipmentScope=structuredClone(draft.equipmentScope),eqScope=el('section',{id:'user-equipment-scope',class:'user-scope-section'},el('h4',{text:'محدودهٔ تجهیزات مجاز'}),el('p',{class:'hint',text:'ابعاد با «و» ترکیب می‌شوند. همه یعنی دسته‌های فعلی و آینده؛ انتخاب‌های تکی با شناسه ثابت ذخیره می‌شوند و تغییر نام خودکار است. هیچ انتخابی یعنی عدم دسترسی در آن بُعد.'}));
+      equipmentScopeRefresh=()=>{eqScope.querySelectorAll('fieldset,.category-error').forEach(n=>n.remove());try{const raw=localStorage.getItem('fam.equipment.inventory.v3'),old=localStorage.getItem('fam.equipment.inventory.v2');const data=FamEquipmentInventory.validate(raw?JSON.parse(raw):old?FamEquipmentInventory.migrateV2(JSON.parse(old)):FamEquipmentInventory.defaults());
+       for(const [key,label]of Object.entries(FamEquipmentInventory.dimensions)){
+        const group=el('fieldset',{class:'permission-group'},el('legend',{text:label})),selected=new Set(equipmentScope[key]);
+        const all=el('input',{type:'checkbox','data-equipment-all':key,checked:selected.has('*')});
+        const redraw=()=>{group.querySelectorAll('input[data-equipment-ref]').forEach(input=>{input.checked=selected.has(input.dataset.equipmentRef);input.disabled=selected.has('*');});equipmentScope[key]=[...selected];};
+        all.addEventListener('change',()=>{selected.delete('*');if(all.checked)selected.add('*');redraw();});group.appendChild(el('label',{class:'access-check'},all,txt('همهٔ دسته‌های فعلی و آینده')));
+        for(const item of data.catalog[key]){const parent=item.typeId?data.catalog.types.find(t=>t.id===item.typeId):item.siteKindId?data.catalog.siteKinds.find(k=>k.id===item.siteKindId):null;const check=el('input',{type:'checkbox','data-equipment-dimension':key,'data-equipment-ref':item.id,checked:selected.has(item.id),onchange:e=>{e.target.checked?selected.add(item.id):selected.delete(item.id);redraw();}});group.appendChild(el('label',{class:'access-check'},check,txt(item.name+(parent?' — '+parent.name:''))));}
+        for(const id of selected)if(id!=='*'&&!data.catalog[key].some(x=>x.id===id))group.appendChild(el('p',{class:'category-error',text:'دسته حذف‌شده؛ دسترسی مسدود: '+id}));redraw();eqScope.appendChild(group);
+       }
+      }catch(e){eqScope.appendChild(el('p',{class:'category-error',text:'دسته‌های تجهیزات خوانده نشدند؛ انتخاب‌های قبلی حفظ می‌شوند.'}));}
+      };equipmentScopeRefresh();scopes.appendChild(eqScope);
+
       const permissionSection=el('section',{id:'user-permissions',class:'user-permission-section'},
         el('h4',{text:'۲. عملیات مجاز'}),
         el('p',{class:'hint',text:'هر عملیات فقط در محدودهٔ دادهٔ انتخاب‌شده در بالا اعمال می‌شود. مجوزهای مدیریتی مستقل از داده هستند.'}));
@@ -9191,7 +9241,7 @@ const Access = (() => {
         saving=true;save.disabled=true;saveAndNew.disabled=true;cancel.disabled=true;error.textContent='';
         try{
           const changed={...draft,username:username(un.input.value),name:name.input.value.trim(),enabled:enabled.checked,
-            categories:[...cs],regions:cs.has('provinces')?[...rs]:[],sheets:[],permissions:[...ps],revision:crypto.randomUUID()};
+            categories:[...cs],regions:cs.has('provinces')?[...rs]:[],sheets:[],permissions:[...ps],equipmentScope,equipmentPolicyVersion:1,revision:crypto.randomUUID()};
           if(!/^[a-z0-9_.-]{3,40}$/.test(changed.username))throw Error('نام کاربری باید ۳ تا ۴۰ نویسه انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.');
           if(!changed.name || changed.name.length>60)throw Error('نام نمایشی باید بین ۱ تا ۶۰ نویسه باشد.');
           if(db.users.some(u=>u.id!==changed.id && u.username===changed.username))throw Error('این نام کاربری قبلاً ثبت شده است.');
@@ -9242,7 +9292,7 @@ const Access = (() => {
     // Data/region changes in another tab may change the allowed region of a sheet.
     if(e.key===LS_KEY && current()){document.documentElement.classList.add('auth-pending');document.getElementById('access-viewer')?.remove();location.reload();}
   });
-  return Object.freeze({start,current,can,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,editOwnPassword,manageUsers,logout,renderViewer});
+  return Object.freeze({start,current,can,equipmentView,equipmentMerge,equipmentNode,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,editOwnPassword,manageUsers,logout,renderViewer});
 })();
 </script>
 <script id="fam-province-records-js">
@@ -9810,11 +9860,11 @@ async function startProvinceAdd(selectedName) {
   let errRevision=0,repairDialog=null,portSelected=new Set(),recovered=new Set();
   try{const raw=localStorage.getItem(KEY);if(raw!==null)standards=T.validateStandards(JSON.parse(raw));}catch(e){standardIssue='استانداردهای ذخیره‌شده قابل خواندن نیست؛ برای حفظ اطلاعات ویرایش غیرفعال است.';}
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-  const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const b=el('button',cls,text);b.type='button';b.addEventListener('click',handler);return b;};
+  const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const b=el('button',cls,text);b.type='button';b.addEventListener('click',handler);const permission=({'خروجی همهٔ تجهیزات':'equipment-export','خروجی اکسل چک‌لیست':'equipment-audit','ذخیره استاندارد':'equipment-standards'})[text];if(permission&&!isAuthorized(permission))b.disabled=true;if(text==='دریافت فرم ورود از دسته‌های فعلی'&&!isAuthorized('equipment-import')&&!isAuthorized('equipment-export'))b.disabled=true;return b;};
   const tools=(...items)=>{const row=el('div','eq-tools');row.append(...items);return row;};
   const note=(text,warning=false)=>el('div','eq-notice'+(warning?' warning':''),text);
   const find=(key,id)=>getInventory().catalog[key].find(x=>x.id===id),name=(key,id)=>find(key,id)?.name||'حذف‌شده / نامشخص';
-  const id=()=>crypto.randomUUID(),allowed=()=>{if(!isAuthorized())throw Error('دوباره وارد مدیریت تجهیزات شوید.');};
+  const id=()=>crypto.randomUUID(),allowed=(operation='equipment')=>{if(!isAuthorized(operation))throw Error('دوباره وارد مدیریت تجهیزات شوید.');};
   function select(parent,label,items,value,handler,key,all='انتخاب کنید…'){
    const wrap=el('label','eq-field',label),s=el('select','inp');if(key)s.id=key;const empty=el('option','',all);empty.value='';s.append(empty);
    for(const item of items){const o=el('option','',item.name);o.value=item.id;s.append(o);}if(value&&!items.some(x=>x.id===value)){const o=el('option','','دستهٔ قبلی حذف شده؛ اصلاح کنید');o.value=value;s.append(o);}s.value=value||'';
@@ -9824,17 +9874,17 @@ async function startProvinceAdd(selectedName) {
   function check(parent,text,value,handler,key){const wrap=el('label','eq-tool-checkbox'),n=el('input');n.type='checkbox';n.checked=value;if(key)n.id=key;n.addEventListener('change',()=>handler(n.checked));wrap.append(n,el('span','',text));parent.append(wrap);return n;}
   function table(parent,headers,rows){const wrap=el('div','eq-table-wrap'),table=el('table','eq-table'),head=el('thead'),hr=el('tr');headers.forEach(x=>hr.append(el('th','',x)));head.append(hr);table.append(head);const body=el('tbody');rows.forEach(cells=>{const row=el('tr');cells.forEach(text=>row.append(el('td','',String(text??''))));body.append(row);});table.append(body);wrap.append(table);parent.append(wrap);return body;}
   function download(sheets,filename){allowed();const book=XLSX.utils.book_new();for(const [title,rows]of sheets){const sheet=XLSX.utils.aoa_to_sheet(rows);sheet['!cols']=(rows[0]||[]).map((_,i)=>({wch:i===0?28:24}));XLSX.utils.book_append_sheet(book,sheet,title);}XLSX.writeFile(book,filename,{bookType:'xlsx',compression:true});}
-  function exportInventory(){allowed();E.download(getInventory(),{includeNodes:true});}
-  function template(){allowed();E.download(getInventory());}
+  function exportInventory(){allowed('equipment-export');E.download(getInventory(),{includeNodes:true});}
+  function template(){allowed(isAuthorized('equipment-import')?'equipment-import':'equipment-export');E.download(getInventory());}
   function excel(parent){
    parent.append(note('ورود اکسل واقعیِ مشخصات تجهیزات؛ بدون تغییر فایل‌های پایگاه داده. ثبت فقط پس از پیش‌نمایش و تأیید انجام می‌شود. رمز یا کانفیگ در فایل تجهیزات نگذارید.'));
    const templateButton=button('دریافت فرم ورود از دسته‌های فعلی',template);templateButton.id='eq-download-template';parent.append(tools(templateButton,button('خروجی همهٔ تجهیزات',exportInventory)));
    parent.append(note('قالب زنده است: هر بار از آخرین دسته‌ها و نام‌های همین برنامه ساخته می‌شود؛ دسته‌ها فقط از فهرست مجاز با خطای توقف انتخاب می‌شوند؛ مدل، محل و الگوها وابسته‌اند. دستهٔ جدید را ابتدا در برنامه بسازید. ابتدا فرم به‌روز بگیرید، ردیف‌ها را تکمیل و سپس همین‌جا وارد کنید. بعد از تغییر دسته‌ها، فایل قبلی قابل ورود نیست.'));
    const options=el('div','eq-tool-options');check(options,'به‌روزرسانی نودهای موجود بر اساس شناسه / IP',update,value=>{update=value;preview=null;draw();},'eq-import-update');parent.append(options);
-   const label=el('label','eq-field','انتخاب فایل xlsx تجهیزات'),file=el('input','inp');file.type='file';file.accept='.xlsx';file.id='eq-inventory-file';label.append(file);parent.append(label);
+   const label=el('label','eq-field','انتخاب فایل xlsx تجهیزات'),file=el('input','inp');file.disabled=!isAuthorized('equipment-import');file.type='file';file.accept='.xlsx';file.id='eq-inventory-file';label.append(file);parent.append(label);
    file.addEventListener('change',async()=>{
     const f=file.files[0],token=++generation;preview=null;importError='';if(!f)return;
-    try{allowed();if(!/\.xlsx$/i.test(f.name)||f.size>5*1024*1024)throw Error('فقط xlsx با اندازهٔ حداکثر ۵ مگابایت مجاز است.');
+    try{allowed('equipment-import');if(!/\.xlsx$/i.test(f.name)||f.size>5*1024*1024)throw Error('فقط xlsx با اندازهٔ حداکثر ۵ مگابایت مجاز است.');
      const buffer=await f.arrayBuffer();if(token!==generation||!isAuthorized())return;
      const imported=E.read(buffer);T.assertCatalogSnapshot(getInventory(),imported.snapshot);const rows=imported.rows;
      preview=T.prepareImport(getInventory(),rows,{update});
@@ -9844,11 +9894,11 @@ async function startProvinceAdd(selectedName) {
    if(preview){const p=preview;parent.append(note(p.counts.added+' نود جدید · '+p.counts.updated+' ویرایش · '+p.counts.categories+' دستهٔ جدید · '+p.errors.length+' خطا — هنوز ثبت نشده است.',!!p.errors.length));
     if(p.errors.length){table(parent,['ردیف','خطا'],p.errors.slice(0,100).map(x=>[x.row||'کل فایل',x.message]));if(p.errors.length>100)parent.append(note('فقط ۱۰۰ خطای اول نمایش داده شده؛ همهٔ خطاها باید برطرف شوند.'));}
     else{const body=table(parent,['نام','IP','نوع / مدل','منطقه / محل'],p.next.nodes.slice(0,25).map(n=>[n.name,n.host,p.next.catalog.models.find(x=>x.id===n.modelId)?.name||'',p.next.catalog.sites.find(x=>x.id===n.siteId)?.name||'']));body.closest('table').setAttribute('aria-label','پیش‌نمایش موجودی پس از ورود');parent.append(note('پیش‌نمایش ۲۵ نود اولِ کل موجودیِ پس از ثبت؛ هیچ نودی خارج از فایل حذف نمی‌شود.'));
-     const apply=button('تأیید و ثبت ورود',()=>{try{allowed();if(p.base!==JSON.stringify(M.validate(getInventory())))throw Error('موجودی تغییر کرده؛ فایل را دوباره پیش‌نمایش کنید.');if(!confirm('ورود '+p.counts.added+' نود جدید و ویرایش '+p.counts.updated+' نود ثبت شود؟'))return;saveInventory(p.next);preview=null;importError='ورود با موفقیت ثبت شد؛ دسته‌بندی‌ها خودکار به‌روز شدند.';draw();}catch(e){importError=e.name==='QuotaExceededError'?'فضای مرورگر کافی نیست؛ هیچ ردیفی ثبت نشد.':e.message;draw();}},'btn btn-primary');apply.id='eq-import-apply';parent.append(apply);}
+     const apply=button('تأیید و ثبت ورود',()=>{try{allowed('equipment-import');if(p.base!==JSON.stringify(M.validate(getInventory())))throw Error('موجودی تغییر کرده؛ فایل را دوباره پیش‌نمایش کنید.');if(!confirm('ورود '+p.counts.added+' نود جدید و ویرایش '+p.counts.updated+' نود ثبت شود؟'))return;saveInventory(p.next);preview=null;importError='ورود با موفقیت ثبت شد؛ دسته‌بندی‌ها خودکار به‌روز شدند.';draw();}catch(e){importError=e.name==='QuotaExceededError'?'فضای مرورگر کافی نیست؛ هیچ ردیفی ثبت نشد.':e.message;draw();}},'btn btn-primary');apply.id='eq-import-apply';parent.append(apply);}
    }
   }
   function newDraft(){return {id:id(),name:'',modelId:'',siteKindId:null,siteId:null,checks:[{id:id(),name:'',operator:'exact-line',pattern:''}]};}
-  function saveStandards(next){allowed();if(standardIssue)throw Error(standardIssue);const clean=T.validateStandards(next);try{localStorage.setItem(KEY,JSON.stringify(clean));}catch(e){throw Error('استاندارد ذخیره نشد؛ فضای مرورگر را بررسی کنید.');}standards=clean;auditResult=null;}
+  function saveStandards(next){allowed('equipment-standards');if(standardIssue)throw Error(standardIssue);const clean=T.validateStandards(next);try{localStorage.setItem(KEY,JSON.stringify(clean));}catch(e){throw Error('استاندارد ذخیره نشد؛ فضای مرورگر را بررسی کنید.');}standards=clean;auditResult=null;}
   function standardsUI(parent){
    parent.append(note('استاندارد بر اساس مدل و محل استفاده اعمال می‌شود. آیتم‌ها تطبیق متنیِ دادهٔ آزمایشی‌اند، نه تحلیل کامل Cisco. متن کانفیگ واقعی یا رمز وارد نکنید.'));
    if(standardIssue)parent.append(note(standardIssue,true));
@@ -9861,21 +9911,21 @@ async function startProvinceAdd(selectedName) {
    select(editor,'محل دقیق (اختیاری)',getInventory().catalog.sites.filter(x=>!s.siteKindId||x.siteKindId===s.siteKindId),s.siteId,v=>{s.siteId=v||null;if(v)s.siteKindId=find('sites',v).siteKindId;draw();},'eq-standard-site','همهٔ محل‌های مرتبط');
    s.checks.forEach((c,i)=>{const row=el('div','eq-tool-check');input(row,'عنوان آیتم '+(i+1),c.name,v=>c.name=v,'eq-standard-check-'+i);select(row,'روش مقایسه',[{id:'exact-line',name:'وجود خط دقیق'},{id:'contains',name:'وجود عبارت'},{id:'not-contains',name:'نبود عبارت'}],c.operator,v=>c.operator=v,'eq-standard-op-'+i);input(row,'عبارت یا خط مورد انتظار',c.pattern,v=>c.pattern=v,'eq-standard-pattern-'+i,300);row.append(button('حذف آیتم',()=>{s.checks.splice(i,1);draw();},'eq-mini-action eq-danger'));editor.append(row);});
    const add=button('＋ آیتم چک‌لیست',()=>{s.checks.push({id:id(),name:'',operator:'exact-line',pattern:''});draw();});add.disabled=s.checks.length>=50||!!standardIssue;
-   const error=el('div','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary','ذخیره استاندارد');submit.type='submit';submit.id='eq-standard-save';submit.disabled=!!standardIssue;editor.append(add,error,tools(submit,button('فرم استاندارد جدید',()=>{draft=newDraft();draw();})));
+   const error=el('div','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary','ذخیره استاندارد');submit.type='submit';submit.id='eq-standard-save';submit.disabled=!!standardIssue||!isAuthorized('equipment-standards');editor.append(add,error,tools(submit,button('فرم استاندارد جدید',()=>{draft=newDraft();draw();})));
    editor.addEventListener('submit',event=>{event.preventDefault();try{const model=find('models',s.modelId);if(!model||!['router','switch'].includes(find('types',model.typeId)?.kind)||s.siteKindId&&!find('siteKinds',s.siteKindId)||s.siteId&&find('sites',s.siteId)?.siteKindId!==s.siteKindId)throw Error('مدل و محل معتبر و سازگار انتخاب کنید.');const next=structuredClone(standards),at=next.items.findIndex(x=>x.id===s.id);if(at<0)next.items.push(s);else next.items[at]=s;saveStandards(next);draft=newDraft();draw();}catch(e){error.textContent=e.message;}});
    list.append(el('h4','','استانداردهای تعریف‌شده'));
-   for(const policy of standards.items){const row=el('article','eq-tool-policy');row.append(el('strong','',policy.name),el('p','eq-muted',name('models',policy.modelId)+' · '+(policy.siteId?name('sites',policy.siteId):policy.siteKindId?name('siteKinds',policy.siteKindId):'همهٔ محل‌ها')+' · '+policy.checks.length+' آیتم'));
-    const edit=button('ویرایش',()=>{draft=structuredClone(policy);draw();}),remove=button('حذف',()=>{if(!confirm('فقط استاندارد «'+policy.name+'» حذف شود؟ نودها حذف نمی‌شوند.'))return;try{saveStandards({version:1,items:standards.items.filter(x=>x.id!==policy.id)});draft=newDraft();draw();}catch(e){alert(e.message);}});edit.disabled=remove.disabled=!!standardIssue;edit.setAttribute('aria-label','ویرایش استاندارد '+policy.name);remove.setAttribute('aria-label','حذف استاندارد '+policy.name);row.append(tools(edit,remove));list.append(row);}
+   for(const policy of standards.items.filter(p=>find('models',p.modelId)&&(!p.siteKindId||find('siteKinds',p.siteKindId))&&(!p.siteId||find('sites',p.siteId)))){const row=el('article','eq-tool-policy');row.append(el('strong','',policy.name),el('p','eq-muted',name('models',policy.modelId)+' · '+(policy.siteId?name('sites',policy.siteId):policy.siteKindId?name('siteKinds',policy.siteKindId):'همهٔ محل‌ها')+' · '+policy.checks.length+' آیتم'));
+    const edit=button('ویرایش',()=>{draft=structuredClone(policy);draw();}),remove=button('حذف',()=>{if(!confirm('فقط استاندارد «'+policy.name+'» حذف شود؟ نودها حذف نمی‌شوند.'))return;try{saveStandards({version:1,items:standards.items.filter(x=>x.id!==policy.id)});draft=newDraft();draw();}catch(e){alert(e.message);}});edit.disabled=remove.disabled=!!standardIssue||!isAuthorized('equipment-standards');edit.setAttribute('aria-label','ویرایش استاندارد '+policy.name);remove.setAttribute('aria-label','حذف استاندارد '+policy.name);row.append(tools(edit,remove));list.append(row);}
    if(!standards.items.length)list.append(note('استانداردی تعریف نشده؛ نتیجهٔ بررسی بدون استاندارد «تأییدشده» محسوب نمی‌شود.'));grid.append(editor,list);parent.append(grid);
    const audit=el('section','eq-tool-card');audit.append(el('h4','','بررسی نود و خروجی چک‌لیست'));
    const nodeSelectBox=el('div');input(audit,'جست‌وجوی نام یا IP نود',auditQuery,v=>{auditQuery=v;drawNodeOptions();},'eq-audit-search');
    function drawNodeOptions(){nodeSelectBox.replaceChildren();const nodes=getInventory().nodes.filter(n=>n.id===nodeId||[n.name,n.host].some(x=>x.toLowerCase().includes(auditQuery.toLowerCase())));select(nodeSelectBox,'نود مورد بررسی',nodes.map(n=>({id:n.id,name:n.name+' · '+n.host})),nodeId,v=>{nodeId=v;observed='';auditResult=null;draw();},'eq-audit-node');}
    drawNodeOptions();audit.append(nodeSelectBox);if(nodeId){const n=getInventory().nodes.find(n=>n.id===nodeId);if(n)audit.append(note(name('models',n.modelId)+' · '+name('sites',n.siteId)));}
    const observedLabel=el('label','eq-field','کانفیگ ساختگی همین نود (فقط RAM)'),text=el('textarea','inp eq-tool-observed');text.id='eq-audit-observed';text.dir='ltr';text.maxLength=12000;text.spellcheck=false;text.autocomplete='off';text.value=observed;observedLabel.append(text);audit.append(observedLabel);
-   const report=el('div');report.id='eq-audit-report';const exportButton=button('خروجی اکسل چک‌لیست',()=>{try{allowed();if(!auditResult)throw Error('ابتدا بررسی را اجرا کنید.');const live=T.audit(getInventory(),standards,nodeId,observed);if(live.signature!==auditResult.signature)throw Error('نود یا استاندارد تغییر کرده؛ بررسی را دوباره اجرا کنید.');download([['چک‌لیست',[
-    ['منبع','نود','IP','استاندارد','آیتم','نتیجه','زمان'],...auditResult.rows.map(r=>[auditResult.source,auditResult.node.name,auditResult.node.host,r.standard,r.check,auditLabel(r.status),auditResult.at])]]],'FAM-Checklist-DEMO.xlsx');}catch(e){report.replaceChildren(note(e.message,true));}});exportButton.id='eq-audit-export';exportButton.disabled=!auditResult?.rows.length;
+   const report=el('div');report.id='eq-audit-report';const exportButton=button('خروجی اکسل چک‌لیست',()=>{try{allowed('equipment-audit');if(!auditResult)throw Error('ابتدا بررسی را اجرا کنید.');const live=T.audit(getInventory(),standards,nodeId,observed);if(live.signature!==auditResult.signature)throw Error('نود یا استاندارد تغییر کرده؛ بررسی را دوباره اجرا کنید.');download([['چک‌لیست',[
+    ['منبع','نود','IP','استاندارد','آیتم','نتیجه','زمان'],...auditResult.rows.map(r=>[auditResult.source,auditResult.node.name,auditResult.node.host,r.standard,r.check,auditLabel(r.status),auditResult.at])]]],'FAM-Checklist-DEMO.xlsx');}catch(e){report.replaceChildren(note(e.message,true));}});exportButton.id='eq-audit-export';exportButton.disabled=!isAuthorized('equipment-audit')||!auditResult?.rows.length;
    text.addEventListener('input',()=>{observed=text.value;auditResult=null;report.replaceChildren();exportButton.disabled=true;});
-   const run=button('بررسی چک‌لیست آزمایشی',()=>{try{allowed();auditResult={...T.audit(getInventory(),standards,nodeId,observed),at:new Date().toISOString()};draw();}catch(e){report.replaceChildren(note(e.message,true));}},'btn btn-primary');run.id='eq-audit-run';run.disabled=!!standardIssue;
+   const run=button('بررسی چک‌لیست آزمایشی',()=>{try{allowed('equipment-audit');auditResult={...T.audit(getInventory(),standards,nodeId,observed),at:new Date().toISOString()};draw();}catch(e){report.replaceChildren(note(e.message,true));}},'btn btn-primary');run.id='eq-audit-run';run.disabled=!!standardIssue||!isAuthorized('equipment-audit');
    audit.append(tools(run,exportButton),report);if(auditResult){report.append(note(auditResult.source+'؛ نتیجه، وضعیت واقعی دستگاه نیست.'));if(!auditResult.rows.length)report.append(note('استاندارد متناسب با مدل و محل این نود تعریف نشده است.',true));else table(report,['استاندارد','آیتم','نتیجه'],auditResult.rows.map(r=>[r.standard,r.check,auditLabel(r.status)]));}parent.append(audit);
   }
   const auditLabel=status=>({ok:'منطبق (آزمایشی)',fail:'نامنطبق (آزمایشی)',unknown:'نامشخص / بررسی‌نشده'})[status];
@@ -9896,16 +9946,16 @@ async function startProvinceAdd(selectedName) {
    const bulk=el('div','eq-tool-options');let bulkScenario='';select(bulk,'سناریوی ساختگی برای انتخاب‌شده‌ها',scenarioItems,'',v=>bulkScenario=v,'eq-err-bulk','انتخاب سناریو');bulk.append(button('اعمال سناریو',()=>{if(!bulkScenario)return;selected.forEach(id=>scenarios[id]=bulkScenario);invalidateErr();draw();}));parent.append(bulk);
    const list=el('div','eq-tool-switch-list');for(const n of nodes.slice(page*25,page*25+25)){const row=el('div','eq-tool-switch');check(row,n.name+' · '+n.host,selected.has(n.id),v=>{v?selected.add(n.id):selected.delete(n.id);invalidateErr();draw();},'eq-err-node-'+n.id);row.append(el('span','eq-muted',name('models',n.modelId)+' · '+name('regions',n.regionId)));select(row,'سناریوی این سوئیچ',scenarioItems,scenarios[n.id],v=>{scenarios[n.id]=v||'unknown';invalidateErr();draw();},'eq-err-scenario-'+n.id,'بررسی نشده');list.append(row);}parent.append(list);
    if(nodes.length>25){const prev=button('قبلی',()=>{page--;draw();}),next=button('بعدی',()=>{page++;draw();});prev.disabled=page===0;next.disabled=page===maxPage;parent.append(tools(prev,el('span','eq-muted','صفحه '+(page+1)+' از '+(maxPage+1)),next));}
-   const report=el('div');report.id='eq-err-report';const run=button('بررسی پورت‌های سوئیچ‌های انتخاب‌شده (نمایشی)',()=>{try{allowed();if(!selected.size)throw Error('حداقل یک سوئیچ انتخاب کنید.');if(!confirm('بررسی نمایشی '+selected.size+' سوئیچ انتخاب‌شده در همهٔ دسته‌ها انجام شود؟ هیچ اتصالی برقرار نمی‌شود.'))return;invalidateErr();errResult=T.simulateErr(getInventory(),[...selected],scenarios);errSignature=JSON.stringify(getInventory());errAt=new Date().toISOString();draw();}catch(e){report.replaceChildren(note(e.message,true));}},'btn btn-primary');run.id='eq-err-run';
-   const exportButton=button('خروجی اکسل Err-disabled',()=>{try{allowed();if(!errResult||errSignature!==JSON.stringify(getInventory()))throw Error('موجودی تغییر کرده؛ دوباره بررسی کنید.');download([['Err-disabled',[
-    ['منبع','سوئیچ','IP','مدل','نتیجه بررسی','پورت ساختگی','رفع نمایشی','زمان'],...errResult.flatMap(r=>(r.ports.length?r.ports:['']).map(port=>[r.source,r.node.name,r.node.host,name('models',r.node.modelId),errLabel(r.scenario),port,port?(recovered.has(r.node.id+':'+port)?'رفع نمایشی شد؛ وضعیت واقعی نامعلوم':'انجام نشده'):'غیرقابل رفع',errAt]))]]],'FAM-Errdisabled-DEMO.xlsx');}catch(e){report.replaceChildren(note(e.message,true));}});exportButton.id='eq-err-export';exportButton.disabled=!errResult;parent.append(tools(run,exportButton),report);
+   const report=el('div');report.id='eq-err-report';const run=button('بررسی پورت‌های سوئیچ‌های انتخاب‌شده (نمایشی)',()=>{try{allowed('equipment-scan');if(!selected.size)throw Error('حداقل یک سوئیچ انتخاب کنید.');if(!confirm('بررسی نمایشی '+selected.size+' سوئیچ انتخاب‌شده در همهٔ دسته‌ها انجام شود؟ هیچ اتصالی برقرار نمی‌شود.'))return;invalidateErr();errResult=T.simulateErr(getInventory(),[...selected],scenarios);errSignature=JSON.stringify(getInventory());errAt=new Date().toISOString();draw();}catch(e){report.replaceChildren(note(e.message,true));}},'btn btn-primary');run.id='eq-err-run';run.disabled=!isAuthorized('equipment-scan');
+   const exportButton=button('خروجی اکسل Err-disabled',()=>{try{allowed('equipment-scan');if(!errResult||errSignature!==JSON.stringify(getInventory()))throw Error('موجودی تغییر کرده؛ دوباره بررسی کنید.');download([['Err-disabled',[
+    ['منبع','سوئیچ','IP','مدل','نتیجه بررسی','پورت ساختگی','رفع نمایشی','زمان'],...errResult.flatMap(r=>(r.ports.length?r.ports:['']).map(port=>[r.source,r.node.name,r.node.host,name('models',r.node.modelId),errLabel(r.scenario),port,port?(recovered.has(r.node.id+':'+port)?'رفع نمایشی شد؛ وضعیت واقعی نامعلوم':'انجام نشده'):'غیرقابل رفع',errAt]))]]],'FAM-Errdisabled-DEMO.xlsx');}catch(e){report.replaceChildren(note(e.message,true));}});exportButton.id='eq-err-export';exportButton.disabled=!errResult||!isAuthorized('equipment-scan');parent.append(tools(run,exportButton),report);
    if(errResult){
     report.append(el('h4','','نتیجهٔ بررسی پورت‌ها'),note('نام و IP سوئیچ کنار هر پورت مشخص است. فقط پورت‌های خطادار را برای رفع انتخاب کنید؛ نتایج و رفع همگی نمایشی‌اند.'));
     table(report,['سوئیچ','IP','نتیجه بررسی','پورت‌های خطادار'],errResult.map(r=>[r.node.name,r.node.host,errLabel(r.scenario),r.ports.join('، ')||'—']));
     const ports=errResult.flatMap(r=>r.ports.map(port=>({key:r.node.id+':'+port,node:r.node,port}))),pending=ports.filter(p=>!recovered.has(p.key));
     if(ports.length){const toolbar=el('div','eq-tools'),all=pending.length>0&&pending.every(p=>portSelected.has(p.key));const master=check(toolbar,'تیک همهٔ پورت‌های خطادارِ رفع‌نشده',all,value=>{closeRepair();pending.forEach(p=>value?portSelected.add(p.key):portSelected.delete(p.key));errRevision++;draw();},'eq-err-port-all');master.disabled=!pending.length;master.indeterminate=!all&&pending.some(p=>portSelected.has(p.key));report.append(toolbar);
      const list=el('div','eq-err-port-list');for(const p of ports){const row=el('div','eq-err-port-row'),status=recovered.has(p.key)?'رفع نمایشی شد — وضعیت واقعی نامعلوم':'Err-disabled — نمایشی';const box=check(row,p.node.name+' · '+p.node.host+' · '+p.port,portSelected.has(p.key),value=>{closeRepair();value?portSelected.add(p.key):portSelected.delete(p.key);errRevision++;draw();});box.dataset.portKey=p.key;box.disabled=recovered.has(p.key);row.append(el('span','eq-muted',status));list.append(row);}report.append(list);
-     const repair=button('بازبینی و تأیید رفع پورت‌های انتخاب‌شده',()=>{try{allowed();openRepair();}catch(e){report.append(note(e.message,true));}},'btn btn-primary');repair.id='eq-err-repair-review';repair.disabled=!portSelected.size;report.append(tools(repair));
+     const repair=button('بازبینی و تأیید رفع پورت‌های انتخاب‌شده',()=>{try{allowed('equipment-repair');openRepair();}catch(e){report.append(note(e.message,true));}},'btn btn-primary');repair.id='eq-err-repair-review';repair.disabled=!portSelected.size||!isAuthorized('equipment-repair');report.append(tools(repair));
     }else report.append(note('پورت خطاداری برای رفع گزارش نشده است. نتیجهٔ نامشخص به معنی پاک‌بودن نیست.'));
    }
   }
@@ -9920,7 +9970,7 @@ async function startProvinceAdd(selectedName) {
    const ack=check(dialog,'نام سوئیچ، IP و پورت‌های بالا را بررسی کردم؛ رفع فقط نمایشی است.',false,value=>apply.disabled=!value,'eq-err-repair-ack');
    const error=el('div','eq-error');error.setAttribute('role','alert');
    const apply=button('تأیید و رفع نمایشی خطا',()=>{try{
-    allowed();if(!ack.checked||revision!==errRevision||signature!==JSON.stringify(errResult)||JSON.stringify(keys)!==JSON.stringify([...portSelected])||errSignature!==JSON.stringify(getInventory()))throw Error('انتخاب یا نتیجه تغییر کرده؛ دوباره بررسی و تأیید کنید.');
+    allowed('equipment-repair');if(!ack.checked||revision!==errRevision||signature!==JSON.stringify(errResult)||JSON.stringify(keys)!==JSON.stringify([...portSelected])||errSignature!==JSON.stringify(getInventory()))throw Error('انتخاب یا نتیجه تغییر کرده؛ دوباره بررسی و تأیید کنید.');
     const live=T.errRecoveryPlan(getInventory(),errResult,keys);if(JSON.stringify(live)!==JSON.stringify(plan))throw Error('مقصدها تغییر کرده‌اند؛ دوباره بررسی کنید.');
     live.targets.forEach(t=>recovered.add(t.key));portSelected.clear();errRevision++;closeRepair();draw();
    }catch(e){error.textContent=e.message;apply.disabled=true;}},'btn btn-primary');apply.id='eq-err-repair-apply';apply.disabled=true;
@@ -9940,15 +9990,15 @@ async function startProvinceAdd(selectedName) {
 document.addEventListener('DOMContentLoaded',()=>{
   const root=document.getElementById('equipment-workspace');if(!root)return;
   const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',OLD_KEY='fam.equipment.inventory.v2',CARDS_KEY='fam.equipment.cards.v1';
-  let inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
+  let fullInventory=M.defaults(),inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
   let scenario='clean',result=null,tab='overview',search='',busy=false,facet='overview',filters={},activeField=null,onlyReview=false;
   let cardSettings=M.defaultCards(),cardsIssue='',groupIssue='',workspaceTab='inventory';
   const checks=new Map(),uid=()=>crypto.randomUUID();
   const can=()=>typeof Access!=='undefined'&&Access.can('equipment');
-  const configuration=FamEquipmentConfiguration.create({getInventory:()=>inventory,isAuthorized:()=>!!credentials&&can()&&credentials.userId===Access.current()?.id});
-  const equipmentTools=FamEquipmentTools.create({getInventory:()=>inventory,saveInventory:next=>save(next),isAuthorized:()=>!!credentials&&can()&&credentials.userId===Access.current()?.id});
+  const configuration=FamEquipmentConfiguration.create({getInventory:()=>Access.equipmentView(fullInventory),isAuthorized:()=>!!credentials&&can()&&Access.can('equipment-configuration')&&credentials.userId===Access.current()?.id});
+  const equipmentTools=FamEquipmentTools.create({getInventory:()=>Access.equipmentView(fullInventory),saveInventory:next=>save(next),isAuthorized:(operation='equipment')=>!!credentials&&can()&&Access.can(operation)&&credentials.userId===Access.current()?.id});
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-  const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const n=el('button',cls,text);n.type='button';n.addEventListener('click',handler);return n;};
+  const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const n=el('button',cls,text);n.type='button';n.addEventListener('click',handler);const permission=({'＋ افزودن نود':'equipment-add','＋ نود':'equipment-add','مدیریت این دسته‌ها':'equipment-catalog','افزودن نود':'equipment-add','حذف نود':'equipment-delete','مدیریت دسته‌ها':'equipment-catalog','＋ افزودن زیرمجموعه':'equipment-catalog','خروجی اکسل همهٔ تجهیزات':'equipment-export','پیکربندی این انتخاب':'equipment-configuration','تأیید بازیابی Gi0/1':'equipment-repair','بررسی وضعیت پورت‌ها':'equipment-scan','ویرایش مشخصات نود':'equipment-edit','＋ افزودن کارت':'equipment-cards'})[text];if(permission&&!Access.can(permission))n.disabled=true;return n;};
   const tools=(...buttons)=>{const n=el('div','eq-tools');n.append(...buttons);return n;};
   const notice=(text,cls='')=>el('div','eq-notice '+cls,text);
   function heading(title,sub){const n=el('div','eq-heading');n.append(el('h3','',title),el('p','',sub));return n;}
@@ -9972,6 +10022,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function saveCards(next){
     if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
+    if(!Access.can('equipment-cards'))throw Error('مجوز مدیریت کارت‌های تجهیزات ندارید.');
     if(cardsIssue)throw Error(cardsIssue);
     const clean=M.validateCards(next);
     try{localStorage.setItem(CARDS_KEY,JSON.stringify(clean));}catch(e){throw Error('تنظیمات کارت ذخیره نشد؛ فضای ذخیره‌سازی مرورگر را بررسی کنید.');}
@@ -9980,7 +10031,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function save(next){
     if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
     if(storageIssue)throw Error(storageIssue);
-    const clean=M.validate(next);localStorage.setItem(KEY,JSON.stringify(clean));inventory=clean;groupIssue='';
+    const clean=Access.equipmentMerge(fullInventory,next);localStorage.setItem(KEY,JSON.stringify(clean));fullInventory=clean;inventory=Access.equipmentView(clean);document.dispatchEvent(new Event('fam-equipment-changed'));groupIssue='';
     for(const [field,key]of Object.entries(lookup))if(filters[field]&&!find(key,filters[field])){delete filters[field];if(activeField===field)activeField=null;}
   }
   const navigate=next=>{epoch++;path=next;result=null;tab='overview';busy=false;render();};
@@ -10031,6 +10082,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     dialog.append(heading(title,description));document.body.append(dialog);return {dialog,close};
   }
   function editNode(node=null){
+    if(!Access.can(node?'equipment-edit':'equipment-add'))return;
     if(!can()||storageIssue)return;
     const initial=node||{...filters};
     if(initial.modelId&&!initial.typeId)initial.typeId=find('models',initial.modelId)?.typeId;
@@ -10075,6 +10127,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     dialog.append(form);dialog.showModal();name.focus();
   }
   function manageCatalog(initialKey='types',initialItem=null,preset={}){
+    if(!Access.can('equipment-catalog'))return;
     if(!can()||storageIssue)return;
     const {dialog,close}=dialogShell('مدیریت دسته‌بندی‌ها','نوع‌ها، مدل‌ها، مناطق و محل‌ها را خودتان تعریف کنید. دستهٔ استفاده‌شده بدون تعیین تکلیف نودها حذف نمی‌شود.',true);
     const shell=el('div','eq-catalog-shell'),keySelect=selectField(shell,'eq-catalog-dimension','بخش موردنظر',Object.entries(M.dimensions).map(([id,name])=>({id,name})),initialKey);
@@ -10114,15 +10167,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     return {};
   }
   function removeGroup(key,item){
+    if(!Access.can('equipment-catalog'))return;
     if(!confirm('دستهٔ «'+item.name+'» حذف شود؟ نودها حذف نمی‌شوند؛ دستهٔ دارای نود یا زیرمجموعه قابل حذف نیست.'))return;
     try{save(M.removeCategory(inventory,key,item.id));render();}
     catch(e){groupIssue=e.name==='QuotaExceededError'?'دسته حذف نشد؛ فضای ذخیره‌سازی مرورگر کافی نیست.':e.message;render();}
   }
   function removeNode(node){
+    if(!Access.can('equipment-delete'))return;
     if(!confirm('نود «'+node.name+'» از کل فهرست و همهٔ دسته‌ها حذف شود؟ این کار روی تجهیز واقعی اثری ندارد.'))return;
     try{save({...inventory,nodes:inventory.nodes.filter(n=>n.id!==node.id)});checks.delete(node.id);if(path.node===node.id)path={};render();}catch(e){alert(e.message);}
   }
   function removeMembership(node,field){
+    if(!Access.can('equipment-edit'))return;
     const label=nameOf(lookup[field],node[field]);
     if(!confirm('«'+node.name+'» فقط از دستهٔ «'+label+'» خارج شود؟ خود نود حذف نمی‌شود و در «نیازمند تکمیل» باقی می‌ماند.'))return;
     try{save(M.unassign(inventory,node.id,field));render();}catch(e){alert(e.message);}
@@ -10147,6 +10203,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(card.refId)applyFilter(M.cardFields[card.facet],card.refId);else navigate({});
   }
   function editCard(card=null){
+    if(!Access.can('equipment-cards'))return;
     if(!can()||!credentials||cardsIssue)return;
     const {dialog,close}=dialogShell(card?'ویرایش کارت':'افزودن کارت','این کارت فقط میان‌بُر نمایش است؛ تغییر یا حذف آن، دسته‌ها و نودها را حذف نمی‌کند.');
     const form=el('form','eq-editor eq-card-editor');
@@ -10171,6 +10228,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     dialog.append(form);dialog.showModal();name.focus();
   }
   function deleteCard(card){
+    if(!Access.can('equipment-cards'))return;
     if(!confirm('فقط کارت «'+card.name+'» حذف شود؟ دسته‌ها و تمام نودها باقی می‌مانند.'))return;
     try{saveCards({...cardSettings,cards:cardSettings.cards.filter(c=>c.id!==card.id)});render();}catch(e){alert(e.message);}
   }
@@ -10199,7 +10257,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const type=el('td');type.append(el('span','',nameOf('types',node.typeId)),el('span','eq-node-sub',nameOf('models',node.modelId)));
       const region=el('td','',nameOf('regions',node.regionId)),site=el('td');site.append(el('span','',nameOf('sites',node.siteId)),el('span','eq-node-sub',nameOf('siteKinds',node.siteKindId)));
       const status=el('td');status.append(el('span','eq-badge',M.incomplete(node)?'نیازمند تکمیل':checks.has(node.id)?'بررسی نمایشی شد':'بررسی نشده'));
-      const actions=el('td'),buttons=tools(button('ویرایش',()=>editNode(node)),button('حذف نود',()=>removeNode(node),'btn btn-ghost btn-sm eq-danger'));
+      const edit=button('ویرایش',()=>editNode(node));edit.disabled=!Access.can('equipment-edit');const actions=el('td'),buttons=tools(edit,button('حذف نود',()=>removeNode(node),'btn btn-ghost btn-sm eq-danger'));
       if(activeField&&filters[activeField]===node[activeField])buttons.append(button('حذف از دسته',()=>removeMembership(node,activeField)));
       actions.append(buttons);tr.append(name,type,region,site,status,actions);body.append(tr);
     }
@@ -10214,9 +10272,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     for(const [key,label,kind]of facets){const b=button('',()=>{facet=key;render();},'eq-tree-link'+(facet===key?' selected':''));b.append(icon(kind),el('span','',label));nav.append(b);}main.append(nav);
     if(facet==='overview'){
       const toolbar=el('div','eq-cards-toolbar');toolbar.append(el('h4','','کارت‌های من'));
-      const add=button('＋ افزودن کارت',()=>editCard());add.disabled=!!cardsIssue;toolbar.append(add);main.append(toolbar);
+      const add=button('＋ افزودن کارت',()=>editCard());add.disabled=!!cardsIssue||!Access.can('equipment-cards');toolbar.append(add);main.append(toolbar);
       const cards=el('div','eq-card-grid eq-smart-cards');
       for(const item of cardSettings.cards){
+        if(item.refId&&!cardTarget(item)&&Object.values(fullInventory.catalog).some(items=>items.some(x=>x.id===item.refId)))continue;
         const [,,kind]=facets.find(f=>f[0]===item.facet),card=el('article','eq-card tone-'+kind),go=button('',()=>openCard(item),'eq-card-main');
         go.setAttribute('aria-label','باز کردن '+item.name);
         const title=el('div','eq-shortcut-title');title.append(icon(kind),el('strong','',item.name));
@@ -10224,14 +10283,14 @@ document.addEventListener('DOMContentLoaded',()=>{
         go.title=item.name+' — '+hint;
         go.append(title,el('span','eq-muted',hint));
         const edit=button('ویرایش',()=>editCard(item),'eq-mini-action'),remove=button('حذف',()=>deleteCard(item),'eq-mini-action eq-danger');
-        edit.setAttribute('aria-label','ویرایش کارت '+item.name);remove.setAttribute('aria-label','حذف کارت '+item.name);edit.disabled=remove.disabled=!!cardsIssue;
+        edit.setAttribute('aria-label','ویرایش کارت '+item.name);remove.setAttribute('aria-label','حذف کارت '+item.name);edit.disabled=remove.disabled=!!cardsIssue||!Access.can('equipment-cards');
         card.append(go,tools(edit,remove));cards.append(card);
       }
       if(!cardSettings.cards.length)cards.append(notice('کارتی ندارید؛ با «افزودن کارت» میان‌بُر دلخواه بسازید. دسته‌ها از تب‌های بالا همچنان در دسترس‌اند.'));
       main.append(cards);
     }else{
       const key=groupCatalogKey(),headingRow=el('div','eq-table-toolbar');
-      const addCategory=button('＋ افزودن زیرمجموعه',()=>manageCatalog(key,null,groupPreset()));addCategory.disabled=!!storageIssue;
+      const addCategory=button('＋ افزودن زیرمجموعه',()=>manageCatalog(key,null,groupPreset()));addCategory.disabled=!!storageIssue||!Access.can('equipment-catalog');
       headingRow.append(el('h4','',facets.find(f=>f[0]===facet)[1]),tools(addCategory,button('مدیریت این دسته‌ها',()=>manageCatalog(key))));main.append(headingRow);
       if(groupIssue)main.append(notice(groupIssue,'warning'));
       const grid=el('div','eq-card-grid eq-smart-groups eq-groups-'+facet);for(const {item,field,count}of groupItems()){
@@ -10241,7 +10300,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         const add=button('＋ نود',()=>{applyFilter(field,item.id);editNode();},'eq-mini-action');add.setAttribute('aria-label','＋ نود در این دسته');
         const edit=button('ویرایش',()=>manageCatalog(key,item),'eq-mini-action');edit.setAttribute('aria-label','ویرایش دسته '+item.name);
         const remove=button('حذف',()=>removeGroup(key,item),'eq-mini-action eq-danger');remove.setAttribute('aria-label','حذف دسته '+item.name);
-        add.disabled=edit.disabled=remove.disabled=!!storageIssue;
+        add.disabled=!!storageIssue||!Access.can('equipment-add');edit.disabled=remove.disabled=!!storageIssue||!Access.can('equipment-catalog');
         box.append(go,tools(add,edit,remove));grid.append(box);
       }if(!groupItems().length)grid.append(notice('هنوز دسته‌ای تعریف نشده؛ از «افزودن زیرمجموعه» استفاده کنید.'));main.append(grid);
     }
@@ -10256,10 +10315,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     const exportAll=button('خروجی اکسل همهٔ تجهیزات',()=>equipmentTools.exportInventory());exportAll.id='eq-inventory-export-all';main.append(tools(exportAll));
   }
   async function runCheck(){
-    if(!credentials||!can()||!path.node||busy)return;
+    if(!credentials||!can()||!Access.can('equipment-scan')||!path.node||busy)return;
     const token=epoch;busy=true;result={state:'checking'};render();
     await new Promise(resolve=>setTimeout(resolve,450));
-    if(token!==epoch||!credentials||!can())return;
+    if(token!==epoch||!credentials||!can()||!Access.can('equipment-scan')||!Access.equipmentNode(selected().node))return;
     busy=false;result={state:scenario};checks.set(path.node,scenario);render();
   }
   function deviceView(main){
@@ -10283,13 +10342,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(result&&['errdisabled','still','changed','still_result','auth','timeout','connection'].includes(result.state))status.classList.add('error');
     if(result&&['clean','recovered','changed_result'].includes(result.state))status.classList.add('ok');main.append(status);
     if(result&&['errdisabled','still','changed'].includes(result.state))main.append(button('تأیید بازیابی Gi0/1',()=>{
-      if(!credentials||!can())return;
+      if(!credentials||!can()||!Access.can('equipment-repair')||!Access.equipmentNode(node))return;
       if(confirm('فقط بازیابی پورت Gi0/1 روی «'+node.name+'» ('+node.host+') شبیه‌سازی شود؟\nدر نسخهٔ واقعی، pre-check و post-check همان پورت الزامی است.')){result={state:result.state==='still'?'still_result':result.state==='changed'?'changed_result':'recovered'};checks.set(path.node,result.state);render();}
     },'btn btn-amber btn-sm'));
     if(result?.state==='auth')main.append(notice('ورود با حساب Local و رمز Enable: برنامه‌ریزی‌شده برای مرحلهٔ بعد؛ فعلاً غیرفعال است. هیچ تلاش خودکار یا تغییر روش ورود انجام نمی‌شود.','warning'));
     main.append(el('p','eq-muted','SNMP، مانیتورینگ پیوسته، توپولوژی و مدیریت تنظیمات هنوز متصل نشده‌اند؛ مقدار ساختگی به‌عنوان دادهٔ واقعی نمایش داده نمی‌شود.'));
   }
   function render(){
+    inventory=Access.equipmentView(fullInventory);
     configuration.suspend();equipmentTools.suspend();root.replaceChildren();if(!can()){root.append(notice('برای ورود به مدیریت تجهیزات مجوز لازم است.'));return;}
     if(credentials&&credentials.userId!==Access.current()?.id){credentials=null;checks.clear();path={};configuration.clear();equipmentTools.clear();workspaceTab='inventory';}
     if(!credentials){gate();return;}
@@ -10298,11 +10358,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(storageIssue)root.append(notice(storageIssue,'warning'));if(cardsIssue)root.append(notice(cardsIssue,'warning'));if(migrationNote)root.append(notice(migrationNote));
     const sections=el('nav','eq-tabs eq-workspace-tabs');sections.setAttribute('role','tablist');sections.setAttribute('aria-label','بخش‌های تجهیزات');
     for(const [key,label]of [['inventory','فهرست تجهیزات'],['configuration','پیکربندی'],['tools','ابزارها']]){
+      if(key==='configuration'&&!Access.can('equipment-configuration'))continue;
       const tabButton=button(label,()=>{epoch++;busy=false;if(result?.state==='checking')result=null;workspaceTab=key;render();},'eq-tab'+(workspaceTab===key?' active':''));
       tabButton.id='equipment-tab-'+key;tabButton.setAttribute('role','tab');tabButton.setAttribute('aria-selected',String(workspaceTab===key));sections.append(tabButton);
     }root.append(sections);
     const layout=el('div','eq-layout'),main=el('div','eq-main');layout.append(main);root.append(layout);
-    if(workspaceTab==='configuration')configuration.mount(main);else if(workspaceTab==='tools')equipmentTools.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
+    if(workspaceTab==='configuration'&&Access.can('equipment-configuration'))configuration.mount(main);else if(workspaceTab==='tools')equipmentTools.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
   }
   // A RADIUS credential session belongs to the MAIN FAM login, not to a tab.
   // Navigation never writes credentials to persistent storage or destroys them.
@@ -10316,8 +10377,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(credentials&&(document.documentElement.classList.contains('auth-pending')||!can()||credentials.userId!==Access.current()?.id))lock();
     else if(!credentials&&can()&&!root.querySelector('#equipment-radius-user'))render();
   }).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+  document.addEventListener('fam-access-changed',()=>{epoch++;activeDialog?.close();activeDialog?.remove();activeDialog=null;configuration.clear();equipmentTools.clear();render();});
+  window.addEventListener('storage',event=>{if(event.key===KEY){epoch++;activeDialog?.close();activeDialog?.remove();activeDialog=null;configuration.clear();equipmentTools.clear();load();fullInventory=inventory;render();}});
   window.addEventListener('pagehide',lock); // Also clear before a page can enter BFCache.
-  load();loadCards();render();
+  load();fullInventory=inventory;loadCards();render();
 });
 </script>
 <script id="fam-workspace-launcher-js">

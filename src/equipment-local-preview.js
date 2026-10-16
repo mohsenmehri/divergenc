@@ -2,15 +2,15 @@
 document.addEventListener('DOMContentLoaded',()=>{
   const root=document.getElementById('equipment-workspace');if(!root)return;
   const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',OLD_KEY='fam.equipment.inventory.v2',CARDS_KEY='fam.equipment.cards.v1';
-  let inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
+  let fullInventory=M.defaults(),inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
   let scenario='clean',result=null,tab='overview',search='',busy=false,facet='overview',filters={},activeField=null,onlyReview=false;
   let cardSettings=M.defaultCards(),cardsIssue='',groupIssue='',workspaceTab='inventory';
   const checks=new Map(),uid=()=>crypto.randomUUID();
   const can=()=>typeof Access!=='undefined'&&Access.can('equipment');
-  const configuration=FamEquipmentConfiguration.create({getInventory:()=>inventory,isAuthorized:()=>!!credentials&&can()&&credentials.userId===Access.current()?.id});
-  const equipmentTools=FamEquipmentTools.create({getInventory:()=>inventory,saveInventory:next=>save(next),isAuthorized:()=>!!credentials&&can()&&credentials.userId===Access.current()?.id});
+  const configuration=FamEquipmentConfiguration.create({getInventory:()=>Access.equipmentView(fullInventory),isAuthorized:()=>!!credentials&&can()&&Access.can('equipment-configuration')&&credentials.userId===Access.current()?.id});
+  const equipmentTools=FamEquipmentTools.create({getInventory:()=>Access.equipmentView(fullInventory),saveInventory:next=>save(next),isAuthorized:(operation='equipment')=>!!credentials&&can()&&Access.can(operation)&&credentials.userId===Access.current()?.id});
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-  const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const n=el('button',cls,text);n.type='button';n.addEventListener('click',handler);return n;};
+  const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const n=el('button',cls,text);n.type='button';n.addEventListener('click',handler);const permission=({'＋ افزودن نود':'equipment-add','＋ نود':'equipment-add','مدیریت این دسته‌ها':'equipment-catalog','افزودن نود':'equipment-add','حذف نود':'equipment-delete','مدیریت دسته‌ها':'equipment-catalog','＋ افزودن زیرمجموعه':'equipment-catalog','خروجی اکسل همهٔ تجهیزات':'equipment-export','پیکربندی این انتخاب':'equipment-configuration','تأیید بازیابی Gi0/1':'equipment-repair','بررسی وضعیت پورت‌ها':'equipment-scan','ویرایش مشخصات نود':'equipment-edit','＋ افزودن کارت':'equipment-cards'})[text];if(permission&&!Access.can(permission))n.disabled=true;return n;};
   const tools=(...buttons)=>{const n=el('div','eq-tools');n.append(...buttons);return n;};
   const notice=(text,cls='')=>el('div','eq-notice '+cls,text);
   function heading(title,sub){const n=el('div','eq-heading');n.append(el('h3','',title),el('p','',sub));return n;}
@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   function saveCards(next){
     if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
+    if(!Access.can('equipment-cards'))throw Error('مجوز مدیریت کارت‌های تجهیزات ندارید.');
     if(cardsIssue)throw Error(cardsIssue);
     const clean=M.validateCards(next);
     try{localStorage.setItem(CARDS_KEY,JSON.stringify(clean));}catch(e){throw Error('تنظیمات کارت ذخیره نشد؛ فضای ذخیره‌سازی مرورگر را بررسی کنید.');}
@@ -42,7 +43,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function save(next){
     if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
     if(storageIssue)throw Error(storageIssue);
-    const clean=M.validate(next);localStorage.setItem(KEY,JSON.stringify(clean));inventory=clean;groupIssue='';
+    const clean=Access.equipmentMerge(fullInventory,next);localStorage.setItem(KEY,JSON.stringify(clean));fullInventory=clean;inventory=Access.equipmentView(clean);document.dispatchEvent(new Event('fam-equipment-changed'));groupIssue='';
     for(const [field,key]of Object.entries(lookup))if(filters[field]&&!find(key,filters[field])){delete filters[field];if(activeField===field)activeField=null;}
   }
   const navigate=next=>{epoch++;path=next;result=null;tab='overview';busy=false;render();};
@@ -93,6 +94,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     dialog.append(heading(title,description));document.body.append(dialog);return {dialog,close};
   }
   function editNode(node=null){
+    if(!Access.can(node?'equipment-edit':'equipment-add'))return;
     if(!can()||storageIssue)return;
     const initial=node||{...filters};
     if(initial.modelId&&!initial.typeId)initial.typeId=find('models',initial.modelId)?.typeId;
@@ -137,6 +139,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     dialog.append(form);dialog.showModal();name.focus();
   }
   function manageCatalog(initialKey='types',initialItem=null,preset={}){
+    if(!Access.can('equipment-catalog'))return;
     if(!can()||storageIssue)return;
     const {dialog,close}=dialogShell('مدیریت دسته‌بندی‌ها','نوع‌ها، مدل‌ها، مناطق و محل‌ها را خودتان تعریف کنید. دستهٔ استفاده‌شده بدون تعیین تکلیف نودها حذف نمی‌شود.',true);
     const shell=el('div','eq-catalog-shell'),keySelect=selectField(shell,'eq-catalog-dimension','بخش موردنظر',Object.entries(M.dimensions).map(([id,name])=>({id,name})),initialKey);
@@ -176,15 +179,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     return {};
   }
   function removeGroup(key,item){
+    if(!Access.can('equipment-catalog'))return;
     if(!confirm('دستهٔ «'+item.name+'» حذف شود؟ نودها حذف نمی‌شوند؛ دستهٔ دارای نود یا زیرمجموعه قابل حذف نیست.'))return;
     try{save(M.removeCategory(inventory,key,item.id));render();}
     catch(e){groupIssue=e.name==='QuotaExceededError'?'دسته حذف نشد؛ فضای ذخیره‌سازی مرورگر کافی نیست.':e.message;render();}
   }
   function removeNode(node){
+    if(!Access.can('equipment-delete'))return;
     if(!confirm('نود «'+node.name+'» از کل فهرست و همهٔ دسته‌ها حذف شود؟ این کار روی تجهیز واقعی اثری ندارد.'))return;
     try{save({...inventory,nodes:inventory.nodes.filter(n=>n.id!==node.id)});checks.delete(node.id);if(path.node===node.id)path={};render();}catch(e){alert(e.message);}
   }
   function removeMembership(node,field){
+    if(!Access.can('equipment-edit'))return;
     const label=nameOf(lookup[field],node[field]);
     if(!confirm('«'+node.name+'» فقط از دستهٔ «'+label+'» خارج شود؟ خود نود حذف نمی‌شود و در «نیازمند تکمیل» باقی می‌ماند.'))return;
     try{save(M.unassign(inventory,node.id,field));render();}catch(e){alert(e.message);}
@@ -209,6 +215,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(card.refId)applyFilter(M.cardFields[card.facet],card.refId);else navigate({});
   }
   function editCard(card=null){
+    if(!Access.can('equipment-cards'))return;
     if(!can()||!credentials||cardsIssue)return;
     const {dialog,close}=dialogShell(card?'ویرایش کارت':'افزودن کارت','این کارت فقط میان‌بُر نمایش است؛ تغییر یا حذف آن، دسته‌ها و نودها را حذف نمی‌کند.');
     const form=el('form','eq-editor eq-card-editor');
@@ -233,6 +240,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     dialog.append(form);dialog.showModal();name.focus();
   }
   function deleteCard(card){
+    if(!Access.can('equipment-cards'))return;
     if(!confirm('فقط کارت «'+card.name+'» حذف شود؟ دسته‌ها و تمام نودها باقی می‌مانند.'))return;
     try{saveCards({...cardSettings,cards:cardSettings.cards.filter(c=>c.id!==card.id)});render();}catch(e){alert(e.message);}
   }
@@ -261,7 +269,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const type=el('td');type.append(el('span','',nameOf('types',node.typeId)),el('span','eq-node-sub',nameOf('models',node.modelId)));
       const region=el('td','',nameOf('regions',node.regionId)),site=el('td');site.append(el('span','',nameOf('sites',node.siteId)),el('span','eq-node-sub',nameOf('siteKinds',node.siteKindId)));
       const status=el('td');status.append(el('span','eq-badge',M.incomplete(node)?'نیازمند تکمیل':checks.has(node.id)?'بررسی نمایشی شد':'بررسی نشده'));
-      const actions=el('td'),buttons=tools(button('ویرایش',()=>editNode(node)),button('حذف نود',()=>removeNode(node),'btn btn-ghost btn-sm eq-danger'));
+      const edit=button('ویرایش',()=>editNode(node));edit.disabled=!Access.can('equipment-edit');const actions=el('td'),buttons=tools(edit,button('حذف نود',()=>removeNode(node),'btn btn-ghost btn-sm eq-danger'));
       if(activeField&&filters[activeField]===node[activeField])buttons.append(button('حذف از دسته',()=>removeMembership(node,activeField)));
       actions.append(buttons);tr.append(name,type,region,site,status,actions);body.append(tr);
     }
@@ -276,9 +284,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     for(const [key,label,kind]of facets){const b=button('',()=>{facet=key;render();},'eq-tree-link'+(facet===key?' selected':''));b.append(icon(kind),el('span','',label));nav.append(b);}main.append(nav);
     if(facet==='overview'){
       const toolbar=el('div','eq-cards-toolbar');toolbar.append(el('h4','','کارت‌های من'));
-      const add=button('＋ افزودن کارت',()=>editCard());add.disabled=!!cardsIssue;toolbar.append(add);main.append(toolbar);
+      const add=button('＋ افزودن کارت',()=>editCard());add.disabled=!!cardsIssue||!Access.can('equipment-cards');toolbar.append(add);main.append(toolbar);
       const cards=el('div','eq-card-grid eq-smart-cards');
       for(const item of cardSettings.cards){
+        if(item.refId&&!cardTarget(item)&&Object.values(fullInventory.catalog).some(items=>items.some(x=>x.id===item.refId)))continue;
         const [,,kind]=facets.find(f=>f[0]===item.facet),card=el('article','eq-card tone-'+kind),go=button('',()=>openCard(item),'eq-card-main');
         go.setAttribute('aria-label','باز کردن '+item.name);
         const title=el('div','eq-shortcut-title');title.append(icon(kind),el('strong','',item.name));
@@ -286,14 +295,14 @@ document.addEventListener('DOMContentLoaded',()=>{
         go.title=item.name+' — '+hint;
         go.append(title,el('span','eq-muted',hint));
         const edit=button('ویرایش',()=>editCard(item),'eq-mini-action'),remove=button('حذف',()=>deleteCard(item),'eq-mini-action eq-danger');
-        edit.setAttribute('aria-label','ویرایش کارت '+item.name);remove.setAttribute('aria-label','حذف کارت '+item.name);edit.disabled=remove.disabled=!!cardsIssue;
+        edit.setAttribute('aria-label','ویرایش کارت '+item.name);remove.setAttribute('aria-label','حذف کارت '+item.name);edit.disabled=remove.disabled=!!cardsIssue||!Access.can('equipment-cards');
         card.append(go,tools(edit,remove));cards.append(card);
       }
       if(!cardSettings.cards.length)cards.append(notice('کارتی ندارید؛ با «افزودن کارت» میان‌بُر دلخواه بسازید. دسته‌ها از تب‌های بالا همچنان در دسترس‌اند.'));
       main.append(cards);
     }else{
       const key=groupCatalogKey(),headingRow=el('div','eq-table-toolbar');
-      const addCategory=button('＋ افزودن زیرمجموعه',()=>manageCatalog(key,null,groupPreset()));addCategory.disabled=!!storageIssue;
+      const addCategory=button('＋ افزودن زیرمجموعه',()=>manageCatalog(key,null,groupPreset()));addCategory.disabled=!!storageIssue||!Access.can('equipment-catalog');
       headingRow.append(el('h4','',facets.find(f=>f[0]===facet)[1]),tools(addCategory,button('مدیریت این دسته‌ها',()=>manageCatalog(key))));main.append(headingRow);
       if(groupIssue)main.append(notice(groupIssue,'warning'));
       const grid=el('div','eq-card-grid eq-smart-groups eq-groups-'+facet);for(const {item,field,count}of groupItems()){
@@ -303,7 +312,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         const add=button('＋ نود',()=>{applyFilter(field,item.id);editNode();},'eq-mini-action');add.setAttribute('aria-label','＋ نود در این دسته');
         const edit=button('ویرایش',()=>manageCatalog(key,item),'eq-mini-action');edit.setAttribute('aria-label','ویرایش دسته '+item.name);
         const remove=button('حذف',()=>removeGroup(key,item),'eq-mini-action eq-danger');remove.setAttribute('aria-label','حذف دسته '+item.name);
-        add.disabled=edit.disabled=remove.disabled=!!storageIssue;
+        add.disabled=!!storageIssue||!Access.can('equipment-add');edit.disabled=remove.disabled=!!storageIssue||!Access.can('equipment-catalog');
         box.append(go,tools(add,edit,remove));grid.append(box);
       }if(!groupItems().length)grid.append(notice('هنوز دسته‌ای تعریف نشده؛ از «افزودن زیرمجموعه» استفاده کنید.'));main.append(grid);
     }
@@ -318,10 +327,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     const exportAll=button('خروجی اکسل همهٔ تجهیزات',()=>equipmentTools.exportInventory());exportAll.id='eq-inventory-export-all';main.append(tools(exportAll));
   }
   async function runCheck(){
-    if(!credentials||!can()||!path.node||busy)return;
+    if(!credentials||!can()||!Access.can('equipment-scan')||!path.node||busy)return;
     const token=epoch;busy=true;result={state:'checking'};render();
     await new Promise(resolve=>setTimeout(resolve,450));
-    if(token!==epoch||!credentials||!can())return;
+    if(token!==epoch||!credentials||!can()||!Access.can('equipment-scan')||!Access.equipmentNode(selected().node))return;
     busy=false;result={state:scenario};checks.set(path.node,scenario);render();
   }
   function deviceView(main){
@@ -345,13 +354,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(result&&['errdisabled','still','changed','still_result','auth','timeout','connection'].includes(result.state))status.classList.add('error');
     if(result&&['clean','recovered','changed_result'].includes(result.state))status.classList.add('ok');main.append(status);
     if(result&&['errdisabled','still','changed'].includes(result.state))main.append(button('تأیید بازیابی Gi0/1',()=>{
-      if(!credentials||!can())return;
+      if(!credentials||!can()||!Access.can('equipment-repair')||!Access.equipmentNode(node))return;
       if(confirm('فقط بازیابی پورت Gi0/1 روی «'+node.name+'» ('+node.host+') شبیه‌سازی شود؟\nدر نسخهٔ واقعی، pre-check و post-check همان پورت الزامی است.')){result={state:result.state==='still'?'still_result':result.state==='changed'?'changed_result':'recovered'};checks.set(path.node,result.state);render();}
     },'btn btn-amber btn-sm'));
     if(result?.state==='auth')main.append(notice('ورود با حساب Local و رمز Enable: برنامه‌ریزی‌شده برای مرحلهٔ بعد؛ فعلاً غیرفعال است. هیچ تلاش خودکار یا تغییر روش ورود انجام نمی‌شود.','warning'));
     main.append(el('p','eq-muted','SNMP، مانیتورینگ پیوسته، توپولوژی و مدیریت تنظیمات هنوز متصل نشده‌اند؛ مقدار ساختگی به‌عنوان دادهٔ واقعی نمایش داده نمی‌شود.'));
   }
   function render(){
+    inventory=Access.equipmentView(fullInventory);
     configuration.suspend();equipmentTools.suspend();root.replaceChildren();if(!can()){root.append(notice('برای ورود به مدیریت تجهیزات مجوز لازم است.'));return;}
     if(credentials&&credentials.userId!==Access.current()?.id){credentials=null;checks.clear();path={};configuration.clear();equipmentTools.clear();workspaceTab='inventory';}
     if(!credentials){gate();return;}
@@ -360,11 +370,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(storageIssue)root.append(notice(storageIssue,'warning'));if(cardsIssue)root.append(notice(cardsIssue,'warning'));if(migrationNote)root.append(notice(migrationNote));
     const sections=el('nav','eq-tabs eq-workspace-tabs');sections.setAttribute('role','tablist');sections.setAttribute('aria-label','بخش‌های تجهیزات');
     for(const [key,label]of [['inventory','فهرست تجهیزات'],['configuration','پیکربندی'],['tools','ابزارها']]){
+      if(key==='configuration'&&!Access.can('equipment-configuration'))continue;
       const tabButton=button(label,()=>{epoch++;busy=false;if(result?.state==='checking')result=null;workspaceTab=key;render();},'eq-tab'+(workspaceTab===key?' active':''));
       tabButton.id='equipment-tab-'+key;tabButton.setAttribute('role','tab');tabButton.setAttribute('aria-selected',String(workspaceTab===key));sections.append(tabButton);
     }root.append(sections);
     const layout=el('div','eq-layout'),main=el('div','eq-main');layout.append(main);root.append(layout);
-    if(workspaceTab==='configuration')configuration.mount(main);else if(workspaceTab==='tools')equipmentTools.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
+    if(workspaceTab==='configuration'&&Access.can('equipment-configuration'))configuration.mount(main);else if(workspaceTab==='tools')equipmentTools.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
   }
   // A RADIUS credential session belongs to the MAIN FAM login, not to a tab.
   // Navigation never writes credentials to persistent storage or destroys them.
@@ -378,6 +389,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(credentials&&(document.documentElement.classList.contains('auth-pending')||!can()||credentials.userId!==Access.current()?.id))lock();
     else if(!credentials&&can()&&!root.querySelector('#equipment-radius-user'))render();
   }).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+  document.addEventListener('fam-access-changed',()=>{epoch++;activeDialog?.close();activeDialog?.remove();activeDialog=null;configuration.clear();equipmentTools.clear();render();});
+  window.addEventListener('storage',event=>{if(event.key===KEY){epoch++;activeDialog?.close();activeDialog?.remove();activeDialog=null;configuration.clear();equipmentTools.clear();load();fullInventory=inventory;render();}});
   window.addEventListener('pagehide',lock); // Also clear before a page can enter BFCache.
-  load();loadCards();render();
+  load();fullInventory=inventory;loadCards();render();
 });

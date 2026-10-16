@@ -132,13 +132,33 @@ Migration preserves node IDs, names, IPs, known locations and the legacy path. U
 
 Malformed data or a storage exception yields a visible read-only state instead of silently resetting/overwriting an existing inventory. The original storage keys remain available for recovery. Storage is local to the same browser profile/origin and shared by local FAM accounts; this preview is not a server-side authorization boundary.
 
+## Per-user equipment capabilities and live category scope
+
+The local account editor now includes all 12 equipment operations independently: node add/edit/delete, catalog CRUD, shortcut cards, inventory Excel import/export, group configuration draft, standards editing, checklist audit/export, port scan/report and simulated port repair. The existing equipment-entry permission remains separate. Import requires both import capability and the applicable node CRUD capabilities; inline category creation also requires catalog capability. A granted operation does not widen category scope. Permission-denied controls are disabled or handlers fail closed; authorization is rechecked at final write/confirmation, not just when opening a tab.
+
+Five `equipmentScope` arrays on each user store stable IDs for types/models/regions/siteKinds/sites. Dimensions intersect (AND). `['*']` explicitly includes present and future categories for that dimension; an empty array grants none. Individual selections follow renames automatically; missing/deleted IDs stay denied, never silently become “all”. The editor uses the actual current catalog, shows model/site parents, refreshes on catalog save or another tab's inventory change, and retains unsaved form fields and checked IDs while refreshing labels/lists.
+
+Legacy accounts that already had equipment entry or user administration receive the former equipment operations and unrestricted scope once via `equipmentPolicyVersion:1` normalization. Existing user-administrators also regain explicit history-cleanup capability. This preserves previously delivered LOCAL behavior without repeatedly restoring revoked capabilities: new accounts start with no equipment operations/scope, and saved version-1 policies retain later edits. Legacy non-admin roles do not acquire history cleanup merely because new permission IDs were registered.
+
+The UI, form catalogs, configuration planner and Excel/tools getters consume a freshly scoped inventory. Writes merge only explicitly changed authorized records into the complete canonical inventory, preserving hidden nodes and catalogs. Both old and new node scope are checked on moves; global duplicate IPs, hidden-ID collisions and dependencies on hidden records still block writes. Shared shortcut preferences and canonical inventory remain browser-local; scope is a LOCAL convenience policy, **not a security boundary against browser storage/devtools access or a replacement for server enforcement**. SERVER artifacts/authorization/recovery are unchanged.
+
+Account permission/scope changes invalidate pending equipment dialogs/drafts/reports and re-render the current scope. Other-tab account edits retain the existing forced-session refresh behavior. No credentials are added to policy records or exports.
+
+### History cleanup restored
+
+The old clear-log button and handler incorrectly required the retired `admin`/`manage-system` capability. They now use the registered `clear-history` capability plus `view-history`, with checks before opening confirmation and again before deletion. The capability is separately editable in user management. Existing administrators regain it once; ordinary users do not. Confirmation preserves the log header and deletes only its rows; cancel preserves all rows and other worksheets are untouched.
+
+Tests: `equipment-access.test.cjs` covers granular default denial, migration/revocation preservation, AND scopes/renames/new IDs, hidden-record-preserving merges, forbidden moves/IDs/duplicate IP/dependency changes and explicit history authorization. `equipment-access-ui.test.cjs` covers the real cleanup button/yes-no modal, live scoped user editor without losing draft input, real scoped-account login, filtered inventory/export and disabled denied controls. Existing UI/access/configuration/tools regressions are run as a complete suite.
+
 ## Credentials / lifecycle
 
 RADIUS credentials live only in a closure in RAM. They survive in-page navigation (equipment → dashboard → equipment) for the current FAM account. They are cleared by main FAM logout/account change/permission revocation, manual RADIUS change and page unload/refresh. They are never added to localStorage, sessionStorage, IndexedDB, URLs or node data. The preview does not validate real credentials or contact any network endpoint.
 
 ## Validation and packaging
 
-Current workflow release: **102/102 full local regression tests passed** (397.27 seconds). The 18 pure Excel/tools tests also passed separately. After the final mobile confirmation-table styling adjustment, all 10 tools browser tests passed again, including visibility of the exact port column on mobile. An independent openpyxl load verified eight Stop list validations, dependent kind mappings, hidden metadata and unique ZIP paths. Desktop Microsoft Excel and live device checks were not run.
+Current permissions release: **110/110 full local regression tests passed** (425.02 seconds). All 6 dedicated policy tests and 2 dedicated browser tests also passed separately, including the real clear-log confirmation UI, current-catalog user scope refresh, filtered export and operation denial. Source/embed/LOCAL ZIP parity and unchanged SERVER hash were verified.
+
+Previous port-workflow release: **102/102 full local regression tests passed** (397.27 seconds). The 18 pure Excel/tools tests also passed separately. After the final mobile confirmation-table styling adjustment, all 10 tools browser tests passed again, including visibility of the exact port column on mobile. An independent openpyxl load verified eight Stop list validations, dependent kind mappings, hidden metadata and unique ZIP paths. Desktop Microsoft Excel and live device checks were not run.
 
 - `node --test tests/equipment-inventory.test.cjs`: pure schema, defaults, required fields, parent relationships, IP uniqueness, reclassification, catalog deletion safety, unassignment and migration.
 - `node --test tests/equipment-local.test.cjs`: browser add/edit/groups/filter intersections/category-prefill/inline models and sites/catalog CRUD/unassignment/Device360/RADIUS lifecycle/migration/read-only corrupt data/storage failure/mobile themes/no secret persistence/no network.

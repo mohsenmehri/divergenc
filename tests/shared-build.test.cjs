@@ -91,7 +91,7 @@ test('local accounts use dynamic category scope and per-user capabilities, not l
  const access=read('src/local-access.js'),html=read('FAM.html'),css=read('src/local-access.css'),palette=read('src/light-palette.css');
  assert.match(access,/const PERMISSION_GROUPS=/);
  for(const label of ['مشاهدهٔ شیت‌ها و داشبورد','جست‌وجو در داده‌ها','ویرایش مستقیم سلول‌ها','ذخیرهٔ تغییرات نتایج جست‌وجو','مدیریت کاربران و دسترسی‌ها'])assert.ok(access.includes(label),label);
- assert.match(access,/categories:\[\.\.\.new Set/);assert.match(access,/permissions:Array\.isArray/);
+ assert.match(access,/categories:\[\.\.\.new Set/);assert.match(access,/const permissions=Array\.isArray\(u\?\.permissions\)/);assert.match(access,/equipmentPolicyVersion:1,equipmentScope/);
  assert.match(access,/managedCategories\(\),CAT_OTHER/);
  assert.match(access,/category!==\'provinces\'/);assert.match(access,/scopeAllowsSheet/);
  assert.match(access,/deleted is deliberately fail-closed/);
