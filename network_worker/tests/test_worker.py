@@ -101,6 +101,18 @@ class WorkerTests(unittest.TestCase):
             }), encoding="utf-8")
             return load(config)
 
+    def test_config_accepts_utf8_bom_from_windows_powershell(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config = Path(temp) / "worker.json"
+            config.write_text(json.dumps({
+                "controlPlaneUrl": "https://fam.example.test", "workerId": "worker-lab-01", "tokenEnv": "FAM_NETWORK_WORKER_TOKEN",
+                "pollSeconds": 15, "maxParallel": 1, "caFile": None,
+                "secretStore": {"type": "windows-dpapi", "path": "C:\\private\\s.dpapi"},
+                "probeKeyStore": {"type": "windows-dpapi", "path": "C:\\private\\probe.dpapi"},
+                "devices": [],
+            }), encoding="utf-8-sig")
+            self.assertEqual(load(config).worker_id, "worker-lab-01")
+
     def test_config_refuses_inline_credentials_commands_and_non_https(self):
         with tempfile.TemporaryDirectory() as temp:
             config = Path(temp) / "worker.json"

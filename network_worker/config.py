@@ -133,7 +133,9 @@ def load(path: str | Path) -> Settings:
     """
     file_path = Path(path)
     try:
-        raw = json.loads(file_path.read_text(encoding="utf-8"))
+        # Windows PowerShell 5.1 writes a UTF-8 BOM for Set-Content -Encoding UTF8.
+        # Accept that standard JSON file encoding without weakening any schema checks.
+        raw = json.loads(file_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ConfigError("configuration file cannot be read") from exc
     allowed = {"controlPlaneUrl", "workerId", "tokenEnv", "pollSeconds", "maxParallel", "caFile", "secretStore", "probeKeyStore", "devices"}
