@@ -104,5 +104,20 @@
     }
     return validate(next);
   }
-  globalThis.FamEquipmentInventory=Object.freeze({fields,dimensions,privateIP,validName,defaults,validate,incomplete,matches,upsertNode,removeCategory,unassign,migrateV2});
+  // Display shortcuts are separate from node/catalog storage. Removing a card never
+  // removes a category. References may become stale after a catalog deletion;
+  // the UI then asks the user to repair the shortcut rather than rewriting it.
+  const cardFields=Object.freeze({types:'typeId',models:'modelId',regions:'regionId',siteKinds:'siteKindId',buildings:'siteId',datacenters:'siteId'});
+  function defaultCards(){
+    return {version:1,cards:[['types','نوع تجهیز'],['models','مدل تجهیز'],['regions','منطقه'],['siteKinds','نوع محل'],['buildings','ساختمان‌ها'],['datacenters','دیتا سنتر']].map(([facet,name])=>({id:'view-'+facet,name,facet,refId:null}))};
+  }
+  function validateCards(value){
+    if(!value||value.version!==1||!Array.isArray(value.cards)||value.cards.length>60)throw Error('فهرست کارت‌ها معتبر نیست؛ حداکثر ۶۰ کارت مجاز است.');
+    const ids=new Set();
+    return {version:1,cards:value.cards.map(card=>{
+      if(!card||typeof card.id!=='string'||!/^[\w-]{1,80}$/.test(card.id)||ids.has(card.id)||!validName(card.name)||typeof card.facet!=='string'||!Object.hasOwn(cardFields,card.facet)||card.refId!==null&&(typeof card.refId!=='string'||!/^[\w-]{1,80}$/.test(card.refId)))throw Error('نام یا مقصد کارت معتبر نیست.');
+      ids.add(card.id);return {id:card.id,name:card.name.trim(),facet:card.facet,refId:card.refId};
+    })};
+  }
+  globalThis.FamEquipmentInventory=Object.freeze({fields,dimensions,privateIP,validName,defaults,validate,incomplete,matches,upsertNode,removeCategory,unassign,migrateV2,cardFields,defaultCards,validateCards});
 })();

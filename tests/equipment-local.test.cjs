@@ -46,6 +46,9 @@ test('RADIUS gate precedes six independent classification axes',async()=>{
   assert.ok(await page.locator('#equipment-radius-password').isVisible());await radius();
   assert.equal(await workspace().locator('.eq-smart-cards .eq-card-main').count(),6);
   assert.match(await workspace().innerText(),/یک نود؛ چند دسته/);
+  const boxes=await workspace().locator('.eq-smart-cards .eq-card').evaluateAll(cards=>cards.map(card=>({width:card.getBoundingClientRect().width,height:card.getBoundingClientRect().height})));
+  assert.ok(boxes.every(box=>box.height<=115&&box.width<=200),JSON.stringify(boxes));
+  await page.screenshot({path:'/tmp/fam-compact-cards.png',fullPage:true});
 });
 test('node form asks all metadata; saves a single canonical node with automatic memberships',async()=>{
   await openNodeForm();
@@ -57,6 +60,36 @@ test('node form asks all metadata; saves a single canonical node with automatic 
   const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.equipment.inventory.v3')));assert.equal(data.nodes.length,1);
   const node=data.nodes[0];assert.equal(node.typeId,'type-router');assert.equal(node.modelId,'model-1841');assert.equal(node.regionId,'region-1');assert.equal(node.siteId,'building-0');
   assert.match(await table().innerText(),/روتر رضوان/);assert.match(await table().innerText(),/ساختمان مرکزی رضوان/);
+});
+test('overview cards can be renamed, added for a category, deleted and persisted without changing inventory',async()=>{
+  const snapshot=await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3'));
+  await workspace().getByRole('button',{name:'ویرایش کارت نوع تجهیز',exact:true}).click();
+  await page.locator('#eq-card-name').fill('تجهیزات شبکه');await page.locator('.eq-card-editor').getByRole('button',{name:'ذخیره کارت',exact:true}).click();
+  await workspace().getByRole('button',{name:'＋ افزودن کارت',exact:true}).click();
+  await page.locator('#eq-card-name').fill('تجهیزات منطقه یک');await page.locator('#eq-card-axis').selectOption('regions');await page.locator('#eq-card-target').selectOption('region-1');
+  await page.locator('.eq-card-editor').getByRole('button',{name:'ذخیره کارت',exact:true}).click();
+  assert.equal(await workspace().locator('.eq-smart-cards .eq-card').count(),7);
+  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await openEquipment();await radius();
+  assert.equal(await workspace().getByRole('button',{name:'باز کردن تجهیزات شبکه',exact:true}).count(),1);
+  await workspace().getByRole('button',{name:'باز کردن تجهیزات منطقه یک',exact:true}).click();
+  assert.equal(await page.locator('#eq-filter-regionId').inputValue(),'region-1');assert.match(await table().innerText(),/روتر رضوان/);
+  await viewFacet('همهٔ نودها');
+  page.once('dialog',d=>d.dismiss());await workspace().getByRole('button',{name:'حذف کارت تجهیزات منطقه یک',exact:true}).click();assert.equal(await workspace().locator('.eq-smart-cards .eq-card').count(),7);
+  page.once('dialog',d=>d.accept());await workspace().getByRole('button',{name:'حذف کارت تجهیزات منطقه یک',exact:true}).click();
+  page.once('dialog',d=>d.accept());await workspace().getByRole('button',{name:'حذف کارت تجهیزات شبکه',exact:true}).click();
+  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await openEquipment();await radius();
+  assert.equal(await workspace().locator('.eq-smart-cards .eq-card').count(),5);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3')),snapshot);
+  await workspace().getByRole('button',{name:'＋ افزودن کارت',exact:true}).click();await page.locator('#eq-card-name').fill('نوع تجهیز');
+  await page.locator('.eq-card-editor').getByRole('button',{name:'ذخیره کارت',exact:true}).click();assert.equal(await workspace().locator('.eq-smart-cards .eq-card').count(),6);
+});
+test('a card storage failure keeps the previous cards and inventory unchanged',async()=>{
+  const before=await page.evaluate(()=>[localStorage.getItem('fam.equipment.cards.v1'),localStorage.getItem('fam.equipment.inventory.v3')]);
+  await workspace().getByRole('button',{name:'＋ افزودن کارت',exact:true}).click();await page.locator('#eq-card-name').fill('ذخیره ناموفق');
+  await page.evaluate(()=>{window.__testSetItem=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='fam.equipment.cards.v1')throw new DOMException('Fake quota','QuotaExceededError');return window.__testSetItem.call(this,key,value);};});
+  await page.locator('.eq-card-editor').getByRole('button',{name:'ذخیره کارت',exact:true}).click();assert.match(await page.locator('.eq-card-editor .eq-error').innerText(),/ذخیره نشد/);
+  assert.deepEqual(await page.evaluate(()=>[localStorage.getItem('fam.equipment.cards.v1'),localStorage.getItem('fam.equipment.inventory.v3')]),before);
+  await page.evaluate(()=>{Storage.prototype.setItem=window.__testSetItem;delete window.__testSetItem;});await page.locator('.eq-card-editor').getByRole('button',{name:'انصراف',exact:true}).click();
 });
 test('type/model/region/location filters intersect and all facets see the same node',async()=>{
   await page.locator('#eq-filter-typeId').selectOption('type-router');await page.locator('#eq-filter-modelId').selectOption('model-1841');await page.locator('#eq-filter-regionId').selectOption('region-2');
@@ -124,6 +157,20 @@ test('v2 inventory is migrated without rewriting original; incomplete metadata i
   assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
 });
 
+test('malformed card preferences are not reset or overwritten; mobile cards remain compact',async()=>{
+  await page.setViewportSize({width:1440,height:1000});
+  const old=await page.evaluate(()=>localStorage.getItem('fam.equipment.cards.v1'));
+  await page.evaluate(()=>localStorage.setItem('fam.equipment.cards.v1','{bad-cards'));
+  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await openEquipment();await radius();
+  assert.match(await workspace().innerText(),/ویرایش کارت‌ها غیرفعال است/);
+  assert.ok(await workspace().getByRole('button',{name:'＋ افزودن کارت',exact:true}).isDisabled());
+  assert.ok(await workspace().getByRole('button',{name:'ویرایش کارت نوع تجهیز',exact:true}).isDisabled());
+  assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.cards.v1')),'{bad-cards');
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  assert.ok((await workspace().locator('.eq-smart-cards .eq-card').evaluateAll(cards=>cards.map(card=>card.getBoundingClientRect().height))).every(height=>height<=115));
+  await page.evaluate(value=>localStorage.setItem('fam.equipment.cards.v1',value),old);
+});
 test('malformed v3 is visibly read-only and never overwritten or replaced with stale v2',async()=>{
   await page.setViewportSize({width:1440,height:1000});
   await page.evaluate(()=>localStorage.setItem('fam.equipment.inventory.v3','{invalid-json'));

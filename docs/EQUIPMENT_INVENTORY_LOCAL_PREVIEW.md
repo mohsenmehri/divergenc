@@ -41,6 +41,18 @@ Node edit automatically reclassifies the existing node. **Remove from category**
 
 Clicking a node name opens Device 360 and starts its bounded **simulated** check automatically. Simulated recovery still requires explicit device/port confirmation. Real Local/Enable commands, command favorites and free-form execution remain inactive.
 
+## Compact user-managed overview cards
+
+The six initial overview cards are editable display shortcuts, no longer a fixed display-only set. Cards are roughly half their old height (about 105px instead of 205px), with six columns on wide displays, three on medium and two on mobile. Long names are clamped with a full hover title so cards remain compact.
+
+Each card has inline **edit/delete** controls; **add card** is always available even when all cards have been removed. The editor asks for a display name, one of the six existing grouping axes, and optionally one specific category within that axis. For example, a user can create a shortcut directly to region 1, router model 1841 or a named building. These are shortcuts to existing attributes/categories, not new schema dimensions.
+
+Clicking a card opens its target with fresh filters; model/site targets also select their required parent. Deleting/renaming/retargeting a card never changes node or catalog data. Standard grouping tabs remain available even after all cards are deleted.
+
+Preferences use a separate validated localStorage key, `fam.equipment.cards.v1` (`version:1`, maximum 60 cards, stable ID/name/facet/optional category reference). They contain no credentials. An explicitly empty list stays empty after reload; defaults are only used when no preferences exist. Malformed stored preferences are not overwritten; a warning disables editing while keeping inventory accessible. Failed writes leave both preferences and inventory unchanged. A stale target after category deletion is retained and opens the card editor for explicit repair, not a silently different filter.
+
+Pure tests cover schema bounds/types, empty/custom cards and stripping unrelated fields. Browser tests cover compact desktop/mobile sizing, add/edit/confirmed and cancelled deletion, reload persistence, specific-category navigation, unchanged inventory, malformed preference handling and failed writes.
+
 ## Safe migration / persistence
 
 If v3 is absent, the UI reads `fam.equipment.inventory.v2`, migrates into v3, validates and writes the new key. The original v2 value is not modified or deleted.

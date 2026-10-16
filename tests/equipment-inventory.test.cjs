@@ -50,3 +50,23 @@ test('malformed inventory, unknown references, duplicate names and control chara
  const duplicate=M.defaults();duplicate.catalog.regions.push({...duplicate.catalog.regions[0],id:'duplicate-region'});assert.throws(()=>M.validate(duplicate),/تکراری/);
  assert.throws(()=>M.migrateV2({version:2,types:'bad'}));assert.equal(M.validName('bad\nname'),false);
 });
+test('shortcut defaults and validation are independent from the canonical inventory',()=>{
+ const inventory=M.upsertNode(M.defaults(),node()),before=JSON.stringify(inventory);
+ const prefs=M.validateCards(M.defaultCards());assert.equal(prefs.cards.length,6);
+ prefs.cards[0].name='تجهیزات شبکه';prefs.cards.push({id:'custom-region',name:'منطقه من',facet:'regions',refId:'region-1'});prefs.cards.splice(1,1);
+ assert.equal(M.validateCards(prefs).cards.length,6);assert.equal(JSON.stringify(inventory),before);
+ assert.equal(M.validateCards({version:1,cards:[]}).cards.length,0);
+});
+test('shortcut validation rejects malformed/oversized preferences and strips unrelated fields',()=>{
+ const data=M.defaultCards();data.cards[0].password='fake-only';data.username='fake-only';
+ assert.ok(!JSON.stringify(M.validateCards(data)).includes('fake-only'));
+ for(const change of [{facet:['types']},{facet:'__proto__'},{facet:'anything'},{id:'bad id'},{name:'bad\nname'},{refId:'bad ref'}]){
+  const bad=M.defaultCards();Object.assign(bad.cards[0],change);assert.throws(()=>M.validateCards(bad));
+ }
+ const duplicate=M.defaultCards();duplicate.cards.push({...duplicate.cards[0]});assert.throws(()=>M.validateCards(duplicate));
+ assert.throws(()=>M.validateCards({version:1,cards:Array.from({length:61},(_,i)=>({id:'v-'+i,name:'x',facet:'regions',refId:null}))}));
+});
+test('stale shortcut references are retained for repair, not silently discarded',()=>{
+ const data=M.defaultCards();data.cards[0].refId='deleted-category';const clean=M.validateCards(data);
+ assert.equal(clean.cards[0].refId,'deleted-category');
+});

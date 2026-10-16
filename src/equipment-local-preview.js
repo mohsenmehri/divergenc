@@ -1,9 +1,10 @@
 /* Local-only Equipment UI. Canonical nodes + derived facets; RADIUS in closure RAM only. */
 document.addEventListener('DOMContentLoaded',()=>{
   const root=document.getElementById('equipment-workspace');if(!root)return;
-  const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',OLD_KEY='fam.equipment.inventory.v2';
+  const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',OLD_KEY='fam.equipment.inventory.v2',CARDS_KEY='fam.equipment.cards.v1';
   let inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
   let scenario='clean',result=null,tab='overview',search='',busy=false,facet='overview',filters={},activeField=null,onlyReview=false;
+  let cardSettings=M.defaultCards(),cardsIssue='';
   const checks=new Map(),uid=()=>crypto.randomUUID();
   const can=()=>typeof Access!=='undefined'&&Access.can('equipment');
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -24,6 +25,17 @@ document.addEventListener('DOMContentLoaded',()=>{
       const old=localStorage.getItem(OLD_KEY);
       if(old){inventory=M.migrateV2(JSON.parse(old));localStorage.setItem(KEY,JSON.stringify(inventory));migrationNote='فهرست قبلی بدون حذف منتقل شد. مدل، منطقه یا محل نامشخص را در «نیازمند تکمیل» مشخص کنید؛ نسخهٔ قبلی دست‌نخورده باقی مانده است.';}
     }catch(e){storageIssue='فهرست محلی قابل خواندن یا ذخیره نیست؛ برای حفظ اطلاعات، تغییرات غیرفعال است. داده‌های مرورگر را پاک نکنید.';}
+  }
+  function loadCards(){
+    try{const raw=localStorage.getItem(CARDS_KEY);if(raw!==null)cardSettings=M.validateCards(JSON.parse(raw));}
+    catch(e){cardsIssue='تنظیمات کارت‌ها قابل خواندن نیست؛ برای حفظ اطلاعات، ویرایش کارت‌ها غیرفعال است. دسته‌ها و نودها حذف نشده‌اند.';}
+  }
+  function saveCards(next){
+    if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
+    if(cardsIssue)throw Error(cardsIssue);
+    const clean=M.validateCards(next);
+    try{localStorage.setItem(CARDS_KEY,JSON.stringify(clean));}catch(e){throw Error('تنظیمات کارت ذخیره نشد؛ فضای ذخیره‌سازی مرورگر را بررسی کنید.');}
+    cardSettings=clean;
   }
   function save(next){
     if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
@@ -173,6 +185,44 @@ document.addEventListener('DOMContentLoaded',()=>{
     navigate({});
   }
   const facets=[['overview','همهٔ نودها','other'],['types','نوع تجهیز','router'],['models','مدل تجهیز','switch'],['regions','منطقه','branch'],['siteKinds','نوع محل','building'],['buildings','ساختمان‌ها','building'],['datacenters','دیتا سنتر','datacenter']];
+  function cardTargets(key){
+    if(key==='buildings'||key==='datacenters')return catalog('sites').filter(item=>find('siteKinds',item.siteKindId)?.kind===(key==='buildings'?'building':'datacenter'));
+    return catalog(key);
+  }
+  function cardTarget(card){return card.refId?cardTargets(card.facet).find(item=>item.id===card.refId):null;}
+  function openCard(card){
+    if(card.refId&&!cardTarget(card)){editCard(card);return;}
+    filters={};activeField=null;onlyReview=false;search='';facet=card.facet;
+    if(card.refId)applyFilter(M.cardFields[card.facet],card.refId);else navigate({});
+  }
+  function editCard(card=null){
+    if(!can()||!credentials||cardsIssue)return;
+    const {dialog,close}=dialogShell(card?'ویرایش کارت':'افزودن کارت','این کارت فقط میان‌بُر نمایش است؛ تغییر یا حذف آن، دسته‌ها و نودها را حذف نمی‌کند.');
+    const form=el('form','eq-editor eq-card-editor');
+    const name=textField(form,'eq-card-name','نام کارت',card?.name||'').input;
+    const axis=selectField(form,'eq-card-axis','نمایش بر اساس',facets.slice(1).map(([id,name])=>({id,name})),card?.facet||'types');axis.options[0].disabled=true;
+    const target=selectField(form,'eq-card-target','دستهٔ مشخص (اختیاری)',[],null,false);
+    const populate=ref=>{
+      target.replaceChildren();const all=el('option','','همهٔ دسته‌های این بخش');all.value='';target.append(all);
+      for(const item of cardTargets(axis.value)){const option=el('option','',item.name+(item.typeId?' · '+nameOf('types',item.typeId):''));option.value=item.id;target.append(option);}
+      if(ref&&!cardTargets(axis.value).some(item=>item.id===ref)){const missing=el('option','','دستهٔ قبلی حذف شده؛ مقصد جدید انتخاب کنید');missing.value=ref;target.append(missing);}
+      target.value=ref||'';
+    };
+    populate(card?.refId);axis.addEventListener('change',()=>populate(null));
+    const error=el('div','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary','ذخیره کارت');submit.type='submit';
+    form.append(error,tools(submit,button('انصراف',close)));
+    form.addEventListener('submit',event=>{event.preventDefault();try{
+      if(target.value&&!cardTargets(axis.value).some(item=>item.id===target.value))throw Error('مقصد کارت در دسترس نیست؛ یک مقصد معتبر انتخاب کنید.');
+      const next=structuredClone(cardSettings),item={id:card?.id||uid(),name:name.value.trim(),facet:axis.value,refId:target.value||null};
+      const index=next.cards.findIndex(c=>c.id===item.id);if(index<0)next.cards.push(item);else next.cards[index]=item;
+      saveCards(next);close();render();
+    }catch(e){error.textContent=e.message;}});
+    dialog.append(form);dialog.showModal();name.focus();
+  }
+  function deleteCard(card){
+    if(!confirm('فقط کارت «'+card.name+'» حذف شود؟ دسته‌ها و تمام نودها باقی می‌مانند.'))return;
+    try{saveCards({...cardSettings,cards:cardSettings.cards.filter(c=>c.id!==card.id)});render();}catch(e){alert(e.message);}
+  }
   function groupItems(){
     if(facet==='overview')return [];
     if(['buildings','datacenters'].includes(facet)){
@@ -212,11 +262,22 @@ document.addEventListener('DOMContentLoaded',()=>{
     const nav=el('nav','eq-type-nav eq-facet-nav');nav.setAttribute('aria-label','روش دسته‌بندی');
     for(const [key,label,kind]of facets){const b=button('',()=>{facet=key;render();},'eq-tree-link'+(facet===key?' selected':''));b.append(icon(kind),el('span','',label));nav.append(b);}main.append(nav);
     if(facet==='overview'){
+      const toolbar=el('div','eq-cards-toolbar');toolbar.append(el('h4','','کارت‌های من'));
+      const add=button('＋ افزودن کارت',()=>editCard());add.disabled=!!cardsIssue;toolbar.append(add);main.append(toolbar);
       const cards=el('div','eq-card-grid eq-smart-cards');
-      for(const [key,label,kind]of facets.slice(1)){
-        const card=el('article','eq-card tone-'+(kind==='router'?'router':kind==='switch'?'switch':kind)),go=button('',()=>{facet=key;render();},'eq-card-main');
-        go.append(icon(kind),el('strong','',label),el('span','eq-muted',key==='buildings'?'شش ساختمان اولیه؛ قابل مدیریت':key==='datacenters'?'تهران و سمنان؛ قابل مدیریت':'تعریف دلخواه و عضویت خودکار نودها'));card.append(go);cards.append(card);
-      }main.append(cards);
+      for(const item of cardSettings.cards){
+        const [,,kind]=facets.find(f=>f[0]===item.facet),card=el('article','eq-card tone-'+kind),go=button('',()=>openCard(item),'eq-card-main');
+        go.setAttribute('aria-label','باز کردن '+item.name);
+        const title=el('div','eq-shortcut-title');title.append(icon(kind),el('strong','',item.name));
+        const target=cardTarget(item),hint=item.refId?(target?.name||'مقصد حذف شده؛ ویرایش کنید'):({types:'همهٔ انواع تجهیز',models:'همهٔ مدل‌ها',regions:'همهٔ مناطق',siteKinds:'همهٔ انواع محل',buildings:'همهٔ ساختمان‌ها',datacenters:'همهٔ دیتا سنترها'})[item.facet];
+        go.title=item.name+' — '+hint;
+        go.append(title,el('span','eq-muted',hint));
+        const edit=button('ویرایش',()=>editCard(item),'eq-mini-action'),remove=button('حذف',()=>deleteCard(item),'eq-mini-action eq-danger');
+        edit.setAttribute('aria-label','ویرایش کارت '+item.name);remove.setAttribute('aria-label','حذف کارت '+item.name);edit.disabled=remove.disabled=!!cardsIssue;
+        card.append(go,tools(edit,remove));cards.append(card);
+      }
+      if(!cardSettings.cards.length)cards.append(notice('کارتی ندارید؛ با «افزودن کارت» میان‌بُر دلخواه بسازید. دسته‌ها از تب‌های بالا همچنان در دسترس‌اند.'));
+      main.append(cards);
     }else{
       const headingRow=el('div','eq-table-toolbar');headingRow.append(el('h4','',facets.find(f=>f[0]===facet)[1]),button('مدیریت این دسته‌ها',()=>manageCatalog(['buildings','datacenters'].includes(facet)?'sites':facet)));main.append(headingRow);
       const grid=el('div','eq-card-grid eq-smart-groups eq-groups-'+facet);for(const {item,field,count}of groupItems()){
@@ -274,7 +335,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(!credentials){gate();return;}
     const top=el('div','eq-session-bar');top.append(el('span','eq-session-dot'),el('strong','','RADIUS آماده است'),el('span','eq-muted','معتبر تا خروج از حساب FAM · فقط در حافظه'),button('تغییر اطلاعات RADIUS',lock));root.append(top);
     root.append(notice('پیش‌نمایش محلی · فقط نام، IP و مشخصات نودها ذخیره می‌شود؛ رمز ذخیره یا ارسال نمی‌شود.','eq-demo-note'));
-    if(storageIssue)root.append(notice(storageIssue,'warning'));if(migrationNote)root.append(notice(migrationNote));
+    if(storageIssue)root.append(notice(storageIssue,'warning'));if(cardsIssue)root.append(notice(cardsIssue,'warning'));if(migrationNote)root.append(notice(migrationNote));
     const layout=el('div','eq-layout'),main=el('div','eq-main');layout.append(main);root.append(layout);
     if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
   }
@@ -291,5 +352,5 @@ document.addEventListener('DOMContentLoaded',()=>{
     else if(!credentials&&can()&&!root.querySelector('#equipment-radius-user'))render();
   }).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
   window.addEventListener('pagehide',lock); // Also clear before a page can enter BFCache.
-  load();render();
+  load();loadCards();render();
 });
