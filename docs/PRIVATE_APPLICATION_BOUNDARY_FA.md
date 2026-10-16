@@ -73,8 +73,8 @@ Patch هیچ فایل SQLite، حساب، Password، Sheet یا Backup را حذ
    /secrets/
    ```
 
-5. `https://communication-02.toosbank.corp/network-operations` همچنان بعد از
-   Session معتبر کار می‌کند؛ SSH فقط از سرور مرکزی انجام می‌شود.
+5. بعد از Session معتبر، تب «تجهیزات» داخل `/app` قابل استفاده است؛ SSH فقط
+   از سرور مرکزی انجام می‌شود و صفحهٔ مستقل `/network-operations` وجود ندارد.
 
 ## محدودیت مدیریتی
 

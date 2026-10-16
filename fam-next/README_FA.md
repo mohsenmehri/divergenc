@@ -23,7 +23,7 @@
 
 ```text
 Browser -> HTTPS/IIS -> ASP.NET Core (loopback) -> SQL Server
-                                      -> Network Worker (Local Service) -> SSH
+                                      -> Equipment Management helper (one-shot) -> SSH
 ```
 
 محیط اول: VM آزمایشی. هیچ Migration یا Deployment روی `10.16.243.18` تا زمان

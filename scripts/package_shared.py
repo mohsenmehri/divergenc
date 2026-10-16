@@ -4,7 +4,7 @@ import hashlib
 import json
 from zipfile import ZipFile,ZipInfo,ZIP_DEFLATED
 root=Path(__file__).resolve().parents[1]
-files=[*root.glob('server/*.py'),*root.glob('server/*.html'),*root.glob('server/windows/*.ps1'),*root.glob('server/windows/*.psm1'),*root.glob('server/windows/*.py'),*root.glob('server/tests/*.py'),root/'server/windows/dependencies.json',root/'server/windows/offline-wheels.json',root/'INSTALL-FAM.cmd',root/'PREPARE-OFFLINE.cmd',root/'server/requirements.txt',root/'server/private_ui/FAM.html',root/'server/www/login.html',root/'server/www/login.css',root/'server/www/login.js',root/'server/www/web.config',root/'docs/SHARED_IIS_FA.md',root/'docs/SHARED_TEST_REPORT.md',root/'docs/AUTO_INSTALL_FAM_FA.md',root/'docs/AUTO_INSTALL_TEST_REPORT.md',root/'docs/OFFLINE_SERVER_2019_FA.md',root/'docs/OFFLINE_UPDATE_TEST_REPORT.md',root/'docs/PRIMARY_SERVER_CLIENT_QUICK_DEPLOY_FA.md',root/'docs/HTML_THEME2_PATCH_FA.md',root/'docs/SECURITY_NOTES.md',root/'docs/NETWORK_OPERATIONS_PHASE1_FA.md',root/'docs/PRIVATE_APPLICATION_BOUNDARY_FA.md']
+files=[*root.glob('server/*.py'),*root.glob('server/*.html'),*root.glob('server/windows/*.ps1'),*root.glob('server/windows/*.psm1'),*root.glob('server/windows/*.py'),*root.glob('server/tests/*.py'),root/'server/windows/dependencies.json',root/'server/windows/offline-wheels.json',root/'INSTALL-FAM.cmd',root/'PREPARE-OFFLINE.cmd',root/'server/requirements.txt',root/'server/private_ui/FAM.html',root/'server/www/login.html',root/'server/www/login.css',root/'server/www/login.js',root/'server/www/web.config',root/'docs/SHARED_IIS_FA.md',root/'docs/SHARED_TEST_REPORT.md',root/'docs/AUTO_INSTALL_FAM_FA.md',root/'docs/AUTO_INSTALL_TEST_REPORT.md',root/'docs/OFFLINE_SERVER_2019_FA.md',root/'docs/OFFLINE_UPDATE_TEST_REPORT.md',root/'docs/PRIMARY_SERVER_CLIENT_QUICK_DEPLOY_FA.md',root/'docs/HTML_THEME2_PATCH_FA.md',root/'docs/SECURITY_NOTES.md',root/'docs/EQUIPMENT_MANAGEMENT_FA.md',root/'docs/PRIVATE_APPLICATION_BOUNDARY_FA.md']
 entries={p.relative_to(root).as_posix():p.read_bytes() for p in files}
 # Wheels are required in this release, exactly pinned by filename + SHA256.
 # Installer EXE/MSIs can be added by the operator; never bundle arbitrary payload.
@@ -26,6 +26,6 @@ entries['SHA256SUMS.txt']=''.join(hashlib.sha256(data).hexdigest()+'  '+name+'\n
 output=root/'releases/FAM-Central-IIS.zip';output.parent.mkdir(exist_ok=True)
 with ZipFile(output,'w',ZIP_DEFLATED,compresslevel=9) as z:
     for name,data in sorted(entries.items()):
-        info=ZipInfo(name,(2026,10,11,0,0,0));info.compress_type=ZIP_DEFLATED;info.external_attr=0o100644<<16
+        info=ZipInfo(name,(2026,10,16,0,0,0));info.compress_type=ZIP_DEFLATED;info.external_attr=0o100644<<16
         z.writestr(info,data,compresslevel=9)
 print(output.relative_to(root),output.stat().st_size,'bytes',hashlib.sha256(output.read_bytes()).hexdigest())

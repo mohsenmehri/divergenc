@@ -22,10 +22,13 @@ def add_archive(source:Path,output:Path):
 # every release of the interactive UI.
 server=ROOT/'patches'/'fam-custom-access-server'
 payload=server/'payload';payload.mkdir(parents=True,exist_ok=True)
+for stale in ('network_ops.py','network_operations.html'):
+    (payload/stale).unlink(missing_ok=True)
 FILES=(
     (ROOT/'server'/'app.py','app.py'),
-    (ROOT/'server'/'network_ops.py','network_ops.py'),
-    (ROOT/'server'/'network_operations.html','network_operations.html'),
+    (ROOT/'server'/'equipment_ops.py','equipment_ops.py'),
+    (ROOT/'server'/'equipment_probe.py','equipment_probe.py'),
+    (ROOT/'server'/'windows'/'start.ps1','start.ps1'),
     (ROOT/'server'/'private_ui'/'FAM.html','FAM.html'),
     (ROOT/'server'/'www'/'login.html','login.html'),
     (ROOT/'server'/'www'/'login.css','login.css'),

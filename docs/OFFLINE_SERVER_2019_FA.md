@@ -52,10 +52,10 @@ FAM-Setup\
         python-3.14.7-amd64.exe
         rewrite_amd64_en-US.msi
         requestRouter_amd64.msi
-        wheels\                         ← 11 فایل .whl، از قبل داخل ZIP
+        wheels\                         ← 32 فایل .whl، از قبل داخل ZIP
 ```
 
-کتابخانه‌های همراه: Flask 3.1.3، waitress 3.0.2، Werkzeug 3.1.9، Jinja2 3.1.6، MarkupSafe 3.0.4، itsdangerous 2.2.0، click 8.5.0، blinker 1.9.0 و colorama 0.4.6. سه wheel مجزای MarkupSafe برای CPython 3.12/3.13/3.14 x64 وجود دارد؛ بقیه مشترک‌اند. SQL Server، Node.js، Office و Python جداگانه روی سرور لازم نیست؛ SQLite همراه Python است.
+کتابخانه‌های همراه علاوه بر Flask 3.1.3 و waitress 3.0.2، شامل Netmiko 4.8.0 و وابستگی‌های SSH آن (Paramiko، cryptography، PyYAML و …) هستند. سه wheel مجزای MarkupSafe، CFFI و PyYAML برای CPython 3.12/3.13/3.14 x64 وجود دارد؛ بقیه مشترک‌اند. SQL Server، Node.js، Office و Python جداگانه روی سرور لازم نیست؛ SQLite همراه Python است.
 
 ## فایل منبع Windows؛ فقط اگر قابلیت‌های IIS ناقص باشند
 

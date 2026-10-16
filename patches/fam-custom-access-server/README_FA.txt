@@ -1,17 +1,17 @@
-به‌روزرسانی مدیریت کاربران و دسترسی‌های سفارشی + کنترل‌پلین عملیات شبکه — سرور مرکزی / IIS
+به‌روزرسانی مدیریت کاربران و دسترسی‌های سفارشی + مدیریت تجهیزات — سرور مرکزی / IIS
 
 این پچ برای نصب مرکزی FAM در C:\FAM و C:\FAMData است. رابط مدیریت کاربران را با نسخهٔ محلی یکسان می‌کند: محدودهٔ دسته‌ها، زیرمحدودهٔ مناطق برای استان‌ها، و مجوزهای ریزعملیاتی. «سطح کاربر» در فرم نمایش داده نمی‌شود.
 
-این revision کنترل‌پلین عملیات شبکه را اضافه/به‌روزرسانی می‌کند: صفحهٔ `/network-operations`، Inventory متادیتا، بررسی مستقیم Err-disabled و رفع کنترل‌شدهٔ همان Interface گزارش‌شده. مرورگر اطلاعات اتصال را فقط برای کلید عمومی Worker رمز می‌کند؛ FAM/IIS هیچ IP یا Credential متن‌واضحی را ذخیره نمی‌کند. رفع خطا فقط بعد از انتخاب پورت گزارش‌شده، تأیید انسانی، pre-check و post-check انجام می‌شود؛ هیچ Command آزاد یا `write memory` وجود ندارد. Network Operations به‌صورت پیش‌فرض غیرفعال می‌ماند تا `FAM_NETWORK_OPS_ENABLED=1` تنظیم شود. سپس Worker داخلی خودکار سرور با هویت Built-in `NT AUTHORITY\LOCAL SERVICE` اجرا می‌شود؛ Pairing دستی، Token Worker، حساب نام‌دار یا Password سرویس وجود ندارد. Worker فقط به `http://127.0.0.1:8765/_internal` وصل می‌شود و IIS این مسیر را Proxy نمی‌کند. راهنمای کامل و script مهاجرت: `docs/NETWORK_OPERATIONS_PHASE1_FA.md` در بستهٔ Worker.
+این revision صفحهٔ مستقل عملیات شبکه و Worker Token را حذف می‌کند و تب «تجهیزات» را داخل صفحهٔ اصلی FAM اضافه می‌کند. کاربر مجاز IP خصوصی تجهیز و نام کاربری/رمز موقت SSH یا RADIUS را وارد می‌کند؛ سرور FAM آن‌ها را فقط در حافظهٔ همان درخواست برای اتصال SSH/22 استفاده می‌کند. گزارش فقط پورت‌های Err-disabled است. برای رفع، کاربر همان پورت را تأیید می‌کند؛ سرور pre-check، `shutdown` / `no shutdown` محدود و post-check انجام می‌دهد. command آزاد، Enable، ذخیرهٔ تنظیمات، Worker Pairing و Token وجود ندارد. Netmiko به‌صورت آفلاین و hash-verified داخل venv خود FAM نصب می‌شود و Scheduled Task قدیمی Worker غیرفعال می‌شود.
 
 روش اجرا
 1) ZIP را روی خود سرور Extract کنید.
-2) APPLY-CUSTOM-ACCESS-UPDATE.cmd را با Run as administrator اجرا کنید.
-3) فقط پیام سبز `CUSTOM ACCESS + PRIVATE FAM UI UPDATE APPLIED.` معتبر است.
-4) سپس Worker ZIP هم‌نسخه را در `C:\FAM-NetworkWorker` Extract و `network_worker\windows\UPDATE-COHOSTED-WORKER.ps1` را با Administrator اجرا کنید. هیچ Token وارد نکنید.
+2) Patch به‌صورت آفلاین و hash-verified، Netmiko را در `C:\\FAM\\server\\.venv` نصب می‌کند؛ اینترنت و venv قدیمی Worker لازم نیست.
+3) APPLY-CUSTOM-ACCESS-UPDATE.cmd را با Run as administrator اجرا کنید.
+4) فقط پیام سبز `CUSTOM ACCESS + PRIVATE FAM UI UPDATE APPLIED.` معتبر است. سپس FAM را refresh کنید و تب «تجهیزات» را باز کنید.
 
 ایمنی و بازگشت
-- پیش از تغییر، app.py، FAM.html و web.config فعلی زیر C:\FAMData\backups\custom-access-<date> ذخیره می‌شوند.
+- پیش از تغییر، app.py، start.ps1، FAM.html و web.config فعلی زیر C:\FAMData\backups\custom-access-<date> ذخیره می‌شوند.
 - اگر `network_ops.py` یا `network_operations.html` از قبل وجود داشته باشد، آن‌ها نیز backup می‌شوند. اگر قبلاً وجود نداشته‌اند و Patch ناموفق شود، خودکار حذف می‌شوند.
 - وظیفهٔ شناخته‌شدهٔ FAM-Central کنترل‌شده متوقف و پس از جایگزینی، شنود پورت داخلی 8765 بررسی می‌شود.
 - پچ هیچ فایل SQLite، worksheet، داده، نام worksheet، رمز یا رکورد کاربر را پاک/جابه‌جا نمی‌کند.

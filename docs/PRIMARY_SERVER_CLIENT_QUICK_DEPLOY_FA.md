@@ -45,15 +45,18 @@ curl.exe --noproxy "*" -I https://communication-02.toosbank.corp/
 باز می‌کند و Login می‌کند. قبل از Login، مسیر `/app` یا `/FAM.html` باید به
 `/login.html` بازگردد.
 
-## Network Operations
+## مدیریت تجهیزات
 
-همان URL اصلی FAM صفحهٔ `/network-operations` را در اختیار کاربر مجاز قرار
-می‌دهد. Worker فقط یک سرویس داخلی روی همین سرور و تحت `NT AUTHORITY\LOCAL SERVICE`
-است؛ هیچ حساب دستی `FAMNetworkWorker`، سرور دوم یا Agent روی Workstation کاربران
-ساخته نمی‌شود. تمام SSH از `10.16.243.18` انجام می‌شود.
+پس از Login، کاربر مجاز در تب **تجهیزات** داخل همان صفحهٔ اصلی FAM، IP خصوصی
+Switch/Router و username/password موقت SSH یا RADIUS را وارد می‌کند. FAM برای
+همان درخواست از `10.16.243.18` به SSH/22 تجهیز وصل می‌شود و فقط وضعیت
+Err-disabled را گزارش می‌دهد. هیچ Worker Token، Pairing، Agent Workstation یا
+سرویس Worker جداگانه در UI وجود ندارد.
 
 - Router: کاربر RADIUS username/password خودش را وارد می‌کند.
 - Switch: کاربر local username/password خودش را وارد می‌کند.
-- `enable` و Enable Secret در این مسیر وجود ندارد.
+- `enable`، Enable Secret و `write memory` در این مسیر وجود ندارد.
+- برای رفع، فقط پورت گزارش‌شده، پس از تأیید کاربر و pre-check/post-check،
+  `shutdown` / `no shutdown` محدود دریافت می‌کند.
 
-راهنمای محدودیت‌ها و Recovery کنترل‌شده: [NETWORK_OPERATIONS_PHASE1_FA.md](NETWORK_OPERATIONS_PHASE1_FA.md).
+راهنمای کامل: [EQUIPMENT_MANAGEMENT_FA.md](EQUIPMENT_MANAGEMENT_FA.md).

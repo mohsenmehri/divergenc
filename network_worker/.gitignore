@@ -1,4 +1,0 @@
-private/
-*.dpapi
-worker.json
-__pycache__/

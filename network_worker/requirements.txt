@@ -1,2 +1,0 @@
-netmiko>=4.4,<5
-cryptography>=42,<47

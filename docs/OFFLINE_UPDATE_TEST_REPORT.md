@@ -10,7 +10,7 @@
 
 | بررسی | روش | نتیجه |
 |---|---|---|
-| wheelهای آفلاین | 11 فایل، SHA-256 هر فایل با metadata رسمی PyPI تطبیق داده شد | موفق |
+| wheelهای آفلاین | 32 فایل، SHA-256 هر فایل با metadata رسمی PyPI تطبیق داده شد | موفق |
 | سازگاری wheelhouse | `pip download --no-index --only-binary=:all: --platform win_amd64` برای CPython 3.12، 3.13 و 3.14 | موفق برای هر سه ABI |
 | برنامهٔ نصب آفلاین | آزمون‌های Python ثابت: manifest، نام امن فایل، hash، سه ABI، نبود pip دانلود در آماده‌ساز، `--no-index` و `--only-binary` در نصب، و استثنای محدود زنجیرهٔ امضای آفلاین | 9 آزمون موفق |
 | API و backup قبلی | `server.tests.test_installer` و `server.tests.test_api` | 29 آزمون موفق |
@@ -28,7 +28,7 @@
 node --test tests/sidebar-theme.test.cjs tests/shared-build.test.cjs
 ```
 
-نتایج نهایی این اجرای محیط: **37 آزمون Python** و **8 آزمون Node/Chromium** موفق. برای build، تمام wheelهای همراه نیز hash شدند.
+نتایج نهایی این اجرای محیط: **68 آزمون Python** و بررسی syntax مربوط به JavaScript موفق. برای build، تمام wheelهای همراه نیز hash شدند.
 
 ## محدودیت‌های شفاف
 

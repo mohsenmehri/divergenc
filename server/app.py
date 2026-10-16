@@ -24,16 +24,15 @@ try:
 except ImportError:  # Running directly from C:\FAM\server\app.py.
     from manage import backup as verified_backup
 
-# The independently deployable Network Operations subsystem is present in the
-# full central release.  Older narrow custom-access patches deliberately remain
-# usable without it; they retain the hardened core but expose no Network API.
+# Equipment Management uses a one-shot local SSH helper.  It has no browser
+# Worker API, bearer token, pairing process, or persistent equipment credentials.
 try:
-    from .network_ops import register_network_ops
+    from .equipment_ops import register_equipment_ops
 except ImportError:
     try:
-        from network_ops import register_network_ops
+        from equipment_ops import register_equipment_ops
     except ImportError:
-        register_network_ops=None
+        register_equipment_ops=None
 
 ROOT = Path(__file__).resolve().parent
 SYSTEM = {'CONTROL_PANEL','SYSTEM_SEARCH_INDEX','SYSTEM_SHEET_CONFIG','SYSTEM_DATA_DICTIONARY','CHANGE_LOG','SEARCH_RESULTS','SYSTEM_KEYS','SYSTEM_UNDO_BUFFER','SYSTEM_NAVIGATOR'}
@@ -56,7 +55,7 @@ EMPTY={'v':2,'order':[],'sheets':{},'lockedSheets':{},'categoryConfig':None,'reg
 PERMISSIONS={
     'view-sheets','search','view-history','edit-cells','save-results','add-record','remove-record','undo-remove',
     'refresh-panel','refresh-index','import-data','export-xlsx','backup-server','restore-data','empty-data','reset-data',
-    'manage-regions','manage-categories','manage-users'
+    'manage-regions','manage-categories','manage-users','equipment-operations'
 }
 DATA_PERMISSIONS={'view-sheets','search','edit-cells','save-results','add-record','remove-record','undo-remove','export-xlsx'}
 FULL_REWRITE_PERMISSIONS={'import-data','empty-data','reset-data','restore-data'}
@@ -465,11 +464,12 @@ def create_app(config=None):
     app.config.update(DB_PATH=os.environ.get('FAM_DB',str(ROOT/'private'/'fam.sqlite3')),
       PUBLIC_ORIGIN=os.environ.get('FAM_PUBLIC_ORIGIN',''), COOKIE_SECURE=True,
       MAX_CONTENT_LENGTH=32*1024*1024, TESTING=False,
-      # Network Operations remains opt-in until its independent Worker has
-      # been installed, paired and lab-validated under its own Windows account.
-      NETWORK_OPS_ENABLED=os.environ.get('FAM_NETWORK_OPS_ENABLED','0')=='1',
-      NETWORK_OPS_MAX_LAB_DEVICES=int(os.environ.get('FAM_NETWORK_OPS_MAX_LAB_DEVICES','10')),
-      NETWORK_OPS_JOB_LEASE_SECONDS=int(os.environ.get('FAM_NETWORK_OPS_JOB_LEASE_SECONDS','600')))
+      # Equipment Management is an explicit FAM capability. Its isolated helper
+      # uses the FAM virtual environment; there is no Worker process/runtime.
+      EQUIPMENT_OPS_ENABLED=os.environ.get('FAM_EQUIPMENT_OPS_ENABLED','0')=='1',
+      EQUIPMENT_PYTHON=os.environ.get('FAM_EQUIPMENT_PYTHON',str(ROOT/'.venv'/'Scripts'/'python.exe')),
+      EQUIPMENT_HELPER=str(ROOT/'equipment_probe.py'),
+      EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32))
     if config:app.config.update(config)
     if not app.config['PUBLIC_ORIGIN']:raise RuntimeError('Set FAM_PUBLIC_ORIGIN to the HTTPS origin (no trailing slash).')
     if not app.config['TESTING'] and not app.config['PUBLIC_ORIGIN'].startswith('https://'):raise RuntimeError('Production requires HTTPS.')
@@ -539,17 +539,9 @@ def create_app(config=None):
     @app.before_request
     def guard():
         if not request.path.startswith('/api/'):return
-        # A separately deployed Worker cannot carry a browser session or CSRF
-        # token. Its narrow write endpoints are authenticated later by a scoped,
-        # revocable Worker bearer token; they never accept browser requests or
-        # expose FAM session data. All normal browser API routes keep the
-        # existing Origin + CSRF protections below.
-        worker_endpoint=(request.path=='/_internal/network/worker/claim' or
-                         re.fullmatch(r'/_internal/network/worker/jobs/[a-zA-Z0-9_-]{1,100}/complete',request.path) or
-                         (request.method=='POST' and re.fullmatch(r'/_internal/network/workers/[a-z][a-z0-9._-]{1,63}/probe-key',request.path)))
-        if worker_endpoint:
-            if request.method not in ('GET','HEAD','OPTIONS') and not request.is_json:fail(415,'بدنهٔ JSON لازم است.')
-            return
+        # Equipment requests are ordinary authenticated browser API calls.
+        # They keep the same strict HTTPS Origin + CSRF checks as every other
+        # sensitive FAM action; there is no bearer-token exception.
         if request.method not in ('GET','HEAD','OPTIONS'):
             if request.headers.get('Origin')!=app.config['PUBLIC_ORIGIN']:fail(403,'مبدأ درخواست مجاز نیست.')
             if not request.is_json:fail(415,'بدنهٔ JSON لازم است.')
@@ -576,15 +568,10 @@ def create_app(config=None):
         safe_tree(value);return value
     def admin(user):
         if not may_manage_users(user):fail(403,'مجوز مدیریت کاربران و دسترسی‌ها لازم است.')
-    def network_read_allowed(user):
-        # Network reports are a central operational audit surface.  Custom
-        # accounts need an explicit existing read-audit capability; the user
-        # manager can always inspect the subsystem it provisions.
-        return (may_manage_users(user) or has_permission(user,'view-history')) if is_custom_user(user) else user['role']<=2
-    def network_write_allowed(user):
-        # Pairing a Worker and queuing device jobs are control-plane changes,
-        # reserved for the existing explicit access-manager capability.
-        return may_manage_users(user)
+    def equipment_allowed(user):
+        # Existing access managers retain access during migration.  Other
+        # custom accounts require the explicit Equipment Management capability.
+        return (may_manage_users(user) or has_permission(user,'equipment-operations')) if is_custom_user(user) else user['role']<=2
     def backup_allowed(user):
         if is_custom_user(user):
             if not has_permission(user,'backup-server'):fail(403,'مجوز پشتیبان‌گیری لازم است.')
@@ -807,10 +794,8 @@ def create_app(config=None):
             except Problem:return False
         return True
 
-    if register_network_ops is not None:
-        register_network_ops(app, connect=connect, transaction=transaction, data=data,
-                             fail=fail, can_read_network=network_read_allowed,
-                             can_write_network=network_write_allowed, page_session=page_session)
+    if register_equipment_ops is not None:
+        register_equipment_ops(app, data=data, fail=fail, allowed=equipment_allowed)
     return app
 
 if __name__=='__main__':

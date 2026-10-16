@@ -9,8 +9,8 @@ WINDOWS=ROOT/'server/windows'
 class OfflineKitChecks(unittest.TestCase):
     def setUp(self):self.manifest=json.loads((WINDOWS/'offline-wheels.json').read_text())
     def test_pinned_files_and_origins(self):
-        files=self.manifest['files'];self.assertEqual(len(files),11)
-        self.assertEqual(len({s['file'] for s in files}),11)
+        files=self.manifest['files'];self.assertEqual(len(files),32)
+        self.assertEqual(len({s['file'] for s in files}),32)
         for s in files:
             self.assertEqual(Path(s['file']).name,s['file']);self.assertNotIn('\\',s['file'])
             self.assertTrue(s['url'].startswith('https://files.pythonhosted.org/'))
