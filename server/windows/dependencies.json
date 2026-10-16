@@ -1,0 +1,28 @@
+{
+  "source": "https://github.com/microsoft/winget-pkgs",
+  "checked": "2026-10-11",
+  "python": {
+    "version": "3.14.7",
+    "file": "python-3.14.7-amd64.exe",
+    "url": "https://www.python.org/ftp/python/3.14.7/python-3.14.7-amd64.exe",
+    "sha256": "9D9EB2709EF81BF5CD30DB3C2096BDBC4EA10087C22E62F27D356B36F6AE9649",
+    "publisher": "Python Software Foundation",
+    "manifest": "manifests/p/Python/Python/3/14/3.14.7/Python.Python.3.14.installer.yaml"
+  },
+  "rewrite": {
+    "version": "7.2.1993",
+    "file": "rewrite_amd64_en-US.msi",
+    "url": "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi",
+    "sha256": "37342FF2F585F263F34F48E9DE59EB1051D61015A8E967DBDE4075716230A32A",
+    "publisher": "Microsoft Corporation",
+    "manifest": "manifests/m/Microsoft/IIS/URLRewrite/7.2.1993/Microsoft.IIS.URLRewrite.installer.yaml"
+  },
+  "arr": {
+    "version": "3.0.05311",
+    "file": "requestRouter_amd64.msi",
+    "url": "https://go.microsoft.com/fwlink/?LinkID=615136",
+    "sha256": "FB61FDB7101795A34D5129CB37EEE43AB675C7ED76BA3A3B23B039D8C90C2A4B",
+    "publisher": "Microsoft Corporation",
+    "manifest": "manifests/m/Microsoft/IIS/ApplicationRequestRouting/3.0.05311/Microsoft.IIS.ApplicationRequestRouting.installer.yaml"
+  }
+}

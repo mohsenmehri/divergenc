@@ -1,0 +1,289 @@
+"""Bounded Equipment Management API for FAM.
+
+The browser submits device credentials over its existing HTTPS FAM session.
+The FAM server itself then opens one direct, bounded SSH session to the device
+through the one-shot ``equipment_probe.py`` helper (Windows OpenSSH ssh.exe).
+No device credential, job, or CLI output is stored in FAM's database, files,
+URL, command line, or normal logs.  The legacy VDI connector broker remains
+only as an explicitly disabled compatibility path (``FAM_EQUIPMENT_CONNECTOR_ENABLED=0``).
+"""
+from __future__ import annotations
+
+import base64
+import hashlib
+import hmac
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import secrets
+import subprocess
+import threading
+import time
+
+from flask import g, jsonify
+
+INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
+# Same allowlist as equipment_probe.USERNAME: the name is passed to ssh.exe -l
+# and echoed into the askpass prompt, so shell metacharacters are refused here.
+USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
+# Outer wall clock for the helper process per operation.  It must exceed
+# equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
+# helper while it is still supervising an ssh.exe child.
+EXECUTOR_TIMEOUT = {"status": 40, "recover": 95}
+JOB_ID = re.compile(r"[A-Za-z0-9_-]{20,100}\Z")
+RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
+
+
+class EquipmentBroker:
+    """Memory-only, same-user job hand-off to a Connector polling over HTTPS."""
+
+    def __init__(self):
+        self._condition = threading.Condition()
+        self._jobs = {}
+        self._active_until = {}
+
+    def _purge(self, now):
+        self._active_until = {user: until for user, until in self._active_until.items() if until > now}
+        self._jobs = {job_id: job for job_id, job in self._jobs.items() if job["expires"] > now}
+
+    def submit(self, user_id, payload, timeout=100):
+        now = time.monotonic()
+        with self._condition:
+            self._purge(now)
+            if user_id not in self._active_until:
+                return {"ok": False, "error": "connector_offline"}
+            job_id = secrets.token_urlsafe(24)
+            job = {"user": user_id, "payload": payload, "expires": now + timeout, "claimed": False,
+                   "done": threading.Event(), "result": None}
+            self._jobs[job_id] = job
+            self._condition.notify_all()
+        if not job["done"].wait(timeout):
+            with self._condition:
+                self._jobs.pop(job_id, None)
+            return {"ok": False, "error": "connector_timeout"}
+        with self._condition:
+            self._jobs.pop(job_id, None)
+        return job["result"] if isinstance(job["result"], dict) else {"ok": False, "error": "connector_failed"}
+
+    def claim(self, user_id, timeout=25):
+        deadline = time.monotonic() + timeout
+        with self._condition:
+            while True:
+                now = time.monotonic()
+                self._purge(now)
+                # A connector must refresh this short heartbeat continuously;
+                # a disconnected VDI cannot be selected for a browser request.
+                self._active_until[user_id] = now + 35
+                for job_id, job in self._jobs.items():
+                    if job["user"] == user_id and not job["claimed"]:
+                        job["claimed"] = True
+                        return {"jobId": job_id, **job["payload"]}
+                remaining = deadline - now
+                if remaining <= 0:
+                    return None
+                self._condition.wait(remaining)
+
+    def online(self, user_id):
+        with self._condition:
+            self._purge(time.monotonic())
+            return user_id in self._active_until
+
+    def complete(self, user_id, job_id, result):
+        with self._condition:
+            job = self._jobs.get(job_id)
+            if not job or job["user"] != user_id or not job["claimed"] or job["expires"] <= time.monotonic():
+                return False
+            job["result"] = result
+            job["done"].set()
+            self._condition.notify_all()
+            return True
+
+
+def _b64(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
+
+
+def _unb64(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def _input(value, *, recovery=False):
+    expected = {"host", "username", "password"} | ({"interface", "ticket"} if recovery else set())
+    if not isinstance(value, dict) or set(value) != expected:
+        raise ValueError
+    host, username, password = value["host"], value["username"], value["password"]
+    if not isinstance(host, str) or not isinstance(username, str) or not isinstance(password, str):
+        raise ValueError
+    try:
+        address = ipaddress.ip_address(host.strip())
+    except ValueError as exc:
+        raise ValueError from exc
+    if not isinstance(address, ipaddress.IPv4Address) or not any(address in network for network in RFC1918_NETWORKS):
+        raise ValueError
+    username = username.strip()
+    if not USERNAME.fullmatch(username) or not 1 <= len(password) <= 512:
+        raise ValueError
+    # The password only ever travels through an environment variable into the
+    # ssh.exe child; keep it to printable ASCII so no code-page translation or
+    # control character can alter it on the way.
+    if not all(0x20 <= ord(char) <= 0x7E for char in password):
+        raise ValueError
+    result = {"host": str(address), "username": username, "password": password}
+    if recovery:
+        interface, ticket = value["interface"], value["ticket"]
+        if not isinstance(interface, str) or not INTERFACE.fullmatch(interface) or not isinstance(ticket, str) or not 40 <= len(ticket) <= 1024:
+            raise ValueError
+        result |= {"interface": interface, "ticket": ticket}
+    return result
+
+
+def _ticket(app, *, user_id, host, username, interface):
+    # The browser needs an opaque one-time ticket, not a copy of its username.
+    user_digest = hashlib.sha256(username.encode("utf-8")).hexdigest()
+    payload = json.dumps({"u": user_id, "h": host, "n": user_digest, "i": interface, "e": int(time.time()) + 300}, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    tag = hmac.new(app.config["EQUIPMENT_TICKET_KEY"], payload, hashlib.sha256).digest()
+    return _b64(payload) + "." + _b64(tag)
+
+
+def _verify_ticket(app, value, *, user_id, host, username, interface):
+    try:
+        encoded, signature = value.split(".", 1)
+        payload, tag = _unb64(encoded), _unb64(signature)
+        expected = hmac.new(app.config["EQUIPMENT_TICKET_KEY"], payload, hashlib.sha256).digest()
+        decoded = json.loads(payload.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    user_digest = hashlib.sha256(username.encode("utf-8")).hexdigest()
+    return (hmac.compare_digest(tag, expected) and isinstance(decoded, dict) and
+            decoded == {"u": user_id, "h": host, "n": user_digest, "i": interface, "e": decoded.get("e")} and
+            isinstance(decoded.get("e"), int) and int(time.time()) <= decoded["e"])
+
+
+def _helper_environment(app):
+    """Environment for the helper: inherited process environment plus the
+    explicit ssh.exe / host-key settings.  No device credential is placed here;
+    the helper receives the job on stdin only."""
+    env = dict(os.environ)
+    for key, name in (("EQUIPMENT_SSH", "FAM_EQUIPMENT_SSH"), ("EQUIPMENT_KNOWN_HOSTS", "FAM_EQUIPMENT_KNOWN_HOSTS"),
+                      ("EQUIPMENT_HOST_KEY_POLICY", "FAM_EQUIPMENT_HOST_KEY_POLICY"), ("EQUIPMENT_RUNTIME_DIR", "FAM_EQUIPMENT_RUNTIME_DIR")):
+        value = app.config.get(key)
+        if value:
+            env[name] = str(value)
+    return env
+
+
+def _execute(app, payload):
+    override = app.config.get("EQUIPMENT_EXECUTOR")
+    if override is not None:
+        return override(payload)
+    if app.config.get("EQUIPMENT_CONNECTOR_ENABLED"):
+        return app.config["EQUIPMENT_BROKER"].submit(g.user["id"], payload)
+    executable = Path(app.config["EQUIPMENT_PYTHON"])
+    helper = Path(app.config["EQUIPMENT_HELPER"])
+    if not executable.is_file() or not helper.is_file():
+        return {"ok": False, "error": "executor_unavailable"}
+    timeout = EXECUTOR_TIMEOUT.get(payload.get("operation"), EXECUTOR_TIMEOUT["status"])
+    try:
+        completed = subprocess.run(
+            [str(executable), str(helper)], input=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=timeout, check=False, env=_helper_environment(app),
+        )
+        result = json.loads(completed.stdout.decode("utf-8"))
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "connection_timeout"}
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {"ok": False, "error": "executor_unavailable"}
+    return result if isinstance(result, dict) else {"ok": False, "error": "executor_unavailable"}
+
+
+def _failure(value):
+    code = value.get("error") if isinstance(value, dict) else ""
+    return {
+        "authentication_failed": "نام کاربری یا رمز تجهیز پذیرفته نشد.",
+        "connection_timeout": "اتصال SSH به تجهیز در زمان مجاز پاسخ نداد.",
+        "connection_failed": "بررسی تجهیز انجام نشد؛ دسترسی SSH و وضعیت تجهیز را بررسی کنید.",
+        "host_key_rejected": "کلید میزبان (Host Key) تجهیز تأیید نشد یا با رکورد قبلی تفاوت دارد؛ اتصال برای ایمنی قطع شد. با مدیر FAM تماس بگیرید.",
+        "recovery_rejected": "تجهیز دستورهای بازیابی را نپذیرفت (احتمالاً سطح دسترسی کافی نیست)؛ هیچ تغییری اعمال یا ذخیره نشد.",
+        "executor_unavailable": "موتور داخلی بررسی تجهیز (OpenSSH) روی سرور FAM آماده نیست.",
+        "connector_offline": "Connector تجهیزات روی VDI شما متصل نیست؛ ابتدا START-FAM-EQUIPMENT-CONNECTOR را اجرا کنید.",
+        "connector_timeout": "Connector تجهیزات در زمان مجاز پاسخ نداد؛ اتصال VDI و SSH تجهیز را بررسی کنید.",
+        "connector_failed": "Connector تجهیزات نتیجهٔ معتبر ارسال نکرد.",
+    }.get(code, "بررسی تجهیز انجام نشد.")
+
+
+def _ports_or_fail(result, fail):
+    raw_ports = result.get("ports") if isinstance(result, dict) else None
+    if not isinstance(result, dict) or result.get("ok") is not True or not isinstance(raw_ports, list):
+        fail(502, _failure(result))
+    ports = []
+    seen = set()
+    for item in raw_ports:
+        if (not isinstance(item, dict) or set(item) != {"interface", "description"} or
+                not isinstance(item["interface"], str) or not INTERFACE.fullmatch(item["interface"]) or
+                not isinstance(item["description"], str) or len(item["description"]) > 128 or
+                "\r" in item["description"] or "\n" in item["description"] or item["interface"] in seen):
+            fail(502, _failure(result))
+        seen.add(item["interface"])
+        ports.append({"interface": item["interface"], "description": item["description"]})
+    return sorted(ports, key=lambda item: item["interface"])
+
+
+def register_equipment_ops(app, *, data, fail, allowed):
+    """Register authenticated browser and same-user Connector endpoints."""
+    broker = app.config["EQUIPMENT_BROKER"]
+
+    def authorize():
+        if not app.config["EQUIPMENT_OPS_ENABLED"]:
+            fail(404, "مدیریت تجهیزات فعال نشده است.")
+        if not allowed(g.user):
+            fail(403, "مجوز مدیریت تجهیزات لازم است.")
+
+    @app.post("/api/equipment/check")
+    def equipment_check():
+        authorize()
+        try:
+            value = _input(data())
+        except ValueError:
+            fail(400, "IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.")
+        result = _execute(app, {"operation": "status", **value})
+        ports = _ports_or_fail(result, fail)
+        tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
+        return jsonify(host=value["host"], errDisabledPorts=ports, recoveryTickets=tickets)
+
+    @app.post("/api/equipment/recover")
+    def equipment_recover():
+        authorize()
+        try:
+            value = _input(data(), recovery=True)
+        except ValueError:
+            fail(400, "درخواست بازیابی معتبر نیست.")
+        if not _verify_ticket(app, value.pop("ticket"), user_id=g.user["id"], host=value["host"], username=value["username"], interface=value["interface"]):
+            fail(409, "تأیید بررسی این پورت منقضی شده است؛ ابتدا وضعیت را دوباره بررسی کنید.")
+        result = _execute(app, {"operation": "recover", **value})
+        if not isinstance(result, dict) or result.get("ok") is not True or result.get("recovery") not in {"recovered", "still_errdisabled", "not_errdisabled"}:
+            fail(502, _failure(result))
+        return jsonify(host=value["host"], interface=value["interface"], recovery=result["recovery"])
+
+    @app.post("/api/equipment/connector/claim")
+    def equipment_connector_claim():
+        authorize()
+        if not app.config["EQUIPMENT_CONNECTOR_ENABLED"]:
+            fail(404, "Connector تجهیزات فعال نشده است.")
+        if data() != {}:
+            fail(400, "درخواست Connector معتبر نیست.")
+        return jsonify(job=broker.claim(g.user["id"]))
+
+    @app.post("/api/equipment/connector/complete")
+    def equipment_connector_complete():
+        authorize()
+        if not app.config["EQUIPMENT_CONNECTOR_ENABLED"]:
+            fail(404, "Connector تجهیزات فعال نشده است.")
+        value = data()
+        if (not isinstance(value, dict) or set(value) != {"jobId", "result"} or
+                not isinstance(value["jobId"], str) or not JOB_ID.fullmatch(value["jobId"]) or not isinstance(value["result"], dict)):
+            fail(400, "نتیجهٔ Connector معتبر نیست.")
+        if not broker.complete(g.user["id"], value["jobId"], value["result"]):
+            fail(409, "درخواست Connector منقضی شده است.")
+        return jsonify(ok=True)

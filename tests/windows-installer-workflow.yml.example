@@ -1,0 +1,34 @@
+name: Windows IIS installer check
+on:
+  push:
+    branches: [arena/a50077cc-divergenc]
+    paths:
+      - '.github/workflows/windows-installer-check.yml'
+      - 'server/windows/**'
+      - 'server/requirements.txt'
+      - 'tests/windows-installer.ps1'
+      - 'INSTALL-FAM.cmd'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fam-windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  iis:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Real Windows PowerShell parser and IIS deployment
+        shell: powershell
+        run: .\tests\windows-installer.ps1
+      - name: Installation diagnostics (no database or private keys)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-iis-installation-logs
+          path: |
+            C:\FAM-CIData\logs\*.log
+            C:\FAM-CIData\logs\verification-*.json
+            C:\FAM-CI\deployment.json

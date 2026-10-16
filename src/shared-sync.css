@@ -1,0 +1,13 @@
+/* Central status is the only new chrome; both themes share the same layout. */
+#shared-status{position:fixed;bottom:12px;left:16px;z-index:800;padding:8px 13px;border:1px solid var(--stroke-2);border-radius:8px;background:var(--bg-1);color:var(--green);font:11px var(--font);max-width:min(510px,calc(100vw - 32px));box-shadow:0 3px 18px #0002;}
+#shared-status.sync-error{color:var(--red);border-color:var(--red);}
+.auth-pending #shared-status{display:none;}
+/* The central revision is already visible in the header. Hide its duplicate
+   fixed message, “مرکزی · نسخهٔ … سرور”, at the bottom of the interface. */
+html[data-fam-variant="shared"] #shared-status{display:none!important;}
+#shared-block{position:fixed;inset:0;background:#101b35a6;z-index:50000;display:grid;place-items:center;padding:18px;}
+.shared-box{width:min(530px,100%);max-height:90vh;overflow:auto;background:var(--bg-1);color:var(--txt-0);border:1px solid var(--stroke-2);border-radius:14px;padding:26px;box-shadow:0 18px 70px #0004;}
+.shared-box h3{font-size:18px;margin:0 0 16px;}.shared-box p{font-size:12px;line-height:2;}.shared-box .btn{margin:10px 0 0 8px;}
+#live-update-notice{position:fixed;top:18px;inset-inline-start:50%;transform:translateX(-50%);z-index:1800;width:min(560px,calc(100vw - 32px));padding:14px 16px;background:var(--bg-1);color:var(--txt-0);border:1px solid var(--cyan);border-radius:12px;box-shadow:0 16px 42px #0005;font:13px var(--font);text-align:right;direction:rtl;}
+#live-update-notice[hidden]{display:none;}.live-update-message{margin:0;line-height:1.8;}.live-update-actions{display:flex;gap:8px;justify-content:flex-start;margin-top:11px;}.live-update-actions .btn{margin:0;min-height:34px;}
+@media(max-width:560px){#live-update-notice{top:10px;padding:12px;}.live-update-actions{flex-wrap:wrap;}.live-update-actions .btn{flex:1 1 130px;}}

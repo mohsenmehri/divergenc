@@ -1,0 +1,71 @@
+# یادداشت‌های امنیتی FAM
+
+این سند تصمیم‌های امنیتی فعال و مسیرهای بهبود آینده را ثبت می‌کند تا تغییرهای
+مرتبط با production قابل بازبینی باشند.
+
+## پچ hardening فعلی
+
+این انتشار موارد زیر را اعمال می‌کند:
+
+- HSTS یک‌ساله (`max-age=31536000`) برای سایت HTTPS داخلی؛ عمداً
+  `includeSubDomains` و `preload` ندارد.
+- خطای کنترل‌شده و fail-closed برای ستون‌های JSON آسیب‌دیدهٔ جدول `users`.
+- رد صریح نام شیت‌های سیستمی غیرمجاز در ورودی browser. دو شیت
+  `SYSTEM_SHEET_CONFIG` و `SYSTEM_KEYS` به‌علت فرادادهٔ persist‌شده و
+  `CHANGE_LOG` به‌علت نمایش read-only تاریخچه همچنان سازگار هستند؛ لاگ از
+  ورودی پاک می‌شود و هرگز از client persist نمی‌گردد.
+- allowlist صریح فایل‌های deployment به‌جای copy کردن wildcard همهٔ `*.py`.
+- یکسان‌سازی اولویت Python ماشین: `3.14 → 3.13 → 3.12`.
+
+## Rate limiting پشت IIS/ARR
+
+bucket فعلی login از username و `request.remote_addr` ساخته می‌شود. چون backend
+پشت IIS/ARR فقط روی loopback شنود می‌کند، در استقرار استاندارد مقدار IP نزد
+Flask معمولاً `127.0.0.1` است. بنابراین محدودسازی فعلی عمداً **per-username
+سراسری** است، نه per-client-IP.
+
+این رفتار جلوی تلاش نامحدود روی یک username را می‌گیرد، اما یک کاربر داخلی
+می‌تواند با ۱۰ تلاش ناموفق ورود همان username را برای ۱۵ دقیقه محدود کند.
+
+`X-Forwarded-For` در backend خوانده نمی‌شود. اضافه کردن آن بدون آزمون واقعی
+ARR خطرناک است، چون header قابل جعل است. برای تبدیل این مدل به IP-aware باید
+همهٔ این مراحل تکمیل شوند:
+
+1. IIS/ARR header ارسالی کاربر را پیش از proxy پاک یا با IP واقعی overwrite کند.
+2. backend فقط در یک تنظیم صریح `TRUSTED_PROXY` و تنها از proxy loopback آن
+   header را بپذیرد.
+3. آزمون IIS واقعی ثابت کند header جعل‌شده روی bucket اثر ندارد.
+4. regression test رفتار trusted/untrusted را پوشش دهد.
+
+تا آن زمان، مدل per-username سراسری از اعتماد نادرست به header ناامن بهتر است.
+
+## PBKDF2
+
+رمزها با `PBKDF2-HMAC-SHA256` و ۲۱۰٬۰۰۰ iteration ذخیره می‌شوند. این مقدار
+برای انتشار فعلی حفظ شده تا migration ناگهانی و فشار نامشخص CPU روی Windows
+Server ایجاد نشود.
+
+راهنماهای جدیدتر معمولاً iteration بالاتری برای PBKDF2-SHA256 پیشنهاد می‌کنند.
+هر افزایش باید migration کنترل‌شده داشته باشد:
+
+1. ستون additive مانند `kdf_iter` اضافه شود.
+2. رمز قدیمی با iteration ثبت‌شده تأیید شود.
+3. هنگام login موفق، hash با target benchmark‌شدهٔ سرور دوباره ساخته شود.
+4. پیش از فعال‌سازی، latency و CPU روی Windows Server واقعی اندازه‌گیری شود.
+
+## رمز اولیه در نصب fresh
+
+`FAM_INITIAL_PASSWORD` باید در نصب production صریحاً تعیین شود. fallback فعلی
+فقط برای سازگاری نصب‌های موجود باقی مانده است؛ عملیات نصب باید بلافاصله رمز
+مدیر را به مقدار منحصر‌به‌فرد سازمان تغییر دهد. حذف fallback یا تولید رمز اولیه
+تصادفی نیازمند تغییر کنترل‌شدهٔ installer و روش امن تحویل رمز به Administrator
+است.
+
+## Equipment Management (direct ssh.exe)
+
+- Equipment checks run on the FAM server itself via `server/equipment_probe.py`, which spawns the Windows OpenSSH client (`ssh.exe`). Netmiko/Paramiko and the `Transport._preferred_ciphers` workaround are gone.
+- Only one legacy cipher is appended for the Catalyst switches that offer CBC only: `-o Ciphers=+aes128-cbc`. `3des-cbc`, `aes192-cbc`, `aes256-cbc` and wildcards are never offered; `scripts/package_custom_access_updates.py` refuses to package a payload that enables them or sets `StrictHostKeyChecking=no`.
+- The device password is never in argv, files, SQLite, URLs or logs. It is placed only in the `ssh.exe` child environment (`FAM_EQUIPMENT_SSH_SECRET`); the per-session `askpass.cmd` only echoes that variable through delayed expansion and is deleted in `finally`. Usernames are restricted to `[A-Za-z0-9._@\-]` and passwords to printable ASCII so no shell metacharacter reaches `cmd.exe`.
+- Host keys are verified against `C:\FAMData\equipment\known_hosts` with `StrictHostKeyChecking=accept-new` (first contact recorded, later change refused with `host_key_rejected`); `FAM_EQUIPMENT_HOST_KEY_POLICY=strict` requires pre-trusted keys.
+- Timeouts are layered: `ConnectTimeout=10`, 25 s per ssh session, 30/85 s helper deadline (status/recovery), 40/95 s backend executor timeout, 110 s browser wait — the parent never kills the helper before it has killed its own `ssh.exe`.
+- Deferred: keyboard-interactive devices that send multi-prompt challenges receive the same password for every prompt (bounded by `NumberOfPasswordPrompts=1`); a dedicated service account for the FAM-Central task with a locked-down `%TEMP%` remains an operations recommendation.

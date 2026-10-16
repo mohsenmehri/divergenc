@@ -1,0 +1,12 @@
+node_modules/
+.cache/
+test-results/
+
+.venv/
+server/private/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+server/windows/settings.json
+__pycache__/
+server/windows/payload/
