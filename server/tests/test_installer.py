@@ -1,5 +1,6 @@
 """Linux-executable helper tests. These are NOT Windows/IIS deployment tests."""
 import json
+import re
 from pathlib import Path
 import sqlite3
 import ssl
@@ -118,6 +119,22 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertIn('data-view="equipment"',fam)
         self.assertIn('equipment/check',fam)
         self.assertNotIn('network-operations',fam)
+
+    def test_equipment_script_is_not_embedded_inside_the_sheetjs_script(self):
+        """An inline <script> inside SheetJS becomes visible page text in browsers."""
+        fam=(Path(__file__).resolve().parents[1]/'private_ui'/'FAM.html').read_text(encoding='utf8')
+        tags=list(re.finditer(r'(?is)<script\b[^>]*>|</script\s*>',fam))
+        inside=False;equipment_open=False
+        for tag in tags:
+            if tag.group(0).lower().startswith('</script'):
+                self.assertTrue(inside, 'unexpected closing script tag')
+                inside=False
+            else:
+                self.assertFalse(inside, 'a script tag is nested inside another script')
+                inside=True
+                equipment_open|='id="fam-equipment-management-js"' in tag.group(0)
+        self.assertFalse(inside, 'unclosed script tag')
+        self.assertTrue(equipment_open)
 
     def test_verified_iis_client_patch_targets_iis_physical_path_and_validates_payload(self):
         root=Path(__file__).resolve().parents[2]
