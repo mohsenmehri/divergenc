@@ -16,7 +16,7 @@ from network_worker.config import ProbeKeyStoreConfig
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from network_worker.secrets import Credential, SecretStoreError
+from network_worker.secrets import Credential
 
 
 class FakeConnection:
@@ -39,16 +39,10 @@ class FakeConnection:
         self.disconnected = True
 
 
-class FakeStore:
-    def credential(self, reference):
-        if reference == "missing":
-            raise SecretStoreError("not available")
-        return Credential("readonly", "not-a-real-password")
-
 
 class FakeProbeKeys:
     def decrypt(self, envelope, worker_id):
-        if envelope != {"sealed": "one-time"} or worker_id != "worker-lab-01":
+        if envelope != {"sealed": "one-time"} or worker_id != "worker-fam-local":
             raise AssertionError("unexpected sealed probe")
         return SimpleNamespace(host="192.0.2.55", port=22, username="operator", password="not-a-real-password", operation="interactive_probe", interface=None)
 
@@ -89,13 +83,11 @@ class WorkerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             config = Path(temp) / "worker.json"
             config.write_text(json.dumps({
-                "controlPlaneUrl": "https://fam.example.test",
-                "workerId": "worker-lab-01",
-                "tokenEnv": "FAM_NETWORK_WORKER_TOKEN",
+                "controlPlaneUrl": "http://127.0.0.1:8765",
+                "workerId": "worker-fam-local",
                 "pollSeconds": 15,
                 "maxParallel": 2,
                 "caFile": None,
-                "secretStore": {"type": "windows-dpapi", "path": "C:\\FAM-NetworkWorker\\private\\secrets.json.dpapi"},
                 "probeKeyStore": {"type": "windows-dpapi", "path": "C:\\FAM-NetworkWorker\\private\\interactive-probe-key.dpapi"},
                 "devices": [{"id": "lab-isr-01", "host": "192.0.2.10", "port": 22, "credentialRef": "cisco-readonly-lab", "platform": "cisco_ios", "timeoutSeconds": 30}],
             }), encoding="utf-8")
@@ -105,24 +97,27 @@ class WorkerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             config = Path(temp) / "worker.json"
             config.write_text(json.dumps({
-                "controlPlaneUrl": "https://fam.example.test", "workerId": "worker-lab-01", "tokenEnv": "FAM_NETWORK_WORKER_TOKEN",
+                "controlPlaneUrl": "http://127.0.0.1:8765", "workerId": "worker-fam-local",
                 "pollSeconds": 15, "maxParallel": 1, "caFile": None,
-                "secretStore": {"type": "windows-dpapi", "path": "C:\\private\\s.dpapi"},
                 "probeKeyStore": {"type": "windows-dpapi", "path": "C:\\private\\probe.dpapi"},
                 "devices": [],
             }), encoding="utf-8-sig")
-            self.assertEqual(load(config).worker_id, "worker-lab-01")
+            self.assertEqual(load(config).worker_id, "worker-fam-local")
 
     def test_config_refuses_inline_credentials_commands_and_non_https(self):
         with tempfile.TemporaryDirectory() as temp:
             config = Path(temp) / "worker.json"
             raw = {
-                "controlPlaneUrl": "http://fam.example.test", "workerId": "worker-lab-01", "tokenEnv": "FAM_NETWORK_WORKER_TOKEN",
+                "controlPlaneUrl": "http://127.0.0.1:8765", "workerId": "worker-fam-local",
                 "pollSeconds": 15, "maxParallel": 1, "caFile": None,
-                "secretStore": {"type": "windows-dpapi", "path": "C:\\private\\s.dpapi"},
                 "probeKeyStore": {"type": "windows-dpapi", "path": "C:\\private\\probe.dpapi"},
                 "devices": [{"id": "lab-isr-01", "host": "192.0.2.10", "port": 22, "credentialRef": "cred", "platform": "cisco_ios", "timeoutSeconds": 30, "command": "show run"}],
             }
+            config.write_text(json.dumps(raw), encoding="utf-8")
+            with self.assertRaises(ConfigError):
+                load(config)
+            raw["devices"] = []
+            raw["secretStore"] = {"type": "windows-dpapi", "path": "C:\\private\\legacy.dpapi"}
             config.write_text(json.dumps(raw), encoding="utf-8")
             with self.assertRaises(ConfigError):
                 load(config)
@@ -160,12 +155,12 @@ class WorkerTests(unittest.TestCase):
         def fake_collector(device, credential):
             return {"deviceId": device.id, "status": "succeeded", "facts": {"hostname": "r1"}, "warnings": [], "error": None}
 
-        runner = Runner(settings, client, FakeStore(), collector=fake_collector)
+        runner = Runner(settings, client, collector=fake_collector)
         self.assertTrue(runner.run_once())
         job_id, results = client.completed
         self.assertEqual(job_id, "job_test")
         self.assertEqual([item["deviceId"] for item in results], ["lab-isr-01", "unknown-device"])
-        self.assertEqual(results[1]["error"], "local_inventory_missing")
+        self.assertTrue(all(item["error"] == "local_inventory_missing" for item in results))
         self.assertFalse(runner.run_once())
 
     def test_probe_envelope_is_bound_to_its_worker_and_decrypts_only_in_worker_memory(self):
@@ -173,7 +168,7 @@ class WorkerTests(unittest.TestCase):
         public = key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo).decode("ascii")
         store = ProbeKeyStore(ProbeKeyStoreConfig("windows-dpapi", Path("C:/private/probe.dpapi")))
         store._private_key, store._public_pem = key, public
-        raw = bytes(range(32)); iv = bytes(range(12)); worker_id = "worker-lab-01"
+        raw = bytes(range(32)); iv = bytes(range(12)); worker_id = "worker-fam-local"
         value = json.dumps({"host": "192.0.2.55", "port": 22, "username": "operator", "password": "not-a-real-password", "operation": "interactive_probe", "interface": None}, separators=(",", ":")).encode()
         encrypted = AESGCM(raw).encrypt(iv, value, ("FAM Network Worker Probe v1|" + worker_id).encode())
         b64 = lambda data: base64.urlsafe_b64encode(data).decode().rstrip("=")
@@ -197,7 +192,7 @@ class WorkerTests(unittest.TestCase):
             captured.update(host=device.host, username=credential.username, password=credential.password, device_id=device.id)
             return {"deviceId": device.id, "status": "succeeded", "facts": {"interfaces": {"errDisabled": 1}}, "warnings": ["err-disabled interfaces detected"], "error": None}
 
-        runner = Runner(settings, client, FakeStore(), FakeProbeKeys(), collector=fake_collector)
+        runner = Runner(settings, client, FakeProbeKeys(), collector=fake_collector)
         self.assertTrue(runner.run_once())
         self.assertEqual(captured, {"host": "192.0.2.55", "username": "operator", "password": "not-a-real-password", "device_id": "probe-123"})
         self.assertEqual(client.completed[1][0]["warnings"], ["err-disabled interfaces detected"])

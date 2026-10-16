@@ -10,7 +10,6 @@ from urllib.parse import urlparse
 
 
 IDENTIFIER = re.compile(r"[a-z][a-z0-9._-]{1,63}")
-ENV_NAME = re.compile(r"[A-Z_][A-Z0-9_]{0,127}")
 HOSTNAME = re.compile(r"(?=.{1,253}\Z)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)\Z")
 WINDOWS_ABSOLUTE = re.compile(r"(?:[A-Za-z]:[\\/]|\\\\)")
 
@@ -30,12 +29,6 @@ class Device:
 
 
 @dataclass(frozen=True)
-class SecretStoreConfig:
-    kind: str
-    path: Path
-
-
-@dataclass(frozen=True)
 class ProbeKeyStoreConfig:
     kind: str
     path: Path
@@ -45,11 +38,10 @@ class ProbeKeyStoreConfig:
 class Settings:
     control_plane_url: str
     worker_id: str
-    token_env: str
+    cohosted_loopback: bool
     poll_seconds: int
     max_parallel: int
     ca_file: Path | None
-    secret_store: SecretStoreConfig
     probe_key_store: ProbeKeyStoreConfig
     devices: dict[str, Device]
 
@@ -88,15 +80,20 @@ def _absolute_path(value):
 
 
 def _url(value):
+    """Accept only the co-hosted Worker's private loopback control plane.
+
+    Browser users use the public HTTPS origin.  The Worker is a local server
+    process and talks only to the unproxied loopback service, so it needs no
+    browser-visible pairing token and never traverses IIS, a proxy, or a LAN.
+    """
     if not isinstance(value, str):
         raise ConfigError("controlPlaneUrl is invalid")
     parsed = urlparse(value)
-    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password or parsed.query or parsed.fragment:
-        raise ConfigError("controlPlaneUrl must be an HTTPS origin without credentials")
-    path = parsed.path.rstrip("/")
-    if path not in ("", "/"):
-        raise ConfigError("controlPlaneUrl must not include a path")
-    return f"https://{parsed.netloc}"
+    if (parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or
+            parsed.port != 8765 or parsed.username or parsed.password or
+            parsed.query or parsed.fragment or parsed.path.rstrip("/") not in ("", "/")):
+        raise ConfigError("controlPlaneUrl must be http://127.0.0.1:8765 for the co-hosted Worker")
+    return "http://127.0.0.1:8765"
 
 
 def _store(value, label, cls):
@@ -138,14 +135,10 @@ def load(path: str | Path) -> Settings:
         raw = json.loads(file_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ConfigError("configuration file cannot be read") from exc
-    allowed = {"controlPlaneUrl", "workerId", "tokenEnv", "pollSeconds", "maxParallel", "caFile", "secretStore", "probeKeyStore", "devices"}
+    allowed = {"controlPlaneUrl", "workerId", "pollSeconds", "maxParallel", "caFile", "probeKeyStore", "devices"}
     if not isinstance(raw, dict) or set(raw) != allowed:
         raise ConfigError("configuration must contain exactly the documented fields")
-    token_env = raw["tokenEnv"]
-    if not isinstance(token_env, str) or not ENV_NAME.fullmatch(token_env):
-        raise ConfigError("tokenEnv is invalid")
     try:
-        secret_store = _store(raw["secretStore"], "secretStore", SecretStoreConfig)
         probe_key_store = _store(raw["probeKeyStore"], "probeKeyStore", ProbeKeyStoreConfig)
         ca_file = None if raw["caFile"] is None else _absolute_path(raw["caFile"])
     except ConfigError as exc:
@@ -160,12 +153,11 @@ def load(path: str | Path) -> Settings:
     return Settings(
         control_plane_url=_url(raw["controlPlaneUrl"]),
         worker_id=_identifier(raw["workerId"], "workerId"),
-        token_env=token_env,
+        cohosted_loopback=True,
         poll_seconds=_integer(raw["pollSeconds"], "pollSeconds", 5, 300),
         # The first validation release deliberately caps concurrency at two.
         max_parallel=_integer(raw["maxParallel"], "maxParallel", 1, 2),
         ca_file=Path(ca_file) if ca_file else None,
-        secret_store=secret_store,
         probe_key_store=probe_key_store,
         devices={item.id: item for item in parsed_devices},
     )

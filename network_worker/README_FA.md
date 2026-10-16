@@ -1,17 +1,19 @@
-# FAM Network Worker
+# FAM Network Worker — مدل هم‌مکان خودکار
 
-Worker روی سرور مرکزی FAM اجرا می‌شود و اتصال SSH به تجهیزات فقط از همان سرور انجام می‌گیرد؛ کاربران فقط UI مرورگر FAM را می‌بینند.
+Worker فقط روی همان سرور FAM اجرا می‌شود و اتصال SSH به Router/Switch فقط از همان سرور برقرار می‌شود. کاربران فقط UI مرورگر FAM را روی HTTPS می‌بینند.
 
-قابلیت‌ها:
+- مرورگر اپراتور IP/hostname و credential موقت SSH را وارد می‌کند: Router با RADIUS اپراتور و Switch با حساب Local تجهیز.
+- مرورگر داده را برای کلید عمومی Worker رمز می‌کند؛ FAM آن را متن‌واضح ذخیره نمی‌کند و Worker آن را فقط در حافظه باز می‌کند.
+- Worker روی همان سرور، زیر `NT AUTHORITY\LOCAL SERVICE`، به SSH/22 تجهیز وصل می‌شود.
+- ارتباط داخلی Worker با FAM فقط `http://127.0.0.1:8765/_internal` است. IIS این مسیر را Proxy نمی‌کند؛ مرورگر و شبکه به آن دسترسی ندارند.
+- Token Pairing مرورگر، حساب نام‌دار Worker و Password سرویس وجود ندارد. Local Service و مسیر loopback مرز داخلی Worker هستند.
+- هیچ credential تجهیزی در Worker config یا DPAPI store نگهداری نمی‌شود؛ credential واردشده فقط در حافظهٔ process Worker برای همان Job است.
+- Worker فقط commandهای ثابت show و recovery محدود همان Interface گزارش‌شده را اجرا می‌کند؛ `enable`، Enable Secret، `write memory` و command آزاد وجود ندارد.
 
-- Inventory فقط‌خواندنی Cisco IOS با commandهای ثابت `show`.
-- بررسی مستقیم Err-disabled برای Router یا Switch Cisco IOS: کاربر IP/hostname، username و password را در مرورگر وارد می‌کند؛ برای Router از RADIUS خودش و برای Switch از حساب Local همان تجهیز. مرورگر آن‌ها را برای کلید DPAPI/RSA Worker رمز می‌کند و FAM هیچ متن‌واضحی نمی‌بیند.
-- رفع کنترل‌شدهٔ یک Interface Err-disabled: فقط پورت گزارش‌شده از بررسی موفق، با pre-check، توالی محدود `shutdown` / `no shutdown`، post-check و بدون `enable`، Enable Secret یا `write memory`.
+بعد از Extract نسخهٔ Worker، با Administrator اجرا کنید:
 
-Worker ترمینال یا اجرای دستور آزاد نیست. هیچ Command عمومی، تغییر global configuration، backup/restore یا auto-remediation ندارد.
+```powershell
+C:\FAM-NetworkWorker\network_worker\windows\UPDATE-COHOSTED-WORKER.ps1
+```
 
-- راهنمای معماری و استقرار: [`../docs/NETWORK_OPERATIONS_PHASE1_FA.md`](../docs/NETWORK_OPERATIONS_PHASE1_FA.md)
-- فایل نمونهٔ فاقد Credential: `worker.example.json`
-- فایل واقعی `worker.json` و همهٔ `*.dpapi` طبق `.gitignore` محلی Worker هرگز نباید وارد repository شوند.
-
-Worker فقط یک سرویس داخلی روی همان سرور FAM/IIS است؛ سرور دوم، Agent روی Workstation کاربران یا حساب نام‌دار `FAMNetworkWorker` لازم نیست. آن را خارج از مسیر public و با هویت Built-in غیرتعاملی `NT AUTHORITY\LOCAL SERVICE` اجرا کنید؛ این هویت Password یا Desktop Login ندارد و از هویت Application Pool/IIS جدا می‌ماند. ارتباط کنترل‌پلین FAM همیشه مستقیم و بدون Proxy/PAC است؛ در صورت گواهی خصوصی، `caFile` می‌تواند گواهی عمومی PEM یا Windows DER `.cer` تأییدشدهٔ FAM باشد.
+این script `worker.json` و Scheduled Task را بدون Token می‌سازد. فایل واقعی config و DPAPI هرگز وارد repository نمی‌شوند.

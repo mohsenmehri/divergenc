@@ -53,14 +53,14 @@ class NetworkOpsTests(unittest.TestCase):
             },
         })
 
-    def worker(self):
-        response = self.post(self.admin, "network/workers", {"id": "worker-lab-01", "name": "Lab Worker"})
-        self.assertEqual(response.status_code, 200, response.json)
-        return response.json["token"]
+    def internal_post(self, path, body):
+        return self.admin.post(path, json=body, headers={"X-FAM-Worker-ID": "worker-fam-local"}, environ_overrides={"REMOTE_ADDR": "127.0.0.1"})
 
-    @staticmethod
-    def worker_headers(token):
-        return {"Authorization": "Bearer " + token, "X-FAM-Worker-ID": "worker-lab-01"}
+    def worker(self):
+        public_key = "-----BEGIN PUBLIC KEY-----\n" + ("A" * 400) + "\n-----END PUBLIC KEY-----\n"
+        response = self.internal_post("/_internal/network/workers/worker-fam-local/probe-key", {"publicKey": public_key})
+        self.assertEqual(response.status_code, 200, response.json)
+        return None
 
     def test_network_operations_page_is_private_dynamic_and_network_ops_is_opt_in(self):
         anonymous = self.app.test_client().get("/network-operations", follow_redirects=False)
@@ -91,7 +91,7 @@ class NetworkOpsTests(unittest.TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertEqual(client.get("/api/network/overview").status_code, 404)
         # Worker routes must not accidentally become anonymous when disabled.
-        self.assertEqual(client.post("/api/network/worker/claim", json={}).status_code, 404)
+        self.assertEqual(client.post("/api/network/worker/claim", json={}).status_code, 403)
 
     def test_inventory_rejects_endpoints_credentials_and_non_lab_devices(self):
         revision = self.admin.get("/api/network/overview").json["inventoryRevision"]
@@ -144,24 +144,27 @@ class NetworkOpsTests(unittest.TestCase):
         }})
         self.assertEqual(created.status_code, 200, created.json)
 
-    def test_pairing_token_is_one_time_response_and_worker_route_needs_it(self):
-        token = self.worker()
+    def test_cohosted_worker_has_no_browser_token_and_internal_route_is_loopback_only(self):
+        self.worker()
         workers = self.admin.get("/api/network/workers")
         self.assertEqual(workers.status_code, 200)
+        self.assertEqual([item["id"] for item in workers.json["workers"]], ["worker-fam-local"])
         self.assertNotIn("token", str(workers.json))
-        self.assertEqual(self.admin.post("/api/network/worker/claim", json={}).status_code, 401)
-        self.assertEqual(self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token)).status_code, 200)
+        self.assertEqual(self.admin.post("/api/network/worker/claim", json={}).status_code, 403)
+        denied = self.admin.post("/_internal/network/worker/claim", json={}, headers={"X-FAM-Worker-ID": "worker-fam-local"}, environ_overrides={"REMOTE_ADDR": "198.51.100.7"})
+        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(self.internal_post("/_internal/network/worker/claim", {}).status_code, 200)
         # A normal browser route still rejects a write without Origin + CSRF.
         self.assertEqual(self.admin.post("/api/network/jobs", json={}).status_code, 403)
 
     def test_user_entered_probe_is_opaque_to_fam_and_claimed_only_by_its_worker(self):
-        token = self.worker()
+        self.worker()
         public_key = "-----BEGIN PUBLIC KEY-----\n" + ("A" * 400) + "\n-----END PUBLIC KEY-----\n"
-        registered = self.admin.post(
-            "/api/network/workers/worker-lab-01/probe-key", json={"publicKey": public_key}, headers=self.worker_headers(token)
+        registered = self.internal_post(
+            "/_internal/network/workers/worker-fam-local/probe-key", {"publicKey": public_key}
         )
         self.assertEqual(registered.status_code, 200, registered.json)
-        key = self.admin.get("/api/network/workers/worker-lab-01/probe-key")
+        key = self.admin.get("/api/network/workers/worker-fam-local/probe-key")
         self.assertEqual(key.status_code, 200, key.json)
         self.assertEqual(key.json["fingerprint"], registered.json["fingerprint"])
         sealed = {
@@ -171,21 +174,20 @@ class NetworkOpsTests(unittest.TestCase):
             "iv": "B" * 16,
             "ciphertext": "C" * 24,
         }
-        queued = self.post(self.admin, "network/probes", {"workerId": "worker-lab-01", "sealed": sealed})
+        queued = self.post(self.admin, "network/probes", {"workerId": "worker-fam-local", "sealed": sealed})
         self.assertEqual(queued.status_code, 201, queued.json)
         self.assertTrue(queued.json["job"]["interactive"])
         self.assertNotIn("host", str(queued.json).lower())
         self.assertNotIn("password", str(queued.json).lower())
-        claimed = self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token))
+        claimed = self.internal_post("/_internal/network/worker/claim", {})
         self.assertEqual(claimed.status_code, 200, claimed.json)
         self.assertEqual(set(claimed.json["job"]), {"id", "kind", "operation", "targetInterface", "deviceIds", "leaseSeconds", "sealed"})
         self.assertEqual(claimed.json["job"]["sealed"], sealed)
         device_id = claimed.json["job"]["deviceIds"][0]
-        completed = self.admin.post(
-            "/api/network/worker/jobs/" + queued.json["job"]["id"] + "/complete",
-            json={"results": [{"deviceId": device_id, "status": "succeeded", "facts": {"interfaces": {"errDisabled": 1, "errDisabledPorts": [{"name": "Gi0/1"}]}},
+        completed = self.internal_post(
+            "/_internal/network/worker/jobs/" + queued.json["job"]["id"] + "/complete",
+            {"results": [{"deviceId": device_id, "status": "succeeded", "facts": {"interfaces": {"errDisabled": 1, "errDisabledPorts": [{"name": "Gi0/1"}]}},
                                 "warnings": ["err-disabled interfaces detected"], "error": None}]},
-            headers=self.worker_headers(token),
         )
         self.assertEqual(completed.status_code, 200, completed.json)
         # The sealed credential envelope is cleared on completion and no
@@ -197,26 +199,25 @@ class NetworkOpsTests(unittest.TestCase):
         # A recovery can target only the interface that the completed discovery
         # result structurally reported; it cannot be a free-form CLI request.
         wrong_port = self.post(self.admin, "network/recoveries", {
-            "workerId": "worker-lab-01", "sourceJobId": queued.json["job"]["id"], "deviceId": device_id,
+            "workerId": "worker-fam-local", "sourceJobId": queued.json["job"]["id"], "deviceId": device_id,
             "interface": "Gi0/2", "sealed": sealed,
         })
         self.assertEqual(wrong_port.status_code, 409)
         recovery = self.post(self.admin, "network/recoveries", {
-            "workerId": "worker-lab-01", "sourceJobId": queued.json["job"]["id"], "deviceId": device_id,
+            "workerId": "worker-fam-local", "sourceJobId": queued.json["job"]["id"], "deviceId": device_id,
             "interface": "Gi0/1", "sealed": sealed,
         })
         self.assertEqual(recovery.status_code, 201, recovery.json)
         self.assertEqual(recovery.json["job"]["operation"], "errdisabled_recovery")
         self.assertEqual(recovery.json["job"]["targetInterface"], "Gi0/1")
-        recovery_claim = self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token))
+        recovery_claim = self.internal_post("/_internal/network/worker/claim", {})
         self.assertEqual(recovery_claim.status_code, 200, recovery_claim.json)
         self.assertEqual(recovery_claim.json["job"]["operation"], "errdisabled_recovery")
         self.assertEqual(recovery_claim.json["job"]["targetInterface"], "Gi0/1")
-        completed_recovery = self.admin.post(
-            "/api/network/worker/jobs/" + recovery.json["job"]["id"] + "/complete",
-            json={"results": [{"deviceId": device_id, "status": "succeeded",
+        completed_recovery = self.internal_post(
+            "/_internal/network/worker/jobs/" + recovery.json["job"]["id"] + "/complete",
+            {"results": [{"deviceId": device_id, "status": "succeeded",
                                 "facts": {"recovery": {"interface": "Gi0/1", "status": "recovered"}}, "warnings": [], "error": None}]},
-            headers=self.worker_headers(token),
         )
         self.assertEqual(completed_recovery.status_code, 200, completed_recovery.json)
 
@@ -234,9 +235,9 @@ class NetworkOpsTests(unittest.TestCase):
 
     def test_worker_receives_only_inventory_ids_and_structured_results(self):
         self.assertEqual(self.inventory().status_code, 200)
-        token = self.worker()
+        self.worker()
         queued = self.post(self.admin, "network/jobs", {"siteId": "lab", "groupId": "edge", "deviceIds": ["lab-isr-01"]}).json["job"]
-        claimed = self.admin.post("/api/network/worker/claim", json={}, headers=self.worker_headers(token))
+        claimed = self.internal_post("/_internal/network/worker/claim", {})
         self.assertEqual(claimed.status_code, 200, claimed.json)
         payload = claimed.json["job"]
         self.assertEqual(set(payload), {"id", "kind", "operation", "targetInterface", "deviceIds", "leaseSeconds"})
@@ -248,12 +249,12 @@ class NetworkOpsTests(unittest.TestCase):
                 "warnings": [], "error": None, "rawOutput": "show running-config ...",
             }]
         }
-        self.assertEqual(self.admin.post("/api/network/worker/jobs/" + queued["id"] + "/complete", json=raw_attempt, headers=self.worker_headers(token)).status_code, 400)
-        completed = self.admin.post("/api/network/worker/jobs/" + queued["id"] + "/complete", json={"results": [{
+        self.assertEqual(self.internal_post("/_internal/network/worker/jobs/" + queued["id"] + "/complete", raw_attempt).status_code, 400)
+        completed = self.internal_post("/_internal/network/worker/jobs/" + queued["id"] + "/complete", {"results": [{
             "deviceId": "lab-isr-01", "status": "succeeded",
             "facts": {"hostname": "r1", "model": "ISR4451", "osVersion": "17.6", "interfaces": {"total": 2, "up": 1, "down": 1}},
             "warnings": ["some fixed inventory commands were unavailable"], "error": None,
-        }]}, headers=self.worker_headers(token))
+        }]})
         self.assertEqual(completed.status_code, 200, completed.json)
         detail = self.admin.get("/api/network/jobs/" + queued["id"])
         self.assertEqual(detail.status_code, 200)

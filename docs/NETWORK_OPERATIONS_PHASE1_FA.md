@@ -62,36 +62,36 @@ no shutdown
 | **Network Worker** | اتصال SSH از سرور مرکزی، بررسی ثابت، recovery محدود و post-check | UI، Command آزاد، تغییر خارج از پورت تأییدشده، `write memory` |
 | **Windows DPAPI** | حفاظت از کلید خصوصی Worker و Credentialهای inventory محلی زیر حساب Worker | دسترسی برای IIS/FAM یا مرورگر |
 
-## استقرار هم‌مکان روی همان سرور FAM/IIS
+## استقرار هم‌مکان خودکار روی همان سرور FAM/IIS
 
-Worker فقط یک سرویس داخلی روی همان سرور FAM/IIS است؛ سرور دوم یا حساب دستی برای کاربران ایجاد نمی‌شود. برای اجرای غیرتعاملی آن از هویت Built-in `NT AUTHORITY\LOCAL SERVICE` استفاده کنید؛ از `LocalSystem` و هویت Application Pool استفاده نکنید.
-
-1. حساب نام‌دار مانند `FAMNetworkWorker` نسازید و Password سرویس تعریف نکنید.
-2. Worker را در مسیری مانند `C:\FAM-NetworkWorker` نصب کنید، نه زیر `C:\FAM\server\www`.
-3. روی `worker.json`، `*.dpapi` و پوشهٔ `private` فقط `LOCAL SERVICE`، `SYSTEM` و Administratorهای مجاز مجوز لازم داشته باشند.
-4. ACL مدیریت تجهیزات باید اجازهٔ SSH از IP سرور Worker را بدهد؛ رایانه‌های کاربران نیازی به مسیر SSH به تجهیزات ندارند.
-5. FAM باید فقط از HTTPS و نامی استفاده کند که در SAN گواهی آن وجود دارد. `controlPlaneUrl` همان HTTPS origin واقعی FAM است.
-
-## فعال‌سازی و راه‌اندازی
-
-کنترل‌پلین به‌صورت پیش‌فرض غیرفعال است. پس از اعمال Patch سرور، متغیرهای زیر را روی سرور FAM تنظیم و سرویس FAM را restart کنید:
+Worker فقط یک process داخلی روی همان سرور FAM/IIS است. مسیر واقعی عملیات این است:
 
 ```text
-FAM_NETWORK_OPS_ENABLED=1
-FAM_NETWORK_OPS_MAX_LAB_DEVICES=10
-FAM_NETWORK_OPS_JOB_LEASE_SECONDS=600
+مرورگر کاربر ─ HTTPS/443 ─> communication-02.toosbank.corp
+                              │
+                              └─ FAM/IIS روی 10.16.243.18
+                                   │
+                                   └─ Worker داخلی Local Service ─ SSH/22 ─> Router / Switch
 ```
 
-1. Worker را با `worker.example.json` پیکربندی کنید. برای بررسی مستقیم، `devices` می‌تواند خالی باشد.
-2. در `/network-operations` یک Worker ثبت و Token یک‌بارمصرف را فقط در محیط حساب Worker نگهداری کنید.
-3. Worker را یک‌بار اجرا کنید تا کلید DPAPI/RSA خود را ثبت کند:
+- کاربر هرگز SSH Client، Agent، Token Worker یا حساب سرویس دریافت نمی‌کند.
+- Worker با هویت Built-in غیرتعاملی `NT AUTHORITY\LOCAL SERVICE` اجرا می‌شود؛ حساب نام‌دار و Password سرویس لازم نیست.
+- Worker به‌جای HTTPS عمومی، فقط به `http://127.0.0.1:8765/_internal` وصل می‌شود. IIS این namespace داخلی را Proxy نمی‌کند و browser/شبکه نمی‌تواند به آن برسد.
+- مسیر `private` Worker فقط برای Local Service، SYSTEM و Administratorهای مجاز ACL می‌شود.
+- تجهیزات فقط باید SSH/22 را از IP سرور `10.16.243.18` مجاز کنند؛ workstation کاربران نیازی به SSH ندارد.
+
+### راه‌اندازی
+
+1. Patch جدید سرور را با Administrator روی FAM اعمال کنید.
+2. Worker ZIP جدید را روی `C:\FAM-NetworkWorker` Extract و فایل‌های `network_worker` را overwrite کنید؛ venv و private موجود را حذف نکنید.
+3. Worker را بدون Token پیکربندی و Task را بازسازی کنید:
 
    ```powershell
-   C:\FAM-NetworkWorker\venv\Scripts\python.exe -m network_worker.main --config C:\FAM-NetworkWorker\worker.json --once
+   C:\FAM-NetworkWorker\network_worker\windows\UPDATE-COHOSTED-WORKER.ps1
    ```
 
-4. سپس Worker را به‌صورت Scheduled Task/Service با هویت `NT AUTHORITY\LOCAL SERVICE` اجرا کنید؛ هیچ Passwordی برای آن وارد نمی‌شود.
-5. کاربر دارای مجوز `manage-users` می‌تواند بررسی و recovery کنترل‌شده را درخواست کند؛ حساب دارای `view-history` فقط گزارش‌ها را می‌بیند.
+4. در `/network-operations` بعد از حدود 20 ثانیه Worker داخلی خودکار آماده می‌شود.
+5. اپراتور مجاز در همان UI IP/hostname، username و password موقت SSH را وارد می‌کند. Router از RADIUS اپراتور و Switch از حساب Local تجهیز استفاده می‌کند.
 
 ## ممنوعیت‌ها
 

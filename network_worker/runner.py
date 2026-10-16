@@ -7,7 +7,7 @@ from .collector import collect
 from .config import Device
 from .probe_envelope import ProbeEnvelopeError
 from .remediator import recover_errdisabled
-from .secrets import Credential, SecretStoreError
+from .secrets import Credential
 
 
 def missing_inventory(device_id):
@@ -27,23 +27,17 @@ def recovery_secret_failure(device_id, interface):
 
 
 class Runner:
-    def __init__(self, settings, client, secret_store, probe_keys=None, *, collector=collect, remediator=recover_errdisabled):
+    def __init__(self, settings, client, probe_keys=None, *, collector=collect, remediator=recover_errdisabled):
         self.settings = settings
         self.client = client
-        self.secret_store = secret_store
         self.probe_keys = probe_keys
         self.collector = collector
         self.remediator = remediator
 
     def _one(self, device_id):
-        device = self.settings.devices.get(device_id)
-        if device is None:
-            return missing_inventory(device_id)
-        try:
-            credential = self.secret_store.credential(device.credential_ref)
-        except SecretStoreError:
-            return secret_failure(device_id)
-        return self.collector(device, credential)
+        # Co-hosted operation deliberately has no durable equipment credential
+        # store.  Interactive browser-sealed checks are the supported path.
+        return missing_inventory(device_id)
 
     def _interactive_job(self, job):
         """Run a one-time encrypted discovery or a validated port recovery.

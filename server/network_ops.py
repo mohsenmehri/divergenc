@@ -39,6 +39,8 @@ ERROR_CODES = {
     "worker_error",
 }
 RESULT_STATUSES = {"succeeded", "failed"}
+COHOSTED_WORKER_ID = "worker-fam-local"
+COHOSTED_WORKER_NAME = "FAM Co-hosted Local Service Worker"
 MAX_RESULT_TEXT = 120
 
 
@@ -363,6 +365,21 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
         if "target_interface" not in job_columns:
             db.execute("ALTER TABLE network_jobs ADD COLUMN target_interface TEXT")
         db.execute("INSERT OR IGNORE INTO network_settings VALUES(1,0)")
+        # Phase 1 is a single co-hosted Worker on the FAM server.  It has no
+        # browser-visible pairing secret and no independent named account.
+        # Any old manually paired rows are disabled: they cannot claim jobs or
+        # register a key after this migration.
+        if app.config.get("NETWORK_OPS_ENABLED", False):
+            now = _millis()
+            db.execute("UPDATE network_workers SET enabled=0 WHERE id<>?", (COHOSTED_WORKER_ID,))
+            row = db.execute("SELECT id FROM network_workers WHERE id=?", (COHOSTED_WORKER_ID,)).fetchone()
+            if row:
+                db.execute("UPDATE network_workers SET name=?,enabled=1 WHERE id=?", (COHOSTED_WORKER_NAME, COHOSTED_WORKER_ID))
+            else:
+                db.execute(
+                    "INSERT INTO network_workers(id,name,token_hash,enabled,created_by,created_at) VALUES(?,?,?,?,?,?)",
+                    (COHOSTED_WORKER_ID, COHOSTED_WORKER_NAME, "cohosted-loopback-only", 1, "system", now),
+                )
 
     def enabled():
         if not app.config.get("NETWORK_OPS_ENABLED", False):
@@ -399,20 +416,24 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             )
             event(db, row["worker_id"] or "worker", "job_lease_expired", job_id=row["id"])
 
-    def worker_auth(db):
+    def internal_worker_auth(db):
+        """Authenticate the only supported Worker by an unproxied loopback path.
+
+        IIS deliberately has no rewrite for /_internal.  A browser can reach
+        only /api via HTTPS; this route is reachable only by a process on the
+        FAM host connecting to 127.0.0.1:8765.  This removes manual Bearer
+        token handling without making a browser-facing Worker API public.
+        """
         enabled()
+        if request.remote_addr not in {"127.0.0.1", "::1"}:
+            fail(403, "این endpoint فقط برای Worker داخلی سرور است.")
         worker_id = request.headers.get("X-FAM-Worker-ID", "")
-        authorization = request.headers.get("Authorization", "")
-        if not IDENTIFIER.fullmatch(worker_id) or not authorization.startswith("Bearer "):
-            fail(401, "اعتبار Worker معتبر نیست.")
-        token = authorization[7:]
-        if not 32 <= len(token) <= 200:
-            fail(401, "اعتبار Worker معتبر نیست.")
-        row = db.execute("SELECT * FROM network_workers WHERE id=? AND enabled=1", (worker_id,)).fetchone()
-        supplied = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        if not row or not hmac.compare_digest(supplied, row["token_hash"]):
-            fail(401, "اعتبار Worker معتبر نیست.")
-        db.execute("UPDATE network_workers SET last_seen_at=? WHERE id=?", (_millis(), worker_id))
+        if worker_id != COHOSTED_WORKER_ID:
+            fail(401, "Worker داخلی معتبر نیست.")
+        row = db.execute("SELECT * FROM network_workers WHERE id=? AND enabled=1", (COHOSTED_WORKER_ID,)).fetchone()
+        if not row:
+            fail(401, "Worker داخلی فعال نیست.")
+        db.execute("UPDATE network_workers SET last_seen_at=? WHERE id=?", (_millis(), COHOSTED_WORKER_ID))
         return row
 
     @app.get("/network-operations")
@@ -435,7 +456,7 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
     def network_workers():
         write_access()
         with connect() as db:
-            return jsonify(workers=[_public_worker(row) for row in db.execute("SELECT * FROM network_workers ORDER BY name")])
+            return jsonify(workers=[_public_worker(row) for row in db.execute("SELECT * FROM network_workers WHERE id=?", (COHOSTED_WORKER_ID,))])
 
     @app.get("/api/network/workers/<worker_id>/probe-key")
     def network_worker_probe_key(worker_id):
@@ -448,7 +469,7 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
                 fail(409, "کلید رمزنگاری این Worker هنوز آماده نیست.")
             return jsonify(workerId=worker_id, publicKey=row["probe_public_key"], fingerprint=row["probe_key_fingerprint"])
 
-    @app.post("/api/network/workers/<worker_id>/probe-key")
+    @app.post("/_internal/network/workers/<worker_id>/probe-key")
     def register_network_worker_probe_key(worker_id):
         body = data()
         if set(body) != {"publicKey"} or not IDENTIFIER.fullmatch(worker_id):
@@ -458,9 +479,9 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
         except ValueError:
             fail(400, "کلید رمزنگاری Worker نامعتبر است.")
         with transaction() as db:
-            worker = worker_auth(db)
+            worker = internal_worker_auth(db)
             if worker["id"] != worker_id:
-                fail(403, "Worker فقط می‌تواند کلید خود را ثبت کند.")
+                fail(403, "Worker داخلی فقط می‌تواند کلید خود را ثبت کند.")
             db.execute(
                 "UPDATE network_workers SET probe_public_key=?,probe_key_fingerprint=? WHERE id=?",
                 (public_key, fingerprint, worker_id),
@@ -610,42 +631,9 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
 
     @app.post("/api/network/workers")
     def provision_network_worker():
+        # There is no browser pairing/token workflow in the co-hosted model.
         write_access()
-        body = data()
-        if set(body) - {"id", "name", "rotate"} or "id" not in body or "name" not in body:
-            fail(400, "مشخصات Worker نامعتبر است.")
-        try:
-            worker_id = _text(body["id"], "شناسه Worker", identifier=True)
-            name = _text(body["name"], "نام Worker")
-        except ValueError:
-            fail(400, "مشخصات Worker نامعتبر است.")
-        rotate = body.get("rotate", False)
-        if type(rotate) is not bool:
-            fail(400, "مشخصات Worker نامعتبر است.")
-        # The token is intentionally returned only from this write response;
-        # database/API reads expose its hash and status, never its plaintext.
-        token = "fwn_" + secrets.token_urlsafe(32)
-        digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        with transaction() as db:
-            old = db.execute("SELECT * FROM network_workers WHERE id=?", (worker_id,)).fetchone()
-            if old and not rotate:
-                fail(409, "این Worker وجود دارد؛ برای چرخش اعتبار، rotate را صریحاً فعال کنید.")
-            now = _millis()
-            if old:
-                db.execute(
-                    "UPDATE network_workers SET name=?,token_hash=?,enabled=1,created_by=?,created_at=?,last_seen_at=NULL WHERE id=?",
-                    (name, digest, g.user["username"], now, worker_id),
-                )
-                action = "worker_token_rotated"
-            else:
-                db.execute(
-                    "INSERT INTO network_workers(id,name,token_hash,enabled,created_by,created_at) VALUES(?,?,?,?,?,?)",
-                    (worker_id, name, digest, 1, g.user["username"], now),
-                )
-                action = "worker_provisioned"
-            row = db.execute("SELECT * FROM network_workers WHERE id=?", (worker_id,)).fetchone()
-            event(db, g.user["username"], action, detail=worker_id)
-            return jsonify(worker=_public_worker(row), token=token)
+        fail(410, "Worker داخلی به‌صورت خودکار روی همان سرور FAM ثبت می‌شود.")
 
     @app.post("/api/network/jobs")
     def enqueue_network_job():
@@ -721,13 +709,13 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
             event(db, g.user["username"], "job_cancelled", job_id=job_id)
             return jsonify(job=_public_job(updated))
 
-    @app.post("/api/network/worker/claim")
+    @app.post("/_internal/network/worker/claim")
     def worker_claim_job():
         body = data()
         if body:
             fail(400, "درخواست Worker نامعتبر است.")
         with transaction() as db:
-            worker = worker_auth(db)
+            worker = internal_worker_auth(db)
             release_expired_claims(db)
             rows = db.execute("SELECT * FROM network_jobs WHERE status='queued' ORDER BY created_at").fetchall()
             row = None
@@ -768,7 +756,7 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
                 job["sealed"] = sealed_payload
             return jsonify(job=job)
 
-    @app.post("/api/network/worker/jobs/<job_id>/complete")
+    @app.post("/_internal/network/worker/jobs/<job_id>/complete")
     def worker_complete_job(job_id):
         body = data()
         if set(body) != {"results"} or not isinstance(body["results"], list):
@@ -778,7 +766,7 @@ def register_network_ops(app, *, connect, transaction, data, fail, can_read_netw
         except ValueError:
             fail(400, "نتیجهٔ Worker نامعتبر است.")
         with transaction() as db:
-            worker = worker_auth(db)
+            worker = internal_worker_auth(db)
             row = db.execute("SELECT * FROM network_jobs WHERE id=?", (job_id,)).fetchone()
             if not row:
                 fail(404, "Job پیدا نشد.")

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import ssl
 from urllib.error import HTTPError, URLError
-from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
+from urllib.request import HTTPHandler, HTTPSHandler, ProxyHandler, Request, build_opener
 
 from .config import Settings
 
@@ -37,21 +37,16 @@ def _tls_context(ca_file: Path | None):
 
 
 class ControlPlaneClient:
-    def __init__(self, settings: Settings, token: str):
-        if not isinstance(token, str) or not token.startswith("fwn_") or len(token) < 36:
-            raise ControlPlaneError("Worker token is unavailable or malformed")
-        self.base_url = settings.control_plane_url.rstrip("/")
+    """Client for the private, loopback-only co-hosted FAM control plane."""
+
+    def __init__(self, settings: Settings):
+        if not settings.cohosted_loopback or settings.control_plane_url != "http://127.0.0.1:8765":
+            raise ControlPlaneError("co-hosted loopback control-plane configuration is invalid")
+        self.base_url = settings.control_plane_url
         self.worker_id = settings.worker_id
-        self.token = token
-        self.context = _tls_context(settings.ca_file)
-        # FAM is an explicitly configured internal control-plane endpoint.
-        # A Windows/PAC proxy may return a gateway page for its short hostname,
-        # so Worker API traffic is always direct and never exposes its bearer
-        # token to a proxy.
-        self.opener = build_opener(
-            ProxyHandler({}),
-            HTTPSHandler(context=self.context),
-        )
+        # This requests an unproxied HTTP loopback address.  It never leaves
+        # the FAM host.  Browser traffic cannot reach /_internal through IIS.
+        self.opener = build_opener(ProxyHandler({}), HTTPHandler())
 
     def _post(self, path, value):
         payload = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -62,7 +57,6 @@ class ControlPlaneClient:
             headers={
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "Authorization": "Bearer " + self.token,
                 "X-FAM-Worker-ID": self.worker_id,
                 "User-Agent": "FAM-Network-Worker/1",
             },
@@ -70,24 +64,22 @@ class ControlPlaneClient:
         try:
             with self.opener.open(request, timeout=45) as response:
                 parsed = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, ssl.SSLError, json.JSONDecodeError) as exc:
-            # Do not surface response text: it can contain reverse-proxy details
-            # and must never result in an accidental token/header log.
-            raise ControlPlaneError("control-plane request failed") from exc
+        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+            raise ControlPlaneError("local control-plane request failed") from exc
         if not isinstance(parsed, dict):
-            raise ControlPlaneError("control-plane response is invalid")
+            raise ControlPlaneError("local control-plane response is invalid")
         return parsed
 
     def register_probe_key(self, public_key: str):
         if not isinstance(public_key, str) or not public_key.startswith("-----BEGIN PUBLIC KEY-----\n") or len(public_key) > 4096:
             raise ControlPlaneError("Worker probe key is invalid")
-        response = self._post(f"/api/network/workers/{self.worker_id}/probe-key", {"publicKey": public_key})
+        response = self._post(f"/_internal/network/workers/{self.worker_id}/probe-key", {"publicKey": public_key})
         if response.get("workerId") != self.worker_id or not isinstance(response.get("fingerprint"), str):
             raise ControlPlaneError("Worker probe-key registration is invalid")
         return response
 
     def claim(self):
-        response = self._post("/api/network/worker/claim", {})
+        response = self._post("/_internal/network/worker/claim", {})
         job = response.get("job")
         if job is None:
             return None
@@ -103,7 +95,7 @@ class ControlPlaneClient:
         return job
 
     def complete(self, job_id, results):
-        response = self._post(f"/api/network/worker/jobs/{job_id}/complete", {"results": results})
+        response = self._post(f"/_internal/network/worker/jobs/{job_id}/complete", {"results": results})
         if not isinstance(response.get("job"), dict):
             raise ControlPlaneError("control-plane completion response is invalid")
         return response["job"]

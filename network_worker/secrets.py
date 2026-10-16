@@ -8,15 +8,10 @@ exists in production code.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import base64
 import ctypes
 from ctypes import wintypes
-import json
 import os
-from pathlib import Path
-import re
 
-from .config import IDENTIFIER, SecretStoreConfig
 
 
 class SecretStoreError(RuntimeError):
@@ -85,73 +80,3 @@ def protect(payload: bytes) -> bytes:
 
 def unprotect(payload: bytes) -> bytes:
     return _dpapi("unprotect", payload)
-
-
-def _validate_store(raw):
-    if not isinstance(raw, dict) or len(raw) > 500:
-        raise SecretStoreError("DPAPI secret store is malformed")
-    normalized = {}
-    for reference, value in raw.items():
-        if not isinstance(reference, str) or not IDENTIFIER.fullmatch(reference):
-            raise SecretStoreError("DPAPI secret reference is malformed")
-        if not isinstance(value, dict) or set(value) != {"username", "password"}:
-            raise SecretStoreError("DPAPI credential record is malformed")
-        username = value["username"]
-        password = value["password"]
-        if (not isinstance(username, str) or not 1 <= len(username) <= 128 or "\n" in username or "\r" in username or
-                not isinstance(password, str) or not 1 <= len(password) <= 512):
-            raise SecretStoreError("DPAPI credential record is malformed")
-        normalized[reference] = Credential(username=username, password=password)
-    return normalized
-
-
-class DPAPISecretStore:
-    def __init__(self, config: SecretStoreConfig):
-        if config.kind != "windows-dpapi":
-            raise SecretStoreError("unsupported secret store")
-        self.path = config.path
-
-    def _load(self):
-        try:
-            encoded = self.path.read_text(encoding="ascii").strip()
-            plaintext = unprotect(base64.b64decode(encoded, validate=True))
-            raw = json.loads(plaintext.decode("utf-8"))
-        except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError, SecretStoreError) as exc:
-            if isinstance(exc, SecretStoreError):
-                raise
-            raise SecretStoreError("Worker DPAPI secret store cannot be read") from exc
-        return _validate_store(raw)
-
-    def credential(self, reference: str) -> Credential:
-        if not isinstance(reference, str) or not IDENTIFIER.fullmatch(reference):
-            raise SecretStoreError("credential reference is invalid")
-        credential = self._load().get(reference)
-        if not credential:
-            raise SecretStoreError("credential reference is unavailable to this Worker")
-        return credential
-
-
-def provision(path: str | Path, reference: str, username: str, password: str):
-    """Create/update one encrypted record, only under the current DPAPI identity.
-
-    Call this from an interactive PowerShell started as the dedicated Worker
-    account.  It intentionally accepts values only from the caller; no secret
-    is printed, logged, or sent to FAM.
-    """
-    if os.name != "nt":
-        raise SecretStoreError("secret provisioning must run on Windows as the Worker identity")
-    if not isinstance(reference, str) or not IDENTIFIER.fullmatch(reference):
-        raise SecretStoreError("credential reference is invalid")
-    store_path = Path(path)
-    if store_path.exists():
-        raw = {key: {"username": value.username, "password": value.password} for key, value in DPAPISecretStore(SecretStoreConfig("windows-dpapi", store_path))._load().items()}
-    else:
-        raw = {}
-    raw[reference] = {"username": username, "password": password}
-    # Reuse the reader validation before storing encrypted JSON.
-    _validate_store(raw)
-    store_path.parent.mkdir(parents=True, exist_ok=True)
-    protected = base64.b64encode(protect(json.dumps(raw, ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
-    temporary = store_path.with_suffix(store_path.suffix + ".new")
-    temporary.write_bytes(protected)
-    os.replace(temporary, store_path)

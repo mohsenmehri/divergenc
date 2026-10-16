@@ -544,9 +544,9 @@ def create_app(config=None):
         # revocable Worker bearer token; they never accept browser requests or
         # expose FAM session data. All normal browser API routes keep the
         # existing Origin + CSRF protections below.
-        worker_endpoint=(request.path=='/api/network/worker/claim' or
-                         re.fullmatch(r'/api/network/worker/jobs/[a-zA-Z0-9_-]{1,100}/complete',request.path) or
-                         (request.method=='POST' and re.fullmatch(r'/api/network/workers/[a-z][a-z0-9._-]{1,63}/probe-key',request.path)))
+        worker_endpoint=(request.path=='/_internal/network/worker/claim' or
+                         re.fullmatch(r'/_internal/network/worker/jobs/[a-zA-Z0-9_-]{1,100}/complete',request.path) or
+                         (request.method=='POST' and re.fullmatch(r'/_internal/network/workers/[a-z][a-z0-9._-]{1,63}/probe-key',request.path)))
         if worker_endpoint:
             if request.method not in ('GET','HEAD','OPTIONS') and not request.is_json:fail(415,'بدنهٔ JSON لازم است.')
             return

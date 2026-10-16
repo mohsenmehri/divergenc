@@ -12,6 +12,7 @@ files = [
     worker / "worker.example.json",
     worker / ".gitignore",
     worker / "README_FA.md",
+    worker / "windows" / "UPDATE-COHOSTED-WORKER.ps1",
     root / "docs" / "NETWORK_OPERATIONS_PHASE1_FA.md",
 ]
 entries = {path.relative_to(root).as_posix(): path.read_bytes() for path in files}
