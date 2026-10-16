@@ -67,7 +67,23 @@ The choices have hover/focus growth, accent glow, native keyboard focus containm
 
 The database dashboard now has an explicit equipment switch and equipment has an explicit database switch. Both include a return-to-chooser button. Navigation stays within the current FAM account and does not clear the equipment RADIUS closure. Main logout and refresh still clear that RAM-only credential state. SERVER is not rebuilt or modified for this local UI change.
 
-Browser coverage exercises both entry choices, hover/keyboard/escape behavior, mobile/reduced motion, account restrictions, direct category CRUD for all six axes, dependency protection, persistence, and RADIUS retention across direct/chooser round trips. The complete local suite passes 60 tests.
+Browser coverage exercises both entry choices, hover/keyboard/escape behavior, mobile/reduced motion, account restrictions, direct category CRUD for all six axes, dependency protection, persistence, and RADIUS retention across direct/chooser round trips. That release passed 60 tests; the current configuration-planner release passes the 74-test complete local suite.
+
+## Group configuration planner (LOCAL dry-run only)
+
+`src/equipment-configuration.js` contains pure planning/validation functions and an isolated UI controller factory. The model is embedded after `FamEquipmentInventory` and before the equipment UI consumer. The equipment page now has inventory/configuration tabs and a **configure this selection** shortcut that copies only the five explicit category filters (not the name/IP search or needs-completion toggle).
+
+The command textarea is multiline, monospace and RAM-only. There is deliberately **no executor**, SSH/API call, logging, browser storage, export or real configuration save. This separate draft planner does not expand the constrained Device360 recovery path or the unchanged SERVER implementation. It performs size/control-character checks only, not Cisco syntax, command safety or hardware compatibility validation. Never enter real secrets/configuration.
+
+Targeting supports 1–12 groups. Attributes within a group use AND; groups use OR. Examples: router + region 2, or router/model 1841, or switch/model 2960. Model/site selections preselect their required type/site-kind parents. Empty groups, unknown/removed references, parent conflicts and unknown filter keys fail closed instead of broadening to all equipment.
+
+Planning validates/copies the canonical inventory, unions matching nodes once by stable ID, excludes incomplete nodes with a visible count, and rejects a target whose IP is duplicated anywhere in inventory—even if the conflicting record is outside the selected groups. It never modifies inventory or catalogs. Target previews page by 25; confirmation lists every exact target in a scrollable list and requires an explicit acknowledgment. Empty commands or zero eligible nodes cannot be confirmed.
+
+The confirmation snapshot binds the exact draft, revision, rules, inventory metadata and targets. Confirmation revalidates authorization, text and the live inventory signature; changes require another review. A successful dry-run sets only a RAM-only marker, visibly labeled **simulated / no send** on each node; it is not a successful device deployment. Any draft/rule edit invalidates previous outcomes. Navigation closes outstanding confirmation dialogs without clearing the draft. Main logout, account-bound RADIUS reset and page unload/refresh clear drafts/rules/outcomes together with RAM credentials. In-page inventory/database navigation retains them.
+
+Limits: 12,000 characters, 120 lines, 512 characters per line; terminal and bidi controls are rejected. No command text is included in returned plan/validation summaries, persisted app data, or diagnostics.
+
+Tests: `equipment-configuration-model.test.cjs` covers exact AND/OR scope, deduplication, empty/stale/invalid conditions, incomplete nodes, duplicate IP, immutable snapshots/signatures, draft bounds and absence of I/O/execution adapters. `equipment-configuration.test.cjs` covers the real standalone-file editor, multi-group targeting, pagination, review/cancel/acknowledgment, no inventory mutation or secret persistence/network requests, outcome invalidation, RAM lifecycle, prefilled filters, textarea size and mobile themes. Complete local regression suite: **74 tests passed**.
 
 ## Safe migration / persistence
 

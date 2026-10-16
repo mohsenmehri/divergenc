@@ -4,9 +4,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',OLD_KEY='fam.equipment.inventory.v2',CARDS_KEY='fam.equipment.cards.v1';
   let inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
   let scenario='clean',result=null,tab='overview',search='',busy=false,facet='overview',filters={},activeField=null,onlyReview=false;
-  let cardSettings=M.defaultCards(),cardsIssue='',groupIssue='';
+  let cardSettings=M.defaultCards(),cardsIssue='',groupIssue='',workspaceTab='inventory';
   const checks=new Map(),uid=()=>crypto.randomUUID();
   const can=()=>typeof Access!=='undefined'&&Access.can('equipment');
+  const configuration=FamEquipmentConfiguration.create({getInventory:()=>inventory,isAuthorized:()=>!!credentials&&can()&&credentials.userId===Access.current()?.id});
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
   const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const n=el('button',cls,text);n.type='button';n.addEventListener('click',handler);return n;};
   const tools=(...buttons)=>{const n=el('div','eq-tools');n.append(...buttons);return n;};
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   const navigate=next=>{epoch++;path=next;result=null;tab='overview';busy=false;render();};
   function lock(){
-    epoch++;credentials=null;path={};result=null;busy=false;checks.clear();
+    epoch++;credentials=null;path={};result=null;busy=false;checks.clear();configuration.clear();workspaceTab='inventory';
     activeDialog?.close();activeDialog?.remove();activeDialog=null;
     root.querySelectorAll('input[type=password]').forEach(n=>{n.value='';});render();
   }
@@ -269,7 +270,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function inventoryView(main){
     const hero=el('div','eq-hero'),copy=el('div','eq-hero-copy');copy.append(el('div','eq-eyebrow','SMART DEVICE GROUPS'),heading('یک نود؛ چند دستهٔ خودکار','نوع، مدل، منطقه و محل را انتخاب کنید؛ نود در همهٔ دسته‌های مرتبط دیده می‌شود.'));
     const stats=el('div','eq-metrics');stats.append(metric(inventory.nodes.length,'نود یکتا'),metric(inventory.nodes.filter(M.incomplete).length,'نیازمند تکمیل'));hero.append(copy,stats);main.append(hero);
-    main.append(tools(button('＋ افزودن نود',()=>editNode(),'btn btn-primary btn-sm'),button('مدیریت دسته‌ها',()=>manageCatalog()),button('نیازمند تکمیل ('+inventory.nodes.filter(M.incomplete).length+')',()=>{onlyReview=!onlyReview;if(onlyReview){filters={};activeField=null;}path={};render();},'btn btn-ghost btn-sm'+(onlyReview?' eq-active-filter':''))));
+    main.append(tools(button('＋ افزودن نود',()=>editNode(),'btn btn-primary btn-sm'),button('مدیریت دسته‌ها',()=>manageCatalog()),button('پیکربندی این انتخاب',()=>{configuration.useSelection(filters);workspaceTab='configuration';navigate({});}),button('نیازمند تکمیل ('+inventory.nodes.filter(M.incomplete).length+')',()=>{onlyReview=!onlyReview;if(onlyReview){filters={};activeField=null;}path={};render();},'btn btn-ghost btn-sm'+(onlyReview?' eq-active-filter':''))));
     const nav=el('nav','eq-type-nav eq-facet-nav');nav.setAttribute('aria-label','روش دسته‌بندی');
     for(const [key,label,kind]of facets){const b=button('',()=>{facet=key;render();},'eq-tree-link'+(facet===key?' selected':''));b.append(icon(kind),el('span','',label));nav.append(b);}main.append(nav);
     if(facet==='overview'){
@@ -349,14 +350,19 @@ document.addEventListener('DOMContentLoaded',()=>{
     main.append(el('p','eq-muted','SNMP، مانیتورینگ پیوسته، توپولوژی و مدیریت تنظیمات هنوز متصل نشده‌اند؛ مقدار ساختگی به‌عنوان دادهٔ واقعی نمایش داده نمی‌شود.'));
   }
   function render(){
-    root.replaceChildren();if(!can()){root.append(notice('برای ورود به مدیریت تجهیزات مجوز لازم است.'));return;}
-    if(credentials&&credentials.userId!==Access.current()?.id){credentials=null;checks.clear();path={};}
+    configuration.suspend();root.replaceChildren();if(!can()){root.append(notice('برای ورود به مدیریت تجهیزات مجوز لازم است.'));return;}
+    if(credentials&&credentials.userId!==Access.current()?.id){credentials=null;checks.clear();path={};configuration.clear();workspaceTab='inventory';}
     if(!credentials){gate();return;}
     const top=el('div','eq-session-bar');top.append(el('span','eq-session-dot'),el('strong','','RADIUS آماده است'),el('span','eq-muted','معتبر تا خروج از حساب FAM · فقط در حافظه'),button('تغییر اطلاعات RADIUS',lock));root.append(top);
     root.append(notice('پیش‌نمایش محلی · فقط نام، IP و مشخصات نودها ذخیره می‌شود؛ رمز ذخیره یا ارسال نمی‌شود.','eq-demo-note'));
     if(storageIssue)root.append(notice(storageIssue,'warning'));if(cardsIssue)root.append(notice(cardsIssue,'warning'));if(migrationNote)root.append(notice(migrationNote));
+    const sections=el('nav','eq-tabs eq-workspace-tabs');sections.setAttribute('role','tablist');sections.setAttribute('aria-label','بخش‌های تجهیزات');
+    for(const [key,label]of [['inventory','فهرست تجهیزات'],['configuration','پیکربندی']]){
+      const tabButton=button(label,()=>{epoch++;busy=false;if(result?.state==='checking')result=null;workspaceTab=key;render();},'eq-tab'+(workspaceTab===key?' active':''));
+      tabButton.id='equipment-tab-'+key;tabButton.setAttribute('role','tab');tabButton.setAttribute('aria-selected',String(workspaceTab===key));sections.append(tabButton);
+    }root.append(sections);
     const layout=el('div','eq-layout'),main=el('div','eq-main');layout.append(main);root.append(layout);
-    if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
+    if(workspaceTab==='configuration')configuration.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
   }
   // A RADIUS credential session belongs to the MAIN FAM login, not to a tab.
   // Navigation never writes credentials to persistent storage or destroys them.
@@ -364,7 +370,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const target=event.target.closest?.('[data-view], [data-act="go-cp"], #account-logout');if(!target)return;
     if(target.id==='account-logout'){lock();return;}
     if(target.dataset.view==='equipment'){render();return;}
-    if(credentials){epoch++;busy=false;if(result?.state==='checking')result=null;activeDialog?.close();activeDialog?.remove();activeDialog=null;}
+    if(credentials){configuration.suspend();epoch++;busy=false;if(result?.state==='checking')result=null;activeDialog?.close();activeDialog?.remove();activeDialog=null;}
   },true);
   new MutationObserver(()=>{
     if(credentials&&(document.documentElement.classList.contains('auth-pending')||!can()||credentials.userId!==Access.current()?.id))lock();
