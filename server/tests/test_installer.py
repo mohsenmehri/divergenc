@@ -118,6 +118,8 @@ class IISConfigurationCheck(unittest.TestCase):
         fam=(server_root/'private_ui'/'FAM.html').read_text(encoding='utf8')
         self.assertIn('data-view="equipment"',fam)
         self.assertIn('equipment/check',fam)
+        self.assertIn('port.description',fam)
+        self.assertNotIn('equipment-ack',fam)
         self.assertNotIn('network-operations',fam)
 
     def test_equipment_script_is_not_embedded_inside_the_sheetjs_script(self):

@@ -129,10 +129,21 @@ def register_equipment_ops(app, *, data, fail, allowed):
         except ValueError:
             fail(400, "IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.")
         result = _execute(app, {"operation": "status", **value})
-        if result.get("ok") is not True or not isinstance(result.get("ports"), list) or any(not isinstance(item, str) or not INTERFACE.fullmatch(item) for item in result.get("ports", [])):
+        raw_ports = result.get("ports") if isinstance(result, dict) else None
+        if not isinstance(result, dict) or result.get("ok") is not True or not isinstance(raw_ports, list):
             fail(502, _failure(result))
-        ports = sorted(set(result["ports"]))
-        tickets = {port: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=port) for port in ports}
+        ports = []
+        seen = set()
+        for item in raw_ports:
+            if (not isinstance(item, dict) or set(item) != {"interface", "description"} or
+                    not isinstance(item["interface"], str) or not INTERFACE.fullmatch(item["interface"]) or
+                    not isinstance(item["description"], str) or len(item["description"]) > 128 or
+                    "\r" in item["description"] or "\n" in item["description"] or item["interface"] in seen):
+                fail(502, _failure(result))
+            seen.add(item["interface"])
+            ports.append({"interface": item["interface"], "description": item["description"]})
+        ports.sort(key=lambda item: item["interface"])
+        tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
         return jsonify(host=value["host"], errDisabledPorts=ports, recoveryTickets=tickets)
 
     @app.post("/api/equipment/recover")

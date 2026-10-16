@@ -1392,7 +1392,7 @@ table.xl,table.logtable,table.block-table{width:max-content;min-width:100%;}
 @media(max-width:540px){.sheet-filter-group{grid-column:1/-1;width:100%;}}
 
 /* Direct equipment management: no Worker screen, token, or pairing UI. */
-#view-equipment .equipment-card{max-width:980px;margin:0 auto;}.equipment-intro{line-height:2;color:var(--txt-1);margin:0 0 18px}.equipment-form{display:grid;grid-template-columns:1.1fr 1fr 1fr auto;gap:12px;align-items:end}.equipment-form .field{margin:0}.equipment-form label{display:block;margin-bottom:7px;font-size:12px;color:var(--txt-1)}.equipment-form input{width:100%}.equipment-note{font-size:12px;line-height:1.9;color:var(--txt-1);margin:15px 0 0}.equipment-status{margin-top:16px;padding:12px 14px;border:1px solid var(--stroke-2);border-radius:10px;background:var(--bg-2);line-height:1.9}.equipment-status.error{border-color:var(--red);color:var(--red)}.equipment-status.ok{border-color:var(--green)}.equipment-ports{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.equipment-port{border:1px solid var(--amber);border-radius:9px;padding:10px 12px;background:color-mix(in srgb,var(--amber) 10%,var(--bg-1));display:flex;gap:10px;align-items:center}.equipment-port b{font-family:ui-monospace,Consolas,monospace;direction:ltr}.equipment-empty{color:var(--green);font-weight:700}.equipment-lock{display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:12px;color:var(--txt-1)}.equipment-lock input{width:auto;margin-top:3px}@media(max-width:820px){.equipment-form{grid-template-columns:1fr 1fr}.equipment-form button{grid-column:1/-1}}@media(max-width:500px){.equipment-form{grid-template-columns:1fr}}
+#view-equipment .equipment-card{max-width:980px;margin:0 auto;}.equipment-intro{line-height:2;color:var(--txt-1);margin:0 0 18px}.equipment-form{display:grid;grid-template-columns:1.1fr 1fr 1fr auto;gap:12px;align-items:end}.equipment-form .field{margin:0}.equipment-form label{display:block;margin-bottom:7px;font-size:12px;color:var(--txt-1)}.equipment-form input{width:100%}.equipment-note{font-size:12px;line-height:1.9;color:var(--txt-1);margin:15px 0 0}.equipment-status{margin-top:16px;padding:12px 14px;border:1px solid var(--stroke-2);border-radius:10px;background:var(--bg-2);line-height:1.9}.equipment-status.error{border-color:var(--red);color:var(--red)}.equipment-status.ok{border-color:var(--green)}.equipment-ports{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.equipment-port{border:1px solid var(--amber);border-radius:9px;padding:10px 12px;background:color-mix(in srgb,var(--amber) 10%,var(--bg-1));display:flex;gap:10px;align-items:center}.equipment-port b{font-family:ui-monospace,Consolas,monospace;direction:ltr}.equipment-description{font-size:12px;color:var(--txt-1);max-width:280px;overflow-wrap:anywhere}.equipment-empty{color:var(--green);font-weight:700}@media(max-width:820px){.equipment-form{grid-template-columns:1fr 1fr}.equipment-form button{grid-column:1/-1}}@media(max-width:500px){.equipment-form{grid-template-columns:1fr}}
 </style>
 <script>
 (function () {
@@ -2432,15 +2432,14 @@ html[data-fam-variant="shared"] #shared-status{display:none!important;}
         <div class="head-actions"><button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button></div>
       </div>
       <div class="content"><article class="card equipment-card"><div class="card-head"><div class="ico g-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></div><div><h3>بررسی Err-disabled</h3><div class="sub">یک تجهیز، یک بررسی محدود، بدون دستور آزاد</div></div></div><div class="card-body">
-        <p class="equipment-intro">IP خصوصی Switch یا Router و نام کاربری/رمز موقت SSH را وارد کنید. FAM آن را فقط برای همین اتصال SSH در حافظهٔ سرور استفاده می‌کند؛ در دیتابیس، لاگ، URL یا browser storage ذخیره نمی‌شود.</p>
+        <p class="equipment-intro">IP خصوصی Switch یا Router و نام کاربری/رمز موقت SSH را وارد کنید و «بررسی وضعیت پورت‌ها» را بزنید. FAM آن را فقط برای همین اتصال SSH در حافظهٔ سرور استفاده می‌کند؛ در دیتابیس، لاگ، URL یا browser storage ذخیره نمی‌شود.</p>
         <form id="equipment-check-form" class="equipment-form" autocomplete="off">
           <div class="field"><label for="equipment-host">IP تجهیز</label><input id="equipment-host" class="inp" inputmode="decimal" placeholder="مثال: 10.2.52.2" maxlength="15" required></div>
           <div class="field"><label for="equipment-username">نام کاربری SSH / RADIUS</label><input id="equipment-username" class="inp" maxlength="128" autocomplete="off" required></div>
           <div class="field"><label for="equipment-password">رمز SSH</label><input id="equipment-password" class="inp" type="password" maxlength="512" autocomplete="off" required></div>
           <button id="equipment-check-submit" class="btn btn-primary" type="submit">بررسی وضعیت پورت‌ها</button>
         </form>
-        <label class="equipment-lock"><input id="equipment-ack" type="checkbox" required>تأیید می‌کنم فقط بررسی محدود وضعیت Err-disabled همین تجهیز انجام شود. هیچ فرمان پیکربندی یا ذخیره‌سازی اجرا نمی‌شود.</label>
-        <div id="equipment-status" class="equipment-status" role="status">IP، نام کاربری و رمز را وارد کنید؛ سپس وضعیت پورت‌ها گزارش می‌شود.</div>
+        <div id="equipment-status" class="equipment-status" role="status">IP، نام کاربری و رمز را وارد کنید؛ بررسی بلافاصله انجام می‌شود.</div>
       </div></article></div>
     </section>
 
@@ -2627,15 +2626,15 @@ document.addEventListener('DOMContentLoaded',()=>{
     }catch(error){by('equipment-password').value='';show(error.message||'رفع پورت انجام نشد.','error');}
   };
   form.addEventListener('submit',async event=>{
-    event.preventDefault(); if(!by('equipment-ack').checked){show('تأیید بررسی محدود لازم است.','error');return;}
+    event.preventDefault();
     const current=values(); submit.disabled=true;show('سرور FAM در حال بررسی وضعیت تجهیز است…');
     try{
       const result=await FamShared.api('equipment/check',current,60000), ports=result.errDisabledPorts||[];
       by('equipment-password').value='';
       if(!ports.length){show('Err-disabled در این تجهیز گزارش نشد.','ok');return;}
-      status.className='equipment-status error';status.replaceChildren(document.createTextNode('پورت‌های Err-disabled یافت شد. در صورت تأیید، فقط همان پورت را رفع کنید.'));
+      status.className='equipment-status error';status.replaceChildren(document.createTextNode('پورت‌های Err-disabled یافت شد. برای هر پورت، در صورت تأیید شما فقط همان پورت رفع می‌شود.'));
       const list=document.createElement('div');list.className='equipment-ports';
-      ports.forEach(port=>{const row=document.createElement('div');row.className='equipment-port';const name=document.createElement('b');name.textContent=port;const button=document.createElement('button');button.type='button';button.className='btn btn-amber btn-sm';button.textContent='تأیید رفع خطا';button.addEventListener('click',()=>recover(port,result.recoveryTickets[port]));row.append(name,button);list.append(row)});status.append(list);
+      ports.forEach(port=>{const row=document.createElement('div');row.className='equipment-port';const name=document.createElement('b');name.textContent=port.interface;row.append(name);if(port.description){const description=document.createElement('span');description.className='equipment-description';description.textContent=port.description;row.append(description)}const button=document.createElement('button');button.type='button';button.className='btn btn-amber btn-sm';button.textContent='تأیید رفع خطا';button.addEventListener('click',()=>recover(port.interface,result.recoveryTickets[port.interface]));row.append(button);list.append(row)});status.append(list);
     }catch(error){by('equipment-password').value='';show(error.message||'بررسی تجهیز انجام نشد.','error');}finally{submit.disabled=false;}
   });
 });

@@ -18,14 +18,34 @@ def respond(value):
     sys.stdout.flush()
 
 
-def errdisabled_ports(output: str):
-    """Return only interface names with an explicit err-disabled status."""
-    ports = []
+def errdisabled_interfaces(output: str):
+    """Return only an interface and its displayed status-name/description.
+
+    Cisco IOS places the optional port name between the interface column and
+    ``err-disabled`` in ``show interfaces status``.  This deliberately returns
+    no raw CLI line or other device data.
+    """
+    ports = {}
     for line in output.splitlines():
         fields = line.split()
-        if len(fields) >= 2 and "err-disabled" in line.lower() and INTERFACE.fullmatch(fields[0]):
-            ports.append(fields[0])
-    return sorted(set(ports))
+        if not fields or not INTERFACE.fullmatch(fields[0]):
+            continue
+        try:
+            status_index = next(index for index, field in enumerate(fields[1:], 1) if field.lower() == "err-disabled")
+        except StopIteration:
+            continue
+        description = " ".join(fields[1:status_index]).strip()
+        # IOS uses -- when the Name column is empty. Keep the useful, bounded
+        # label only; do not turn the complete device response into an API.
+        if description in {"--", "-", "N/A"}:
+            description = ""
+        ports.setdefault(fields[0], description[:128])
+    return [{"interface": interface, "description": ports[interface]} for interface in sorted(ports)]
+
+
+def errdisabled_ports(output: str):
+    """Compatibility helper for the recovery pre-/post-check."""
+    return [item["interface"] for item in errdisabled_interfaces(output)]
 
 
 def connect(value):
@@ -48,8 +68,8 @@ def connect(value):
 def status(value):
     connection = connect(value)
     try:
-        # Fixed command only.  Raw output is parsed then discarded.
-        return {"ok": True, "ports": errdisabled_ports(connection.send_command("show interfaces status", read_timeout=20))}
+        # Fixed command only. Raw output is parsed then discarded.
+        return {"ok": True, "ports": errdisabled_interfaces(connection.send_command("show interfaces status", read_timeout=20))}
     finally:
         connection.disconnect()
 

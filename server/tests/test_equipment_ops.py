@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from server.app import create_app
-from server.equipment_probe import errdisabled_ports
+from server.equipment_probe import errdisabled_interfaces, errdisabled_ports
 
 ORIGIN = "https://fam.test"
 
@@ -19,7 +19,10 @@ class EquipmentOpsTests(unittest.TestCase):
         def executor(value):
             self.calls.append(value)
             if value["operation"] == "status":
-                return {"ok": True, "ports": ["Gi0/2", "Gi0/1", "Gi0/1"]}
+                return {"ok": True, "ports": [
+                    {"interface": "Gi0/2", "description": "Uplink core"},
+                    {"interface": "Gi0/1", "description": "ATM 17"},
+                ]}
             return {"ok": True, "recovery": "recovered"}
 
         self.app = create_app({
@@ -49,7 +52,10 @@ class EquipmentOpsTests(unittest.TestCase):
         result = self.post("/api/equipment/check", {"host": "10.2.52.2", "username": "radius.user", "password": password})
         self.assertEqual(result.status_code, 200, result.json)
         self.assertEqual(result.json["host"], "10.2.52.2")
-        self.assertEqual(result.json["errDisabledPorts"], ["Gi0/1", "Gi0/2"])
+        self.assertEqual(result.json["errDisabledPorts"], [
+            {"interface": "Gi0/1", "description": "ATM 17"},
+            {"interface": "Gi0/2", "description": "Uplink core"},
+        ])
         self.assertEqual(set(result.json["recoveryTickets"]), {"Gi0/1", "Gi0/2"})
         self.assertNotIn(password, str(result.json))
         self.assertNotIn("radius.user", str(result.json["recoveryTickets"]))
@@ -94,6 +100,10 @@ Gi0/2 uplink connected trunk a-full a-1000 10/100/1000BaseTX
 Fa0/7 err-disabled 10 auto auto 10/100BaseTX
 """
         self.assertEqual(errdisabled_ports(output), ["Fa0/7", "Gi0/1"])
+        self.assertEqual(errdisabled_interfaces(output), [
+            {"interface": "Fa0/7", "description": ""},
+            {"interface": "Gi0/1", "description": "users"},
+        ])
 
 
 if __name__ == "__main__":
