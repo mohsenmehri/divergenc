@@ -2,12 +2,13 @@
 
 این پچ برای نصب مرکزی FAM در C:\FAM و C:\FAMData است. رابط مدیریت کاربران را با نسخهٔ محلی یکسان می‌کند: محدودهٔ دسته‌ها، زیرمحدودهٔ مناطق برای استان‌ها، و مجوزهای ریزعملیاتی. «سطح کاربر» در فرم نمایش داده نمی‌شود.
 
-این revision کنترل‌پلین عملیات شبکه را اضافه/به‌روزرسانی می‌کند: صفحهٔ `/network-operations`، Inventory متادیتا، Pairing Worker، بررسی مستقیم Err-disabled و رفع کنترل‌شدهٔ همان Interface گزارش‌شده. مرورگر اطلاعات اتصال را فقط برای کلید عمومی Worker رمز می‌کند؛ FAM/IIS هیچ IP یا Credential متن‌واضحی را ذخیره نمی‌کند. رفع خطا فقط بعد از انتخاب پورت گزارش‌شده، تأیید انسانی، pre-check و post-check انجام می‌شود؛ هیچ Command آزاد یا `write memory` وجود ندارد. Network Operations به‌صورت پیش‌فرض غیرفعال می‌ماند؛ تا زمانی که `FAM_NETWORK_OPS_ENABLED=1` تنظیم نشود و Worker داخلی سرور با هویت Built-in `NT AUTHORITY\LOCAL SERVICE` pair نگردد، هیچ API شبکه‌ای فعال نیست. Worker روی همان سرور و خارج از مسیر IIS اجرا می‌شود؛ حساب نام‌دار، Password سرویس یا Login کاربر لازم ندارد. راهنمای کامل: `docs/NETWORK_OPERATIONS_PHASE1_FA.md` در بستهٔ Worker.
+این revision کنترل‌پلین عملیات شبکه را اضافه/به‌روزرسانی می‌کند: صفحهٔ `/network-operations`، Inventory متادیتا، بررسی مستقیم Err-disabled و رفع کنترل‌شدهٔ همان Interface گزارش‌شده. مرورگر اطلاعات اتصال را فقط برای کلید عمومی Worker رمز می‌کند؛ FAM/IIS هیچ IP یا Credential متن‌واضحی را ذخیره نمی‌کند. رفع خطا فقط بعد از انتخاب پورت گزارش‌شده، تأیید انسانی، pre-check و post-check انجام می‌شود؛ هیچ Command آزاد یا `write memory` وجود ندارد. Network Operations به‌صورت پیش‌فرض غیرفعال می‌ماند تا `FAM_NETWORK_OPS_ENABLED=1` تنظیم شود. سپس Worker داخلی خودکار سرور با هویت Built-in `NT AUTHORITY\LOCAL SERVICE` اجرا می‌شود؛ Pairing دستی، Token Worker، حساب نام‌دار یا Password سرویس وجود ندارد. Worker فقط به `http://127.0.0.1:8765/_internal` وصل می‌شود و IIS این مسیر را Proxy نمی‌کند. راهنمای کامل و script مهاجرت: `docs/NETWORK_OPERATIONS_PHASE1_FA.md` در بستهٔ Worker.
 
 روش اجرا
 1) ZIP را روی خود سرور Extract کنید.
 2) APPLY-CUSTOM-ACCESS-UPDATE.cmd را با Run as administrator اجرا کنید.
-3) فقط موفقیت با خط سبز CUSTOM ACCESS + NETWORK OPERATIONS UPDATE APPLIED. معتبر است.
+3) فقط پیام سبز `CUSTOM ACCESS + PRIVATE FAM UI UPDATE APPLIED.` معتبر است.
+4) سپس Worker ZIP هم‌نسخه را در `C:\FAM-NetworkWorker` Extract و `network_worker\windows\UPDATE-COHOSTED-WORKER.ps1` را با Administrator اجرا کنید. هیچ Token وارد نکنید.
 
 ایمنی و بازگشت
 - پیش از تغییر، app.py، FAM.html و web.config فعلی زیر C:\FAMData\backups\custom-access-<date> ذخیره می‌شوند.
