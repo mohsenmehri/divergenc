@@ -36,9 +36,8 @@ import tempfile
 import time
 
 INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
-# Device user names are passed with ``-l`` and echoed by OpenSSH into the
-# askpass prompt argument, which Windows hands to cmd.exe.  A strict allowlist
-# keeps shell metacharacters out of that path entirely.
+# Device user names are passed with -l and appear in the ASKPASS prompt.
+# A strict allowlist keeps option-like and control-character input out.
 USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
 CLI_ERROR = re.compile(r"^\s*%\s+\S")  # IOS "% Invalid input ..." (syslog lines are "%LINK-5-..." without a space)
@@ -61,10 +60,49 @@ MAX_OUTPUT_BYTES = 1024 * 1024
 
 STATUS_COMMANDS = ("terminal length 0", "show interfaces status", "exit")
 
-# The askpass helper never references its prompt argument (%1) and prints the
-# environment variable through delayed expansion so that password characters
-# such as & | < > ^ % are emitted verbatim instead of being parsed by cmd.exe.
-ASKPASS_SCRIPT = "@echo off\r\nsetlocal EnableDelayedExpansion\r\necho(!" + SECRET_ENV + "!\r\n"
+# Win32 OpenSSH uses CreateProcess, which cannot directly execute a .cmd/.ps1
+# file. Build a tiny .NET Framework executable in the per-session directory.
+# Neither its source nor its executable contains a credential. The source is
+# constant; the password is read only by the child from its environment.
+ASKPASS_SOURCE = r'''using System;
+using System.Text;
+class FamAskpass {
+    static int Main(string[] args) {
+        if (args.Length != 1 ||
+            args[0].IndexOf("password", StringComparison.OrdinalIgnoreCase) < 0)
+            return 1; // Never answer a host-key confirmation or other challenge.
+        string password = Environment.GetEnvironmentVariable("FAM_EQUIPMENT_SSH_SECRET");
+        if (String.IsNullOrEmpty(password)) return 1;
+        Console.OutputEncoding = new UTF8Encoding(false);
+        Console.WriteLine(password);
+        return 0;
+    }
+}
+'''
+
+
+def prepare_askpass(workdir):
+    """Compile a secret-free, executable Windows ASKPASS helper (bounded 5 s)."""
+    root = os.environ.get("SystemRoot", r"C:\Windows")
+    compiler = next((os.path.join(root, "Microsoft.NET", framework, "v4.0.30319", "csc.exe")
+                     for framework in ("Framework64", "Framework")
+                     if os.path.isfile(os.path.join(root, "Microsoft.NET", framework, "v4.0.30319", "csc.exe"))), None)
+    if not compiler:
+        raise ProbeError("connection_failed")
+    source = os.path.join(workdir, "askpass.cs")
+    executable = os.path.join(workdir, "askpass.exe")
+    with open(source, "w", encoding="ascii") as handle:
+        handle.write(ASKPASS_SOURCE)
+    result = subprocess.run(
+        [compiler, "/nologo", "/noconfig", "/target:exe", "/out:" + executable, source],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        env={key: os.environ[key] for key in ENV_PASSTHROUGH if key in os.environ},
+        timeout=5, check=False, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    if result.returncode != 0 or not os.path.isfile(executable):
+        raise ProbeError("connection_failed")
+    return executable
+
 
 # Only this subset of the parent environment is visible to ssh.exe / cmd.exe.
 ENV_PASSTHROUGH = (
@@ -150,12 +188,13 @@ def _table_rows(output: str):
             if aligned and positional and positional[0].lower() in KNOWN_STATUSES:
                 yield interface, line[name_start:status_start], positional[0]
                 continue
-        # Fallback: the first token that is exactly the err-disabled keyword.
-        try:
-            index = next(i for i, field in enumerate(fields[1:], 1) if field.lower() == "err-disabled")
-        except StopIteration:
-            continue
-        yield interface, " ".join(fields[1:index]), fields[index]
+        # Non-aligned fixtures/devices: status must be followed by a VLAN and
+        # the duplex/speed/type columns, never just a word in a description.
+        for index in range(len(fields) - 5, 0, -1):
+            if (fields[index].lower() in KNOWN_STATUSES and
+                    re.fullmatch(r"[0-9]+|trunk|routed|unassigned", fields[index + 1], re.I)):
+                yield interface, " ".join(fields[1:index]), fields[index]
+                break
 
 
 def has_status_table(output: str) -> bool:
@@ -202,10 +241,10 @@ def ssh_executable() -> str:
     if os.name == "nt":
         # Never pick up an arbitrary ssh from PATH (e.g. an MSYS build) on the
         # server: only the configured or in-box Windows OpenSSH client is used.
-        raise ProbeError("executor_unavailable")
+        raise ProbeError("connection_failed")
     found = shutil.which("ssh")
     if not found:
-        raise ProbeError("executor_unavailable")
+        raise ProbeError("connection_failed")
     return found
 
 
@@ -232,7 +271,7 @@ def host_key_policy() -> str:
     try:
         return HOST_KEY_POLICIES[value]
     except KeyError as exc:  # An unknown policy must never silently relax checking.
-        raise ProbeError("executor_unavailable") from exc
+        raise ProbeError("connection_failed") from exc
 
 
 def ssh_arguments(executable: str, host: str, username: str, known_hosts: str, policy: str):
@@ -265,7 +304,7 @@ def ssh_arguments(executable: str, host: str, username: str, known_hosts: str, p
         "EscapeChar=none",
         "LogLevel=ERROR",
     )
-    argv = [executable, "-T", "-p", "22"]
+    argv = [executable, "-F", "NUL" if os.name == "nt" else "/dev/null", "-T", "-p", "22"]
     for option in options:
         argv += ["-o", option]
     argv += ["-l", username, host]
@@ -303,20 +342,16 @@ def run_ssh(job, commands, timeout: float):
     """Run one bounded ssh.exe session; return (returncode, stdout, stderr, timed_out)."""
     for name in FORBIDDEN_CIPHERS:
         if name in LEGACY_CIPHER_OPTION:
-            raise ProbeError("executor_unavailable")
+            raise ProbeError("connection_failed")
     executable = ssh_executable()
     argv = ssh_arguments(executable, job["host"], job["username"], known_hosts_file(), host_key_policy())
     script = ("\n".join(commands) + "\n").encode("ascii")
     workdir = runtime_directory()
-    askpass = os.path.join(workdir, "askpass.cmd")
+    askpass = None
+    started = time.monotonic()
     process = None
     try:
-        with open(askpass, "w", encoding="ascii", newline="") as handle:
-            handle.write(ASKPASS_SCRIPT)
-        try:
-            os.chmod(askpass, 0o700)
-        except OSError:
-            pass
+        askpass = prepare_askpass(workdir)
         process = subprocess.Popen(
             argv,
             stdin=subprocess.PIPE,
@@ -327,7 +362,7 @@ def run_ssh(job, commands, timeout: float):
             creationflags=_creation_flags(),
         )
         try:
-            out, err = process.communicate(script, timeout=max(1.0, timeout))
+            out, err = process.communicate(script, timeout=max(1.0, timeout - (time.monotonic() - started)))
             timed_out = False
         except subprocess.TimeoutExpired:
             process.kill()
@@ -340,7 +375,7 @@ def run_ssh(job, commands, timeout: float):
         # The askpass file never contains the secret, but it must not outlive
         # the session either.
         try:
-            os.remove(askpass)
+            os.remove(askpass) if askpass else None
         except OSError:
             pass
         shutil.rmtree(workdir, ignore_errors=True)
@@ -352,11 +387,11 @@ def classify_failure(stderr: str, timed_out: bool) -> str:
         return "connection_timeout"
     if "ssh_askpass" in text:
         # The askpass helper could not be started: a server-side setup problem.
-        return "executor_unavailable"
+        return "connection_failed"
     if "permission denied" in text or "authentication failed" in text or "too many authentication failures" in text:
         return "authentication_failed"
     if "host key verification failed" in text or "remote host identification has changed" in text or ("host key for" in text and "has changed" in text):
-        return "host_key_rejected"
+        return "connection_failed"
     if "timed out" in text or "timeout" in text:
         return "connection_timeout"
     return "connection_failed"
@@ -375,14 +410,15 @@ class Deadline:
 
 def session_output(job, commands, deadline: Deadline) -> str:
     code, out, err, timed_out = run_ssh(job, commands, deadline.session_timeout())
-    if timed_out or code == 255 or (code != 0 and not out.strip()):
+    if timed_out or code != 0:
         raise ProbeError(classify_failure(err, timed_out))
     return out
 
 
 def status_table(job, deadline: Deadline) -> str:
     output = session_output(job, STATUS_COMMANDS, deadline)
-    if not has_status_table(output):
+    rows = list(_table_rows(output))
+    if not has_status_table(output) or cli_errors(output) or not rows:
         # Malformed/unexpected output must never be reported as "clean".
         raise ProbeError("connection_failed")
     return output
@@ -394,7 +430,12 @@ def status_table(job, deadline: Deadline) -> str:
 def status(job):
     deadline = Deadline(HELPER_DEADLINE["status"])
     # Fixed commands only.  Raw output is parsed then discarded.
-    return {"ok": True, "ports": errdisabled_interfaces(status_table(job, deadline))}
+    ports = errdisabled_interfaces(status_table(job, deadline))
+    for item in ports:
+        # A device-controlled Name column must not reflect submitted credentials.
+        if any(secret in item["description"] for secret in (job["username"], job["password"])):
+            item["description"] = ""
+    return {"ok": True, "ports": ports}
 
 
 def recovery_commands(interface: str):
@@ -411,8 +452,8 @@ def recover(job):
         return {"ok": True, "recovery": "not_errdisabled"}
     config_output = session_output(job, recovery_commands(interface), deadline)
     if cli_errors(config_output):
-        # e.g. insufficient privilege: nothing was changed, nothing is saved.
-        raise ProbeError("recovery_rejected")
+        # e.g. insufficient privilege: do not claim recovery succeeded. Never save.
+        raise ProbeError("connection_failed")
     after = errdisabled_ports(status_table(job, deadline))
     return {"ok": True, "recovery": "still_errdisabled" if interface in after else "recovered"}
 
@@ -421,7 +462,7 @@ def execute(value):
     """Run one already-decoded, bounded job and return only its safe result."""
     if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}):
         return {"ok": False, "error": "invalid_request"}
-    if value.get("operation") not in {"status", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
+    if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
         return {"ok": False, "error": "invalid_request"}
     try:
         address = ipaddress.ip_address(value["host"])

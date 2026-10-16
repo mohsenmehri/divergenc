@@ -4,8 +4,7 @@ The browser submits device credentials over its existing HTTPS FAM session.
 The FAM server itself then opens one direct, bounded SSH session to the device
 through the one-shot ``equipment_probe.py`` helper (Windows OpenSSH ssh.exe).
 No device credential, job, or CLI output is stored in FAM's database, files,
-URL, command line, or normal logs.  The legacy VDI connector broker remains
-only as an explicitly disabled compatibility path (``FAM_EQUIPMENT_CONNECTOR_ENABLED=0``).
+URL, command line, or normal logs.  No connector broker or connector endpoints are registered.
 """
 from __future__ import annotations
 
@@ -19,86 +18,19 @@ from pathlib import Path
 import re
 import secrets
 import subprocess
-import threading
 import time
 
 from flask import g, jsonify
 
 INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
 # Same allowlist as equipment_probe.USERNAME: the name is passed to ssh.exe -l
-# and echoed into the askpass prompt, so shell metacharacters are refused here.
+# and echoed into the askpass prompt, so control/option-like input is refused here.
 USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 # Outer wall clock for the helper process per operation.  It must exceed
 # equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
 # helper while it is still supervising an ssh.exe child.
 EXECUTOR_TIMEOUT = {"status": 40, "recover": 95}
-JOB_ID = re.compile(r"[A-Za-z0-9_-]{20,100}\Z")
 RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
-
-
-class EquipmentBroker:
-    """Memory-only, same-user job hand-off to a Connector polling over HTTPS."""
-
-    def __init__(self):
-        self._condition = threading.Condition()
-        self._jobs = {}
-        self._active_until = {}
-
-    def _purge(self, now):
-        self._active_until = {user: until for user, until in self._active_until.items() if until > now}
-        self._jobs = {job_id: job for job_id, job in self._jobs.items() if job["expires"] > now}
-
-    def submit(self, user_id, payload, timeout=100):
-        now = time.monotonic()
-        with self._condition:
-            self._purge(now)
-            if user_id not in self._active_until:
-                return {"ok": False, "error": "connector_offline"}
-            job_id = secrets.token_urlsafe(24)
-            job = {"user": user_id, "payload": payload, "expires": now + timeout, "claimed": False,
-                   "done": threading.Event(), "result": None}
-            self._jobs[job_id] = job
-            self._condition.notify_all()
-        if not job["done"].wait(timeout):
-            with self._condition:
-                self._jobs.pop(job_id, None)
-            return {"ok": False, "error": "connector_timeout"}
-        with self._condition:
-            self._jobs.pop(job_id, None)
-        return job["result"] if isinstance(job["result"], dict) else {"ok": False, "error": "connector_failed"}
-
-    def claim(self, user_id, timeout=25):
-        deadline = time.monotonic() + timeout
-        with self._condition:
-            while True:
-                now = time.monotonic()
-                self._purge(now)
-                # A connector must refresh this short heartbeat continuously;
-                # a disconnected VDI cannot be selected for a browser request.
-                self._active_until[user_id] = now + 35
-                for job_id, job in self._jobs.items():
-                    if job["user"] == user_id and not job["claimed"]:
-                        job["claimed"] = True
-                        return {"jobId": job_id, **job["payload"]}
-                remaining = deadline - now
-                if remaining <= 0:
-                    return None
-                self._condition.wait(remaining)
-
-    def online(self, user_id):
-        with self._condition:
-            self._purge(time.monotonic())
-            return user_id in self._active_until
-
-    def complete(self, user_id, job_id, result):
-        with self._condition:
-            job = self._jobs.get(job_id)
-            if not job or job["user"] != user_id or not job["claimed"] or job["expires"] <= time.monotonic():
-                return False
-            job["result"] = result
-            job["done"].set()
-            self._condition.notify_all()
-            return True
 
 
 def _b64(value: bytes) -> str:
@@ -178,12 +110,10 @@ def _execute(app, payload):
     override = app.config.get("EQUIPMENT_EXECUTOR")
     if override is not None:
         return override(payload)
-    if app.config.get("EQUIPMENT_CONNECTOR_ENABLED"):
-        return app.config["EQUIPMENT_BROKER"].submit(g.user["id"], payload)
     executable = Path(app.config["EQUIPMENT_PYTHON"])
     helper = Path(app.config["EQUIPMENT_HELPER"])
     if not executable.is_file() or not helper.is_file():
-        return {"ok": False, "error": "executor_unavailable"}
+        return {"ok": False, "error": "connection_failed"}
     timeout = EXECUTOR_TIMEOUT.get(payload.get("operation"), EXECUTOR_TIMEOUT["status"])
     try:
         completed = subprocess.run(
@@ -194,8 +124,8 @@ def _execute(app, payload):
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "connection_timeout"}
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return {"ok": False, "error": "executor_unavailable"}
-    return result if isinstance(result, dict) else {"ok": False, "error": "executor_unavailable"}
+        return {"ok": False, "error": "connection_failed"}
+    return result if isinstance(result, dict) else {"ok": False, "error": "connection_failed"}
 
 
 def _failure(value):
@@ -204,12 +134,6 @@ def _failure(value):
         "authentication_failed": "نام کاربری یا رمز تجهیز پذیرفته نشد.",
         "connection_timeout": "اتصال SSH به تجهیز در زمان مجاز پاسخ نداد.",
         "connection_failed": "بررسی تجهیز انجام نشد؛ دسترسی SSH و وضعیت تجهیز را بررسی کنید.",
-        "host_key_rejected": "کلید میزبان (Host Key) تجهیز تأیید نشد یا با رکورد قبلی تفاوت دارد؛ اتصال برای ایمنی قطع شد. با مدیر FAM تماس بگیرید.",
-        "recovery_rejected": "تجهیز دستورهای بازیابی را نپذیرفت (احتمالاً سطح دسترسی کافی نیست)؛ هیچ تغییری اعمال یا ذخیره نشد.",
-        "executor_unavailable": "موتور داخلی بررسی تجهیز (OpenSSH) روی سرور FAM آماده نیست.",
-        "connector_offline": "Connector تجهیزات روی VDI شما متصل نیست؛ ابتدا START-FAM-EQUIPMENT-CONNECTOR را اجرا کنید.",
-        "connector_timeout": "Connector تجهیزات در زمان مجاز پاسخ نداد؛ اتصال VDI و SSH تجهیز را بررسی کنید.",
-        "connector_failed": "Connector تجهیزات نتیجهٔ معتبر ارسال نکرد.",
     }.get(code, "بررسی تجهیز انجام نشد.")
 
 
@@ -231,8 +155,7 @@ def _ports_or_fail(result, fail):
 
 
 def register_equipment_ops(app, *, data, fail, allowed):
-    """Register authenticated browser and same-user Connector endpoints."""
-    broker = app.config["EQUIPMENT_BROKER"]
+    """Register authenticated browser endpoints for direct server-to-device SSH."""
 
     def authorize():
         if not app.config["EQUIPMENT_OPS_ENABLED"]:
@@ -265,25 +188,3 @@ def register_equipment_ops(app, *, data, fail, allowed):
         if not isinstance(result, dict) or result.get("ok") is not True or result.get("recovery") not in {"recovered", "still_errdisabled", "not_errdisabled"}:
             fail(502, _failure(result))
         return jsonify(host=value["host"], interface=value["interface"], recovery=result["recovery"])
-
-    @app.post("/api/equipment/connector/claim")
-    def equipment_connector_claim():
-        authorize()
-        if not app.config["EQUIPMENT_CONNECTOR_ENABLED"]:
-            fail(404, "Connector تجهیزات فعال نشده است.")
-        if data() != {}:
-            fail(400, "درخواست Connector معتبر نیست.")
-        return jsonify(job=broker.claim(g.user["id"]))
-
-    @app.post("/api/equipment/connector/complete")
-    def equipment_connector_complete():
-        authorize()
-        if not app.config["EQUIPMENT_CONNECTOR_ENABLED"]:
-            fail(404, "Connector تجهیزات فعال نشده است.")
-        value = data()
-        if (not isinstance(value, dict) or set(value) != {"jobId", "result"} or
-                not isinstance(value["jobId"], str) or not JOB_ID.fullmatch(value["jobId"]) or not isinstance(value["result"], dict)):
-            fail(400, "نتیجهٔ Connector معتبر نیست.")
-        if not broker.complete(g.user["id"], value["jobId"], value["result"]):
-            fail(409, "درخواست Connector منقضی شده است.")
-        return jsonify(ok=True)

@@ -60,7 +60,7 @@ class FakeProcess:
             "stdin": input.decode("ascii") if input is not None else None,
             "timeout": timeout,
             "askpass_exists": os.path.isfile(askpass),
-            "askpass_text": Path(askpass).read_text(encoding="ascii") if os.path.isfile(askpass) else None,
+            "askpass_text": (Path(askpass).parent / "askpass.cs").read_text(encoding="ascii"),
             "askpass_path": askpass,
             "creationflags": self.kwargs.get("creationflags"),
         })
@@ -96,8 +96,17 @@ class ProbeHarness(unittest.TestCase):
         self.environ.start()
         os.environ.pop("FAM_EQUIPMENT_RUNTIME_DIR", None)
         self.calls = []
+        def prepare(directory):
+            (Path(directory) / "askpass.cs").write_text(equipment_probe.ASKPASS_SOURCE, encoding="ascii")
+            executable = Path(directory) / "askpass.exe"
+            executable.write_bytes(b"mock-executable-no-secret")
+            return str(executable)
+        self.real_prepare = equipment_probe.prepare_askpass
+        self.prepare_mock = mock.patch.object(equipment_probe, "prepare_askpass", side_effect=prepare)
+        self.prepare_mock.start()
 
     def tearDown(self):
+        self.prepare_mock.stop()
         self.environ.stop()
         self.temp.cleanup()
 
@@ -190,10 +199,10 @@ class SshExeTransportTests(ProbeHarness):
 
     def test_host_key_change_is_refused_with_safe_code(self):
         result = self.run_probe(self.status_job(), [{"code": 255, "err": "@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @\nHost key verification failed."}])
-        self.assertEqual(result, {"ok": False, "error": "host_key_rejected"})
+        self.assertEqual(result, {"ok": False, "error": "connection_failed"})
 
     def test_malformed_output_is_never_reported_as_clean(self):
-        for output in ("", "% Invalid input detected at '^' marker.\n", "garbage without any table\nGi1/0/1 something\n"):
+        for output in ("Port Name Status Vlan Duplex Speed Type\n", "Port Name Status Vlan Duplex Speed Type\nGi0/1 malformed\n", "", "% Invalid input detected at '^' marker.\n", "garbage without any table\nGi1/0/1 something\n"):
             self.calls.clear()
             result = self.run_probe(self.status_job(), [{"out": output}])
             self.assertEqual(result, {"ok": False, "error": "connection_failed"}, output)
@@ -205,8 +214,9 @@ class SshExeTransportTests(ProbeHarness):
         self.assertNotIn(PASSWORD, call["stdin"])
         self.assertTrue(call["askpass_exists"])
         self.assertNotIn(PASSWORD, call["askpass_text"])
-        self.assertIn("!" + equipment_probe.SECRET_ENV + "!", call["askpass_text"])
-        self.assertIn("EnableDelayedExpansion", call["askpass_text"])
+        self.assertIn(equipment_probe.SECRET_ENV, call["askpass_text"])
+        self.assertIn("Environment.GetEnvironmentVariable", call["askpass_text"])
+        self.assertTrue(call["askpass_path"].endswith(".exe"))
         self.assertNotIn("%1", call["askpass_text"])
         self.assertEqual(call["env"][equipment_probe.SECRET_ENV], PASSWORD)
         self.assertEqual(call["env"]["SSH_ASKPASS"], call["askpass_path"])
@@ -257,7 +267,7 @@ class SshExeTransportTests(ProbeHarness):
 
     def test_recovery_rejected_by_device_changes_nothing_else(self):
         result = self.run_probe(self.recover_job("Gi1/0/1"), [{"out": TABLE_ERRDISABLED}, {"out": "% Invalid input detected at '^' marker.\n"}])
-        self.assertEqual(result, {"ok": False, "error": "recovery_rejected"})
+        self.assertEqual(result, {"ok": False, "error": "connection_failed"})
         self.assertEqual(len(self.calls), 2)
 
     def test_session_timeouts_fit_inside_backend_executor_timeout(self):
@@ -280,6 +290,8 @@ class SshExeTransportTests(ProbeHarness):
             {**self.recover_job(), "interface": "Gi1/0/1; reload"},
             {**self.status_job(), "command": "show run"},
             "not a dict",
+            self.status_job(operation=[]),
+            self.status_job(operation={}),
         ]
         for job in bad:
             self.calls.clear()
@@ -293,8 +305,27 @@ class SshExeTransportTests(ProbeHarness):
         self.calls.clear()
         with mock.patch.dict(os.environ, {"FAM_EQUIPMENT_HOST_KEY_POLICY": "no"}):
             result = self.run_probe(self.status_job(), [{"out": TABLE_CLEAN}])
-        self.assertEqual(result, {"ok": False, "error": "executor_unavailable"})
+        self.assertEqual(result, {"ok": False, "error": "connection_failed"})
         self.assertEqual(self.calls, [])
+
+    def test_nonzero_exit_even_with_table_is_not_clean(self):
+        result = self.run_probe(self.status_job(), [{"code": 1, "out": TABLE_CLEAN}])
+        self.assertEqual(result, {"ok": False, "error": "connection_failed"})
+
+    def test_compiler_never_receives_secret_and_has_bounded_timeout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def compile(argv, **kwargs):
+                self.assertNotIn(PASSWORD, " ".join(argv))
+                self.assertNotIn(PASSWORD, Path(argv[-1]).read_text())
+                self.assertNotIn(equipment_probe.SECRET_ENV, kwargs["env"])
+                self.assertEqual(kwargs["timeout"], 5)
+                Path(directory, "askpass.exe").write_bytes(b"compiled-test-helper")
+                return subprocess.CompletedProcess(argv, 0)
+            with mock.patch.dict(os.environ, {equipment_probe.SECRET_ENV: PASSWORD}), \
+                 mock.patch.object(equipment_probe.os.path, "isfile", return_value=True), \
+                 mock.patch.object(equipment_probe.subprocess, "run", side_effect=compile):
+                result = self.real_prepare(directory)
+            self.assertTrue(result.endswith("askpass.exe"))
 
     def test_source_has_no_netmiko_paramiko_or_preferred_ciphers_workaround(self):
         source = Path(equipment_probe.__file__).read_text(encoding="utf-8")

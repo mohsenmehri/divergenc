@@ -29,9 +29,8 @@ class ConnectorPackageChecks(unittest.TestCase):
         self.assertIn("FAM_EQUIPMENT_KNOWN_HOSTS", start)
         self.assertIn("FAM_EQUIPMENT_HOST_KEY_POLICY='accept-new'", start)
         self.assertNotIn("StrictHostKeyChecking=no", start)
-        # The legacy broker is still importable for compatibility but is not the production path.
-        self.assertIn("class EquipmentBroker", backend)
-        self.assertIn("/api/equipment/connector/claim", backend)
+        self.assertNotIn("class EquipmentBroker", backend)
+        self.assertNotIn('/api/equipment/connector/claim', backend)
 
 
 if __name__ == "__main__":

@@ -28,12 +28,11 @@ except ImportError:  # Running directly from C:\FAM\server\app.py.
 # server (Windows OpenSSH ssh.exe). It has no browser Worker API, bearer
 # token, pairing process, Windows service, or persistent equipment credentials.
 try:
-    from .equipment_ops import EquipmentBroker, register_equipment_ops
+    from .equipment_ops import register_equipment_ops
 except ImportError:
     try:
-        from equipment_ops import EquipmentBroker, register_equipment_ops
+        from equipment_ops import register_equipment_ops
     except ImportError:
-        EquipmentBroker=None
         register_equipment_ops=None
 
 ROOT = Path(__file__).resolve().parent
@@ -470,15 +469,14 @@ def create_app(config=None):
       # on the FAM server itself and connects directly to the device with
       # ssh.exe; the legacy VDI connector broker stays disabled.
       EQUIPMENT_OPS_ENABLED=os.environ.get('FAM_EQUIPMENT_OPS_ENABLED','0')=='1',
-      EQUIPMENT_CONNECTOR_ENABLED=os.environ.get('FAM_EQUIPMENT_CONNECTOR_ENABLED','0')=='1',
+      EQUIPMENT_CONNECTOR_ENABLED=False,
       EQUIPMENT_PYTHON=os.environ.get('FAM_EQUIPMENT_PYTHON',str(ROOT/'.venv'/'Scripts'/'python.exe')),
       EQUIPMENT_HELPER=str(ROOT/'equipment_probe.py'),
       EQUIPMENT_SSH=os.environ.get('FAM_EQUIPMENT_SSH',''),
       EQUIPMENT_KNOWN_HOSTS=os.environ.get('FAM_EQUIPMENT_KNOWN_HOSTS',str(ROOT/'private'/'equipment'/'known_hosts')),
       EQUIPMENT_HOST_KEY_POLICY=os.environ.get('FAM_EQUIPMENT_HOST_KEY_POLICY','accept-new'),
       EQUIPMENT_RUNTIME_DIR=os.environ.get('FAM_EQUIPMENT_RUNTIME_DIR',''),
-      EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32),
-      EQUIPMENT_BROKER=EquipmentBroker() if EquipmentBroker is not None else None)
+      EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32))
     if config:app.config.update(config)
     if not app.config['PUBLIC_ORIGIN']:raise RuntimeError('Set FAM_PUBLIC_ORIGIN to the HTTPS origin (no trailing slash).')
     if not app.config['TESTING'] and not app.config['PUBLIC_ORIGIN'].startswith('https://'):raise RuntimeError('Production requires HTTPS.')

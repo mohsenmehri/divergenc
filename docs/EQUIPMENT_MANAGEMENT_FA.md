@@ -38,15 +38,15 @@ Browser کاربر → HTTPS → FAM روی 10.16.243.18 → ssh.exe (Windows Op
    end
    exit
    ```
-   و سپس در جلسهٔ سوم دوباره `show interfaces status`. اگر تجهیز دستور config را رد کند (مثلاً سطح دسترسی ناکافی)، `recovery_rejected` برمی‌گردد و چیزی تغییر نمی‌کند.
+   و سپس در جلسهٔ سوم دوباره `show interfaces status`. اگر تجهیز دستور config را رد کند (مثلاً سطح دسترسی ناکافی)، `connection_failed` برمی‌گردد؛ موفقیت ادعا نمی‌شود و تنظیمی ذخیره نمی‌شود.
 7. `enable`، command آزاد، `write memory`، `copy running-config` و ذخیرهٔ تنظیمات وجود ندارد.
 
 ## حفاظت اطلاعات ورود
 
 - username/password تجهیز فقط در حافظهٔ Browser، درخواست HTTPS، stdin helper و RAM همان child process است.
 - رمز هرگز در command-line، URL، SQLite، log معمولی، فایل تنظیمات یا فایل دائمی قرار نمی‌گیرد.
-- helper برای هر جلسه یک فایل موقت `askpass.cmd` می‌سازد که **فقط** متغیر محیطی `FAM_EQUIPMENT_SSH_SECRET` را echo می‌کند؛ خود فایل حاوی رمز نیست و در `finally` حذف می‌شود. رمز فقط در environment همان `ssh.exe` قرار می‌گیرد (`SSH_ASKPASS` + `SSH_ASKPASS_REQUIRE=force`).
-- نام کاربری به مجموعهٔ `[A-Za-z0-9._@\-]` و رمز به ASCII چاپ‌شدنی (۱ تا ۵۱۲ نویسه) محدود است تا هیچ متاکاراکتری به مسیر `cmd.exe`/askpass نرسد.
+- helper برای هر جلسه با compiler داخلی .NET Framework ویندوز، یک `askpass.exe` موقت از source ثابت `askpass.cs` می‌سازد. Win32 OpenSSH برای ASKPASS فایل اجرایی نیاز دارد، نه CMD/PowerShell script. source و executable هیچ رمزی ندارند؛ برنامه فقط متغیر محیطی `FAM_EQUIPMENT_SSH_SECRET` را از حافظهٔ child می‌خواند و تنها به prompt رمز پاسخ می‌دهد. هر دو فایل در `finally` حذف می‌شوند. رمز فقط پس از compilation به environment همان `ssh.exe` اضافه می‌شود.
+- نام کاربری به مجموعهٔ `[A-Za-z0-9._@\-]` و رمز به ASCII چاپ‌شدنی (۱ تا ۵۱۲ نویسه) محدود است؛ shell اجرا نمی‌شود.
 - رمز تجهیز پس از هر پاسخ سرور از فرم پاک می‌شود. recovery فقط تا پنج دقیقه پس از همان بررسی، برای همان IP، همان username و همان پورت با ticket امضاشدهٔ سرور مجاز است.
 - CSRF، Origin، permission، session و محدودیت‌های قبلی تغییری نکرده‌اند.
 
@@ -54,7 +54,7 @@ Browser کاربر → HTTPS → FAM روی 10.16.243.18 → ssh.exe (Windows Op
 
 - `StrictHostKeyChecking=no` استفاده نمی‌شود.
 - کلیدهای میزبان در فایل اختصاصی `C:\FAMData\equipment\known_hosts` (فقط کلید عمومی تجهیز) ذخیره می‌شوند.
-- سیاست پیش‌فرض `accept-new` است: کلید تجهیز در نخستین اتصال ثبت و هر تغییر بعدی رد می‌شود (`host_key_rejected`). برای الزام به کلید از پیش‌تأییدشده، در `start.ps1` مقدار `FAM_EQUIPMENT_HOST_KEY_POLICY='strict'` بگذارید و کلید را با `ssh-keyscan` یا یک اتصال دستی به همان فایل اضافه کنید.
+- سیاست پیش‌فرض `accept-new` است: کلید تجهیز در نخستین اتصال ثبت و هر تغییر بعدی رد می‌شود (`connection_failed`). برای الزام به کلید از پیش‌تأییدشده، در `start.ps1` مقدار `FAM_EQUIPMENT_HOST_KEY_POLICY='strict'` بگذارید و اثر انگشت کلید را از مسیر مستقل با مدیر تجهیز تطبیق دهید و سپس کلید تأییدشده را به همان فایل اضافه کنید؛ خروجی ssh-keyscan به‌تنهایی قابل اعتماد نیست.
 
 ## زمان‌بندی
 
@@ -64,9 +64,9 @@ Browser کاربر → HTTPS → FAM روی 10.16.243.18 → ssh.exe (Windows Op
 
 ## کدهای خطا
 
-فقط کدهای redacted به Browser می‌رسند: `authentication_failed`، `connection_timeout`، `connection_failed`، `invalid_request`، `host_key_rejected`، `recovery_rejected`، `executor_unavailable`. خروجی CLI خام، Banner، Prompt، نام کاربری، رمز یا جزئیات شبکه هرگز برنمی‌گردد.
+فقط کدهای redacted به Browser می‌رسند: `authentication_failed`، `connection_timeout`، `connection_failed`، `invalid_request`، `connection_failed`، `recovery_rejected`، `executor_unavailable`. خروجی CLI خام، Banner، Prompt، نام کاربری، رمز یا جزئیات شبکه هرگز برنمی‌گردد.
 
 ## پیش‌نیاز سرور FAM
 
 - «OpenSSH Client» ویندوز (`C:\Windows\System32\OpenSSH\ssh.exe`) نصب باشد و `ssh -Q cipher` شامل `aes128-cbc` باشد؛ نصاب Patch این را پیش از هر تغییر بررسی می‌کند.
-- Python، pip یا wheel اضافه‌ای لازم نیست.
+- .NET Framework 4.x و `csc.exe` داخلی ویندوز برای ساخت ASKPASS موقت لازم است؛ نصاب وجود آن را بررسی می‌کند. دانلود یا pip/wheel اضافه‌ای لازم نیست. ساخت ASKPASS حداکثر ۵ ثانیه از بودجهٔ ۲۵ ثانیهٔ هر session مصرف می‌کند.

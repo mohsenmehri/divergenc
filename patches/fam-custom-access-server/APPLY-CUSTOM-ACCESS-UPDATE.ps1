@@ -40,6 +40,8 @@ function Test-OpenSshClient {
   Assert-File $SshClient 'Windows OpenSSH client (ssh.exe) is missing. Install the "OpenSSH Client" optional feature first. No file was changed.'
   $Previous=$ErrorActionPreference;$ErrorActionPreference='Continue';try{$Ciphers=@(& $SshClient -Q cipher 2>$null);$Code=$LASTEXITCODE}finally{$ErrorActionPreference=$Previous}
   if($Code -ne 0 -or @($Ciphers|Where-Object{"$_".Trim() -eq 'aes128-cbc'}).Count -ne 1){throw 'ssh.exe does not offer aes128-cbc; the FAM server OpenSSH client must support the temporary legacy cipher. No file was changed.'}
+  $Compilers=@('Framework64','Framework')|ForEach-Object{Join-Path $env:SystemRoot ('Microsoft.NET\'+$_+'\v4.0.30319\csc.exe')}|Where-Object{Test-Path -LiteralPath $_ -PathType Leaf}
+  if(!@($Compilers).Count){throw '.NET Framework 4.x compiler (csc.exe) is required for the temporary secret-free ASKPASS executable. No file was changed.'}
   New-Item -ItemType Directory -Force -Path $EquipmentDir|Out-Null
 }
 function Protect-PrivateUi {
