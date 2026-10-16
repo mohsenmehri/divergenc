@@ -18,62 +18,116 @@ before(async()=>{
   await page.goto(pathToFileURL(path.resolve('FAM.html')).href);
   await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');
   await page.locator('#auth-submit').click();
-  await page.waitForFunction(()=>Access.current()&&!document.documentElement.classList.contains('auth-pending'));
-  await page.locator('[data-act="toggle-sidebar"]').click();
+  await page.waitForFunction(()=>Access.current()&&document.documentElement.dataset.famReady==='true');
+  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();
   await page.locator('.tab-btn[data-view="equipment"]').click();
 });
 after(async()=>{await browser?.close();});
-async function check(scenario){
-  await page.locator('#equipment-demo-scenario').selectOption(scenario);
-  await page.locator('#equipment-host').fill('10.2.35.2');
-  await page.locator('#equipment-username').fill('fake-only-user');
-  await page.locator('#equipment-password').fill('fake-only-password-777');
-  await page.locator('#equipment-check-submit').click();
-  await page.waitForFunction(()=>!document.querySelector('#equipment-check-submit').disabled);
-  assert.equal(await page.locator('#equipment-password').inputValue(),'');
+const workspace=()=>page.locator('#equipment-workspace');
+async function radius(){
+  await page.locator('#equipment-radius-user').fill('fake-radius-user-987');
+  await page.locator('#equipment-radius-password').fill('fake-radius-secret-987');
+  await page.getByRole('button',{name:'ورود به فضای تجهیزات',exact:true}).click();
 }
-test('local file login opens the full FAM and equipment tab without server or workbook',async()=>{
-  assert.equal(await page.evaluate(()=>Access.current().username),'admin');
-  assert.ok(await page.locator('#view-equipment').isVisible());
-  assert.match(await page.locator('.equipment-demo-banner').innerText(),/نسخهٔ محلی/);
-  assert.match(await page.locator('.equipment-demo-banner').innerText(),/رمز واقعی/);
-  await check('clean');
+async function card(name){await workspace().locator('.eq-card-main').filter({has:page.locator('strong',{hasText:new RegExp('^'+name+'$')})}).click();}
+async function add(kind,name,host){
+  await workspace().getByRole('button',{name:'＋ افزودن '+kind,exact:true}).click();
+  await page.locator('#eq-edit-name').fill(name);
+  if(host)await page.locator('#eq-edit-host').fill(host);
+  await page.locator('.eq-dialog').getByRole('button',{name:'ذخیره',exact:true}).click();
+}
+async function cleanCheck(){
+  await page.waitForFunction(()=>document.querySelector('#equipment-check-submit')&&!document.querySelector('#equipment-check-submit').disabled);
+}
+test('clicking Equipment requires transient RADIUS before showing inventory',async()=>{
+  assert.ok(await page.locator('#equipment-radius-password').isVisible());
+  assert.equal(await workspace().locator('.eq-card-main').count(),0);
+  assert.match(await workspace().innerText(),/این مرحله احراز هویت واقعی RADIUS نیست/);
+  await radius();
+  assert.equal(await workspace().locator('.eq-card-main').count(),2);
+  assert.equal(await page.locator('#equipment-radius-password').count(),0);
+  assert.match(await workspace().innerText(),/نشست موقت RADIUS/);
+});
+test('router and switch each have requested editable geographic hierarchy',async()=>{
+  for(const type of ['روتر','سوئیچ']){
+    await card(type);
+    for(const name of ['شعبه و حوزه','ساختمان‌ها','دیتا سنتر'])assert.ok((await workspace().innerText()).includes(name));
+    await card('ساختمان‌ها');
+    assert.equal(await workspace().locator('.eq-card-main').count(),6);
+    for(const name of ['ساختمان مرکزی رضوان','ساختمان 68 شرقی فام','ساختمان 68 شرقی ملل','ساختمان 68 شرقی شرکت ها','ساختمان مرکزی فام','ساختمان ملاصدرا فام'])assert.ok((await workspace().innerText()).includes(name));
+    await workspace().locator('.eq-breadcrumbs').getByRole('button',{name:type,exact:true}).click();
+    await card('دیتا سنتر');assert.equal(await workspace().locator('.eq-card-main').count(),2);
+    assert.ok((await workspace().innerText()).includes('تهران'));assert.ok((await workspace().innerText()).includes('سمنان'));
+    await workspace().locator('.eq-breadcrumbs').getByRole('button',{name:type,exact:true}).click();
+    await card('شعبه و حوزه');
+    for(const name of ['شعبه','حوزه','انبار و غیره'])assert.ok((await workspace().innerText()).includes(name));
+    await workspace().locator('.eq-breadcrumbs').getByRole('button',{name:'تجهیزات',exact:true}).click();
+  }
+});
+test('add a node by name/IP, then click its name for automatic simulated check and Device 360',async()=>{
+  await card('سوئیچ');await card('شعبه و حوزه');await card('شعبه');
+  await add('نود','سوئیچ شعبه آزمایشی','10.2.35.2');
+  assert.equal(await page.locator('.eq-dialog').count(),0);
+  await page.screenshot({path:'/tmp/fam-equipment-inventory.png',fullPage:true});
+  await page.getByRole('button',{name:'سوئیچ شعبه آزمایشی',exact:true}).click();
+  await cleanCheck();
   assert.match(await page.locator('#equipment-status').innerText(),/وضعیت پاک \(نمایشی\)/);
+  assert.match(await workspace().innerText(),/DEVICE 360/);
+  assert.match(await workspace().innerText(),/10.2.35.2/);
+  await page.getByRole('tab',{name:'دستورهای موردعلاقه',exact:true}).click();
+  assert.match(await workspace().innerText(),/در مرحلهٔ بعد/);
 });
-test('sample port requires same-interface confirmation and fresh fake password',async()=>{
-  await check('errdisabled');
-  const button=page.getByRole('button',{name:'تأیید رفع خطا',exact:true});
-  assert.match(await page.locator('.equipment-port').innerText(),/Gi0\/1/);
-  assert.match(await page.locator('.equipment-port').innerText(),/ATM 17/);
-  page.once('dialog',async d=>{assert.match(d.message(),/Gi0\/1/);await d.accept();});
-  await button.click();
-  assert.match(await page.locator('#equipment-recovery-note').innerText(),/دوباره وارد کنید/);
-  await page.locator('#equipment-password').fill('fake-only-password-777');
-  page.once('dialog',d=>d.dismiss());await button.click();
-  assert.equal(await page.locator('#equipment-password').inputValue(),'fake-only-password-777');
-  page.once('dialog',d=>d.accept());await button.click();
-  await page.waitForFunction(()=>!document.querySelector('#equipment-check-submit').disabled);
-  assert.match(await page.locator('#equipment-status').innerText(),/نمایشی.*Gi0\/1 بازیابی شد/);
-  assert.equal(await page.locator('#equipment-password').inputValue(),'');
+test('RADIUS error does not auto-detect local account or execute Enable; recovery needs confirmation',async()=>{
+  await page.getByRole('tab',{name:'پورت‌ها و خطاها',exact:true}).click();
+  await page.locator('#equipment-demo-scenario').selectOption('auth');
+  await page.locator('#equipment-check-submit').click();await cleanCheck();
+  assert.match(await page.locator('#equipment-status').innerText(),/ثابت نمی‌کند حساب تجهیز Local است/);
+  assert.match(await workspace().innerText(),/فعلاً غیرفعال است/);
+  assert.equal(await workspace().locator('input[type=password]').count(),0);
+  await page.locator('#equipment-demo-scenario').selectOption('errdisabled');
+  await page.locator('#equipment-check-submit').click();await cleanCheck();
+  page.once('dialog',async d=>{assert.match(d.message(),/Gi0\/1/);assert.match(d.message(),/سوئیچ شعبه آزمایشی/);await d.dismiss();});
+  await page.getByRole('button',{name:'تأیید بازیابی Gi0/1',exact:true}).click();
+  assert.match(await page.locator('#equipment-status').innerText(),/Err-disabled یافت شد/);
+  page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'تأیید بازیابی Gi0/1',exact:true}).click();
+  assert.match(await page.locator('#equipment-status').innerText(),/هیچ دستور واقعی اجرا نشد/);
 });
-test('remaining recovery states and all error scenarios are explicitly simulated',async()=>{
-  for(const [scenario,text] of [['still','همچنان Err-disabled'],['changed','تغییری اعمال نشد']]){
-    await check(scenario);await page.locator('#equipment-password').fill('fake-only-password-777');
-    page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'تأیید رفع خطا',exact:true}).click();
-    await page.waitForFunction(()=>!document.querySelector('#equipment-check-submit').disabled);
-    assert.ok((await page.locator('#equipment-status').innerText()).includes(text));
-    assert.equal(await page.locator('#equipment-password').inputValue(),'');
-  }
-  for(const scenario of ['auth','timeout','connection']){
-    await check(scenario);assert.match(await page.locator('#equipment-status').innerText(),/^نمایشی/);
-    assert.ok(await page.locator('#equipment-status').evaluate(e=>e.classList.contains('error')));
-  }
-});
-test('device demo values are never persisted or sent to network; layout works on mobile',async()=>{
+test('inventory CRUD, validation, search and safe rendering work without storing credentials',async()=>{
+  await workspace().locator('.eq-breadcrumbs').getByRole('button',{name:'شعبه',exact:true}).click();
+  await add('نود','IP نامعتبر','8.8.8.8');
+  assert.match(await page.locator('.eq-dialog').innerText(),/فقط IPv4 خصوصی/);
+  await page.locator('.eq-dialog').getByRole('button',{name:'انصراف',exact:true}).click();
+  await add('نود','IP تکراری','10.2.35.2');assert.match(await page.locator('.eq-dialog').innerText(),/IP در همین نوع تجهیز ثبت شده/);
+  await page.locator('.eq-dialog').getByRole('button',{name:'انصراف',exact:true}).click();
+  await page.locator('#equipment-node-search').fill('missing');assert.equal(await workspace().locator('.eq-node-link').count(),0);
+  await page.locator('#equipment-node-search').fill('10.2.35');assert.equal(await workspace().locator('.eq-node-link').count(),1);
+  await page.locator('#equipment-node-search').fill('');
+  await workspace().locator('.eq-table').getByRole('button',{name:'ویرایش',exact:true}).click();
+  await page.locator('#eq-edit-name').fill('<img src=x onerror=alert(1)>');
+  await page.locator('.eq-dialog').getByRole('button',{name:'ذخیره',exact:true}).click();
+  assert.equal(await workspace().locator('.eq-table img').count(),0);
+  page.once('dialog',d=>d.accept());await workspace().locator('.eq-table').getByRole('button',{name:'حذف',exact:true}).click();
+  assert.equal(await workspace().locator('.eq-node-link').count(),0);
+  await workspace().locator('.eq-breadcrumbs').getByRole('button',{name:'تجهیزات',exact:true}).click();
+  await add('نوع تجهیز','فایروال');await card('فایروال');
+  await add('دسته','سایت آزمایشی');await card('سایت آزمایشی');
+  await add('زیر‌بخش','اتاق شبکه');await card('اتاق شبکه');
+  await add('نود','نود تست فایروال','192.168.1.10');
   const storage=await page.evaluate(()=>JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)]));
-  for(const secret of ['fake-only-user','fake-only-password-777'])assert.ok(!storage.includes(secret));
+  assert.ok(storage.includes('نود تست فایروال'));
+  for(const secret of ['fake-radius-user-987','fake-radius-secret-987'])assert.ok(!storage.includes(secret));
   assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
+});
+test('credentials expire on leaving equipment; persisted inventory survives reload; mobile fits',async()=>{
+  await page.getByRole('button',{name:'← داشبورد FAM',exact:true}).click();
+  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();await page.locator('.tab-btn[data-view="equipment"]').click();
+  assert.ok(await page.locator('#equipment-radius-password').isVisible());
+  await radius();await card('فایروال');await card('سایت آزمایشی');await card('اتاق شبکه');
+  assert.match(await workspace().innerText(),/نود تست فایروال/);
+  await page.reload();await page.waitForFunction(()=>Access.current()&&document.documentElement.dataset.famReady==='true');
+  if(!await page.locator('#sidebar').evaluate(e=>e.classList.contains('open')))await page.locator('[data-act="toggle-sidebar"]').click();await page.locator('.tab-btn[data-view="equipment"]').click();
+  assert.ok(await page.locator('#equipment-radius-password').isVisible());await radius();
+  assert.ok((await workspace().innerText()).includes('فایروال'));
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  assert.ok(await page.locator('#equipment-check-submit').isVisible());
 });
