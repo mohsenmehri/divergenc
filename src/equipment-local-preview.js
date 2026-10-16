@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const checks=new Map(),uid=()=>crypto.randomUUID();
   const can=()=>typeof Access!=='undefined'&&Access.can('equipment');
   const configuration=FamEquipmentConfiguration.create({getInventory:()=>inventory,isAuthorized:()=>!!credentials&&can()&&credentials.userId===Access.current()?.id});
+  const equipmentTools=FamEquipmentTools.create({getInventory:()=>inventory,saveInventory:next=>save(next),isAuthorized:()=>!!credentials&&can()&&credentials.userId===Access.current()?.id});
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
   const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const n=el('button',cls,text);n.type='button';n.addEventListener('click',handler);return n;};
   const tools=(...buttons)=>{const n=el('div','eq-tools');n.append(...buttons);return n;};
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
   const navigate=next=>{epoch++;path=next;result=null;tab='overview';busy=false;render();};
   function lock(){
-    epoch++;credentials=null;path={};result=null;busy=false;checks.clear();configuration.clear();workspaceTab='inventory';
+    epoch++;credentials=null;path={};result=null;busy=false;checks.clear();configuration.clear();equipmentTools.clear();workspaceTab='inventory';
     activeDialog?.close();activeDialog?.remove();activeDialog=null;
     root.querySelectorAll('input[type=password]').forEach(n=>{n.value='';});render();
   }
@@ -314,6 +315,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const list=el('div');const draw=()=>{list.replaceChildren();table(inventory.nodes.filter(node=>M.matches(node,filters)&&(!onlyReview||M.incomplete(node))&&[node.name,node.host].some(v=>v.toLowerCase().includes(search.toLowerCase()))),list);};
     input.addEventListener('input',()=>{search=input.value;draw();});bar.append(input);panel.append(bar,list);main.append(panel);draw();
     main.append(el('p','eq-muted','حذف از یک دسته، خود نود را حذف نمی‌کند. دسته‌های هر نود از مشخصات آن ساخته می‌شوند؛ جابه‌جایی دستی یا کپی نود لازم نیست.'));
+    const exportAll=button('خروجی اکسل همهٔ تجهیزات',()=>equipmentTools.exportInventory());exportAll.id='eq-inventory-export-all';main.append(tools(exportAll));
   }
   async function runCheck(){
     if(!credentials||!can()||!path.node||busy)return;
@@ -350,19 +352,19 @@ document.addEventListener('DOMContentLoaded',()=>{
     main.append(el('p','eq-muted','SNMP، مانیتورینگ پیوسته، توپولوژی و مدیریت تنظیمات هنوز متصل نشده‌اند؛ مقدار ساختگی به‌عنوان دادهٔ واقعی نمایش داده نمی‌شود.'));
   }
   function render(){
-    configuration.suspend();root.replaceChildren();if(!can()){root.append(notice('برای ورود به مدیریت تجهیزات مجوز لازم است.'));return;}
-    if(credentials&&credentials.userId!==Access.current()?.id){credentials=null;checks.clear();path={};configuration.clear();workspaceTab='inventory';}
+    configuration.suspend();equipmentTools.suspend();root.replaceChildren();if(!can()){root.append(notice('برای ورود به مدیریت تجهیزات مجوز لازم است.'));return;}
+    if(credentials&&credentials.userId!==Access.current()?.id){credentials=null;checks.clear();path={};configuration.clear();equipmentTools.clear();workspaceTab='inventory';}
     if(!credentials){gate();return;}
     const top=el('div','eq-session-bar');top.append(el('span','eq-session-dot'),el('strong','','RADIUS آماده است'),el('span','eq-muted','معتبر تا خروج از حساب FAM · فقط در حافظه'),button('تغییر اطلاعات RADIUS',lock));root.append(top);
-    root.append(notice('پیش‌نمایش محلی · فقط نام، IP و مشخصات نودها ذخیره می‌شود؛ رمز ذخیره یا ارسال نمی‌شود.','eq-demo-note'));
+    root.append(notice('پیش‌نمایش محلی · مشخصات تجهیزات و استانداردهای بدون رمز ذخیره می‌شوند؛ رمز و متن کانفیگ ذخیره یا ارسال نمی‌شوند.','eq-demo-note'));
     if(storageIssue)root.append(notice(storageIssue,'warning'));if(cardsIssue)root.append(notice(cardsIssue,'warning'));if(migrationNote)root.append(notice(migrationNote));
     const sections=el('nav','eq-tabs eq-workspace-tabs');sections.setAttribute('role','tablist');sections.setAttribute('aria-label','بخش‌های تجهیزات');
-    for(const [key,label]of [['inventory','فهرست تجهیزات'],['configuration','پیکربندی']]){
+    for(const [key,label]of [['inventory','فهرست تجهیزات'],['configuration','پیکربندی'],['tools','ابزارها']]){
       const tabButton=button(label,()=>{epoch++;busy=false;if(result?.state==='checking')result=null;workspaceTab=key;render();},'eq-tab'+(workspaceTab===key?' active':''));
       tabButton.id='equipment-tab-'+key;tabButton.setAttribute('role','tab');tabButton.setAttribute('aria-selected',String(workspaceTab===key));sections.append(tabButton);
     }root.append(sections);
     const layout=el('div','eq-layout'),main=el('div','eq-main');layout.append(main);root.append(layout);
-    if(workspaceTab==='configuration')configuration.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
+    if(workspaceTab==='configuration')configuration.mount(main);else if(workspaceTab==='tools')equipmentTools.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
   }
   // A RADIUS credential session belongs to the MAIN FAM login, not to a tab.
   // Navigation never writes credentials to persistent storage or destroys them.
@@ -370,7 +372,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const target=event.target.closest?.('[data-view], [data-act="go-cp"], #account-logout');if(!target)return;
     if(target.id==='account-logout'){lock();return;}
     if(target.dataset.view==='equipment'){render();return;}
-    if(credentials){configuration.suspend();epoch++;busy=false;if(result?.state==='checking')result=null;activeDialog?.close();activeDialog?.remove();activeDialog=null;}
+    if(credentials){configuration.suspend();equipmentTools.suspend();epoch++;busy=false;if(result?.state==='checking')result=null;activeDialog?.close();activeDialog?.remove();activeDialog=null;}
   },true);
   new MutationObserver(()=>{
     if(credentials&&(document.documentElement.classList.contains('auth-pending')||!can()||credentials.userId!==Access.current()?.id))lock();

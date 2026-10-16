@@ -67,11 +67,11 @@ The choices have hover/focus growth, accent glow, native keyboard focus containm
 
 The database dashboard now has an explicit equipment switch and equipment has an explicit database switch. Both include a return-to-chooser button. Navigation stays within the current FAM account and does not clear the equipment RADIUS closure. Main logout and refresh still clear that RAM-only credential state. SERVER is not rebuilt or modified for this local UI change.
 
-Browser coverage exercises both entry choices, hover/keyboard/escape behavior, mobile/reduced motion, account restrictions, direct category CRUD for all six axes, dependency protection, persistence, and RADIUS retention across direct/chooser round trips. That release passed 60 tests; the current configuration-planner release passes the 74-test complete local suite.
+Browser coverage exercises both entry choices, hover/keyboard/escape behavior, mobile/reduced motion, account restrictions, direct category CRUD for all six axes, dependency protection, persistence, and RADIUS retention across direct/chooser round trips. That release passed 60 tests; the subsequent configuration-planner release passed the 74-test complete local suite.
 
 ## Group configuration planner (LOCAL dry-run only)
 
-`src/equipment-configuration.js` contains pure planning/validation functions and an isolated UI controller factory. The model is embedded after `FamEquipmentInventory` and before the equipment UI consumer. The equipment page now has inventory/configuration tabs and a **configure this selection** shortcut that copies only the five explicit category filters (not the name/IP search or needs-completion toggle).
+`src/equipment-configuration.js` contains pure planning/validation functions and an isolated UI controller factory. The model is embedded after `FamEquipmentInventory` and before the equipment UI consumer. The equipment page has inventory/configuration/tools tabs and a **configure this selection** shortcut that copies only the five explicit category filters (not the name/IP search or needs-completion toggle).
 
 The command textarea is multiline, monospace and RAM-only. There is deliberately **no executor**, SSH/API call, logging, browser storage, export or real configuration save. This separate draft planner does not expand the constrained Device360 recovery path or the unchanged SERVER implementation. It performs size/control-character checks only, not Cisco syntax, command safety or hardware compatibility validation. Never enter real secrets/configuration.
 
@@ -83,7 +83,40 @@ The confirmation snapshot binds the exact draft, revision, rules, inventory meta
 
 Limits: 12,000 characters, 120 lines, 512 characters per line; terminal and bidi controls are rejected. No command text is included in returned plan/validation summaries, persisted app data, or diagnostics.
 
-Tests: `equipment-configuration-model.test.cjs` covers exact AND/OR scope, deduplication, empty/stale/invalid conditions, incomplete nodes, duplicate IP, immutable snapshots/signatures, draft bounds and absence of I/O/execution adapters. `equipment-configuration.test.cjs` covers the real standalone-file editor, multi-group targeting, pagination, review/cancel/acknowledgment, no inventory mutation or secret persistence/network requests, outcome invalidation, RAM lifecycle, prefilled filters, textarea size and mobile themes. Complete local regression suite: **74 tests passed**.
+Tests: `equipment-configuration-model.test.cjs` covers exact AND/OR scope, deduplication, empty/stale/invalid conditions, incomplete nodes, duplicate IP, immutable snapshots/signatures, draft bounds and absence of I/O/execution adapters. `equipment-configuration.test.cjs` covers the real standalone-file editor, multi-group targeting, pagination, review/cancel/acknowledgment, no inventory mutation or secret persistence/network requests, outcome invalidation, RAM lifecycle, prefilled filters, textarea size and mobile themes. That configuration release passed **74 local regression tests**.
+
+## Equipment tools and dynamic Excel
+
+`src/equipment-tools-model.js` provides pure import planning, standard validation/literal checks and explicit switch scenarios. `src/equipment-excel.js` builds/reads XLSX using the bundled SheetJS library; `src/equipment-tools.js` owns the tools UI. The embedding order is inventory → tools model → Excel → controller → equipment consumer. No external assets, ZIP library, network adapter or executor is added.
+
+### Current-catalog form, not a distributed static template
+
+In **equipment → tools → Excel**, use **دریافت فرم ورود از دسته‌های فعلی** after editing categories. Every click reads the live canonical inventory and builds a new workbook:
+
+- `تجهیزات`: empty input table, or all current nodes with IDs for inventory export, independent of UI filters.
+- `راهنما`: filling/import/update instructions, limits and generation time.
+- `دسته‌ها`: exact current readable names, kinds and parent names for all five catalog dimensions.
+- `مثال`: synthetic examples derived only from currently available, compatible catalogs. Deleted defaults are not resurrected; empty catalogs produce no guessed examples.
+- Hidden `فهرست‌ها`: generated named ranges, type→model and site-kind→site mappings.
+- Hidden `اطلاعات قالب`: versioned canonical snapshot of catalog IDs, names, kinds and parents, sorted independently of UI order.
+
+List dropdowns cover rows 2–4001; model and site dropdowns depend on the selected type/site-kind. They use generated safe named ranges rather than category text as formulas/names. SheetJS CE does not write validations, so the encoder updates the existing worksheet ZIP entry with standard OOXML `dataValidations` using its bundled CFB API. Device rows remain literal values, never formulas. The original worksheet entry is replaced, not duplicated.
+
+Workflow: download the latest form → fill equipment rows → select the XLSX → inspect errors/preview → explicitly confirm. The exact current catalog snapshot is checked before import planning, even when category creation is enabled. Renames, additions, deletions or changed parents invalidate an older file; receive a fresh form and move only the equipment rows across. Missing/edited metadata is rejected. Node-only changes do not stale the catalog form. This is accidental-staleness/compatibility detection, **not a cryptographic signature or trusted-file boundary**. No authoritative standalone `.xlsx` is included in the release; the familiar template filename is generated afresh in the user's app.
+
+Import is real local metadata CRUD, not a device simulation. Limits: `.xlsx`, 5 MiB, 4000 input rows / 10 columns; formulas in equipment or catalog metadata are rejected, and oversized declared ranges fail closed. All required attributes/private IPv4/parents/kinds are validated. Blank rows are ignored. Unknown categories require explicit opt-in; they and nodes are committed atomically only after all rows pass. Existing nodes require explicit update mode; stable IDs are retained, ambiguous ID/IP targets and duplicate input IPs are rejected. Nodes absent from the file are never deleted. A changed inventory between preview/confirmation requires re-preview. A failed storage write leaves the old canonical inventory and catalogs unchanged. Export carries the same current snapshot for the supported edit→re-import round trip; incomplete exported nodes must be completed before re-import.
+
+### Standards and checklist
+
+A standard has a stable ID, name, router/switch model, optional site-kind/site restriction and 1–50 checklist items (exact trimmed line, substring present or substring absent; not a Cisco parser). Up to 100 definitions / 1000 total items are validated and saved under `fam.equipment.standards.v1`, with known credential/key/token patterns blocked. This is not a general secret detector: only synthetic non-sensitive policy text belongs here. Deleted category references remain visible for explicit repair, not silent retargeting. Corrupt storage is not reset/overwritten; definition editing/check execution is disabled visibly.
+
+Choose a node and provide synthetic observed configuration (≤12,000 characters). Applicable model/location policies produce per-item pass/fail/unknown. Blank text is unknown; no applicable policy is not a passing audit. Reports/Excel contain source, node metadata, standard/check titles, outcome and timestamp, never the raw input. Input edits, node/standard changes invalidate the prior report. Observed text, draft definitions and reports are RAM-only.
+
+### Switch-only Err-disabled scenarios
+
+Only canonical type kind `switch` qualifies; changing the displayed type name cannot admit routers. Filters include type/model/region/site. Individual and whole-current-filter checkboxes accumulate selections across groups; the group checkbox covers every matching page, and the list pages by 25. Selection never silently broadens beyond the explicit checkboxes. Confirmation states the total selected count.
+
+LOCAL results come **only from explicit user-selected demo scenarios**, not from SSH or fabricated successful checks. Missing scenario, auth failure, timeout and connection failure remain unknown. Only explicit clean yields demo-clean; Err-disabled yields an explicitly synthetic Gi0/1. Excel reports include demo source and timestamp. Canonical inventory changes invalidate prior results. Selection, scenarios and reports live only in RAM; main logout/RADIUS reset/refresh clears them with existing credential/draft lifecycle. No recovery executor/backend/SSH path is changed.
 
 ## Safe migration / persistence
 
@@ -99,9 +132,12 @@ RADIUS credentials live only in a closure in RAM. They survive in-page navigatio
 
 ## Validation and packaging
 
+Current tools release: **98/98 local regression tests passed** (386.38 seconds), including **24/24 targeted Excel/tools tests**. An independent openpyxl load verified the generated OOXML workbook, seven list validations, named dependent mappings, hidden metadata and unique ZIP paths. Desktop Microsoft Excel and live device checks were not run.
+
 - `node --test tests/equipment-inventory.test.cjs`: pure schema, defaults, required fields, parent relationships, IP uniqueness, reclassification, catalog deletion safety, unassignment and migration.
 - `node --test tests/equipment-local.test.cjs`: browser add/edit/groups/filter intersections/category-prefill/inline models and sites/catalog CRUD/unassignment/Device360/RADIUS lifecycle/migration/read-only corrupt data/storage failure/mobile themes/no secret persistence/no network.
-- `npm test`: full local UI/access/config regression suite, including the pure inventory tests.
+- `node --test --test-concurrency=1 tests/equipment-excel.test.cjs tests/equipment-tools-model.test.cjs tests/equipment-tools.test.cjs`: dynamic workbook codec/dropdowns, catalog CRUD→fresh download→stale rejection, actual-file fill/import, atomic errors/storage failures, stable-ID export/update, standards/reports, group checkboxes, mobile/lifecycle/no network.
+- `npm test`: full local UI/access/config/tools regression suite, including the pure inventory tests.
 - `python3 scripts/embed_local_access.py`: embed sources without touching SERVER.
 - `python3 scripts/package_custom_access_updates.py`: allowlisted LOCAL/SERVER packages; verify the SERVER artifact remains unchanged.
 
