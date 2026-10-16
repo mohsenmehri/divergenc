@@ -1855,6 +1855,12 @@ html[data-ui-theme="light"] .fam-light-select{display:block;}
   });
 })();
 </script>
+<style id="fam-equipment-local-preview-css">
+/* Direct equipment management: no Worker screen, token, or pairing UI. */
+#view-equipment .equipment-card{max-width:980px;margin:0 auto;}.equipment-intro{line-height:2;color:var(--txt-1);margin:0 0 18px}.equipment-form{display:grid;grid-template-columns:1.1fr 1fr 1fr auto;gap:12px;align-items:end}.equipment-form .field{margin:0}.equipment-form label{display:block;margin-bottom:7px;font-size:12px;color:var(--txt-1)}.equipment-form input{width:100%}.equipment-note{font-size:12px;line-height:1.9;color:var(--txt-1);margin:15px 0 0}.equipment-status{margin-top:16px;padding:12px 14px;border:1px solid var(--stroke-2);border-radius:10px;background:var(--bg-2);line-height:1.9}.equipment-status.error{border-color:var(--red);color:var(--red)}.equipment-status.ok{border-color:var(--green)}.equipment-ports{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.equipment-port{border:1px solid var(--amber);border-radius:9px;padding:10px 12px;background:color-mix(in srgb,var(--amber) 10%,var(--bg-1));display:flex;gap:10px;align-items:center}.equipment-port b{font-family:ui-monospace,Consolas,monospace;direction:ltr}.equipment-description{font-size:12px;color:var(--txt-1);max-width:280px;overflow-wrap:anywhere}.equipment-empty{color:var(--green);font-weight:700}@media(max-width:820px){.equipment-form{grid-template-columns:1fr 1fr}.equipment-form button{grid-column:1/-1}}@media(max-width:500px){.equipment-form{grid-template-columns:1fr}}
+.equipment-demo-banner{padding:12px 16px;border:1px solid var(--amber);border-radius:10px;line-height:2;margin-bottom:16px;background:var(--bg-2);color:var(--txt-1)}
+.equipment-demo-controls{margin-bottom:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.equipment-demo-controls select{max-width:100%;min-width:220px}
+</style>
 </head>
 <body>
 <div id="fx-plate" aria-hidden="true"></div>
@@ -1891,6 +1897,10 @@ html[data-ui-theme="light"] .fam-light-select{display:block;}
       <div class="nav-item tab-btn" data-view="sheet">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg>
         مرور بخش‌های شبکه
+      </div>
+      <div class="nav-item tab-btn" data-view="equipment">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 11h.01M11 11h.01M15 11h3M7 14h.01M11 14h.01"/></svg>
+        تجهیزات
       </div>
       <div class="nav-item tab-btn" data-view="log">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
@@ -2473,6 +2483,35 @@ html[data-ui-theme="light"] .fam-light-select{display:block;}
     </section>
 
     <!-- ================= VIEW: LOG ================= -->
+    <!-- ================= VIEW: EQUIPMENT ================= -->
+    <section class="view" id="view-equipment">
+      <div class="view-head">
+        <div class="title-ico g-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 11h.01M11 11h.01M15 11h3M7 14h.01M11 14h.01"/></svg></div>
+        <div><h2>مدیریت تجهیزات</h2><div class="sub">پیش‌نمایش محلی رابط سرور — بدون SSH یا اتصال به تجهیز</div></div>
+        <div class="head-actions"><button class="btn btn-ghost btn-sm" data-act="go-cp">← داشبورد</button></div>
+      </div>
+      <div class="content"><article class="card equipment-card"><div class="card-head"><div class="ico g-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></div><div><h3>بررسی Err-disabled</h3><div class="sub">یک تجهیز، یک بررسی محدود، بدون دستور آزاد</div></div></div><div class="card-body">
+        <div class="equipment-demo-banner" role="note"><strong>نسخهٔ محلی / نمایشی</strong> — این صفحه به سرور FAM یا تجهیز وصل نمی‌شود. همهٔ نتایج ساختگی هستند. فقط اطلاعات آزمایشی وارد کنید؛ رمز واقعی تجهیز را وارد نکنید.</div>
+        <p class="equipment-intro">همان فرم بررسی و تأیید بازیابی نسخهٔ سرور را اینجا آزمایش کنید. سناریو را انتخاب کنید؛ هیچ دستور SSH اجرا و هیچ اطلاعات ورود تجهیز ذخیره نمی‌شود.</p>
+        <div class="equipment-demo-controls"><label for="equipment-demo-scenario">سناریوی نمایشی</label><select id="equipment-demo-scenario" class="inp">
+          <option value="clean">وضعیت پاک — بدون Err-disabled</option>
+          <option value="errdisabled">یک پورت Err-disabled — بازیابی موفق</option>
+          <option value="still">پس از بازیابی همچنان Err-disabled</option>
+          <option value="changed">پورت قبل از بازیابی دیگر خطا ندارد</option>
+          <option value="auth">خطای احراز هویت</option>
+          <option value="timeout">پایان زمان اتصال</option>
+          <option value="connection">خطای اتصال</option>
+        </select></div>
+        <form id="equipment-check-form" class="equipment-form" autocomplete="off">
+          <div class="field"><label for="equipment-host">IP تجهیز</label><input id="equipment-host" class="inp" inputmode="decimal" placeholder="مثال نمایشی: 10.2.35.2" maxlength="15" required></div>
+          <div class="field"><label for="equipment-username">نام کاربری آزمایشی</label><input id="equipment-username" class="inp" maxlength="128" autocomplete="off" required></div>
+          <div class="field"><label for="equipment-password">رمز ساختگی (نه رمز واقعی)</label><input id="equipment-password" class="inp" type="password" maxlength="512" autocomplete="off" required></div>
+          <button id="equipment-check-submit" class="btn btn-primary" type="submit">بررسی وضعیت پورت‌ها</button>
+        </form>
+        <div id="equipment-status" class="equipment-status" role="status">پیش‌نمایش محلی — یک سناریو انتخاب کنید؛ هیچ اتصال واقعی انجام نمی‌شود.</div>
+      </div></article></div>
+    </section>
+
     <section class="view" id="view-log">
       <div class="view-head">
         <div class="title-ico g-amber">
@@ -3145,6 +3184,7 @@ function recoverSearchIndex(showMsg) {
    Rendering: views
    ================================================================ */
 const VIEW_TITLES = {
+  equipment: ["مدیریت تجهیزات", "Local UI Preview — No SSH"],
   panel: ["داشبورد عملیات شبکه", "Network Operations Dashboard"],
   results: ["نتایج جستجو", "Search Results"],
   sheet: ["مرور بخش‌های شبکه", "Network Sections"],
@@ -8446,7 +8486,7 @@ const Access = (() => {
     {title:'ابزارها و عملیات‌ها',items:[
       ['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
     {title:'مدیریت',items:[
-      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها']]}
+      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','مدیریت تجهیزات (پیش‌نمایش)']]}
   ];
   const PERMISSIONS=new Set(PERMISSION_GROUPS.flatMap(group=>group.items.map(([id])=>id)));
   const allPermissions=()=>[...PERMISSIONS];
@@ -8543,6 +8583,7 @@ const Access = (() => {
   function can(operation,sheet){
     const u=current();if(!u)return false;
     if(operation==='own-password')return true;
+    if(operation==='equipment')return has(u,'equipment-operations')||has(u,'manage-users');
     const scoped={read:'view-sheets','search-read':'search',manual:'edit-cells','export':'export-xlsx',backup:'backup-server',add:'add-record',remove:'remove-record','save-results':'save-results','view-history':'view-history',undo:'undo-remove'}[operation];
     if(scoped&&sheet!==undefined)return has(u,scoped)&&scopeAllowsSheet(u,sheet);
     if(operation==='read')return has(u,'view-sheets');
@@ -8606,6 +8647,7 @@ const Access = (() => {
     return can('admin'); // unknown future operations are admin-only, never implicitly granted
   }
   function viewAllowed(view){
+    if(view==='equipment')return can('equipment');
     if(view==='panel')return can('data-access');
     if(view==='sheet')return can('view-sheets');
     if(view==='results')return can('search')||can('remove');
@@ -9031,6 +9073,67 @@ async function startProvinceAdd(selectedName) {
   await ShowMsg('رکورد در «'+destination+'» ذخیره شد.',vbInformation,'افزودن داده — انجام شد');
   state.catFilter='provinces';switchView('sheet');renderSheetView(destination);saveUIState();
 }
+</script>
+<script id="fam-equipment-local-preview-js">
+/* Offline UI preview only. No fetch, API, SSH, credential storage or device access. */
+document.addEventListener('DOMContentLoaded',()=>{
+  const by=id=>document.getElementById(id),form=by('equipment-check-form');
+  if(!form)return;
+  const status=by('equipment-status'),submit=by('equipment-check-submit');
+  let busy=false,generation=0;
+  const show=(text,type='')=>{status.className='equipment-status '+type;status.replaceChildren(document.createTextNode(text));};
+  const authorized=()=>Access.can('equipment');
+  const clearPassword=()=>{by('equipment-password').value='';};
+  const reset=()=>{generation++;clearPassword();show('پیش‌نمایش محلی — سناریو را انتخاب کنید و «بررسی وضعیت پورت‌ها» را بزنید. هیچ اتصال واقعی انجام نمی‌شود.');};
+  const delay=()=>new Promise(resolve=>setTimeout(resolve,350));
+  const recover=async(port,scenario,checkedGeneration)=>{
+    if(busy||!authorized()||checkedGeneration!==generation)return;
+    if(!confirm('پیش‌نمایش نمایشی: بازیابی فقط روی پورت '+port+' شبیه‌سازی شود؟\nدر نسخهٔ سرور، وضعیت همین پورت قبل و بعد از shutdown / no shutdown بررسی می‌شود. اینجا هیچ دستور واقعی اجرا نمی‌شود.'))return;
+    if(!by('equipment-password').value){
+      const note=by('equipment-recovery-note');note.textContent='برای آزمایش تأیید بازیابی، یک رمز ساختگی دوباره وارد کنید.';by('equipment-password').focus();return;
+    }
+    clearPassword();busy=true;submit.disabled=true;
+    show('نمایشی — در حال شبیه‌سازی بررسی و بازیابی '+port+'…');
+    try{
+      await delay();
+      if(!authorized()||checkedGeneration!==generation)return;
+      const texts={
+        errdisabled:'نمایشی — پورت '+port+' بازیابی شد؛ در بررسی پس از عملیات دیگر Err-disabled نبود.',
+        still:'نمایشی — پورت '+port+' همچنان Err-disabled است؛ در نسخهٔ سرور باید علت خطا بررسی شود.',
+        changed:'نمایشی — پورت '+port+' پیش از عملیات دیگر Err-disabled نبود؛ تغییری اعمال نشد.'
+      };
+      show(texts[scenario],scenario==='still'?'error':'ok');
+    }finally{clearPassword();busy=false;submit.disabled=false;}
+  };
+  by('equipment-demo-scenario').addEventListener('change',reset);
+  by('equipment-host').addEventListener('input',reset);
+  by('equipment-username').addEventListener('input',reset);
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();if(busy||!authorized())return;
+    const scenario=by('equipment-demo-scenario').value;
+    const checkedGeneration=++generation;
+    // Deliberately don't read, copy, retain, transmit or persist the password.
+    clearPassword();busy=true;submit.disabled=true;
+    show('نمایشی — در حال شبیه‌سازی بررسی وضعیت پورت‌ها؛ بدون اتصال به تجهیز…');
+    try{
+      await delay();if(!authorized()||checkedGeneration!==generation)return;
+      const errors={auth:'نمایشی — نام کاربری یا رمز تجهیز پذیرفته نشد.',timeout:'نمایشی — اتصال SSH در زمان مجاز پاسخ نداد.',connection:'نمایشی — اتصال به تجهیز انجام نشد.'};
+      if(errors[scenario]){show(errors[scenario],'error');return;}
+      if(scenario==='clean'){
+        show('وضعیت پاک (نمایشی): هیچ پورتی با وضعیت Err-disabled وجود ندارد. پورت‌های disabled، connected و notconnect خطا محسوب نمی‌شوند. این نتیجه واقعی نیست.','ok');return;
+      }
+      show('نمایشی — پورت Err-disabled نمونه یافت شد. برای آزمایش، همان پورت را صریحاً تأیید کنید.','error');
+      const list=document.createElement('div');list.className='equipment-ports';
+      const row=document.createElement('div');row.className='equipment-port';
+      const name=document.createElement('b');name.textContent='Gi0/1';
+      const description=document.createElement('span');description.className='equipment-description';description.textContent='ATM 17 — نمونهٔ نمایشی';
+      const button=document.createElement('button');button.type='button';button.className='btn btn-amber btn-sm';button.textContent='تأیید رفع خطا';
+      button.addEventListener('click',()=>recover('Gi0/1',scenario,checkedGeneration));
+      row.append(name,description,button);list.append(row);status.append(list);
+      const note=document.createElement('div');note.id='equipment-recovery-note';note.textContent='برای آزمایش بازیابی، رمز ساختگی را دوباره وارد کنید.';status.append(note);
+    }finally{clearPassword();busy=false;submit.disabled=false;}
+  });
+});
 </script>
 </body>
 </html>

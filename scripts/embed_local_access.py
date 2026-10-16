@@ -4,7 +4,7 @@ import re
 root = Path(__file__).resolve().parents[1]
 p = root / 'FAM.html'
 html = p.read_text()
-for module, name, tag in [('local-access','css','style'), ('local-access','js','script'), ('province-records','js','script')]:
+for module, name, tag in [('local-access','css','style'), ('local-access','js','script'), ('province-records','js','script'), ('equipment-local-preview','css','style'), ('equipment-local-preview','js','script')]:
     content = (root / f'src/{module}.{name}').read_text()
     block = f'<{tag} id="fam-{module}-{name}">\n{content}</{tag}>'
     pattern = rf'<{tag} id="fam-{module}-{name}">.*?</{tag}>'

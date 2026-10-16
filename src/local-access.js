@@ -17,7 +17,7 @@ const Access = (() => {
     {title:'ابزارها و عملیات‌ها',items:[
       ['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
     {title:'مدیریت',items:[
-      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها']]}
+      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','مدیریت تجهیزات (پیش‌نمایش)']]}
   ];
   const PERMISSIONS=new Set(PERMISSION_GROUPS.flatMap(group=>group.items.map(([id])=>id)));
   const allPermissions=()=>[...PERMISSIONS];
@@ -114,6 +114,7 @@ const Access = (() => {
   function can(operation,sheet){
     const u=current();if(!u)return false;
     if(operation==='own-password')return true;
+    if(operation==='equipment')return has(u,'equipment-operations')||has(u,'manage-users');
     const scoped={read:'view-sheets','search-read':'search',manual:'edit-cells','export':'export-xlsx',backup:'backup-server',add:'add-record',remove:'remove-record','save-results':'save-results','view-history':'view-history',undo:'undo-remove'}[operation];
     if(scoped&&sheet!==undefined)return has(u,scoped)&&scopeAllowsSheet(u,sheet);
     if(operation==='read')return has(u,'view-sheets');
@@ -177,6 +178,7 @@ const Access = (() => {
     return can('admin'); // unknown future operations are admin-only, never implicitly granted
   }
   function viewAllowed(view){
+    if(view==='equipment')return can('equipment');
     if(view==='panel')return can('data-access');
     if(view==='sheet')return can('view-sheets');
     if(view==='results')return can('search')||can('remove');
