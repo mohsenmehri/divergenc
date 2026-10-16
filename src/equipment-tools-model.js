@@ -13,14 +13,13 @@
   if(!Array.isArray(snapshot))throw Error('این فایل فرم پویای تجهیزات نیست؛ ابتدا فرم به‌روز را از همین برنامه دریافت کنید.');
   if(JSON.stringify(snapshot)!==JSON.stringify(catalogSnapshot(value)))throw Error('دسته‌بندی‌ها پس از دریافت فایل تغییر کرده‌اند یا قالب متعلق به این موجودی نیست؛ فرم به‌روز بگیرید و ردیف‌های تجهیزات را به آن منتقل کنید.');
  }
- function prepareImport(value,rows,{createCategories=false,update=false}={}){
+ function prepareImport(value,rows,{update=false}={}){
   const base=M.validate(value),next=structuredClone(base),errors=[],counts={added:0,updated:0,categories:0};
   if(!Array.isArray(rows)||rows.length<2||rows.length>4001||!Array.isArray(rows[0])||rows[0].length<9||rows[0].length>10||rows[0].some((x,i)=>String(x).trim()!==columns[i]))throw Error('سرستون‌ها یا تعداد ردیف‌ها معتبر نیست؛ از قالب تجهیزات استفاده کنید (حداکثر ۴۰۰۰ ردیف).');
   const seenIPs=new Set(),seenIDs=new Set(),targetIDs=new Set(),byId=new Map(next.nodes.map(n=>[n.id,n]));
   const byIP=new Map();for(const n of next.nodes){const list=byIP.get(n.host)||[];list.push(n);byIP.set(n.host,list);}
   const define=(key,name,extra={})=>{let item=next.catalog[key].find(x=>x.name===name&&Object.entries(extra).every(([k,v])=>x[k]===v));if(item)return item;
-   if(!createCategories)throw Error('دستهٔ تعریف‌نشده وجود دارد؛ ابتدا تعریف کنید یا ساخت دسته‌های جدید را فعال کنید.');
-   item={id:uid(),name,...extra};next.catalog[key].push(item);counts.categories++;return item;};
+   throw Error('دستهٔ تعریف‌نشده وجود دارد؛ فقط دسته‌های مجاز فعلی قابل ورودند. ابتدا دسته را در برنامه بسازید و فرم تازه بگیرید.');};
   for(let i=1;i<rows.length;i++){
    const row=rows[i];if(!Array.isArray(row)){errors.push({row:i+1,message:'ردیف معتبر نیست.'});continue;}if(row.every(x=>x===null||x===undefined||String(x).trim()===''))continue;
    try{
@@ -34,6 +33,7 @@
     if(matches.length>1)throw Error('IP در موجودی قبلی مبهم و تکراری است.');
     if(byID&&matches.length&&matches[0].id!==byID.id||!byID&&r[9]&&matches.length&&matches[0].id!==r[9])throw Error('شناسه و IP به یک نود اشاره نمی‌کنند.');
     const previous=byID||matches[0];if(previous&&targetIDs.has(previous.id))throw Error('یک نود موجود در چند ردیف هدف گرفته شده است.');if(previous)targetIDs.add(previous.id);if(previous&&!update)throw Error('نود موجود است؛ برای ویرایش، به‌روزرسانی صریح را فعال کنید.');
+    if(r[9]&&!byID)throw Error('شناسه نود در موجودی فعلی وجود ندارد؛ برای نود جدید شناسه را خالی بگذارید.');
     if(r[9]&&!idOK(r[9]))throw Error('شناسه نود معتبر نیست.');
     const namedType=next.catalog.types.find(x=>x.name===r[2]),namedKind=next.catalog.siteKinds.find(x=>x.name===r[6]);
     if(namedType&&namedType.kind!==r[3]||namedKind&&namedKind.kind!==r[7])throw Error('الگوی دسته با دستهٔ موجود سازگار نیست.');
@@ -70,8 +70,18 @@
   const allowed=new Map(switches(d).map(n=>[n.id,n]));
   return ids.map(id=>{const n=allowed.get(id);if(!n)throw Error('فقط سوئیچ‌های موجود قابل انتخاب‌اند.');if(d.nodes.filter(x=>x.host===n.host).length!==1)throw Error('IP مقصد تکراری و مبهم است.');
    const scenario=scenarios[id]||'unknown';if(!['unknown','clean','errdisabled','auth','timeout','connection'].includes(scenario))throw Error('سناریوی نمایشی معتبر نیست.');
-   return {node:n,scenario,status:scenario==='clean'?'ok':scenario==='errdisabled'?'error':'unknown',port:scenario==='errdisabled'?'Gi0/1 (ساختگی)':'',source:'سناریوی انتخابی — بدون اتصال'};
+   const ports=scenario==='errdisabled'?['Gi0/1','Gi0/2']:[];
+   return {node:n,scenario,status:scenario==='clean'?'ok':scenario==='errdisabled'?'error':'unknown',ports,port:ports.map(p=>p+' (ساختگی)').join('، '),source:'سناریوی انتخابی — بدون اتصال'};
   });
  }
- globalThis.FamEquipmentToolsModel=Object.freeze({columns,inventoryRows,catalogSnapshot,assertCatalogSnapshot,prepareImport,validateStandards,applicable,audit,switches,simulateErr});
+ function errRecoveryPlan(value,results,keys){
+  const d=M.validate(value);
+  if(!Array.isArray(results)||!results.length||!Array.isArray(keys)||!keys.length||keys.length>8000||new Set(keys).size!==keys.length)throw Error('ابتدا بررسی و سپس پورت‌های خطادار را انتخاب کنید.');
+  const fresh=simulateErr(d,results.map(r=>r.node?.id),Object.fromEntries(results.map(r=>[r.node?.id,r.scenario])));
+  if(JSON.stringify(fresh)!==JSON.stringify(results))throw Error('نتیجه یا موجودی تغییر کرده؛ دوباره بررسی کنید.');
+  const allowed=new Map();for(const r of fresh)if(r.status==='error')for(const port of r.ports)allowed.set(r.node.id+':'+port,{key:r.node.id+':'+port,nodeId:r.node.id,name:r.node.name,host:r.node.host,port});
+  const targets=keys.map(k=>{if(!allowed.has(k))throw Error('فقط پورت خطادارِ همان سوئیچ بررسی‌شده قابل انتخاب است.');return allowed.get(k);});
+  return {targets,base:JSON.stringify(d),source:'رفع نمایشی — بدون اتصال یا فرمان'};
+ }
+ globalThis.FamEquipmentToolsModel=Object.freeze({columns,inventoryRows,catalogSnapshot,assertCatalogSnapshot,prepareImport,validateStandards,applicable,audit,switches,simulateErr,errRecoveryPlan});
 })();

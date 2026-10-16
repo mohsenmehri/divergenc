@@ -9,9 +9,9 @@ function standards(){return {version:1,items:[{id:'standard',name:'Clock checkli
 test('Excel import creates canonical memberships and preserves the original inventory before explicit commit',()=>{
  const d=M.defaults(),before=JSON.stringify(d),p=T.prepareImport(d,rows(row()));assert.equal(p.errors.length,0);assert.equal(p.counts.added,1);assert.equal(p.next.nodes[0].regionId,'region-2');assert.equal(p.next.nodes[0].siteId,'building-0');assert.equal(JSON.stringify(d),before);
 });
-test('unknown catalogs require opt-in and are created atomically with correct parents',()=>{
+test('unknown categories cannot be created by Excel, even with the retired opt-in flag',()=>{
  const r=row([[4,'new model'],[8,'new building']]);assert.equal(T.prepareImport(M.defaults(),rows(r)).next,null);
- const p=T.prepareImport(M.defaults(),rows(r),{createCategories:true});assert.equal(p.counts.categories,2);assert.equal(p.errors.length,0);const n=p.next.nodes[0];assert.equal(p.next.catalog.models.find(m=>m.id===n.modelId).typeId,n.typeId);
+ const d=M.defaults(),before=JSON.stringify(d),p=T.prepareImport(d,rows(r),{createCategories:true});assert.equal(p.next,null);assert.ok(p.errors.length);assert.equal(p.counts.categories,0);assert.equal(JSON.stringify(d),before);
 });
 test('updates require explicit mode and preserve IDs; identifier/IP conflicts fail closed',()=>{
  const d=inventory(),r=row([[0,'new name']]);assert.equal(T.prepareImport(d,rows(r)).next,null);
@@ -46,4 +46,15 @@ test('Err-disabled requires explicit demo scenarios; auth, timeout and missing s
  const d=inventory();for(const scenario of ['unknown','auth','timeout','connection'])assert.equal(T.simulateErr(d,['switch'],{switch:scenario})[0].status,'unknown');assert.equal(T.simulateErr(d,['switch'],{})[0].status,'unknown');
  assert.equal(T.simulateErr(d,['switch'],{switch:'errdisabled'})[0].status,'error');assert.equal(T.simulateErr(d,['switch'],{switch:'clean'})[0].status,'ok');assert.throws(()=>T.simulateErr(d,['switch','switch'],{}));
  d.nodes.push(node('duplicate',{host:'10.2.0.2'}));assert.throws(()=>T.simulateErr(d,['switch'],{}),/تکراری/);
+});
+
+test('port recovery plans bind each explicit err-disabled port to its scanned switch; unknown/clean/router/forged ports are refused',()=>{
+ const d=inventory(),r=T.simulateErr(d,['switch'],{switch:'errdisabled'}),before=JSON.stringify(d);assert.deepEqual(plain(r[0].ports),['Gi0/1','Gi0/2']);const p=T.errRecoveryPlan(d,r,['switch:Gi0/2']);assert.equal(p.targets.length,1);assert.equal(p.targets[0].host,'10.2.0.2');assert.equal(p.targets[0].nodeId,'switch');assert.equal(JSON.stringify(d),before);
+ for(const keys of [[],['switch:Gi0/9'],['router:Gi0/1'],['switch:Gi0/1','switch:Gi0/1']])assert.throws(()=>T.errRecoveryPlan(d,r,keys));
+ for(const scenario of ['unknown','clean','auth','timeout','connection'])assert.throws(()=>T.errRecoveryPlan(d,T.simulateErr(d,['switch'],{switch:scenario}),['switch:Gi0/1']));
+ const stale=structuredClone(d);stale.nodes[1].host='10.2.0.99';assert.throws(()=>T.errRecoveryPlan(stale,r,['switch:Gi0/1']));const forged=structuredClone(r);forged[0].ports.push('Gi0/9');assert.throws(()=>T.errRecoveryPlan(d,forged,['switch:Gi0/9']));
+});
+
+test('same port names on different switches never alias in recovery targets',()=>{
+ const d=inventory();d.nodes.push(node('switch-b',{host:'10.2.0.3',typeId:'type-switch',modelId:'model-2960'}));const results=T.simulateErr(d,['switch','switch-b'],{switch:'errdisabled','switch-b':'errdisabled'});const p=T.errRecoveryPlan(d,results,['switch-b:Gi0/1']);assert.equal(p.targets.length,1);assert.equal(p.targets[0].name,'switch-b');assert.equal(p.targets[0].host,'10.2.0.3');
 });

@@ -9,7 +9,7 @@ test('dynamic XLSX contains current category names, additions/deletions, depende
  const d=latest(),bytes=E.encode(d,{generatedAt:'2026-10-16T00:00:00Z'}),book=read(bytes);const text=JSON.stringify(rows(book,'دسته‌ها'));
  for(const value of ['Router NEW','Model NEW','منطقه تازه','ساختمان تازه'])assert.ok(text.includes(value));for(const value of ['منطقه 4','ساختمان 68 شرقی فام'])assert.ok(!text.includes(value));
  assert.deepEqual(plain(E.read(bytes).rows[0]),plain(T.columns));assert.doesNotThrow(()=>T.assertCatalogSnapshot(d,E.read(bytes).snapshot));
- const zip=X.CFB.read(bytes,{type:'array'}),xml=new TextDecoder().decode(X.CFB.find(zip,'/xl/worksheets/sheet1.xml').content);assert.match(xml,/<dataValidations count="7">/);assert.match(xml,/INDIRECT\(IFERROR\(VLOOKUP/);assert.match(xml,/sqref="E2:E4001"/);assert.match(xml,/sqref="I2:I4001"/);
+ const zip=X.CFB.read(bytes,{type:'array'}),xml=new TextDecoder().decode(X.CFB.find(zip,'/xl/worksheets/sheet1.xml').content);assert.match(xml,/<dataValidations count="8">/);assert.match(xml,/INDIRECT\(IFERROR\(VLOOKUP/);assert.match(xml,/sqref="E2:E4001"/);assert.match(xml,/sqref="I2:I4001"/);
  assert.ok(book.Workbook.Names.some(n=>n.Name==='FamModel_0'));assert.ok(book.Workbook.Sheets.filter(x=>x.Hidden===1).length>=2);
 });
 test('each generated file takes a fresh catalog snapshot; stale forms reject rename/add/remove even with auto-create',()=>{
@@ -25,4 +25,9 @@ test('deleted defaults never leak back through examples; empty catalogs produce 
 });
 test('formula-bearing import cells are rejected; missing snapshot is distinguishable from corrupt Excel',()=>{
  const d=M.defaults(),{book}=E.build(d);X.utils.sheet_add_aoa(book.Sheets['تجهیزات'],[['demo',2]],{origin:'A2'});book.Sheets['تجهیزات'].B2.f='1+1';assert.throws(()=>E.read(new Uint8Array(X.write(book,{type:'array',bookType:'xlsx'}))),/فایل قابل ورود نیست/);
+});
+
+test('category dropdowns stop invalid input and type/site patterns allow only their parent kind; IDs have a bounded current list',()=>{
+ const {book,validations}=E.build(M.defaults()),map=Object.fromEntries(validations);assert.match(map.D,/FamTypeKindMap/);assert.match(map.H,/FamSitePatternMap/);assert.equal(map.J,'FamNodeIDs');const bytes=E.encode(M.defaults()),zip=X.CFB.read(bytes,{type:'array'}),xml=new TextDecoder().decode(X.CFB.find(zip,'/xl/worksheets/sheet1.xml').content);assert.equal((xml.match(/errorStyle="stop"/g)||[]).length,8);assert.equal((xml.match(/showErrorMessage="1"/g)||[]).length,8);assert.ok(!xml.includes('showErrorMessage="0"'));assert.equal((xml.match(/allowBlank="0"/g)||[]).length,7);assert.match(xml,/allowBlank="1"[^>]*sqref="J2:J4001"/);
+ const named=book.Workbook.Names.find(n=>n.Name==='FamTypeKind_0');assert.ok(named);const ref=X.utils.decode_range(named.Ref.split('!')[1]);assert.equal(book.Sheets['فهرست‌ها'][X.utils.encode_cell(ref.s)].v,'router');
 });
