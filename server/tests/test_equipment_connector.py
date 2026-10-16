@@ -10,6 +10,7 @@ class ConnectorPackageChecks(unittest.TestCase):
         connector = (ROOT / "equipment_connector" / "connector.ps1").read_text(encoding="utf8")
         launcher = (ROOT / "equipment_connector" / "START-FAM-EQUIPMENT-CONNECTOR.cmd").read_text(encoding="utf8")
         self.assertIn("powershell.exe", launcher.lower())
+        self.assertIn("where ssh.exe", launcher.lower())
         self.assertNotIn("python", launcher.lower())
         self.assertNotIn("schtasks", launcher.lower())
         self.assertNotIn("CERT_NONE", connector)
