@@ -7,11 +7,12 @@ import re
 from zipfile import ZipFile,ZipInfo,ZIP_DEFLATED
 ROOT=Path(__file__).resolve().parents[1]
 html=(ROOT/'FAM.html').read_text()
+html=re.sub(r'<title>.*?</title>','<title>FAM LOCAL — IP دستی و show int des (نمایشی)</title>',html,count=1)
 for module in ('equipment-local-preview','equipment-tools'):
     source=(ROOT/f'src/{module}.js').read_text()
     if module=='equipment-local-preview':
         source=source.replace("if(!credentials){gate();return;}","if(!credentials)credentials={userId:Access.current()?.id,username:'local-preview',password:''};")
-        source=source.replace("'RADIUS آماده است'","'پیش‌نمایش LOCAL'").replace("'معتبر تا خروج از حساب FAM · فقط در حافظه'","'بدون اتصال SSH و بدون تغییر واقعی پورت'").replace("'تغییر اطلاعات RADIUS'","'بازنشانی پیش‌نمایش'")
+        source=source.replace("'RADIUS آماده است'","'LOCAL · IP دستی + show int des'").replace("'معتبر تا خروج از حساب FAM · فقط در حافظه'","'بدون اتصال SSH و بدون تغییر واقعی پورت'").replace("'تغییر اطلاعات RADIUS'","'بازنشانی پیش‌نمایش'")
         a=source.index('  async function runCheck(){');b=source.index('  function render(){',a)
         source=source[:a]+'''  function deviceView(main){
     const {node}=selected();main.append(heading(node.name,node.host),button('ویرایش مشخصات نود',()=>editNode(node)));
@@ -48,16 +49,42 @@ for old,new in [
  ('تأیید و رفع پورت‌های انتخاب‌شده','تأیید و رفع نمایشی پورت‌های انتخاب‌شده')]:live=live.replace(old,new)
 live=live.replace("pane.append(title,", "pane.append(title,el('p','eq-notice warning','فقط بررسی ظاهر و مراحل: این فایل به سوئیچ وصل نمی‌شود و نتیجهٔ واقعی نشان نمی‌دهد.'),button('۲ سوئیچ نمونه برای تست (فقط در حافظه)',()=>{FamEquipmentLocalTransport.addSamples();invalidate();draw();},'eq-local-samples'),",1)
 live=re.sub(r'^/\*.*?\*/', '/* LOCAL-only simple workflow preview. All results are synthetic; no network. */',live,count=1,flags=re.S)
+# LOCAL-specific controls share the simple scan/review flow; never add a
+# transport or pretend that the browser can connect to a physical switch.
+live=live.replace(' let pane=null,'," let manualIP='',descriptionBusy=false,descriptions=[];\n let pane=null,",1)
+live=live.replace('function invalidate(){epoch++;',"function invalidate(){descriptions=[];epoch++;",1)
+live=live.replace("const fieldset=el('fieldset');fieldset.disabled=busy;", "manualControls(pane);const fieldset=el('fieldset');fieldset.disabled=busy;",1)
+live=live.replace('pane.append(out);report();',"pane.append(out);const cli=el('section');cli.id='eq-local-descriptions';pane.append(cli);report();",1)
+live=live.replace("if(!root)return;root.replaceChildren();", "if(!root)return;descriptionsView();root.replaceChildren();",1)
+live=live.replace("if(busy)return;try{allowed('equipment-scan');", "if(busy||descriptionBusy)return;try{allowed('equipment-scan');",1)
+needle_scan="break;}report();}}\n   finally"
+assert needle_scan in live
+live=live.replace(needle_scan,"break;}report();}if(token===epoch)await descriptionsRead(results.filter(r=>r.state==='checked').map(r=>r.node),token);}\n   finally",1)
+live=live.replace('function clear(){invalidate();',"function clear(){manualIP='';descriptionBusy=false;invalidate();",1)
+live=live.replace(' function draw(){',(ROOT/'src/equipment-local-preview-additions.js').read_text()+'\n function draw(){',1)
+
 adapter='''window.FamEquipmentLocalTransport=(()=>{
- let samples=false;
- function inventory(){const raw=localStorage.getItem('fam.equipment.inventory.v3');const data=Access.equipmentView(raw?FamEquipmentInventory.validate(JSON.parse(raw)):FamEquipmentInventory.defaults());
+ let samples=false,manual=[];
+ function canonical(){const raw=localStorage.getItem('fam.equipment.inventory.v3');return raw?FamEquipmentInventory.validate(JSON.parse(raw)):FamEquipmentInventory.defaults();}
+ function inventory(){const data=Access.equipmentView(canonical());data.nodes.push(...manual.filter(n=>Object.entries({types:'typeId',models:'modelId',regions:'regionId',siteKinds:'siteKindId',sites:'siteId'}).every(([k,f])=>data.catalog[k].some(x=>x.id===n[f]))));
   if(samples){const type=data.catalog.types.find(t=>t.kind==='switch'),model=data.catalog.models.find(m=>m.typeId===type?.id),region=data.catalog.regions[0],site=data.catalog.sites[0],kind=data.catalog.siteKinds.find(k=>k.id===site?.siteKindId);
    if(type&&model&&region&&kind&&site)for(const i of [1,2])data.nodes.push({id:'local-sample-'+i,name:'سوئیچ نمونه '+i+' (ساختگی)',host:'10.254.253.'+i,typeId:type.id,modelId:model.id,regionId:region.id,siteKindId:kind.id,siteId:site.id});
   }return data;
  }
- document.addEventListener('fam-access-changed',()=>samples=false);window.addEventListener('pagehide',()=>samples=false);
- return Object.freeze({inventory,blocked:()=>false,addSamples:()=>samples=true,async api(path,value){
+ function addManual(host){
+  if(!FamEquipmentInventory.privateIP(host))throw Error('فقط IPv4 خصوصی معتبر وارد کنید؛ مثال 10.2.35.2.');
+  const data=inventory(),existing=data.nodes.find(n=>n.host===host);
+  if(existing){if(!data.catalog.types.some(t=>t.id===existing.typeId&&t.kind==='switch'))throw Error('این IP در موجودی متعلق به سوئیچ نیست.');return existing.id;}
+  if(canonical().nodes.some(n=>n.host===host)||!['types','models','regions','siteKinds','sites'].every(k=>Access.current()?.equipmentScope?.[k]?.includes('*')))throw Error('IP در موجودی مجاز شما نیست؛ مدیر باید آن را با دسته‌های مجاز تعریف کند.');
+  const type=data.catalog.types.find(t=>t.kind==='switch'),model=data.catalog.models.find(m=>m.typeId===type?.id),region=data.catalog.regions[0],site=data.catalog.sites[0],kind=data.catalog.siteKinds.find(k=>k.id===site?.siteKindId);
+  if(!type||!model||!region||!site||!kind)throw Error('برای نمونهٔ IP دستی، دسته‌های نوع/مدل/منطقه/محل مجاز باید موجود باشند.');
+  if(manual.length>=5)manual.shift();const node={id:'manual-'+crypto.randomUUID(),name:'IP دستی (نمایشی) '+host,host,typeId:type.id,modelId:model.id,regionId:region.id,siteKindId:kind.id,siteId:site.id};manual.push(node);return node.id;
+ }
+ const reset=()=>{samples=false;manual=[];};document.addEventListener('fam-access-changed',reset);window.addEventListener('pagehide',reset);
+ return Object.freeze({inventory,addManual,blocked:()=>false,addSamples:()=>samples=true,async api(path,value){
   await new Promise(resolve=>setTimeout(resolve,200));
+  if(!inventory().nodes.some(n=>n.host===value.host))throw Error('مقصد مجاز پیدا نشد.');
+  if(path==='equipment/descriptions')return {host:value.host,source:'local-ui-demo',output:'Interface                      Status         Protocol Description\\nGi0/1                          up             up       SAMPLE uplink\\nGi0/7                          down           down     SAMPLE err-disabled port\\nGi0/8                          admin down     down     SAMPLE spare\\n'};
   if(path==='equipment/check')return {host:value.host,source:'local-ui-demo',checkedAt:Date.now(),errDisabledPorts:[{interface:'Gi0/7',description:'پورت نمونه؛ غیرواقعی'}],recoveryTickets:{'Gi0/7':'local-preview-only'}};
   if(path==='equipment/recover')return {host:value.host,interface:value.interface,recovery:'recovered'};
   throw Error('در این پیش‌نمایش هیچ API یا اتصال شبکه‌ای وجود ندارد.');
@@ -68,12 +95,14 @@ html=html.replace('\n</body>','\n<script id="fam-equipment-simple-local-js">\n'+
 folder=ROOT/'patches/fam-simple-ports-local-preview';folder.mkdir(parents=True,exist_ok=True)
 (folder/'FAM.html').write_text(html)
 (folder/'START-FAM.cmd').write_bytes((ROOT/'patches/fam-custom-access-local/START-FAM.cmd').read_bytes())
-(folder/'README_FA.txt').write_text('''پیش‌نمایش LOCAL رابط سادهٔ بررسی پورت‌ها
+(folder/'README_FA.txt').write_text('''پیش‌نمایش LOCAL — IP دستی و خروجی show int des
 
 ZIP را در یک پوشهٔ جدید استخراج و FAM.html یا START-FAM.cmd را باز کنید.
 حساب اولیهٔ محلی: admin / 1109. اگر رمز همین مرورگر قبلاً تغییر کرده، رمز قبلی معتبر است.
 مدیریت تجهیزات ← ابزارها: انتخاب سوئیچ‌ها ← بررسی نمایشی پورت‌ها ← نمایش نام/IP سوئیچ کنار پورت ← تأیید رفع نمایشی.
 برای تست بدون واردکردن تجهیزات، دکمهٔ «۲ سوئیچ نمونه برای تست» را بزنید. سوئیچ‌های نمونه فقط در RAM همان ابزارند و در موجودی ذخیره نمی‌شوند.
+بخش انتخاب/اعمال سناریو کاملاً از رابط حذف شده است. در کادر «IP دستی» یک IPv4 خصوصی وارد و «بررسی IP دستی — نمایشی» را بزنید. مقصد دستی فقط در RAM است و ذخیره نمی‌شود؛ رفع نمونه فقط بعد از انتخاب پورت و تأیید جدا انجام می‌شود.
+پس از بررسی، خروجی نمونه show int des زیر جدول نمایش داده می‌شود؛ دکمهٔ مستقل نمایش خروجی هم وجود دارد. سطرها و فاصله‌ها در کادر متنی حفظ می‌شوند. این خروجی ساختگی است و از سوئیچ شما دریافت نشده است.
 فرم اضافی RADIUS و انتخاب سناریوهای پیچیده حذف شده؛ رمز واقعی لازم نیست و نباید وارد کنید.
 تمام پورت‌ها و نتیجه‌های این نسخه ساختگی و با برچسب نمایشی‌اند. این فایل نه به سوئیچ وصل می‌شود و نه پورت واقعی را بررسی یا رفع می‌کند.
 موجودی و حساب‌های LOCAL قبلی در همین origin/browser ممکن است مشترک باشند؛ برای بررسی کاملاً جدا از یک پروفایل مرورگر جدا استفاده کنید. اضافه‌کردن نمونه‌ها موجودی قبلی را تغییر نمی‌دهد.
