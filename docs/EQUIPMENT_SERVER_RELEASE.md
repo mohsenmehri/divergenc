@@ -8,7 +8,7 @@ Scope selected: latest LOCAL inventory, categories, cards, per-model/location st
 
 Use `releases/FAM-Custom-Access-SERVER-Patch.zip` on a **test copy** of the existing Windows/IIS deployment. Extract, take an independent verified FAM SQLite backup, and run `APPLY-CUSTOM-ACCESS-UPDATE.cmd` as administrator. Read bundled `README_FA.txt`. A code rollback is not a substitute for a database backup. Additive schema migration does not reseed existing accounts or replace the workbook.
 
-Package: 1,774,079 bytes. SHA256: `729686e31c4f29c68391a1c3d5f33289cdb2e273b68ac2f47ec27e5f178b7904`.
+Package: 1,774,706 bytes. SHA256: `b51e372efbbc877326e43fee357b33aa637efbd72a17bfafb2addeb3f2d40778`.
 
 The ten-file payload is checksum verified; the new `equipment_inventory.py` participates in installation, presence-aware backup and rollback. The full-install source allowlist also includes equipment backend modules; the historical full-install ZIP was not rebuilt in this release. No runtime DB, credentials, keys, known_hosts, logs, environment, or node_modules are shipped. Root SERVER ZIP mirrors the release ZIP. LOCAL release bytes and hash are unchanged.
 
@@ -66,3 +66,5 @@ Safe numeric `preparationMs` and `sshMs` metrics are returned for inspection and
 For the current interactive, bounded Windows-server workflow, retaining Python plus native OpenSSH avoids a migration that does not itself remove slow device authentication. Ansible is worth evaluating separately for inventory/playbook-oriented fleet automation and standardized scheduled jobs; no Ansible dependency, controller or deployment change is part of this patch.
 
 Combined inspection preserves the prior aggregate read budget: 50 s SSH session (two previous 25 s sessions), 55 s helper, 65 s parent, bounded 110 s browser wait. This avoids manufacturing a faster result by simply lowering the timeout for twice as many commands. Standalone reads and recovery retain their existing budgets.
+
+Current IP-range fix: RFC1918 plus RFC6598 `100.64.0.0/10` is accepted across inventory, Excel and SSH, including the reported `100.100.1.22`, `100.108.1.*`, `100.107.1.*`. Other public ranges and access-scope bypasses remain refused. Full backend: 125 tests (124 pass, one environment skip); targeted JS/model/build: 53 pass; actual LOCAL browser regressions: 11 pass, including all three building ranges. Device SSH is mocked, not a hardware test.

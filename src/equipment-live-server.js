@@ -25,7 +25,7 @@ window.FamEquipmentLive=(()=>{
 /* Injected only into the real SERVER controller closure. Device credentials,
    manual targets, review tickets and description tables remain in document RAM. */
  function addManual(host){
-  if(!FamEquipmentInventory.privateIP(host))throw Error('فقط IPv4 خصوصی معتبر وارد کنید؛ مثال 10.2.35.2.');
+  if(!FamEquipmentInventory.privateIP(host))throw Error('IPv4 داخلی مجاز وارد کنید؛ مانند 100.100.1.22 یا 10.2.35.2.');
   const data=inventory(),known=data.nodes.find(n=>n.host===host);
   if(known){if(!data.catalog.types.some(t=>t.id===known.typeId&&t.kind==='switch'))throw Error('IP موجودی انتخاب‌شده متعلق به سوئیچ نیست.');return known.id;}
   const previous=manualTargets.find(n=>n.host===host);if(previous)return previous.id;
@@ -45,14 +45,14 @@ window.FamEquipmentLive=(()=>{
  }
  async function showDescriptions(){
   if(busy||descriptionBusy)return;
-  try{allowed('equipment-scan');if(!auth.username.trim()||!auth.password)throw Error('نام کاربری و رمز ورود سوئیچ را وارد کنید.');if(!selected.size&&manualIP.trim())manualTarget();const nodes=switches().filter(n=>selected.has(n.id));if(!nodes.length||nodes.length!==selected.size||nodes.length>MAX)throw Error('یک تا پنج سوئیچ مجاز انتخاب کنید یا IP خصوصی دستی را وارد کنید.');
+  try{allowed('equipment-scan');if(!auth.username.trim()||!auth.password)throw Error('نام کاربری و رمز ورود سوئیچ را وارد کنید.');if(!selected.size&&manualIP.trim())manualTarget();const nodes=switches().filter(n=>selected.has(n.id));if(!nodes.length||nodes.length!==selected.size||nodes.length>MAX)throw Error('یک تا پنج سوئیچ مجاز انتخاب کنید یا IP داخلی مجاز دستی را وارد کنید.');
    invalidate();signature=stamp();busy=true;descriptionBusy=true;const token=epoch;message='سرور FAM در حال اجرای show interfaces description با SSH است…';draw();
    try{await descriptionsRead(nodes,token);}finally{busy=false;descriptionBusy=false;message=token===epoch?'دریافت خروجی پایان یافت؛ خطای دریافت، جداگانه کنار هر سوئیچ نمایش داده می‌شود.':'دریافت متوقف شد؛ نتیجه‌ای تأیید نشده است.';draw();}
   }catch(error){message=error.message;report();}
  }
  function manualControls(parent){
   const fieldset=el('fieldset');fieldset.disabled=busy;fieldset.id='eq-live-manual-box';fieldset.append(el('legend','','یا بررسی با IP دستی'));
-  const label=el('label','eq-field','IP خصوصی سوئیچ'),input=el('input','inp');input.id='eq-live-manual-ip';input.dir='ltr';input.inputMode='decimal';input.maxLength=15;input.value=manualIP;input.placeholder='مثال: 10.2.35.2';input.oninput=()=>{manualIP=input.value;};input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run.click();}};label.append(input);
+  const label=el('label','eq-field','IP داخلی مجاز سوئیچ'),input=el('input','inp');input.id='eq-live-manual-ip';input.dir='ltr';input.inputMode='decimal';input.maxLength=15;input.value=manualIP;input.placeholder='مثال: 100.100.1.22';input.oninput=()=>{manualIP=input.value;};input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run.click();}};label.append(input);
   const run=button('بررسی IP دستی',async()=>{if(busy||descriptionBusy)return;try{allowed('equipment-scan');manualTarget();await scan();}catch(error){message=error.message;report();}},'eq-live-manual-scan');
   const show=button('نمایش خروجی show int des',async()=>{if(busy||descriptionBusy)return;try{allowed('equipment-scan');if(manualIP.trim())manualTarget();await showDescriptions();}catch(error){message=error.message;report();}},'eq-live-show-descriptions');run.disabled=show.disabled=!Access.can('equipment-scan');
   fieldset.append(label,run,show,el('p','eq-muted','از همان نام کاربری و رمز سوئیچ در بالا استفاده می‌شود. اتصال از سرور FAM است؛ IP دستی ذخیره نمی‌شود. رفع فقط بعد از انتخاب پورت و تأیید جداگانه انجام می‌شود.'));parent.append(fieldset);

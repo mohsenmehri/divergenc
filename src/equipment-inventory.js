@@ -4,9 +4,10 @@
   const fields=['typeId','modelId','regionId','siteKindId','siteId'];
   const dimensions={types:'نوع تجهیز',models:'مدل تجهیز',regions:'منطقه',siteKinds:'نوع محل',sites:'محل استقرار'};
   const uid=()=>crypto.randomUUID();
+  // Legacy API name retained: RFC1918 + authorized building/shared 100.64/10.
   const privateIP=value=>{
     if(typeof value!=='string'||!/^(?:0|[1-9]\d{0,2})(?:\.(?:0|[1-9]\d{0,2})){3}$/.test(value))return false;
-    const p=value.split('.').map(Number);return p.every(n=>n<=255)&&(p[0]===10||p[0]===172&&p[1]>=16&&p[1]<=31||p[0]===192&&p[1]===168);
+    const p=value.split('.').map(Number);return p.every(n=>n<=255)&&(p[0]===10||p[0]===172&&p[1]>=16&&p[1]<=31||p[0]===192&&p[1]===168||p[0]===100&&p[1]>=64&&p[1]<=127);
   };
   const validName=value=>typeof value==='string'&&value.trim().length>0&&value.length<=80&&!/[\x00-\x1f\x7f]/.test(value);
   function defaults(){
@@ -39,7 +40,7 @@
     }
     const lists={typeId:'types',modelId:'models',regionId:'regions',siteKindId:'siteKinds',siteId:'sites'};
     const nodes=value.nodes.map(item=>{
-      const clean=identity(item);if(!privateIP(item.host))throw Error('IP خصوصی معتبر نیست.');clean.host=item.host;
+      const clean=identity(item);if(!privateIP(item.host))throw Error('IP داخلی مجاز معتبر نیست.');clean.host=item.host;
       for(const field of fields){const ref=item[field];if(ref!==null&&(typeof ref!=='string'||!catalog[lists[field]].some(entry=>entry.id===ref)))throw Error('ارجاع دستهٔ تجهیز معتبر نیست.');clean[field]=ref;}
       if(clean.modelId&&catalog.models.find(m=>m.id===clean.modelId).typeId!==clean.typeId)throw Error('مدل باید متعلق به نوع تجهیز انتخاب‌شده باشد.');
       if(clean.siteId&&catalog.sites.find(m=>m.id===clean.siteId).siteKindId!==clean.siteKindId)throw Error('محل باید متعلق به نوع محل انتخاب‌شده باشد.');

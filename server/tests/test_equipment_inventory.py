@@ -17,6 +17,28 @@ class EquipmentInventoryTests(api.CentralTests):
         p=self.a.get('/api/users').json
         p['users'].append({'id':str(uuid.uuid4()),'username':'eq-worker','name':'Eq worker','enabled':True,'categories':[],'permissions':['equipment-operations']+permissions,'regions':[],'sheets':[],'password':'1109','equipmentScope':scope or {k:['*'] for k in DEFAULT_INVENTORY['catalog']}})
         r=self.post(self.a,'users',p);self.assertEqual(r.status_code,200,r.json);return self.login('eq-worker')
+    def test_building_shared_range_roundtrip_import_and_scope_enforcement(self):
+        p=self.populated()
+        p['inventory']['nodes'][0]['host']='100.100.1.22'
+        p['inventory']['nodes'][1]['host']='100.108.1.22'
+        self.assertEqual(self.write(self.a,p,kind='import').status_code,200)
+        p=self.eq().json
+        self.assertEqual([n['host'] for n in p['inventory']['nodes']],['100.100.1.22','100.108.1.22'])
+        p['inventory']['nodes'][1]['host']='100.107.1.22'
+        self.assertEqual(self.write(self.a,p).status_code,200)
+        for host in ['100.63.255.255','100.128.0.0','100.1.1.22','8.8.8.8','::1','100.100.1.256']:
+            p=self.eq().json;p['inventory']['nodes'][0]['host']=host
+            self.assertEqual(self.write(self.a,p).status_code,400)
+        scope={k:['*'] for k in DEFAULT_INVENTORY['catalog']};scope['regions']=['region-1']
+        worker=self.worker(['equipment-scan'],scope);calls=[]
+        self.app.config.update(EQUIPMENT_OPS_ENABLED=True,EQUIPMENT_EXECUTOR=lambda job:(calls.append(job['host']) or {'ok':True,'ports':[]}))
+        body={'host':'100.107.1.22','username':'fixture','password':'synthetic-only'}
+        for path in ['check','inspect','descriptions']:
+            self.assertEqual(self.post(worker,'equipment/'+path,body).status_code,403)
+        self.assertEqual(calls,[])
+        self.assertEqual(self.post(worker,'equipment/check',{**body,'host':'100.100.1.22'}).status_code,200)
+        self.assertEqual(calls,['100.100.1.22'])
+
     def test_equipment_roundtrip_restart_revision_and_replay(self):
         p=self.populated();self.app=__import__('server.app',fromlist=['create_app']).create_app(self.config);self.a=self.login('admin');self.assertEqual(self.eq().json['inventory'],p['inventory'])
         rid=str(uuid.uuid4());p['inventory']['nodes'][0]['name']='Edited';r=self.write(self.a,p,rid=rid);self.assertEqual(r.status_code,200);self.assertEqual(self.write(self.a,p,rid=rid).status_code,200);self.assertEqual(self.write(self.a,p).status_code,409)

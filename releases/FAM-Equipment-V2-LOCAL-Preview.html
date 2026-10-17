@@ -9243,9 +9243,10 @@ async function startProvinceAdd(selectedName) {
   const fields=['typeId','modelId','regionId','siteKindId','siteId'];
   const dimensions={types:'نوع تجهیز',models:'مدل تجهیز',regions:'منطقه',siteKinds:'نوع محل',sites:'محل استقرار'};
   const uid=()=>crypto.randomUUID();
+  // Legacy API name retained: RFC1918 + authorized building/shared 100.64/10.
   const privateIP=value=>{
     if(typeof value!=='string'||!/^(?:0|[1-9]\d{0,2})(?:\.(?:0|[1-9]\d{0,2})){3}$/.test(value))return false;
-    const p=value.split('.').map(Number);return p.every(n=>n<=255)&&(p[0]===10||p[0]===172&&p[1]>=16&&p[1]<=31||p[0]===192&&p[1]===168);
+    const p=value.split('.').map(Number);return p.every(n=>n<=255)&&(p[0]===10||p[0]===172&&p[1]>=16&&p[1]<=31||p[0]===192&&p[1]===168||p[0]===100&&p[1]>=64&&p[1]<=127);
   };
   const validName=value=>typeof value==='string'&&value.trim().length>0&&value.length<=80&&!/[\x00-\x1f\x7f]/.test(value);
   function defaults(){
@@ -9278,7 +9279,7 @@ async function startProvinceAdd(selectedName) {
     }
     const lists={typeId:'types',modelId:'models',regionId:'regions',siteKindId:'siteKinds',siteId:'sites'};
     const nodes=value.nodes.map(item=>{
-      const clean=identity(item);if(!privateIP(item.host))throw Error('IP خصوصی معتبر نیست.');clean.host=item.host;
+      const clean=identity(item);if(!privateIP(item.host))throw Error('IP داخلی مجاز معتبر نیست.');clean.host=item.host;
       for(const field of fields){const ref=item[field];if(ref!==null&&(typeof ref!=='string'||!catalog[lists[field]].some(entry=>entry.id===ref)))throw Error('ارجاع دستهٔ تجهیز معتبر نیست.');clean[field]=ref;}
       if(clean.modelId&&catalog.models.find(m=>m.id===clean.modelId).typeId!==clean.typeId)throw Error('مدل باید متعلق به نوع تجهیز انتخاب‌شده باشد.');
       if(clean.siteId&&catalog.sites.find(m=>m.id===clean.siteId).siteKindId!==clean.siteKindId)throw Error('محل باید متعلق به نوع محل انتخاب‌شده باشد.');
@@ -9555,7 +9556,7 @@ async function startProvinceAdd(selectedName) {
     if(row.length>10)throw Error('ستون اضافی مجاز نیست.');
     const r=Array.from({length:10},(_,j)=>row[j]===null||row[j]===undefined?'':String(row[j]).trim());
     for(const index of [0,2,4,5,6,8])if(!M.validName(r[index]))throw Error('نام تجهیز و همهٔ مشخصات دسته‌بندی باید معتبر و تکمیل باشند.');
-    if(!M.privateIP(r[1]))throw Error('IPv4 خصوصی معتبر نیست.');
+    if(!M.privateIP(r[1]))throw Error('IPv4 داخلی مجاز نیست.');
     if(!['router','switch','other'].includes(r[3])||!['branch','building','datacenter','other'].includes(r[7]))throw Error('الگوی نوع یا الگوی محل معتبر نیست.');
     if(seenIPs.has(r[1])||r[9]&&seenIDs.has(r[9]))throw Error('IP یا شناسه در خود فایل تکراری است.');seenIPs.add(r[1]);if(r[9])seenIDs.add(r[9]);
     const matches=byIP.get(r[1])||[],byID=r[9]?byId.get(r[9]):null;
@@ -9636,7 +9637,7 @@ async function startProvinceAdd(selectedName) {
    ['برگه‌های مخفیِ فهرست‌ها و اطلاعات قالب را حذف یا ویرایش نکنید. تغییر تجهیزات به‌تنهایی قالب را قدیمی نمی‌کند؛ تغییر دسته‌ها می‌کند.'],
    ['نمونه‌ها از دسته‌های فعلی ساخته می‌شوند و خودکار وارد نمی‌شوند. اگر دسته‌های لازم وجود ندارند، ابتدا آن‌ها را در برنامه تعریف کنید.'],
    ['حداکثر ۴۰۰۰ ردیف، ۵ مگابایت، بدون فرمول؛ هیچ رمز یا کانفیگ در فایل ننویسید.'],
-   ['فقط دسته‌های موجود مجازند؛ دستهٔ جدید را ابتدا در برنامه بسازید و فرم تازه بگیرید. اکسل ورود دستیِ خارج از فهرست را با خطای Stop رد می‌کند؛ کپی/چسباندن ممکن است آن را دور بزند، پس ایمپورت دوباره همهٔ ردیف‌ها را کنترل می‌کند.'],['نام و IP را خودتان بنویسید؛ IP خصوصی، یکتا و تکمیل مشخصات هنگام ایمپورت بررسی می‌شوند. الگوها نیز فقط مقدار سازگار با نوع انتخاب‌شده را می‌پذیرند.']
+   ['فقط دسته‌های موجود مجازند؛ دستهٔ جدید را ابتدا در برنامه بسازید و فرم تازه بگیرید. اکسل ورود دستیِ خارج از فهرست را با خطای Stop رد می‌کند؛ کپی/چسباندن ممکن است آن را دور بزند، پس ایمپورت دوباره همهٔ ردیف‌ها را کنترل می‌کند.'],['نام و IP را خودتان بنویسید؛ IP داخلی مجاز، یکتا و تکمیل مشخصات هنگام ایمپورت بررسی می‌شوند. الگوها نیز فقط مقدار سازگار با نوع انتخاب‌شده را می‌پذیرند.']
   ],[115,32]);
   add('دسته‌ها',catalogs,[22,40,20,40]);
   const examples=[T.columns.slice()],region=d.catalog.regions[0],kind=d.catalog.siteKinds.find(k=>d.catalog.sites.some(s=>s.siteKindId===k.id));
@@ -9871,7 +9872,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const form=el('form','eq-editor eq-node-editor');form.autocomplete='off';
     const grid=el('div','eq-node-fields');
     const name=textField(grid,'eq-edit-name','نام تجهیز',node?.name||'').input;
-    const host=textField(grid,'eq-edit-host','IP خصوصی تجهیز',node?.host||'',15).input;host.dir='ltr';host.placeholder='10.2.35.2';
+    const host=textField(grid,'eq-edit-host','IP داخلی مجاز تجهیز',node?.host||'',15).input;host.dir='ltr';host.placeholder='100.100.1.22';
     const type=selectField(grid,'eq-node-type','نوع تجهیز',catalog('types'),initial.typeId);
     const model=selectField(grid,'eq-node-model','مدل تجهیز',[],initial.modelId);
     const newModel=textField(grid,'eq-node-new-model','نام مدل جدید');newModel.wrap.hidden=true;newModel.input.required=false;
@@ -9891,7 +9892,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     form.append(grid,notice('یک تجهیز، چند دسته: مثلاً Router / 1841 / منطقه ۱ / ساختمان مرکزی رضوان. تغییر مشخصات، دسته‌ها را خودکار به‌روز می‌کند.'),error,tools(submit,button('انصراف',close)));
     form.addEventListener('submit',event=>{
       event.preventDefault();try{
-        if(!M.privateIP(host.value.trim()))throw Error('فقط IPv4 خصوصی معتبر وارد کنید.');
+        if(!M.privateIP(host.value.trim()))throw Error('IPv4 داخلی مجاز وارد کنید: رنج خصوصی یا 100.64.0.0/10؛ مانند 100.100.1.22.');
         const next=structuredClone(inventory);
         const define=(key,label,parent)=>{
           const name=label.trim();if(!M.validName(name))throw Error('نام معتبر برای مدل یا محل جدید وارد کنید.');

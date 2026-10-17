@@ -83,3 +83,7 @@ The new inspect read performs the existing two allowlisted read commands in one 
 ## Equipment workspace v2
 
 The replacement UI preserves existing server authorization/storage and native SSH boundaries. Inventory and offline tools no longer ask for device credentials. Only the direct server port page accepts SSH/RADIUS credentials in document RAM. Opening equipment details never automatically runs SSH. LOCAL no longer has a fake authentication gate or fabricated scan/recovery UI; it explicitly requires SERVER for connection. No database reset, broadened scope, credential persistence or new configuration-execution permission was introduced. See `EQUIPMENT_V2_REDESIGN.md`.
+
+## Building/shared IPv4 range exception — 2026-10-17
+
+The user explicitly authorized building addresses including `100.100.1.22`, `100.108.1.*` and `100.107.1.*`. Equipment targets now accept RFC1918 **plus `100.64.0.0/10` (RFC6598 shared address space)**, consistently in browser inventory/import, server inventory/import, all operation endpoints and the isolated SSH helper. This is not an arbitrary-public-IP exception or all of `100/8`. Loopback, link-local, multicast, IPv6, malformed IPs, `100.63.255.255` and `100.128.0.0` remain denied. Stable data/schema IDs, five-AND authorization scopes, manual-target wildcard requirement, CSRF/Origin/session validation, SSH fixed commands, host keys and exact recovery confirmation are unchanged. Tests exercise all reported ranges, boundaries, scoped denials and Excel round-trips; no hardware reachability is claimed.

@@ -70,3 +70,7 @@ test('stale shortcut references are retained for repair, not silently discarded'
  const data=M.defaultCards();data.cards[0].refId='deleted-category';const clean=M.validateCards(data);
  assert.equal(clean.cards[0].refId,'deleted-category');
 });
+test('building/shared 100.64/10 is accepted without allowing all 100/8, public, malformed or IPv6 targets',()=>{
+ for(const host of ['100.100.1.22','100.108.1.22','100.107.1.22','100.64.0.0','100.127.255.255','10.2.35.2','172.16.1.1','192.168.1.1']){assert.equal(M.privateIP(host),true,host);assert.equal(M.upsertNode(M.defaults(),node({host})).nodes[0].host,host);}
+ for(const host of ['100.63.255.255','100.128.0.0','100.1.1.22','8.8.8.8','127.0.0.1','169.254.1.1','224.0.0.1','100.100.1.256','100.100.1','100.100.01.22','100.100.1.22:22','::1','::ffff:100.100.1.22','example.test']){assert.equal(M.privateIP(host),false,host);assert.throws(()=>M.upsertNode(M.defaults(),node({host})),undefined,host);}
+});

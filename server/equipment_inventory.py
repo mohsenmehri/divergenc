@@ -77,7 +77,7 @@ def inventory(value):
         host=item.get('host')
         if not isinstance(host,str):raise ValueError('host')
         ip=ipaddress.ip_address(host)
-        if ip.version!=4 or str(ip)!=host or not any(ip in ipaddress.ip_network(n) for n in ('10.0.0.0/8','172.16.0.0/12','192.168.0.0/16')):raise ValueError('host')
+        if ip.version!=4 or str(ip)!=host or not any(ip in ipaddress.ip_network(n) for n in ('10.0.0.0/8','172.16.0.0/12','192.168.0.0/16','100.64.0.0/10')):raise ValueError('host')
         if host in hosts:raise ValueError('duplicate host')
         hosts.add(host);row['host']=host
         for key,field in FIELDS.items():

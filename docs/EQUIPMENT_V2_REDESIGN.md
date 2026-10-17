@@ -33,3 +33,9 @@ The embedder replaces only the relevant embedded modules. The shared builder add
 Backend suite: **122 tests, 121 pass, one environment-dependent skip** after packaging. Authenticated two-session central smoke and synthetic-executor SSH smoke cover persistence/reload, live scope drafts, history sync, pending/conflict gates, exact port ownership, explicit cancel/repair, malformed responses, manual IP, safe description output and RAM-only credentials. No live Windows/IIS/RADIUS or hardware-device test is claimed. Screenshots were reviewed at desktop and 390px mobile sizes.
 
 Deployment: take an independent verified live SQLite backup, install the SERVER patch on a test copy with the existing administrator script, refresh, and validate against approved devices locally. Code rollback alone is not a database backup.
+
+
+اصلاح رنج IP ساختمان‌ها — 2026-10-17
+رنج 100.64.0.0/10 (از 100.64.0.0 تا 100.127.255.255) علاوه بر رنج‌های RFC1918 مجاز است؛ از جمله 100.100.1.22، 100.108.1.22 و 100.107.1.22. این بازه shared-address / RFC6598 است، نه RFC1918.
+ثبت/ویرایش تجهیزات، Excel، API بررسی/توضیحات/رفع و helper SSH همین سیاست را اجرا می‌کنند. همهٔ 100/8 یا IPهای عمومی باز نشده‌اند؛ 100.63.*، 100.128.*، loopback، link-local، IPv6 و مقادیر نامعتبر رد می‌شوند. مجوزها، محدوده‌ها و تأیید پورت تغییری نکرده‌اند.
+تست‌ها با IPهای مثال و داده/SSH ساختگی انجام شده‌اند؛ هیچ اتصال واقعی به ساختمان شما انجام نشده است.

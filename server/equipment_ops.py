@@ -34,7 +34,9 @@ USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 # equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
 # helper while it is still supervising an ssh.exe child.
 EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95}
-RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
+# RFC1918 plus the user-authorized building/shared-address range (RFC6598).
+# Deliberately not all of 100/8 or arbitrary public targets.
+ALLOWED_IPV4_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"))
 
 
 def _b64(value: bytes) -> str:
@@ -56,7 +58,7 @@ def _input(value, *, recovery=False):
         address = ipaddress.ip_address(host.strip())
     except ValueError as exc:
         raise ValueError from exc
-    if not isinstance(address, ipaddress.IPv4Address) or not any(address in network for network in RFC1918_NETWORKS):
+    if not isinstance(address, ipaddress.IPv4Address) or not any(address in network for network in ALLOWED_IPV4_NETWORKS):
         raise ValueError
     username = username.strip()
     if not USERNAME.fullmatch(username) or not 1 <= len(password) <= 512:
@@ -175,7 +177,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
         try:
             value = _input(data())
         except ValueError:
-            fail(400, "IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.")
+            fail(400, "IP داخلی مجاز، نام کاربری و رمز تجهیز معتبر نیست.")
         authorize("status",value["host"])
         result = _execute(app, {"operation": "status", **value})
         ports = _ports_or_fail(result, fail)
@@ -186,7 +188,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
     def equipment_inspect():
         authorize('status')
         try:value=_input(data())
-        except ValueError:fail(400,'IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.')
+        except ValueError:fail(400,'IP داخلی مجاز، نام کاربری و رمز تجهیز معتبر نیست.')
         authorize('status',value['host'])
         result=_execute(app,{'operation':'inspect',**value})
         ports=_ports_or_fail(result,fail)
@@ -207,7 +209,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
     def equipment_descriptions():
         authorize('descriptions')
         try:value=_input(data())
-        except ValueError:fail(400,'IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.')
+        except ValueError:fail(400,'IP داخلی مجاز، نام کاربری و رمز تجهیز معتبر نیست.')
         authorize('descriptions',value['host'])
         result=_execute(app,{'operation':'descriptions',**value})
         if not isinstance(result,dict) or result.get('ok') is not True:fail(502,_failure(result))

@@ -51,6 +51,28 @@ class EquipmentOpsTests(unittest.TestCase):
             headers["X-FAM-CSRF"] = self.csrf
         return self.client.post(path, json=body, headers=headers)
 
+    def test_building_shared_range_is_accepted_consistently_by_all_endpoints(self):
+        from server.tests.test_equipment_probe import DESCRIPTION_TABLE
+        def executor(job):
+            self.calls.append(job)
+            return {'ok':True,'ports':[{'interface':'Gi0/7','description':'Building port'}],
+                    'descriptions':{'ok':True,'output':DESCRIPTION_TABLE},'output':DESCRIPTION_TABLE,'recovery':'recovered'}
+        self.app.config['EQUIPMENT_EXECUTOR']=executor
+        for host in ['100.100.1.22','100.108.1.22','100.107.1.22','100.64.0.0','100.127.255.255']:
+            body={'host':host,'username':'fixture','password':'synthetic-only'}
+            for path in ['check','inspect','descriptions']:
+                result=self.post('/api/equipment/'+path,body)
+                self.assertEqual(result.status_code,200,result.json)
+            ticket=self.post('/api/equipment/check',body).json['recoveryTickets']['Gi0/7']
+            self.assertEqual(self.post('/api/equipment/recover',{**body,'interface':'Gi0/7','ticket':ticket}).status_code,200)
+        self.calls.clear()
+        for host in ['100.63.255.255','100.128.0.0','100.1.1.22','8.8.8.8','127.0.0.1','169.254.1.1','::1','100.100.1.256']:
+            for path in ['check','inspect','descriptions','recover']:
+                body={'host':host,'username':'fixture','password':'synthetic-only'}
+                if path=='recover':body.update(interface='Gi0/7',ticket='x'*100)
+                self.assertEqual(self.post('/api/equipment/'+path,body).status_code,400)
+        self.assertEqual(self.calls,[])
+
     def test_direct_check_uses_transient_request_only_and_returns_structured_ports(self):
         password = "temporary-test-password"
         result = self.post("/api/equipment/check", {"host": "10.2.52.2", "username": "radius.user", "password": password})

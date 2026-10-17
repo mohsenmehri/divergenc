@@ -134,6 +134,16 @@ class ProbeHarness(unittest.TestCase):
 
 
 class SshExeTransportTests(ProbeHarness):
+    def test_building_shared_range_reaches_ssh_but_other_100_ranges_do_not(self):
+        for host in ['100.100.1.22','100.108.1.22','100.107.1.22','100.64.0.0','100.127.255.255']:
+            self.calls.clear()
+            self.assertEqual(self.run_probe(self.status_job(host=host),[{'out':TABLE_CLEAN}]),{'ok':True,'ports':[]})
+            self.assertIn(host,self.calls[0]['argv'])
+        for host in ['100.63.255.255','100.128.0.0','100.1.1.22','127.0.0.1','169.254.1.1','::ffff:100.100.1.22','100.100.1.256']:
+            self.calls.clear()
+            self.assertEqual(self.run_probe(self.status_job(host=host),[]),{'ok':False,'error':'invalid_request'})
+            self.assertEqual(self.calls,[])
+
     def test_successful_connection_uses_only_aes128_cbc_legacy_exception(self):
         result = self.run_probe(self.status_job(), [{"out": TABLE_CLEAN}])
         self.assertEqual(result, {"ok": True, "ports": []})

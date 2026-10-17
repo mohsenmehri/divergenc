@@ -40,7 +40,9 @@ INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
 # Device user names are passed with -l and appear in the ASKPASS prompt.
 # A strict allowlist keeps option-like and control-character input out.
 USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
-RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
+# RFC1918 plus the user-authorized building/shared-address range (RFC6598).
+# Deliberately not all of 100/8 or arbitrary public targets.
+ALLOWED_IPV4_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"))
 CLI_ERROR = re.compile(r"^\s*%\s+\S")  # IOS "% Invalid input ..." (syslog lines are "%LINK-5-..." without a space)
 
 # Exactly one temporary legacy exception.  Never widen this.
@@ -562,7 +564,7 @@ def execute(value):
         address = ipaddress.ip_address(value["host"])
     except ValueError:
         return {"ok": False, "error": "invalid_request"}
-    if not isinstance(address, ipaddress.IPv4Address) or not any(address in network for network in RFC1918_NETWORKS):
+    if not isinstance(address, ipaddress.IPv4Address) or not any(address in network for network in ALLOWED_IPV4_NETWORKS):
         return {"ok": False, "error": "invalid_request"}
     if not USERNAME.fullmatch(value["username"]):
         return {"ok": False, "error": "invalid_request"}

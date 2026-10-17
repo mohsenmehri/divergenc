@@ -26,7 +26,7 @@
     if(row.length>10)throw Error('ستون اضافی مجاز نیست.');
     const r=Array.from({length:10},(_,j)=>row[j]===null||row[j]===undefined?'':String(row[j]).trim());
     for(const index of [0,2,4,5,6,8])if(!M.validName(r[index]))throw Error('نام تجهیز و همهٔ مشخصات دسته‌بندی باید معتبر و تکمیل باشند.');
-    if(!M.privateIP(r[1]))throw Error('IPv4 خصوصی معتبر نیست.');
+    if(!M.privateIP(r[1]))throw Error('IPv4 داخلی مجاز نیست.');
     if(!['router','switch','other'].includes(r[3])||!['branch','building','datacenter','other'].includes(r[7]))throw Error('الگوی نوع یا الگوی محل معتبر نیست.');
     if(seenIPs.has(r[1])||r[9]&&seenIDs.has(r[9]))throw Error('IP یا شناسه در خود فایل تکراری است.');seenIPs.add(r[1]);if(r[9])seenIDs.add(r[9]);
     const matches=byIP.get(r[1])||[],byID=r[9]?byId.get(r[9]):null;

@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const form=el('form','eq-editor eq-node-editor');form.autocomplete='off';
     const grid=el('div','eq-node-fields');
     const name=textField(grid,'eq-edit-name','نام تجهیز',node?.name||'').input;
-    const host=textField(grid,'eq-edit-host','IP خصوصی تجهیز',node?.host||'',15).input;host.dir='ltr';host.placeholder='10.2.35.2';
+    const host=textField(grid,'eq-edit-host','IP داخلی مجاز تجهیز',node?.host||'',15).input;host.dir='ltr';host.placeholder='100.100.1.22';
     const type=selectField(grid,'eq-node-type','نوع تجهیز',catalog('types'),initial.typeId);
     const model=selectField(grid,'eq-node-model','مدل تجهیز',[],initial.modelId);
     const newModel=textField(grid,'eq-node-new-model','نام مدل جدید');newModel.wrap.hidden=true;newModel.input.required=false;
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     form.append(grid,notice('یک تجهیز، چند دسته: مثلاً Router / 1841 / منطقه ۱ / ساختمان مرکزی رضوان. تغییر مشخصات، دسته‌ها را خودکار به‌روز می‌کند.'),error,tools(submit,button('انصراف',close)));
     form.addEventListener('submit',event=>{
       event.preventDefault();try{
-        if(!M.privateIP(host.value.trim()))throw Error('فقط IPv4 خصوصی معتبر وارد کنید.');
+        if(!M.privateIP(host.value.trim()))throw Error('IPv4 داخلی مجاز وارد کنید: رنج خصوصی یا 100.64.0.0/10؛ مانند 100.100.1.22.');
         const next=structuredClone(inventory);
         const define=(key,label,parent)=>{
           const name=label.trim();if(!M.validName(name))throw Error('نام معتبر برای مدل یا محل جدید وارد کنید.');
