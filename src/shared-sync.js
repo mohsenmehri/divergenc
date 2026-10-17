@@ -1,7 +1,7 @@
 /* Central persistence adapter. The server, not browser storage, is authoritative.
    Snapshots are immutable per request; stale revisions never auto-rebase. */
 window.FamShared=(()=>{
-  let csrf='',revision=0,epoch='',ready=false,applying=false,clean='',queued=false,job=null,active=null,failure=null,polling=false,serverUserRevision='',transactionDepth=0,deferred=[],draftFailure=false,dismissedRevision=-1;
+  let csrf='',revision=0,historyFloor=0,epoch='',ready=false,applying=false,clean='',queued=false,job=null,active=null,failure=null,polling=false,serverUserRevision='',transactionDepth=0,deferred=[],draftFailure=false,dismissedRevision=-1;
   const excluded=new Set([CP_SHEET,RESULTS_SHEET,IDX_SHEET,DD_SHEET,LOG_SHEET,UNDO_BUFFER_SHEET,NAV_SHEET_NAME]);
   const originalToast=Toast,originalMessage=ShowMsg;
   const status=el('div',{id:'shared-status',role:'status','aria-live':'polite',text:'اتصال به سرور…'});
@@ -33,11 +33,12 @@ window.FamShared=(()=>{
   }
   function unfreeze(){
     document.getElementById('shared-block')?.remove();
+    if(window.FamEquipmentServer?.blocked())return;
     document.getElementById('layout').inert=false;
     document.getElementById('modal-overlay').inert=false;
   }
-  async function api(path,body){
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+  async function api(path,body,timeoutMs=20000){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.min(110000,Math.max(1000,timeoutMs)));
     try{
       const headers={};if(body!==undefined){headers['Content-Type']='application/json';if(csrf)headers['X-FAM-CSRF']=csrf;}
       const response=await fetch(new URL('api/'+path,location.href),{method:body===undefined?'GET':'POST',headers,credentials:'same-origin',cache:'no-store',signal:controller.signal,...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -56,7 +57,7 @@ window.FamShared=(()=>{
       for(const n of p.order){if(!WB.order.includes(n))WB.order.push(n);WB.sheets[n]=p.sheets[n];}
       state.lockedSheets=p.lockedSheets||{};state.categoryConfig=normalizeCategoryConfig(p.categoryConfig);state.regionConfig=normalizeRegionConfig(p.regionConfig);
       state.panelProtected=p.panelProtected!==false;state.undo=p.undo||null;state.savedAt=p.savedAt||0;state.user=Access.current().name;state.cp=cp;
-      revision=envelope.revision;epoch=envelope.epoch;serverUserRevision=envelope.user.revision;
+      revision=envelope.revision;historyFloor=envelope.historyFloor||0;epoch=envelope.epoch;serverUserRevision=envelope.user.revision;
       state.results=[];
       if(repaint){
         modMapping.RefreshSearchIndex(false);initUIFromState();renderResultsView();
@@ -69,7 +70,7 @@ window.FamShared=(()=>{
   }
   async function load(){
     freeze('در حال دریافت نسخهٔ اصلی از سرور…');
-    try{apply(await api('state'));unfreeze();}
+    try{apply(await api('state'));await FamEquipmentServer.load();unfreeze();}
     catch(err){failure=err;freeze(err.message,err);throw err;}
   }
   function queue(){
@@ -112,7 +113,7 @@ window.FamShared=(()=>{
   }
   function hasUnsavedWork(){return pending()||signature()!==clean;}
   function liveApplyBlocked(){
-    return hasUnsavedWork()||!!document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]');
+    return !!window.FamEquipmentServer?.blocked()||hasUnsavedWork()||!!document.querySelector('#modal-overlay.show,dialog[open]')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]');
   }
   function hideLiveNotice(){liveNotice.hidden=true;liveNotice.dataset.revision='';}
   function announceLiveUpdate(remote){
@@ -123,7 +124,7 @@ window.FamShared=(()=>{
   }
   async function receiveLiveUpdate(force=false,remote=null){
     if(!remote)remote=await api('status');
-    if(remote.revision===revision&&remote.epoch===epoch){hideLiveNotice();return true;}
+    if(remote.revision===revision&&remote.epoch===epoch&&(remote.historyFloor||0)===historyFloor){hideLiveNotice();return true;}
     if(pending()){text('ابتدا ثبت فعلی روی سرور تأیید شود.');return false;}
     if(signature()!==clean){
       if(!force){announceLiveUpdate(remote);return false;}
@@ -146,7 +147,7 @@ window.FamShared=(()=>{
     try{
       const remote=await api('status');
       if(remote.userRevision!==serverUserRevision){const e=Error('حساب یا دسترسی شما تغییر کرده است؛ دوباره وارد شوید.');e.status=401;throw e;}
-      if(remote.revision===revision&&remote.epoch===epoch){hideLiveNotice();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');return;}
+      if(remote.revision===revision&&remote.epoch===epoch&&(remote.historyFloor||0)===historyFloor){hideLiveNotice();text('مرکزی · نسخهٔ '+revision.toLocaleString('fa-IR')+' سرور');return;}
       if(liveApplyBlocked()){
         text(liveSummary(remote)+' پس از پایان کار فعلی دریافت می‌شود.');announceLiveUpdate(remote);return;
       }

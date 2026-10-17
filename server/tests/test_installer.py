@@ -192,7 +192,7 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertIn('max-age=31536000',(payload/'web.config').read_text(encoding='utf8'))
         import hashlib
         entries={name:digest for digest,name in (line.split('  ',1) for line in (payload/'SHA256SUMS.txt').read_text(encoding='utf8').splitlines())}
-        self.assertEqual(set(entries),{'app.py','equipment_ops.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js','web.config'})
+        self.assertEqual(set(entries),{'app.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js','web.config'})
         for name,digest in entries.items():self.assertEqual(digest,hashlib.sha256((payload/name).read_bytes()).hexdigest())
         self.assertEqual((payload/'app.py').read_bytes(),(root/'server'/'app.py').read_bytes())
         self.assertEqual((payload/'equipment_ops.py').read_bytes(),(root/'server'/'equipment_ops.py').read_bytes())

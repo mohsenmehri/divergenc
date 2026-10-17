@@ -9,6 +9,33 @@ from pathlib import Path
 import re
 root=Path(__file__).resolve().parents[1]
 s=(root/'FAM.html').read_text()
+# Equipment metadata uses a server-backed facade, never browser inventory or
+# accounts. The existing UI has explicit pending/failed central commit blocking.
+for module in ('equipment-local-preview','equipment-tools'):
+    source=(root/f'src/{module}.js').read_text().replace('localStorage','FamEquipmentServer.storage')
+    if module=='equipment-local-preview':
+        source=source.replace("if(!credentials){gate();return;}","if(!credentials)credentials={userId:Access.current()?.id,username:'demo-only',password:''};")
+        source=source.replace("'RADIUS آماده است'","'نشست کاربری سرور'").replace("'معتبر تا خروج از حساب FAM · فقط در حافظه'","'تجهیزات مرکزی · ابزارهای بررسی و پیکربندی نمایشی'").replace("'تغییر اطلاعات RADIUS'","'بازنشانی پیش‌نویس‌های نمایشی'")
+        source=source.replace('load();fullInventory=inventory;render();','load();fullInventory=inventory;loadCards();render();')
+        source=source.replace('پیش‌نمایش محلی · مشخصات تجهیزات و استانداردهای بدون رمز ذخیره می‌شوند؛ رمز و متن کانفیگ ذخیره یا ارسال نمی‌شوند.','نسخه مرکزی · مشخصات و استانداردها روی سرور ثبت می‌شوند؛ بررسی/رفع گروهی و پیکربندی همچنان نمایشی‌اند. مسیر SSH واقعی در بخش جداگانه است.')
+    else:
+        marker='  return Object.freeze({mount,suspend,clear,exportInventory});'
+        source=source.replace(marker,"  window.addEventListener('storage',event=>{if(event.key===KEY){try{standards=T.validateStandards(JSON.parse(FamEquipmentServer.storage.getItem(KEY)||'{\"version\":1,\"items\":[]}'));standardIssue='';draft=null;auditResult=null;}catch(e){standardIssue='استانداردهای سرور معتبر نیستند؛ ویرایش غیرفعال است.';}}});\n"+marker)
+    s,n=re.subn(r'<script id="fam-'+module+r'-js">.*?</script>',lambda _: '<script id="fam-'+module+'-js">\n'+source+'</script>',s,flags=re.S);assert n==1
+# Facade must exist before the equipment controllers initialise on DOMContentLoaded.
+s=s.replace('<script id="fam-equipment-local-preview-js">','<script id="fam-equipment-server-store-js">\n'+(root/'src/equipment-server-store.js').read_text()+'</script>\n<script id="fam-equipment-local-preview-js">',1)
+s=s.replace('\n</body>','\n<script id="fam-equipment-management-js">\n'+(root/'src/equipment-live-server.js').read_text()+'</script>\n</body>',1)
+a=s.index('function clearLog() {');b=s.index('/* ---------- results',a)
+s=s[:a]+"""function clearLog(){
+ if(!Access.require('clear-history'))return false;
+ ConfirmBox('پاک‌سازی تاریخچهٔ مرکزی','فهرست تاریخچه برای همه پاک شود؟ داده‌ها و نسخه‌های داخلی لازم برای بازگشت تغییر نمی‌کنند.',async()=>{
+  if(!Access.require('clear-history'))return;
+  try{await FamShared.api('history/clear',{confirm:true});await FamShared.load();renderLogView();Toast('فهرست تاریخچه پاک شد.','ok');}catch(e){Toast(e.message,'warn');}
+ });
+}
+
+"""+s[b:]
+
 a=(root/'src/shared-access.js').read_text()
 assert 'localStorage' not in a and 'hashPassword' not in a
 assert 'const Access' in a and 'FamShared.api' in a

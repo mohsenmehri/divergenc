@@ -157,10 +157,10 @@ def _ports_or_fail(result, fail):
 def register_equipment_ops(app, *, data, fail, allowed):
     """Register authenticated browser endpoints for direct server-to-device SSH."""
 
-    def authorize():
+    def authorize(operation=None,host=None):
         if not app.config["EQUIPMENT_OPS_ENABLED"]:
             fail(404, "مدیریت تجهیزات فعال نشده است.")
-        if not allowed(g.user):
+        if not allowed(g.user,operation=operation,host=host):
             fail(403, "مجوز مدیریت تجهیزات لازم است.")
 
     @app.post("/api/equipment/check")
@@ -170,6 +170,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
             value = _input(data())
         except ValueError:
             fail(400, "IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.")
+        authorize("status",value["host"])
         result = _execute(app, {"operation": "status", **value})
         ports = _ports_or_fail(result, fail)
         tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
@@ -177,11 +178,12 @@ def register_equipment_ops(app, *, data, fail, allowed):
 
     @app.post("/api/equipment/recover")
     def equipment_recover():
-        authorize()
+        authorize("recover")
         try:
             value = _input(data(), recovery=True)
         except ValueError:
             fail(400, "درخواست بازیابی معتبر نیست.")
+        authorize("recover",value["host"])
         if not _verify_ticket(app, value.pop("ticket"), user_id=g.user["id"], host=value["host"], username=value["username"], interface=value["interface"]):
             fail(409, "تأیید بررسی این پورت منقضی شده است؛ ابتدا وضعیت را دوباره بررسی کنید.")
         result = _execute(app, {"operation": "recover", **value})

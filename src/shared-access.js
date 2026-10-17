@@ -6,14 +6,19 @@ const Access = (() => {
   // scope controls as the current offline editor. The server validates every
   // capability independently; this client never treats the UI as a boundary.
   const PERMISSION_GROUPS=[
-    {title:'مشاهده و جست‌وجو',items:[['view-sheets','مشاهدهٔ شیت‌ها و داشبورد'],['search','جست‌وجو در داده‌ها'],['view-history','مشاهدهٔ تاریخچهٔ تغییرات']]},
-    {title:'کار با داده‌ها',items:[['edit-cells','ویرایش مستقیم سلول‌ها'],['save-results','ذخیرهٔ تغییرات نتایج جست‌وجو'],['add-record','افزودن رکورد'],['remove-record','حذف رکورد'],['undo-remove','بازگردانی آخرین حذف']]},
-    {title:'ابزارها و عملیات‌ها',items:[['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
-    {title:'مدیریت',items:[['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها']]}
+    {title:'مشاهده و جست‌وجو',items:[
+      ['view-sheets','مشاهدهٔ شیت‌ها و داشبورد'],['search','جست‌وجو در داده‌ها'],['view-history','مشاهدهٔ تاریخچهٔ تغییرات'],['clear-history','پاک‌سازی تاریخچهٔ تغییرات']]},
+    {title:'کار با داده‌ها',items:[
+      ['edit-cells','ویرایش مستقیم سلول‌ها'],['save-results','ذخیرهٔ تغییرات نتایج جست‌وجو'],['add-record','افزودن رکورد'],['remove-record','حذف رکورد'],['undo-remove','بازگردانی آخرین حذف']]},
+    {title:'ابزارها و عملیات‌ها',items:[
+      ['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
+    {title:'عملیات تجهیزات',items:[['equipment-add','افزودن نود'],['equipment-edit','ویرایش و خروج از دسته'],['equipment-delete','حذف نود'],['equipment-catalog','مدیریت دسته‌های تجهیزات'],['equipment-cards','مدیریت کارت‌های تجهیزات'],['equipment-import','ورود اکسل تجهیزات'],['equipment-export','خروجی اکسل تجهیزات'],['equipment-configuration','پیکربندی نمایشی گروهی'],['equipment-standards','تعریف و ویرایش استانداردها'],['equipment-audit','بررسی و خروجی چک‌لیست'],['equipment-scan','بررسی پورت‌های سوئیچ'],['equipment-repair','رفع نمایشی خطای پورت']]},
+    {title:'مدیریت',items:[
+      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','مدیریت تجهیزات (پیش‌نمایش)']]}
   ];
   const PERMISSIONS=new Set(PERMISSION_GROUPS.flatMap(group=>group.items.map(([id])=>id)));
   const allPermissions=()=>[...PERMISSIONS];
-  const legacyPermissions=role=>role===1?allPermissions():role===2?allPermissions().filter(p=>!['save-results','refresh-panel','import-data','empty-data','restore-data','reset-data','manage-users'].includes(p)):role===3?['view-sheets','search','view-history','edit-cells','refresh-index','export-xlsx','backup-server']:['view-sheets','search'];
+  const legacyPermissions=role=>role===1?allPermissions():role===2?allPermissions().filter(p=>!['save-results','refresh-panel','import-data','empty-data','restore-data','reset-data','manage-users','clear-history'].includes(p)):role===3?['view-sheets','search','view-history','edit-cells','refresh-index','export-xlsx','backup-server']:['view-sheets','search'];
   const allKnownCategoryIds=()=>[...new Set([...(typeof managedCategories==='function'?managedCategories().map(c=>c.id):[]),'other'])];
   const normalizeAccessUser=user=>{
     const sheets=Array.isArray(user?.sheets)?user.sheets.filter(v=>typeof v==='string'):[];
@@ -22,7 +27,7 @@ const Access = (() => {
     if(user?.role>2&&Array.isArray(user?.regions)&&user.regions.length&&!inferred.includes('provinces'))inferred.push('provinces');
     const supplied=Array.isArray(user?.categories)?user.categories.filter(v=>typeof v==='string'):inferred;
     const regions=legacy&&user?.role<=2&&typeof managedRegions==='function'?managedRegions().filter(r=>r.id!=='unassigned').map(r=>r.id):(Array.isArray(user?.regions)?user.regions.filter(v=>typeof v==='string'):[]);
-    return {...user,legacy,sheets,regions:[...new Set(regions)],categories:[...new Set(supplied.includes('*')?allKnownCategoryIds():supplied)],permissions:Array.isArray(user?.permissions)?[...new Set(user.permissions.filter(v=>PERMISSIONS.has(v)))]:legacyPermissions(user?.role)};
+    return {...user,equipmentPolicyVersion:1,equipmentScope:user?.equipmentScope||Object.fromEntries(['types','models','regions','siteKinds','sites'].map(k=>[k,[]])),legacy,sheets,regions:[...new Set(regions)],categories:[...new Set(supplied.includes('*')?allKnownCategoryIds():supplied)],permissions:Array.isArray(user?.permissions)?[...new Set(user.permissions.filter(v=>PERMISSIONS.has(v)))]:legacyPermissions(user?.role)};
   };
   async function credential(password){
     if(password.length<4||password.length>128)throw Error('رمز باید بین ۴ تا ۱۲۸ نویسه باشد.');
@@ -44,7 +49,7 @@ const Access = (() => {
     if(found<0)db.users.push(normalized);else db.users[found]=normalized;
     activeId=normalized.id;state.user=normalized.name;
     document.documentElement.dataset.role='custom';
-    document.documentElement.classList.remove('auth-pending');FamShared.identity(normalized.revision);
+    document.documentElement.classList.remove('auth-pending');document.dispatchEvent(new Event('fam-access-changed'));FamShared.identity(normalized.revision);
   }
   function current(){
     const user=db.users.find(u=>u.id===activeId&&u.enabled);
@@ -66,6 +71,9 @@ const Access = (() => {
   function can(operation,sheet){
     const u=current();if(!u)return false;
     if(operation==='own-password')return true;
+    if(operation==='equipment')return has(u,'equipment-operations')||has(u,'manage-users');
+    if(operation==='clear-history')return has(u,'clear-history')&&has(u,'view-history');
+    if(operation.startsWith('equipment-'))return can('equipment')&&has(u,operation);
     const scoped={read:'view-sheets','search-read':'search',manual:'edit-cells',export:'export-xlsx',backup:'backup-server',add:'add-record',remove:'remove-record','save-results':'save-results','view-history':'view-history',undo:'undo-remove'}[operation];
     if(scoped&&sheet!==undefined)return has(u,scoped)&&scopeAllowsSheet(u,sheet);
     if(operation==='read')return has(u,'view-sheets');
@@ -75,6 +83,31 @@ const Access = (() => {
     const capability={users:'manage-users',admin:'manage-system',source:'source-code',manual:'edit-cells',export:'export-xlsx',backup:'backup-server','view-sheets':'view-sheets','refresh-index':'refresh-index',search:'search',workspace:'view-sheets',add:'add-record',remove:'remove-record',undo:'undo-remove','save-results':'save-results','refresh-panel':'refresh-panel',import:'import-data','empty-data':'empty-data',restore:'restore-data',reset:'reset-data','manage-regions':'manage-regions','manage-categories':'manage-categories','view-history':'view-history'}[operation];
     if(['import','refresh-index','empty-data','restore','reset'].includes(operation))return !!capability&&has(u,capability)&&hasFullDataScope(u);
     return capability?has(u,capability):false;
+  }
+  const equipmentFields={types:'typeId',models:'modelId',regions:'regionId',siteKinds:'siteKindId',sites:'siteId'};
+  function equipmentRef(key,id){const user=db?.users.find(u=>u.id===activeId&&u.enabled),list=user?.equipmentScope?.[key]||[];return list.includes('*')||typeof id==='string'&&list.includes(id);}
+  function equipmentNode(node){return !!node&&Object.entries(equipmentFields).every(([key,field])=>equipmentRef(key,node[field]));}
+  function equipmentView(value){
+    const d=FamEquipmentInventory.validate(value);if(!can('equipment'))return {version:3,catalog:Object.fromEntries(Object.keys(equipmentFields).map(k=>[k,[]])),nodes:[]};
+    for(const key of Object.keys(equipmentFields))d.catalog[key]=d.catalog[key].filter(item=>equipmentRef(key,item.id)&&(key!=='models'||equipmentRef('types',item.typeId))&&(key!=='sites'||equipmentRef('siteKinds',item.siteKindId)));
+    d.nodes=d.nodes.filter(equipmentNode);return FamEquipmentInventory.validate(d);
+  }
+  function equipmentMerge(full,value){
+    if(!can('equipment'))throw Error('مجوز تجهیزات ندارید.');
+    const old=FamEquipmentInventory.validate(full),visible=equipmentView(old),next=FamEquipmentInventory.validate(value),out=structuredClone(old);
+    for(const key of ['nodes',...Object.keys(equipmentFields)]){
+      const before=key==='nodes'?visible.nodes:visible.catalog[key],after=key==='nodes'?next.nodes:next.catalog[key],whole=key==='nodes'?old.nodes:old.catalog[key];
+      const changed=new Set([...before,...after].map(x=>x.id));
+      for(const id of changed){const a=before.find(x=>x.id===id),b=after.find(x=>x.id===id),hidden=whole.find(x=>x.id===id);if(JSON.stringify(a)===JSON.stringify(b))continue;
+        if(!a&&hidden)throw Error('رکورد خارج از محدودهٔ مجاز است.');
+        const permission=key==='nodes'?(!a?'equipment-add':!b?'equipment-delete':'equipment-edit'):'equipment-catalog';
+        if(!can(permission))throw Error('مجوز این تغییر تجهیزات را ندارید.');
+        if(key==='nodes'){if(b&&whole.some(n=>n.id!==id&&n.host===b.host))throw Error('این IP در کل موجودی استفاده شده است.');if(a&&!equipmentNode(a)||b&&!equipmentNode(b))throw Error('نود خارج از محدودهٔ مجاز است.');}
+        else if(!equipmentRef(key,id)||b&&key==='models'&&!equipmentRef('types',b.typeId)||b&&key==='sites'&&!equipmentRef('siteKinds',b.siteKindId))throw Error('دسته خارج از محدودهٔ مجاز است.');
+        const target=key==='nodes'?out.nodes:out.catalog[key],index=target.findIndex(x=>x.id===id);if(!b)target.splice(index,1);else if(index<0)target.push(b);else target[index]=b;
+      }
+    }
+    return FamEquipmentInventory.validate(out);
   }
   function requirePermission(operation,sheet){
     if(can(operation,sheet))return true;
@@ -96,6 +129,7 @@ const Access = (() => {
     const a=node.dataset.act;
     if(['edit-user','logout'].includes(a))return !!current();
     if(a==='manage-users')return can('users');
+    if(a==='clear-log')return can('clear-history');
     if(['show-vba','download-module'].includes(a))return can('source');
     if(a==='run-macro')return macroAllowed(node.dataset.arg);
     if(a==='run-macro-index')return macroAllowed(node.dataset.mod+'.'+node.dataset.name);
@@ -119,6 +153,7 @@ const Access = (() => {
     return can('admin');
   }
   function viewAllowed(view){
+    if(view==='equipment')return can('equipment');
     if(view==='panel')return can('data-access');
     if(view==='sheet')return can('view-sheets');
     if(view==='results')return can('search')||can('remove');
@@ -185,7 +220,7 @@ const Access = (() => {
     const old=field('رمز عبور فعلی','password-current','password'),fresh=field('رمز عبور جدید','password-new','password'),repeat=field('تکرار رمز عبور جدید','password-confirm','password');
     old.input.autocomplete='current-password';[old,fresh,repeat].forEach(f=>{f.input.maxLength=128;f.input.dir='ltr';});
     let saving=false;
-    const close=()=>{if(saving)return;ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
+    const close=()=>{if(saving)return;document.removeEventListener('fam-equipment-changed',equipmentChanged);ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
     const save=el('button',{type:'submit',id:'password-save',class:'btn btn-primary',text:'ثبت روی سرور'}),cancel=el('button',{type:'button',id:'password-cancel',class:'btn btn-ghost',text:'انصراف',onclick:close});
     form.append(old.node,fresh.node,repeat.node,error,el('div',{class:'f'},save,cancel));
     form.addEventListener('submit',async e=>{
@@ -211,8 +246,9 @@ const Access = (() => {
     const status=el('p',{id:'users-status',role:'status','aria-live':'polite'});
     // Creation is the default and remains separate from an explicitly selected
     // account. The submitter decides whether to keep editing or start another.
-    let selected=null, saving=false;
-    const close=()=>{if(saving)return;ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
+    let selected=null, saving=false,equipmentScopeRefresh=null;
+    const equipmentChanged=()=>equipmentScopeRefresh?.();document.addEventListener('fam-equipment-changed',equipmentChanged);
+    const close=()=>{if(saving)return;document.removeEventListener('fam-equipment-changed',equipmentChanged);ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
     const button=(text,id,fn)=>el('button',{type:'button',id,class:'btn btn-ghost btn-sm',text,onclick:fn});
     const drawList=()=>{
       summary.textContent=db.users.length.toLocaleString('fa-IR')+' کاربر ذخیره‌شده · '+db.users.filter(u=>u.enabled&&u.permissions.includes('manage-users')).length.toLocaleString('fa-IR')+' مدیر فعال کاربران';
@@ -281,6 +317,19 @@ const Access = (() => {
       }
       scopes.appendChild(categories);syncRegions();
 
+      const equipmentScope=structuredClone(draft.equipmentScope),eqScope=el('section',{id:'user-equipment-scope',class:'user-scope-section'},el('h4',{text:'محدودهٔ تجهیزات مجاز'}),el('p',{class:'hint',text:'ابعاد با «و» ترکیب می‌شوند. همه یعنی دسته‌های فعلی و آینده؛ انتخاب‌های تکی با شناسه ثابت ذخیره می‌شوند و تغییر نام خودکار است. هیچ انتخابی یعنی عدم دسترسی در آن بُعد.'}));
+      equipmentScopeRefresh=()=>{eqScope.querySelectorAll('fieldset,.category-error').forEach(n=>n.remove());try{const data=FamEquipmentServer.inventory();
+       for(const [key,label]of Object.entries(FamEquipmentInventory.dimensions)){
+        const group=el('fieldset',{class:'permission-group'},el('legend',{text:label})),selected=new Set(equipmentScope[key]);
+        const all=el('input',{type:'checkbox','data-equipment-all':key,checked:selected.has('*')});
+        const redraw=()=>{group.querySelectorAll('input[data-equipment-ref]').forEach(input=>{input.checked=selected.has(input.dataset.equipmentRef);input.disabled=selected.has('*');});equipmentScope[key]=[...selected];};
+        all.addEventListener('change',()=>{selected.delete('*');if(all.checked)selected.add('*');redraw();});group.appendChild(el('label',{class:'access-check'},all,txt('همهٔ دسته‌های فعلی و آینده')));
+        for(const item of data.catalog[key]){const parent=item.typeId?data.catalog.types.find(t=>t.id===item.typeId):item.siteKindId?data.catalog.siteKinds.find(k=>k.id===item.siteKindId):null;const check=el('input',{type:'checkbox','data-equipment-dimension':key,'data-equipment-ref':item.id,checked:selected.has(item.id),onchange:e=>{e.target.checked?selected.add(item.id):selected.delete(item.id);redraw();}});group.appendChild(el('label',{class:'access-check'},check,txt(item.name+(parent?' — '+parent.name:''))));}
+        for(const id of selected)if(id!=='*'&&!data.catalog[key].some(x=>x.id===id))group.appendChild(el('p',{class:'category-error',text:'دسته حذف‌شده؛ دسترسی مسدود: '+id}));redraw();eqScope.appendChild(group);
+       }
+      }catch(e){eqScope.appendChild(el('p',{class:'category-error',text:'دسته‌های تجهیزات خوانده نشدند؛ انتخاب‌های قبلی حفظ می‌شوند.'}));}
+      };equipmentScopeRefresh();scopes.appendChild(eqScope);
+
       const permissionSection=el('section',{id:'user-permissions',class:'user-permission-section'},
         el('h4',{text:'۲. عملیات مجاز'}),
         el('p',{class:'hint',text:'هر عملیات فقط در محدودهٔ دادهٔ انتخاب‌شده در بالا اعمال می‌شود. مجوزهای مدیریتی مستقل از داده هستند.'}));
@@ -301,7 +350,7 @@ const Access = (() => {
         saving=true;save.disabled=true;saveAndNew.disabled=true;cancel.disabled=true;error.textContent='';
         try{
           const changed={...draft,legacy:false,username:username(un.input.value),name:name.input.value.trim(),enabled:enabled.checked,
-            categories:[...cs],regions:cs.has('provinces')?[...rs]:[],sheets:[],permissions:[...ps],revision:crypto.randomUUID()};
+            categories:[...cs],regions:cs.has('provinces')?[...rs]:[],sheets:[],permissions:[...ps],equipmentScope,equipmentPolicyVersion:1,revision:crypto.randomUUID()};
           if(!/^[a-z0-9_.-]{3,40}$/.test(changed.username))throw Error('نام کاربری باید ۳ تا ۴۰ نویسه انگلیسی، عدد، نقطه، خط تیره یا زیرخط باشد.');
           if(!changed.name || changed.name.length>60)throw Error('نام نمایشی باید بین ۱ تا ۶۰ نویسه باشد.');
           if(db.users.some(u=>u.id!==changed.id && u.username===changed.username))throw Error('این نام کاربری قبلاً ثبت شده است.');
@@ -310,7 +359,7 @@ const Access = (() => {
           const next={version:1,users:original?db.users.map(u=>u.id===original.id?changed:u):db.users.concat(changed)};
           if(!next.users.some(u=>u.enabled&&u.permissions.includes('manage-users')))throw Error('حداقل یک مدیر فعال مدیریت کاربران لازم است. برای ساخت حساب جداگانه، «کاربر جدید» را بزنید.');
           await persist(next);pw.input.value='';
-          if(changed.id===activeId){if(!changed.enabled){await logout();return;}establish(changed);}
+          if(changed.id===activeId){if(!changed.enabled){await logout();return;}establish(db.users.find(user=>user.id===changed.id));}
           selected=createAnother?null:changed.id;
           status.textContent=createAnother
             ? 'کاربر «'+changed.username+'» ذخیره شد. فرم کاربر جدید آماده است.'
@@ -345,5 +394,5 @@ const Access = (() => {
   }
   // Custom access uses the regular application views; no level-specific viewer.
   function renderViewer(){ document.getElementById('access-viewer')?.remove(); }
-  return Object.freeze({start,current,can,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,editOwnPassword,manageUsers,logout,renderViewer});
+  return Object.freeze({start,current,can,equipmentView,equipmentMerge,equipmentNode,require:requirePermission,macroAllowed,actionAllowed,viewAllowed,hideOperations,accountMenu,editOwnPassword,manageUsers,logout,renderViewer});
 })();

@@ -35,6 +35,11 @@ except ImportError:
     except ImportError:
         register_equipment_ops=None
 
+try:
+    from . import equipment_inventory as eq_inventory
+except ImportError:
+    import equipment_inventory as eq_inventory
+
 ROOT = Path(__file__).resolve().parent
 SYSTEM = {'CONTROL_PANEL','SYSTEM_SEARCH_INDEX','SYSTEM_SHEET_CONFIG','SYSTEM_DATA_DICTIONARY','CHANGE_LOG','SEARCH_RESULTS','SYSTEM_KEYS','SYSTEM_UNDO_BUFFER','SYSTEM_NAVIGATOR'}
 EPHEMERAL = SYSTEM - {'SYSTEM_SHEET_CONFIG', 'SYSTEM_KEYS'}
@@ -58,6 +63,7 @@ PERMISSIONS={
     'refresh-panel','refresh-index','import-data','export-xlsx','backup-server','restore-data','empty-data','reset-data',
     'manage-regions','manage-categories','manage-users','equipment-operations'
 }
+PERMISSIONS |= eq_inventory.OPS | {'clear-history'}
 DATA_PERMISSIONS={'view-sheets','search','edit-cells','save-results','add-record','remove-record','undo-remove','export-xlsx'}
 FULL_REWRITE_PERMISSIONS={'import-data','empty-data','reset-data','restore-data'}
 BUILTIN_CATEGORIES={'provinces','datacenters','services','carriers','equipment','costs','other'}
@@ -446,6 +452,12 @@ def public_user(row):
     # first save through the new custom-access editor.
     if row['categories'] is not None and row['permissions'] is not None:
         value['categories']=load_list('categories');value['permissions']=load_list('permissions')
+    try:
+        stored=json.loads(row['equipment_scope']) if 'equipment_scope' in row.keys() and row['equipment_scope'] is not None else None
+        permissions,scopes=eq_inventory.policy(value,stored)
+        value['equipmentScope']=scopes;value['equipmentPolicyVersion']=1
+        if 'permissions' in value:value['permissions']=value['permissions']+sorted(permissions-set(value['permissions']))
+    except (ValueError,TypeError,KeyError):fail(500,'سیاست تجهیزات حساب معتبر نیست؛ مدیر باید آن را بررسی کند.')
     return value
 
 def credentials(password,salt=None):
@@ -524,12 +536,14 @@ def create_app(config=None):
         columns={row['name'] for row in db.execute('PRAGMA table_info(users)')}
         if 'categories' not in columns:db.execute('ALTER TABLE users ADD COLUMN categories TEXT')
         if 'permissions' not in columns:db.execute('ALTER TABLE users ADD COLUMN permissions TEXT')
+        if 'equipment_scope' not in columns:db.execute('ALTER TABLE users ADD COLUMN equipment_scope TEXT')
+        if 'history_floor' not in {r['name'] for r in db.execute('PRAGMA table_info(settings)')}:db.execute('ALTER TABLE settings ADD COLUMN history_floor INTEGER NOT NULL DEFAULT 0')
     with transaction() as db:
         if not db.execute('SELECT 1 FROM state').fetchone():
             if not fresh:raise RuntimeError('Existing database has lost its state; refusing to reseed accounts.')
             salt,digest=credentials(os.environ.get('FAM_INITIAL_PASSWORD','1109'))
             db.execute('INSERT INTO state VALUES(1,0,?,?,0)',(str(uuid.uuid4()),packed(EMPTY)))
-            db.execute('INSERT INTO settings VALUES(1,0)')
+            db.execute('INSERT INTO settings(id,users_revision) VALUES(1,0)')
             db.execute('INSERT INTO users(id,username,name,role,enabled,regions,sheets,categories,permissions,revision,salt,hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
               (str(uuid.uuid4()),'admin','admin',1,1,packed([str(index) for index in range(1,len(REGIONS)+1)]),'[]',packed(sorted(BUILTIN_CATEGORIES)),packed(sorted(PERMISSIONS)),str(uuid.uuid4()),salt,digest))
         if not db.execute('SELECT 1 FROM settings WHERE id=1').fetchone():raise RuntimeError('Database settings missing; restore a verified backup.')
@@ -575,10 +589,14 @@ def create_app(config=None):
         safe_tree(value);return value
     def admin(user):
         if not may_manage_users(user):fail(403,'مجوز مدیریت کاربران و دسترسی‌ها لازم است.')
-    def equipment_allowed(user):
-        # Existing access managers retain access during migration.  Other
-        # custom accounts require the explicit Equipment Management capability.
-        return (may_manage_users(user) or has_permission(user,'equipment-operations')) if is_custom_user(user) else user['role']<=2
+    def equipment_allowed(user,operation=None,host=None):
+        if not eq_inventory.permitted(user,'equipment-repair' if operation=='recover' else 'equipment-scan'):return False
+        if host is None:return True
+        if all('*' in user['equipmentScope'][k] for k in eq_inventory.FIELDS):return True
+        with connect() as db:
+            row=db.execute('SELECT payload FROM equipment_state WHERE id=1').fetchone()
+            nodes=eq_inventory.view(user,json.loads(row['payload'])['inventory'])['nodes']
+        return sum(n['host']==host for n in nodes)==1
     def backup_allowed(user):
         if is_custom_user(user):
             if not has_permission(user,'backup-server'):fail(403,'مجوز پشتیبان‌گیری لازم است.')
@@ -610,10 +628,10 @@ def create_app(config=None):
         p['savedAt']=row['saved_at']
         may_see_log=has_permission(user,'view-history') if is_custom_user(user) else user['role']<=2
         if may_see_log:
-            logs=db.execute('SELECT revision,at,actor,names FROM audit ORDER BY revision DESC LIMIT 200').fetchall()
+            logs=db.execute('SELECT revision,at,actor,names FROM audit WHERE revision>(SELECT history_floor FROM settings WHERE id=1) ORDER BY revision DESC LIMIT 200').fetchall()
             p['sheets']['CHANGE_LOG']={'rows':[['Time','Action','Sheets','Revision','User','Status','Notes']]+[[time.strftime('%Y-%m-%d %H:%M:%S',time.gmtime(a['at']/1000)),'SERVER_COMMIT',a['names'],a['revision'],a['actor'],'SUCCESS','ثبت قطعی سرور'] for a in reversed(logs)],'merges':[]}
             p['order'].append('CHANGE_LOG')
-        return {'revision':row['revision'],'epoch':row['epoch'],'state':p,'user':user}
+        return {'revision':row['revision'],'epoch':row['epoch'],'historyFloor':db.execute('SELECT history_floor FROM settings WHERE id=1').fetchone()[0],'state':p,'user':user}
     @app.get('/')
     def root():
         # IIS serves this small public login document. Keep the loopback root
@@ -677,11 +695,12 @@ def create_app(config=None):
         with connect() as db:
             row=db.execute('SELECT revision,epoch FROM state WHERE id=1').fetchone()
             audit=db.execute('SELECT actor,at FROM audit WHERE revision=?',(row['revision'],)).fetchone()
+            history_floor=db.execute('SELECT history_floor FROM settings WHERE id=1').fetchone()[0]
         change={'revision':row['revision'],'at':audit['at'] if audit else None}
         # Scoped accounts do not receive the name of a colleague who changed
         # data outside their permitted scope.
         if audit and ((has_permission(g.user,'view-history')) if is_custom_user(g.user) else g.user['role']<=3):change['actor']=audit['actor']
-        return jsonify(revision=row['revision'],epoch=row['epoch'],userRevision=g.user['revision'],change=change)
+        return jsonify(revision=row['revision'],epoch=row['epoch'],userRevision=g.user['revision'],historyFloor=history_floor,change=change)
     @app.post('/api/backups')
     def create_manual_backup():
         # A browser may request a backup, but it never receives database bytes
@@ -763,14 +782,18 @@ def create_app(config=None):
                     role=x.get('role')
                     if type(role)!=int or role not in [1,2,3,4]:fail(400,'سطح دسترسی قدیمی معتبر نیست.')
                     categories=permissions=None;cat_value=perm_value=None
+                try:
+                    eq_scope=eq_inventory.scope(x['equipmentScope']) if 'equipmentScope' in x else (eq_inventory.scope(json.loads(previous['equipment_scope'])) if previous and previous['equipment_scope'] else eq_inventory.policy({'role':role})[1] if not custom else {k:[] for k in eq_inventory.FIELDS})
+                except (ValueError,TypeError,KeyError):fail(400,'محدودهٔ تجهیزات معتبر نیست.')
                 password=x.get('password')
                 if previous is None and not password:fail(400,'رمز کاربر جدید لازم است.')
                 salt,digest=credentials(password) if password else (previous['salt'],previous['hash'])
                 pub={'id':uid,'username':name,'name':display.strip(),'role':role,'enabled':enabled,'regions':x['regions'],'sheets':x['sheets']}
                 if custom:pub['categories']=categories;pub['permissions']=permissions
+                pub['equipmentScope']=eq_scope;pub['equipmentPolicyVersion']=1
                 changed=not previous or password or any(public_user(previous).get(key)!=value for key,value in pub.items()) or (previous and (previous['categories']!=cat_value or previous['permissions']!=perm_value))
                 revision=str(uuid.uuid4()) if changed else previous['revision']
-                normal.append({'id':uid,'username':name,'name':display.strip(),'role':role,'enabled':enabled,'regions':x['regions'],'sheets':x['sheets'],'categories':cat_value,'permissions':perm_value,'revision':revision,'salt':salt,'hash':digest,'public':pub})
+                normal.append({'id':uid,'username':name,'name':display.strip(),'role':role,'enabled':enabled,'regions':x['regions'],'sheets':x['sheets'],'categories':cat_value,'permissions':perm_value,'revision':revision,'salt':salt,'hash':digest,'public':pub,'equipment_scope':packed(eq_scope)})
             if not any(item['enabled'] and may_manage_users(item['public']) for item in normal):fail(400,'حداقل یک مدیر فعال مدیریت کاربران لازم است.')
             for uid in set(old)-ids:db.execute('DELETE FROM users WHERE id=?',(uid,))
             # Update in-place: REPLACE would cascade-delete active sessions.
@@ -778,6 +801,7 @@ def create_app(config=None):
                 db.execute('''INSERT INTO users(id,username,name,role,enabled,regions,sheets,categories,permissions,revision,salt,hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
                   ON CONFLICT(id) DO UPDATE SET username=excluded.username,name=excluded.name,role=excluded.role,enabled=excluded.enabled,regions=excluded.regions,sheets=excluded.sheets,categories=excluded.categories,permissions=excluded.permissions,revision=excluded.revision,salt=excluded.salt,hash=excluded.hash''',
                   (item['id'],item['username'],item['name'],item['role'],int(item['enabled']),packed(item['regions']),packed(item['sheets']),item['categories'],item['permissions'],item['revision'],item['salt'],item['hash']))
+                db.execute('UPDATE users SET equipment_scope=? WHERE id=?',(item['equipment_scope'],item['id']))
                 if item['id']==u['id'] and item['enabled'] and may_manage_users(item['public']):db.execute('UPDATE sessions SET user_revision=? WHERE token=?',(item['revision'],session['token']))
             db.execute('UPDATE settings SET users_revision=users_revision+1 WHERE id=1')
             return jsonify(users_result(db))
@@ -794,6 +818,19 @@ def create_app(config=None):
             db.execute('UPDATE sessions SET user_revision=? WHERE token=?',(rev,session['token']))
             db.execute('UPDATE settings SET users_revision=users_revision+1 WHERE id=1')
             return jsonify(user=public_user(db.execute('SELECT * FROM users WHERE id=?',(u['id'],)).fetchone()))
+
+    @app.post('/api/history/clear')
+    def clear_history():
+        body=data()
+        if body!={'confirm':True}:fail(400,'تأیید پاک‌سازی لازم است.')
+        with transaction() as db:
+            u,_=user_and_session(db)
+            if not ((has_permission(u,'clear-history') and has_permission(u,'view-history')) if is_custom_user(u) else u['role']==1):fail(403,'مجوز پاک‌سازی تاریخچه ندارید.')
+            revision=db.execute('SELECT revision FROM state WHERE id=1').fetchone()[0]
+            db.execute('UPDATE settings SET history_floor=? WHERE id=1',(revision,))
+            return jsonify(ok=True)
+
+    eq_inventory.register(app,connect,transaction,user_and_session,data,fail,packed)
 
     def page_session():
         with connect() as db:

@@ -53,6 +53,7 @@ if wheels.exists():
 FILES=(
     (ROOT/'server'/'app.py','app.py'),
     (ROOT/'server'/'equipment_ops.py','equipment_ops.py'),
+    (ROOT/'server'/'equipment_inventory.py','equipment_inventory.py'),
     (ROOT/'server'/'equipment_probe.py','equipment_probe.py'),
     (ROOT/'server'/'windows'/'start.ps1','start.ps1'),
     (ROOT/'server'/'private_ui'/'FAM.html','FAM.html'),

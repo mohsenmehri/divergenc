@@ -15,9 +15,9 @@ $ErrorActionPreference='Stop';Set-StrictMode -Version Latest
 $PatchRoot=Split-Path -Parent $PSCommandPath;$Payload=Join-Path $PatchRoot 'payload';$Server=Join-Path $InstallRoot 'server'
 $StartPath=Join-Path $Server 'windows\start.ps1';$FAMPython=Join-Path $Server '.venv\Scripts\python.exe';$SshClient=Join-Path $env:SystemRoot 'System32\OpenSSH\ssh.exe';$EquipmentDir=Join-Path $DataDir 'equipment';$BackupDir=Join-Path $DataDir 'backups'
 $Stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
-$ExpectedNames=@('app.py','equipment_ops.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js','web.config')
+$ExpectedNames=@('app.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js','web.config')
 $Target=@{
-  'app.py'=(Join-Path $Server 'app.py');'equipment_ops.py'=(Join-Path $Server 'equipment_ops.py');'equipment_probe.py'=(Join-Path $Server 'equipment_probe.py');'start.ps1'=$StartPath;
+  'equipment_inventory.py'=(Join-Path $Server 'equipment_inventory.py');'app.py'=(Join-Path $Server 'app.py');'equipment_ops.py'=(Join-Path $Server 'equipment_ops.py');'equipment_probe.py'=(Join-Path $Server 'equipment_probe.py');'start.ps1'=$StartPath;
   'FAM.html'=(Join-Path $Server 'private_ui\FAM.html');'login.html'=(Join-Path $Server 'www\login.html');'login.css'=(Join-Path $Server 'www\login.css');
   'login.js'=(Join-Path $Server 'www\login.js');'web.config'=(Join-Path $Server 'www\web.config')
 }
@@ -53,7 +53,7 @@ function Restore-Backup {
   if(!$Backup){return};Stop-ScheduledTask -TaskName 'FAM-Central' -ErrorAction SilentlyContinue;try{Wait-Backend $false}catch{}
   foreach($Name in @('app.py','start.ps1','web.config')){Copy-Required (Join-Path $Backup $Name) $Target[$Name]}
   Copy-Required (Join-Path $Backup 'legacy-FAM.html') $LegacyHtml
-  foreach($Name in @('equipment_ops.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js')){
+  foreach($Name in @('equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js')){
     if($Presence[$Name]){Copy-Required (Join-Path $Backup $Name) $Target[$Name]}else{Remove-Item -LiteralPath $Target[$Name] -Force -ErrorAction SilentlyContinue}
   }
 }
@@ -67,7 +67,7 @@ try {
   if(!(Test-Path -LiteralPath $DataDir -PathType Container)){throw 'C:\FAMData is missing. No file was changed.'};New-Item -ItemType Directory -Force -Path $BackupDir|Out-Null
   $Backup=Join-Path $BackupDir ('custom-access-'+$Stamp);New-Item -ItemType Directory -Force -Path $Backup|Out-Null
   Copy-Required $Target['app.py'] (Join-Path $Backup 'app.py');Copy-Required $Target['start.ps1'] (Join-Path $Backup 'start.ps1');Copy-Required $LegacyHtml (Join-Path $Backup 'legacy-FAM.html');Copy-Required $Target['web.config'] (Join-Path $Backup 'web.config')
-  foreach($Name in @('equipment_ops.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js')){$Presence[$Name]=Test-Path -LiteralPath $Target[$Name] -PathType Leaf;if($Presence[$Name]){Copy-Required $Target[$Name] (Join-Path $Backup $Name)}}
+  foreach($Name in @('equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js')){$Presence[$Name]=Test-Path -LiteralPath $Target[$Name] -PathType Leaf;if($Presence[$Name]){Copy-Required $Target[$Name] (Join-Path $Backup $Name)}}
   Test-OpenSshClient;Stop-FamTask;$Copied=$true
   $RetiredWorker=Get-ScheduledTask -TaskName 'FAM-NetworkWorker' -ErrorAction SilentlyContinue
   if($RetiredWorker){
