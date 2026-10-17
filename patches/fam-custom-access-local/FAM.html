@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" data-fam-ui="16" data-default-theme="original" class="auth-pending">
 <head>
+<meta name="fam-brand-release" content="FAM-BRAND-BACKGROUND-20261018">
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1865,7 +1866,7 @@ html.workspace-choosing,html.workspace-choosing body{overflow:hidden!important;h
 #workspace-launcher[open]{display:grid;place-items:center}
 #workspace-launcher *{box-sizing:border-box}
 .workspace-portal{width:min(960px,100%);margin:auto}
-.workspace-portal-top{display:flex;gap:18px;align-items:center;margin-bottom:64px;font-size:12px;color:var(--txt-2)}
+.workspace-portal-top{display:flex;gap:18px;align-items:center;margin-bottom:24px;font-size:12px;color:var(--txt-2)}
 .workspace-brand{color:var(--txt-0);font:bold 21px ui-monospace,Consolas,monospace;letter-spacing:4px;padding:9px 14px;border:1px solid var(--stroke-2);border-radius:12px;background:var(--bg-1)}
 .workspace-exit{font:inherit;margin-inline-start:auto;padding:9px 14px;border-radius:10px;border:1px solid var(--stroke-2);background:var(--bg-1);color:var(--txt-1);cursor:pointer}
 .workspace-kicker{font:10px ui-monospace,Consolas,monospace;letter-spacing:3px;direction:ltr;text-align:center;color:var(--txt-2)}
@@ -1916,10 +1917,10 @@ html.workspace-choosing,html.workspace-choosing body{overflow:hidden!important;h
 .eq-tool-card{background:var(--eq-surface);border-color:var(--eq-line)}.eq-tool-content .eq-tool-options,.eq-tool-check{background:var(--eq-soft);border-color:var(--eq-line)}.eq-tool-card h4,.eq-tool-policy strong{color:var(--eq-text)}.eq-tool-policy{border-color:var(--eq-line)}
 </style>
 <style id="fam-equipment-workspace-css">
-/* Equipment v2 — isolated design system, RTL, light/dark, no legacy card maze. */
-#equipment-workspace,.eq-dialog{--eq-accent:#6b9cff;--eq-bg:#111a2b;--eq-surface:#182337;--eq-soft:#202e44;--eq-line:#2c3a50;--eq-text:#eaf0fa;--eq-muted:#9fadc2;--eq-success:#74d8bd;--eq-warning:#efc57a;--eq-danger:#ff9eaa;color:var(--eq-text);font-family:inherit;line-height:1.8;direction:rtl;box-sizing:border-box}
+/* Equipment v2 — shared dashboard palette/background, RTL, light/dark. */
+#equipment-workspace,.eq-dialog{--eq-accent:var(--cyan);--eq-bg:var(--bg-1);--eq-surface:var(--glass);--eq-soft:var(--glass-2);--eq-line:var(--stroke);--eq-text:var(--txt-0);--eq-muted:var(--txt-1);--eq-success:#74d8bd;--eq-warning:#efc57a;--eq-danger:#ff9eaa;color:var(--eq-text);font-family:inherit;line-height:1.8;direction:rtl;box-sizing:border-box}
 html[data-ui-theme="light"] #equipment-workspace,html[data-ui-theme="light"] .eq-dialog{--eq-accent:#315edb;--eq-bg:#f4f6fa;--eq-surface:#fff;--eq-soft:#f5f7fb;--eq-line:#e3e8f0;--eq-text:#1e2e48;--eq-muted:#65758c;--eq-success:#167d66;--eq-warning:#986515;--eq-danger:#bc3450}
-#equipment-workspace{max-width:1600px;margin:0 auto;background:var(--eq-bg);border:1px solid var(--eq-line);border-radius:18px;box-shadow:0 12px 40px #0000000a;overflow:clip;isolation:isolate}
+#equipment-workspace{max-width:1600px;margin:0 auto;background:transparent;border:1px solid var(--eq-line);border-radius:18px;box-shadow:0 12px 40px #0000000a;overflow:clip;isolation:isolate}
 #equipment-workspace *,.eq-dialog *{box-sizing:border-box}
 #view-equipment>.view-head .sub{font-size:10px;letter-spacing:1.4px}
 .eq-workspace-header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:28px 32px 24px;background:var(--eq-surface)}
@@ -1966,9 +1967,9 @@ html[data-ui-theme="light"] #equipment-workspace,html[data-ui-theme="light"] .eq
 /* Fit the existing flex content container; horizontal scrolling is table-only. */
 #equipment-workspace{width:100%;min-width:0;flex-shrink:1}
 #view-equipment.active>.content{display:block;min-width:0;max-width:100%;padding:22px;overflow-x:clip}
-html:has(#view-equipment.active) #fx-stage{display:none!important}
-#view-equipment.active{background:#101a2b}
-html[data-ui-theme="light"] #view-equipment.active{background:#f4f6fa}
+/* Keep the same global FX and background as the dashboard; light-theme FX
+   and reduced-motion preferences remain controlled by the shared theme. */
+#view-equipment.active{background:transparent}
 html[data-ui-theme="light"] #view-equipment.active>.view-head{background:#fff;color:#1e2e48}
 @media(max-width:760px){#view-equipment.active>.content{padding:12px 9px}.eq-main{overflow:hidden}}
 #equipment-server-note{max-width:1600px;margin:0 auto 12px;padding:0 2px;font-size:10px;background:transparent;border:0;color:#a7b6cb}
@@ -1979,12 +1980,22 @@ html:has(#view-equipment.active) #topbar .top-search,
 html:has(#view-equipment.active) #topbar [data-act="open-file"],
 html:has(#view-equipment.active) #topbar [data-act="save-now"],
 html:has(#view-equipment.active) #topbar #save-indicator{display:none!important}
-html:has(#view-equipment.active) #topbar{display:flex;flex-wrap:nowrap;min-height:64px;padding:12px 18px;gap:10px;background:#111a2b;border-bottom:1px solid #2c3a50;box-shadow:none}
+html:has(#view-equipment.active) #topbar{display:flex;flex-wrap:nowrap;min-height:64px;padding:12px 18px;gap:10px}
 html[data-ui-theme="light"]:has(#view-equipment.active) #topbar{background:#fff;border-color:#e3e8f0;color:#1e2e48}
 html:has(#view-equipment.active) #topbar .page-title{min-width:0}
 html[data-ui-theme="light"]:has(#view-equipment.active) #topbar #top-title{color:#1e2e48}
 html[data-ui-theme="light"]:has(#view-equipment.active) #topbar :is(.icon-btn,.stat-pill){background:#f5f7fb;color:#4e6180;border-color:#e3e8f0}
 @media(max-width:760px){html:has(#view-equipment.active) #topbar{padding:10px;gap:7px}html:has(#view-equipment.active) #topbar #top-sub{display:none}html:has(#view-equipment.active) #topbar .spacer{min-width:0;flex:1}html:has(#view-equipment.active) #topbar #stat-line{max-width:65px;overflow:hidden}html:has(#view-equipment.active) #topbar .top-actions{width:auto;flex-wrap:nowrap}}
+</style>
+<style id="fam-fam-brand-css">
+/* One vertical identity on login and the two-workspace chooser, in both themes. */
+.fam-brand-lockup{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;margin:0 auto;text-align:center;max-width:100%;direction:rtl}
+.fam-brand-art{display:block;width:88px;height:90px;max-width:100%;object-fit:contain;flex-shrink:0}
+.fam-brand-caption{max-width:100%;font-family:inherit;font-size:clamp(11px,1.2vw,14px);font-weight:650;line-height:1.9;color:var(--txt-0);text-wrap:balance;overflow-wrap:anywhere}
+.fam-brand-login{margin:8px auto 20px}
+.fam-brand-workspace{margin:0 auto 24px}
+.fam-brand-workspace .fam-brand-art{width:98px;height:100px}
+@media(max-width:640px){.fam-brand-art,.fam-brand-workspace .fam-brand-art{width:76px;height:78px}.fam-brand-workspace{margin-bottom:18px}.fam-brand-caption{font-size:11px}.fam-brand-lockup{gap:10px}}
 </style>
 </head>
 <body>
@@ -8869,7 +8880,7 @@ const Access = (() => {
       const p=field('رمز عبور','auth-password','password');p.input.autocomplete='current-password';
       const error=el('p',{id:'auth-error',role:'alert',class:'category-error'});
       const submit=el('button',{type:'submit',class:'btn btn-primary',id:'auth-submit',text:'ورود'});
-      form.append(el('h2',{id:'auth-title',text:'ورود به فام'}),
+      form.append(el('h2',{id:'auth-title',text:'ورود به فام'}),FamBrand.create('fam-brand-login'),
         el('p',{class:'hint',text:'نسخه محلی HTML — حساب‌ها و داده‌ها در همین مرورگر نگهداری می‌شوند. این محدودیت‌ها جای امنیت سمت سرور را نمی‌گیرند.'}));
       if(storageError){form.append(el('p',{role:'alert',text:'حساب‌های ذخیره‌شده قابل خواندن نیستند یا ذخیره‌سازی مرورگر مسدود است. برای جلوگیری از از‌دست‌رفتن دسترسی، راه‌اندازی مجدد خودکار انجام نمی‌شود. نسخه پشتیبان مرورگر را بررسی کنید.'}));}
       else{
@@ -9810,7 +9821,7 @@ async function startProvinceAdd(selectedName) {
     top.append(node('span','workspace-brand','FAM'),node('span','workspace-user',user.name+'، خوش آمدید'));
     const exit=node('button','workspace-exit','خروج از حساب');exit.type='button';exit.id='workspace-logout';exit.addEventListener('click',()=>Access.logout());top.append(exit);
     const heading=node('h1','','از کجا شروع کنیم؟');heading.id='workspace-title';
-    shell.append(top,node('p','workspace-kicker','ONE ACCOUNT · TWO WORKSPACES'),heading,node('p','workspace-intro','فضای کاری خود را انتخاب کنید؛ هر زمان خواستید بین دو بخش جابه‌جا شوید.'));
+    shell.append(top,FamBrand.create('fam-brand-workspace'),heading,node('p','workspace-intro','فضای کاری خود را انتخاب کنید؛ هر زمان خواستید بین دو بخش جابه‌جا شوید.'));
     const choices=node('div','workspace-options');
     for(const [view,title,sub,index]of [['panel','پایگاه داده','داشبورد، جست‌وجو و مدیریت داده‌های شبکه','01'],['equipment','مدیریت تجهیزات','فهرست تجهیزات، بررسی پورت‌ها و ابزارهای آفلاین','02']]){
       const allowed=Access.viewAllowed(view),button=node('button','workspace-option workspace-option-'+view);button.type='button';button.id='workspace-enter-'+view;button.disabled=!allowed;button.setAttribute('aria-label',title);
@@ -9977,6 +9988,19 @@ document.addEventListener('DOMContentLoaded',()=>{
  window.addEventListener('storage',e=>{if([KEY,CARDS_KEY,'fam.equipment.standards.v1'].includes(e.key)&&!refreshQueued){refreshQueued=true;queueMicrotask(()=>{refreshQueued=false;closeDialog();load();render();});}});
  document.addEventListener('click',e=>{const t=e.target.closest?.('[data-view],#account-logout,#workspace-logout');if(!t)return;if(['account-logout','workspace-logout'].includes(t.id)){reset();return;}if(t.dataset.view==='equipment'){load();render();}else if(t.dataset.view){closeDialog();configuration.suspend();equipmentTools.suspend();window.FamEquipmentLive?.suspend();}},true);
  load();render();
+});
+</script>
+<script id="fam-fam-brand-js">
+/* Reuse the exact embedded sidebar artwork: offline, no extra image request. */
+window.FamBrand=Object.freeze({
+  create(variant=''){
+    const source=document.querySelector('#sidebar .brand-logo img');
+    if(!source)throw Error('FAM sidebar logo is missing');
+    const figure=document.createElement('figure');figure.className='fam-brand-lockup '+variant;
+    const image=source.cloneNode(false);image.removeAttribute('id');image.alt='لوگوی فام';image.className='fam-brand-art';image.decoding='async';
+    const caption=document.createElement('figcaption');caption.className='fam-brand-caption';caption.textContent='تجارت الکترونیک و فناوری اطلاعات ملل (فام)';
+    figure.append(image,caption);return figure;
+  }
 });
 </script>
 </body>

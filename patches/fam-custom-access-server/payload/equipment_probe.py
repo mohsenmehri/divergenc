@@ -59,7 +59,7 @@ SECRET_ENV = "FAM_EQUIPMENT_SSH_SECRET"
 CONNECT_TIMEOUT = 10
 SESSION_TIMEOUT = 25
 INSPECT_SESSION_TIMEOUT = 2 * SESSION_TIMEOUT
-HELPER_DEADLINE = {"status": 30, "inspect": 55, "descriptions": 30, "recover": 85}
+HELPER_DEADLINE = {"status": 30, "inspect": 55, "descriptions": 30, "recover": 85, "diagnose": 85}
 MAX_OUTPUT_BYTES = 1024 * 1024
 
 STATUS_COMMANDS = ("terminal length 0", "show interfaces status", "exit")
@@ -571,11 +571,34 @@ def _recover(job,deadline):
 
 
 
+def diagnose(job):
+    # Two deliberate read phases, one request-owned ASKPASS; never retry auth.
+    try:
+        from . import equipment_diagnostics as diagnostic
+    except ImportError:
+        import equipment_diagnostics as diagnostic
+    deadline=Deadline(HELPER_DEADLINE['diagnose']);workdir=runtime_directory();askpass=None
+    try:
+        askpass=prepare_askpass(workdir);shared={**job,'_askpass':(askpass,workdir)}
+        version=session_output(shared,('terminal length 0','show version','exit'),deadline)
+        try:hardware=diagnostic.profile(version)
+        except ValueError:raise ProbeError('unsupported_platform') from None
+        output=session_output(shared,('terminal length 0',*diagnostic.READS,'exit'),deadline,50)
+        try:
+            report=diagnostic.assess(hardware,diagnostic.client(job['clientIp'],job['clientMac']),output)
+            diagnostic.validate_report(report)
+            encoded=json.dumps(report).casefold()
+            if any(secret.casefold() in encoded for secret in (job['username'],job['password'])):raise ValueError('sensitive result')
+            return {'ok':True,'report':report}
+        except (ValueError,TypeError):raise ProbeError('diagnosis_unreadable') from None
+    finally:_cleanup_runtime(workdir,askpass)
+
+
 def execute(value):
     """Run one already-decoded, bounded job and return only its safe result."""
-    if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}):
+    if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}, {"operation", "host", "username", "password", "clientIp", "clientMac"}):
         return {"ok": False, "error": "invalid_request"}
-    if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "inspect", "descriptions", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
+    if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "inspect", "descriptions", "recover", "diagnose"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
         return {"ok": False, "error": "invalid_request"}
     try:
         address = ipaddress.ip_address(value["host"])
@@ -592,11 +615,19 @@ def execute(value):
         return {"ok": False, "error": "invalid_request"}
     if value["operation"] != "recover" and "interface" in value:
         return {"ok": False, "error": "invalid_request"}
+    if value['operation']=='diagnose':
+        try:
+            if __package__:from .equipment_diagnostics import client
+            else:from equipment_diagnostics import client
+            target=client(value.get('clientIp'),value.get('clientMac'))
+        except (ValueError,TypeError):return {'ok':False,'error':'invalid_request'}
+    elif 'clientIp' in value or 'clientMac' in value:return {'ok':False,'error':'invalid_request'}
     job = {"host": str(address), "username": value["username"], "password": password}
     if value["operation"] == "recover":
         job["interface"] = value["interface"]
+    if value['operation']=='diagnose':job.update(clientIp=target['ip'],clientMac=target['mac'])
     try:
-        return {"status":status,"inspect":inspect_device,"descriptions":descriptions,"recover":recover}[value["operation"]](job)
+        return {"diagnose":diagnose,"status":status,"inspect":inspect_device,"descriptions":descriptions,"recover":recover}[value["operation"]](job)
     except ProbeError as exc:
         return {"ok": False, "error": exc.code}
     except subprocess.TimeoutExpired:

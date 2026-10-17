@@ -4,8 +4,11 @@ import re
 root = Path(__file__).resolve().parents[1]
 p = root / 'FAM.html'
 html = p.read_text()
+marker='<meta name="fam-brand-release" content="FAM-BRAND-BACKGROUND-20261018">'
+html=re.sub(r'<meta name="fam-brand-release"[^>]*>\n?', '', html)
+html=html.replace('<head>', '<head>\n'+marker, 1)
 html=re.sub(r'<(?:script|style) id="fam-equipment-local-preview-(?:js|css)">.*?</(?:script|style)>', '', html, flags=re.S)
-for module, name, tag in [('local-access','css','style'), ('local-access','js','script'), ('province-records','js','script'), ('equipment-workspace','css','style'), ('equipment-inventory','js','script'), ('equipment-configuration','js','script'), ('equipment-tools-model','js','script'), ('equipment-excel','js','script'), ('equipment-tools','js','script'), ('equipment-tools','css','style'), ('equipment-workspace','js','script'), ('workspace-launcher','css','style'), ('workspace-launcher','js','script')]:
+for module, name, tag in [('fam-brand','css','style'), ('fam-brand','js','script'), ('local-access','css','style'), ('local-access','js','script'), ('province-records','js','script'), ('equipment-workspace','css','style'), ('equipment-inventory','js','script'), ('equipment-configuration','js','script'), ('equipment-tools-model','js','script'), ('equipment-excel','js','script'), ('equipment-tools','js','script'), ('equipment-tools','css','style'), ('equipment-workspace','js','script'), ('workspace-launcher','css','style'), ('workspace-launcher','js','script')]:
     content = (root / f'src/{module}.{name}').read_text()
     block = f'<{tag} id="fam-{module}-{name}">\n{content}</{tag}>'
     pattern = rf'<{tag} id="fam-{module}-{name}">.*?</{tag}>'

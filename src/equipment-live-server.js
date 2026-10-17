@@ -3,6 +3,7 @@
    operation permission, fixed commands, host keys and recovery pre/post checks. */
 window.FamEquipmentLive=(()=>{
  'use strict';const MAX=5,IFACE=/^[A-Za-z][A-Za-z0-9/.-]{0,63}$/;
+ let diagnosticTarget={ip:'',mac:''},diagnoses=[];
  let manualIP='',manualTargets=[],descriptionBusy=false,descriptions=[];
  let pane=null,selected=new Set(),results=[],chosen=new Set(),auth={username:'',password:''},busy=false,epoch=0,search='',signature='',dialog=null,message='';
  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -12,10 +13,10 @@ window.FamEquipmentLive=(()=>{
  const stamp=()=>JSON.stringify(inventory()),key=(r,p)=>r.node.id+':'+p.interface;
  function allowed(op){if(!Access.can(op)||FamEquipmentServer.blocked())throw Error('مجوز یا وضعیت ثبت تغییر کرده؛ دوباره وارد شوید.');}
  function close(){if(dialog){dialog.close();dialog.remove();dialog=null;}}
- function invalidate(){descriptions=[];epoch++;close();results=[];chosen.clear();signature='';message='موجودی یا انتخاب تغییر کرده؛ دوباره بررسی کنید.';}
+ function invalidate(){diagnoses=[];descriptions=[];epoch++;close();results=[];chosen.clear();signature='';message='موجودی یا انتخاب تغییر کرده؛ دوباره بررسی کنید.';}
  function valid(){if(signature&&signature!==stamp()){invalidate();return false;}return true;}
  function checkbox(text,checked,fn,id){const label=el('label','eq-tool-checkbox'),input=el('input');input.type='checkbox';input.checked=checked;input.disabled=busy;if(id)input.id=id;input.onchange=()=>fn(input.checked);label.append(input,el('span','',text));return label;}
- function report(){const root=pane?.querySelector('#eq-live-report');if(!root)return;descriptionsView();root.replaceChildren();root.append(el('p','eq-notice',message||'هنوز بررسی نشده است. نتیجه فقط از اتصال واقعی SSH خوانده می‌شود.'));
+ function report(){const root=pane?.querySelector('#eq-live-report');if(!root)return;diagnosisView();descriptionsView();root.replaceChildren();root.append(el('p','eq-notice',message||'هنوز بررسی نشده است. نتیجه فقط از اتصال واقعی SSH خوانده می‌شود.'));
   const onlyStatus=button('بررسی فقط وضعیت پورت‌ها (بدون توضیحات)',()=>scan(true),'eq-live-status-only');onlyStatus.disabled=busy||!Access.can('equipment-scan');root.append(onlyStatus);
   if(!results.length)return;const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');const header=el('tr');['سوئیچ','IP','نتیجهٔ بررسی','پورت خطادار / نتیجهٔ رفع'].forEach(t=>header.append(el('th','',t)));const head=el('thead');head.append(header);table.append(head);const body=el('tbody');
   for(const r of results){const tr=el('tr');tr.append(el('td','',r.node.name),el('td','',r.node.host),el('td','',r.error||({waiting:'در صف بررسی',checking:'در حال اتصال SSH…',checked:r.ports.length?'Err-disabled یافت شد':'بررسی موفق؛ پورت Err-disabled یافت نشد.',unknown:'نامشخص؛ دوباره بررسی کنید.'})[r.state]));const cell=el('td');
@@ -59,6 +60,51 @@ window.FamEquipmentLive=(()=>{
   fieldset.append(label,run,show,el('p','eq-muted','از همان نام کاربری و رمز سوئیچ در بالا استفاده می‌شود. اتصال از سرور FAM است؛ IP دستی ذخیره نمی‌شود. رفع فقط بعد از انتخاب پورت و تأیید جداگانه انجام می‌شود.'));parent.append(fieldset);
  }
 
+ const diagnosticReasons={mac_table_seen:'MAC در جدول Dynamic مشاهده شده؛ تازگی تضمین نمی‌شود',dai_denied_historical:'سابقهٔ رد ARP؛ ممکن است قدیمی باشد',binding_port_conflict:'پورت مشاهده با پورت binding متفاوت است',binding_mac_conflict:'MAC مشاهده با MAC ثبت‌شده برای IP متفاوت است',secure_mac_conflict:'MAC مشاهده در فهرست مجاز این پورت دیده نشد'};
+ function diagnosisView(){
+  const root=pane?.querySelector('#eq-client-diagnosis-report');if(!root)return;root.replaceChildren();
+  for(const item of diagnoses){const card=el('article','eq-tool-card');card.append(el('h4','',item.node.name+' · '+item.node.host));
+   if(item.error){card.append(el('p','eq-error','تشخیص نامشخص: '+item.error));root.append(card);continue;}
+   const r=item.report;card.append(el('p','eq-muted',r.profile.model+' · IOS '+r.profile.ios+' · '+r.profile.image),el('p','eq-muted','IP کلاینت: '+(r.client.ip||'—')+' · MAC: '+(r.client.mac||'—')+' · دریافت: '+new Date(item.checkedAt).toLocaleTimeString('fa-IR')));
+   for(const source of r.sources)card.append(el('p','eq-muted',({secure:'MACهای مجاز پورت',bindings:'bindingهای ثبت‌شده',mac:'جدول MAC پویا',dai:'لاگ تاریخی DAI'})[source.id]+': '+(source.state==='parsed'?source.count+' ردیف قابل‌خواندن در VLAN 100':'غیرقابل‌تأیید / پشتیبانی‌نشده')));
+   if(!r.candidates.length)card.append(el('p','eq-notice warning','پورت کلاینت مشخص نشد؛ نبود شواهد به معنی سلامت یا نبود جابه‌جایی نیست.'));
+   for(const row of r.candidates){const box=el('div','eq-config-rule');box.append(el('strong','',row.interface+' · '+row.observedMac),el('p','eq-muted','اطمینان مکان‌یابی: '+(row.confidence==='medium'?'متوسط؛ مشاهدهٔ جدول MAC':'کم؛ شواهد تاریخی')+' — جابه‌جایی قطعی تأیید نشده است.'),el('p','eq-muted','پورت binding ثبت‌شده (نه لزوماً پورت قبلی): '+(row.recordedPorts.join('، ')||'موجود نیست')));
+    for(const reason of row.reasons)box.append(el('p','eq-notice',diagnosticReasons[reason]));card.append(box);
+   }root.append(card);
+  }
+ }
+ function diagnosisControls(parent){
+  const fieldset=el('fieldset');fieldset.disabled=busy;fieldset.id='eq-client-diagnosis';fieldset.append(el('legend','','۳ · تشخیص فقط‌خواندنی جابه‌جایی کلاینت'));
+  fieldset.append(el('p','eq-muted','ویژهٔ WS-C2960-24TT-L و VLAN 100. سوئیچ‌های مشکوک را بالا انتخاب کنید؛ IP یا MAC کلاینت کافی است و شمارهٔ پورت لازم نیست. ابتدا مدل/IOS خوانده و سپس شواهد بررسی می‌شود. هیچ Sticky، binding، ACL یا پورت تغییر نمی‌کند.'));
+  const fields=el('div','eq-live-inputs');for(const [key,label,placeholder]of [['ip','IP کلاینت (نه IP سوئیچ)','مثال: 10.4.86.7'],['mac','MAC کلاینت (اختیاری اگر IP دارید)','0001.08f1.31a6']]){
+   const wrap=el('label','eq-field',label),input=el('input','inp');input.id='eq-client-'+key;input.dir='ltr';input.maxLength=key==='ip'?15:17;input.autocomplete='off';input.placeholder=placeholder;input.value=diagnosticTarget[key];input.oninput=()=>{diagnosticTarget[key]=input.value;invalidate();report();};wrap.append(input);fields.append(wrap);
+  }
+  const run=button('تشخیص پورت کلاینت — فقط خواندن',diagnoseClients,'eq-client-diagnose');run.disabled=!Access.can('equipment-scan');fieldset.append(fields,run,el('p','eq-notice warning','این گزارش مجوز جابه‌جایی یا رفع خودکار نیست. لاگ DAI ممکن است قدیمی باشد؛ binding و Sticky هم محل اتصال فعلی را ثابت نمی‌کنند. هیچ نتیجه‌ای «جابه‌جایی قطعی» یا «پورت سالم» اعلام نمی‌شود.'));
+  const output=el('section');output.id='eq-client-diagnosis-report';output.setAttribute('aria-live','polite');fieldset.append(output);parent.append(fieldset);
+ }
+ function verifiedDiagnosis(data,host,target){
+  const r=data?.report;if(data?.host!==host||data.source!=='server-ssh'||!Number.isFinite(data.checkedAt)||!r||r.readOnly!==true||r.movementConfirmed!==false||r.vlan!==100||r.client?.ip!==target.ip||r.client?.mac!==target.mac||r.profile?.model!=='WS-C2960-24TT-L'||typeof r.profile?.ios!=='string'||r.profile.ios.length>40||typeof r.profile?.image!=='string'||r.profile.image.length>128||!Array.isArray(r.sources)||r.sources.length!==4||!Array.isArray(r.candidates)||r.candidates.length>48)throw Error('گزارش تشخیص قابل تأیید نیست.');
+  for(const [index,id]of ['secure','bindings','mac','dai'].entries()){const s=r.sources[index];if(s?.id!==id||!['parsed','unavailable'].includes(s.state)||!Number.isInteger(s.count)||s.count<0||s.count>4096)throw Error('منابع تشخیص معتبر نیست.');}
+  for(const row of r.candidates)if(!/^Fa0\/(?:[1-9]|1[0-9]|2[0-4])$/.test(row.interface)||!/^([a-f0-9]{4}\.){2}[a-f0-9]{4}$/.test(row.observedMac)||!['medium','low'].includes(row.confidence)||typeof row.historical!=='boolean'||(row.confidence==='medium')!==row.reasons?.includes('mac_table_seen')||row.historical!==(row.confidence==='low')||!Array.isArray(row.recordedPorts)||row.recordedPorts.length>26||row.recordedPorts.some(p=>!IFACE.test(p))||!Array.isArray(row.reasons)||!row.reasons.length||row.reasons.some(reason=>!Object.hasOwn(diagnosticReasons,reason)))throw Error('شواهد پورت قابل تأیید نیست.');
+  if(r.assessment!==(r.candidates.length?'evidence':'unknown'))throw Error('نتیجهٔ تشخیص معتبر نیست.');return r;
+ }
+ async function diagnoseClients(){
+  if(busy||descriptionBusy)return;
+  try{allowed('equipment-scan');const target={ip:diagnosticTarget.ip.trim(),mac:diagnosticTarget.mac.trim().toLowerCase()};
+   if(target.mac){if(!/^(?:[a-f0-9]{4}\.){2}[a-f0-9]{4}$/.test(target.mac)&&!/^(?:[a-f0-9]{2}[:-]){5}[a-f0-9]{2}$/.test(target.mac))throw Error('MAC کلاینت معتبر نیست.');const compact=target.mac.replace(/[.:-]/g,'');target.mac=[0,4,8].map(i=>compact.slice(i,i+4)).join('.');}
+   if(!target.ip&&!target.mac)throw Error('IP یا MAC کلاینت را وارد کنید؛ شمارهٔ پورت لازم نیست.');
+   if(target.ip&&(!/^\d{1,3}(\.\d{1,3}){3}$/.test(target.ip)||target.ip.split('.').some(n=>Number(n)>255)))throw Error('IP کلاینت معتبر نیست.');
+   if(!auth.username.trim()||!auth.password)throw Error('حساب SSH/RADIUS سوئیچ را وارد کنید.');if(!selected.size&&manualIP.trim())manualTarget();
+   const nodes=switches().filter(n=>selected.has(n.id));if(!nodes.length||nodes.length!==selected.size||nodes.length>MAX)throw Error('بین یک تا پنج سوئیچ مجاز انتخاب کنید.');
+   invalidate();signature=stamp();const token=epoch;busy=true;message='در حال خواندن شواهد؛ هیچ تغییری روی تجهیز اعمال نمی‌شود…';draw();
+   try{for(const node of nodes){if(token!==epoch||!valid())break;allowed('equipment-scan');try{
+    const data=await FamShared.api('equipment/diagnose',{host:node.host,username:auth.username.trim(),password:auth.password,clientIp:target.ip,clientMac:target.mac},110000);if(token!==epoch||!valid())break;
+    diagnoses.push({node:structuredClone(node),report:verifiedDiagnosis(data,node.host,target),checkedAt:data.checkedAt});
+   }catch(error){if(token!==epoch)break;diagnoses.push({node:structuredClone(node),error:error.message});if(error.status===401||error.status===403)break;}diagnosisView();}}
+   finally{busy=false;message=token===epoch?'خواندن شواهد پایان یافت؛ گزارش صرفاً تشخیصی است و مجوز تغییر تنظیمات نیست.':'بررسی متوقف شد؛ نتیجهٔ تازه‌ای تأیید نشده است.';draw();}
+  }catch(error){message=error.message;report();}
+ }
+
  function timingLabel(result){
   const t=result.timings;if(!t||!Number.isInteger(t.preparationMs)||!Number.isInteger(t.sshMs)||t.preparationMs<0||t.sshMs<0||t.preparationMs>65000||t.sshMs>65000)return '';
   return 'آماده‌سازی: '+(t.preparationMs/1000).toFixed(2)+' ثانیه · SSH و اجرای دستورها: '+(t.sshMs/1000).toFixed(2)+' ثانیه';
@@ -68,7 +114,7 @@ window.FamEquipmentLive=(()=>{
   const fieldset=el('fieldset');fieldset.disabled=busy;fieldset.append(el('legend','','۱ · انتخاب سوئیچ‌ها'));const query=el('input','inp');query.id='eq-live-search';query.placeholder='جست‌وجوی نام یا IP سوئیچ';query.setAttribute('aria-label',query.placeholder);query.value=search;const list=el('div','eq-tool-switch-list');
   const listDraw=()=>{list.replaceChildren();const nodes=switches().filter(n=>(n.name+' '+n.host).toLowerCase().includes(search.toLowerCase()));for(const n of nodes.slice(0,50))list.append(checkbox(n.name+' · '+n.host,selected.has(n.id),value=>{if(value&&selected.size>=MAX){message='در هر نوبت حداکثر '+MAX+' سوئیچ انتخاب کنید.';report();listDraw();return;}value?selected.add(n.id):selected.delete(n.id);invalidate();report();const count=pane?.querySelector('#eq-live-selection-count');if(count)count.textContent=selected.size+' از ۵ سوئیچ انتخاب شده';},'eq-live-node-'+n.id));if(nodes.length>50)list.append(el('p','eq-muted','۵۰ نتیجهٔ اول؛ برای یافتن سوئیچ دیگر نام یا IP را جست‌وجو کنید.'));if(!nodes.length)list.append(el('p','eq-notice','سوئیچی در موجودی مجاز نیست. تجهیز را با نوع «سوئیچ» و IP صحیح ثبت کنید.'));};query.oninput=()=>{search=query.value;listDraw();};listDraw();const selection=el('div','eq-live-summary'),count=el('span','eq-muted',selected.size+' از ۵ سوئیچ انتخاب شده');count.id='eq-live-selection-count';selection.append(count,button('پاک‌کردن انتخاب‌ها',()=>{selected.clear();invalidate();draw();},'eq-live-clear-selection'));fieldset.append(query,list,selection);
   const run=button('بررسی پورت‌ها',scan,'eq-live-scan');run.disabled=!Access.can('equipment-scan');fieldset.append(run,el('p','eq-muted','بررسی از سرور FAM، بدون تکرار خودکار اتصال. نتیجهٔ نامشخص هرگز سالم گزارش نمی‌شود.'));
-  const account=el('fieldset');account.disabled=busy;account.append(el('legend','','۲ · اطلاعات اتصال'));const fields=el('div','eq-node-fields');for(const [field,label,type]of [['username','نام کاربری سوئیچ (SSH / RADIUS)','text'],['password','رمز ورود سوئیچ','password']]){const wrap=el('label','eq-field',label),input=el('input','inp');input.id='eq-live-'+field;input.type=type;input.dir='ltr';input.value=auth[field];input.autocomplete=type==='password'?'new-password':'off';input.maxLength=field==='password'?512:64;input.oninput=()=>{auth[field]=input.value;invalidate();report();};wrap.append(input);fields.append(wrap);}account.append(fields,el('p','eq-muted','حساب مشترک انتخاب‌ها؛ فقط در حافظه تا خروج از FAM. رمز ذخیره نمی‌شود.'));manualControls(account);grid.append(fieldset,account);pane.append(grid);
+  const account=el('fieldset');account.disabled=busy;account.append(el('legend','','۲ · اطلاعات اتصال'));const fields=el('div','eq-node-fields');for(const [field,label,type]of [['username','نام کاربری سوئیچ (SSH / RADIUS)','text'],['password','رمز ورود سوئیچ','password']]){const wrap=el('label','eq-field',label),input=el('input','inp');input.id='eq-live-'+field;input.type=type;input.dir='ltr';input.value=auth[field];input.autocomplete=type==='password'?'new-password':'off';input.maxLength=field==='password'?512:64;input.oninput=()=>{auth[field]=input.value;invalidate();report();};wrap.append(input);fields.append(wrap);}account.append(fields,el('p','eq-muted','حساب مشترک انتخاب‌ها؛ فقط در حافظه تا خروج از FAM. رمز ذخیره نمی‌شود.'));manualControls(account);grid.append(fieldset,account);pane.append(grid);diagnosisControls(pane);
   if(busy)pane.append(el('p','eq-notice','عملیات واقعی در حال اجراست؛ درخواست خودکار تکرار نمی‌شود.'));const out=el('section');out.id='eq-live-report';out.setAttribute('aria-live','polite');pane.append(out);const cli=el('section');cli.id='eq-live-descriptions';pane.append(cli);report();
  }
  async function scan(statusOnly=false){statusOnly=statusOnly===true;if(busy||descriptionBusy)return;try{allowed('equipment-scan');const nodes=switches().filter(n=>selected.has(n.id));if(!nodes.length||nodes.length!==selected.size||nodes.length>MAX)throw Error('بین یک تا پنج سوئیچ مجاز انتخاب کنید.');if(!auth.username.trim()||!auth.password)throw Error('نام کاربری و رمز ورود سوئیچ را وارد کنید.');invalidate();signature=stamp();const token=epoch;busy=true;results=nodes.map(node=>({node:structuredClone(node),state:'waiting',ports:[]}));message='بررسی واقعی SSH از سرور FAM؛ اتصال ناموفق هرگز «بدون خطا» گزارش نمی‌شود.';draw();
@@ -83,7 +129,7 @@ window.FamEquipmentLive=(()=>{
   }catch(error){message=error.message;report();}}
  async function repair(plan,token){busy=true;message='در حال رفع پورت‌های تأییدشده…';draw();try{for(const {r,p}of plan){if(token!==epoch||!valid())break;allowed('equipment-repair');p.outcome='رفع در حال اجرا؛ نتیجه هنوز تأیید نشده.';report();try{const result=await FamShared.api('equipment/recover',{host:r.node.host,username:auth.username.trim(),password:auth.password,interface:p.interface,ticket:p.ticket},110000);if(token!==epoch||!valid())break;if(result.host!==r.node.host||result.interface!==p.interface||!['recovered','still_errdisabled','not_errdisabled'].includes(result.recovery))throw Error('پاسخ رفع قابل تأیید نیست.');p.outcome=({recovered:'رفع شد؛ بررسی پس از عملیات نشان داد این پورت دیگر Err-disabled نیست.',still_errdisabled:'خطا باقی است؛ پورت هنوز Err-disabled است.',not_errdisabled:'پورت پیش از عملیات دیگر Err-disabled نبود؛ تغییری اعمال نشد.'})[result.recovery];if(result.recovery==='still_errdisabled')throw Error('پورت هنوز Err-disabled است؛ ابتدا علت خطا بررسی شود.');}catch(error){if(token!==epoch)break;p.outcome='رفع موفق تأیید نشد: '+error.message+' برای ادامه دوباره بررسی کنید.';chosen.clear();for(const item of results)for(const port of item.ports){port.ticket='';if(!port.outcome)port.outcome='به علت توقف دسته اجرا نشد؛ دوباره بررسی کنید.';}message='عملیات متوقف شد؛ نتیجهٔ پورت ممکن است نامشخص باشد. ابتدا وضعیت را دوباره بررسی کنید.';report();break;}chosen.delete(key(r,p));report();}}catch(error){message=error.message;}finally{busy=false;message=token===epoch?'عملیات پایان یافت یا متوقف شد؛ نتیجهٔ هر پورت را بخوانید. در خطا/وضعیت نامشخص، قبل از هر اقدام دوباره بررسی کنید.':'نتیجهٔ درخواست ارسال‌شده پس از ترک/تغییر صفحه تأیید نشده؛ ممکن است اجرا شده باشد. پیش از هر اقدام دوباره پورت‌ها را بررسی کنید.';draw();}}
  function suspend(){pane=null;close();if(busy)invalidate();}
- function clear(){manualIP='';manualTargets=[];descriptionBusy=false;invalidate();auth={username:'',password:''};selected.clear();search='';if(pane?.isConnected)draw();}
+ function clear(){diagnosticTarget={ip:'',mac:''};manualIP='';manualTargets=[];descriptionBusy=false;invalidate();auth={username:'',password:''};selected.clear();search='';if(pane?.isConnected)draw();}
  document.addEventListener('fam-access-changed',clear);window.addEventListener('pagehide',clear);document.addEventListener('click',e=>{if(e.target.closest?.('#account-logout,#workspace-logout'))clear();},true);
  return Object.freeze({mount(parent,nodeId){valid();pane=el('section','eq-live-workspace');parent.append(pane);if(nodeId&&!busy&&!selected.has(nodeId)){selected=new Set([nodeId]);invalidate();}draw();},suspend,invalidate,clear});
 })();

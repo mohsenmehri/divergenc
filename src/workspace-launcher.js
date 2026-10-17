@@ -28,7 +28,7 @@
     top.append(node('span','workspace-brand','FAM'),node('span','workspace-user',user.name+'، خوش آمدید'));
     const exit=node('button','workspace-exit','خروج از حساب');exit.type='button';exit.id='workspace-logout';exit.addEventListener('click',()=>Access.logout());top.append(exit);
     const heading=node('h1','','از کجا شروع کنیم؟');heading.id='workspace-title';
-    shell.append(top,node('p','workspace-kicker','ONE ACCOUNT · TWO WORKSPACES'),heading,node('p','workspace-intro','فضای کاری خود را انتخاب کنید؛ هر زمان خواستید بین دو بخش جابه‌جا شوید.'));
+    shell.append(top,FamBrand.create('fam-brand-workspace'),heading,node('p','workspace-intro','فضای کاری خود را انتخاب کنید؛ هر زمان خواستید بین دو بخش جابه‌جا شوید.'));
     const choices=node('div','workspace-options');
     for(const [view,title,sub,index]of [['panel','پایگاه داده','داشبورد، جست‌وجو و مدیریت داده‌های شبکه','01'],['equipment','مدیریت تجهیزات','فهرست تجهیزات، بررسی پورت‌ها و ابزارهای آفلاین','02']]){
       const allowed=Access.viewAllowed(view),button=node('button','workspace-option workspace-option-'+view);button.type='button';button.id='workspace-enter-'+view;button.disabled=!allowed;button.setAttribute('aria-label',title);

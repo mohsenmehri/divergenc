@@ -1,43 +1,52 @@
-# SERVER review-fix validation — 2026-10-17
+# SERVER release validation — 2026-10-18
 
-This is implementation/release validation, not the historical unfixed review snapshot.
+This release retains the previously implemented SERVER review fixes and adds read-only branch-client diagnosis plus the shared logo/background UI update. It is not the historical unfixed review ZIP.
 
-## Artifact
+## Artifacts
 
-- `releases/FAM-Custom-Access-SERVER-Patch.zip`
-- Size: 1,807,338 bytes; 26 files total, including 20 allowlisted payload files.
-- SHA256: `13fe88ad657da69f3979f280676b2966561b4d195e46d39e5dad1498eade67c1`
-- Persian installation/acceptance/rollback guide: `SERVER_REVIEW_FIX_PATCH_FA.md`; byte-identical to `README_FA.txt` inside ZIP.
-- Protected UI release marker: `FAM-EQUIPMENT-V2-SERVER-FIX-20261017`.
-- LOCAL artifact unchanged; no production deployment or real-device communication performed.
+- SERVER: `releases/FAM-Custom-Access-SERVER-Patch.zip`, 21 allowlisted payload files; both installation and client-diagnosis Persian guides are inside.
+- LOCAL: `releases/FAM-Custom-Access-LOCAL-Patch.zip`; updated branding/background only, no SSH or diagnosis execution.
+- Exact ZIP checksums are in the adjacent `.zip.sha256` files; the build regenerates both deterministically.
+- Main Persian guide: `SERVER_REVIEW_FIX_PATCH_FA.md`, byte-identical to SERVER `README_FA.txt`.
+- Diagnosis guide: `CLIENT_MOVE_DIAGNOSIS_FA.md`, byte-identical to SERVER `CLIENT-MOVE-DIAGNOSIS-FA.txt`.
+- Branding/background guide: `UI_BRAND_BACKGROUND_FA.md`.
+- UI markers: existing SERVER security marker `FAM-EQUIPMENT-V2-SERVER-FIX-20261017`; new branding marker `FAM-BRAND-BACKGROUND-20261018`; new SERVER-only diagnosis marker `FAM-CLIENT-DIAGNOSIS-20261018`.
 
 ## Executed checks
 
 | Check | Result |
 | --- | --- |
-| `.venv/bin/python -m unittest discover -s server/tests -v` | 144 run: 143 passed, 1 skipped; final run 21.414 s |
-| Skip | Offline carried-wheel bytes absent; test explicitly requires separate offline wheel preparation |
-| `.venv/bin/python -m unittest server.tests.test_review_fixes -v` | 19 acceptance contracts passed, including separate Python-process exclusion |
-| `npm test` | 107 passed, 0 failed, 0 skipped; 268.354 s |
-| `node --test tests/shared-build.test.cjs` | 15 passed after final UI marker rebuild |
-| `scripts/verify_server_fix_release.py` | ZIP checksum, 20 payload hashes, canonical source parity, guide parity, and 73 isolated extracted-runtime tests passed |
-| `scripts/smoke_equipment_live.cjs` | Real Chromium UI → authenticated disposable API → synthetic executor passed; no real SSH |
-| `scripts/smoke_equipment_server.cjs` | Two-session central persistence, editor draft, history broadcast, pending/conflict gates passed |
-| Python compile and JavaScript syntax | Passed for changed executable sources |
-| PowerShell tree-sitter syntax | Changed/deployed scripts parsed; final updater and rollback reparsed after final edits |
-| Packaging hygiene | No runtime SQLite/settings/known_hosts, credentials, keys/certificates, logs, venv, wheels, executables or dependency directories |
-| `git diff --check` | Passed |
+| `.venv/bin/python -m unittest discover -s server/tests -v` | 163 run: 162 passed, 1 skipped; 22.255 s |
+| Skip | Offline carried-wheel bytes absent; requires separate offline wheel preparation |
+| `server.tests.test_equipment_diagnostics` | 19 new API/parser/transport contracts passed; synthetic CLI/SSH only |
+| `npm test` | 111 passed, 0 failed, 0 skipped; 299.697 s; includes the 4 new branding checks |
+| New diagnosis UI test file, run separately after it was added | 5 passed, 0 failed; no real network |
+| Final focused run: branding + diagnosis UI + shared build | 24 passed, 0 failed; 26.202 s |
+| `scripts/verify_server_fix_release.py` | ZIP checksum, 21 payload hashes, canonical source parity, both Persian guides and 92 isolated extracted-runtime tests passed |
+| `scripts/smoke_equipment_live.cjs` | Real Chromium → authenticated disposable API → synthetic executor/parsed diagnosis evidence passed; zero browser JavaScript errors |
+| `scripts/smoke_equipment_server.cjs` | Two-session central persistence, editor draft, history broadcast, pending/conflict gates passed; zero browser JavaScript errors |
+| Syntax | Changed Python compiled; JavaScript checked; changed installer PowerShell parsed with tree-sitter, not executed on Windows |
+| Packaging hygiene | No runtime DB/settings/known_hosts, real credentials, keys/certificates, logs, venv, wheels, executables or dependency directories |
+| Working diff whitespace | `git diff --check` passed |
 
-The acceptance suite covers bootstrap fail-before-file creation and secure retry, no echoed-stdin fallback, production new-password minimum with legacy verification, custom-manager normal/preflight/API backups, malformed/disabled manager rejection, random and one-use approvals, concurrent recovery without consuming a busy waiting approval, cross-instance/global admission, separate-process exclusion, lease cleanup, structured uncertainty, switch-only known inventory enforcement, case/long/keyword masking, helper environment filtering, strict default and mocked Windows Job Object ABI/fail-closed contracts.
+The 111-test full JavaScript run started before the separate 5-test diagnosis UI file was created; these results are explicitly separate, not a claim that all 116 ran in one invocation. The 24-test focused run rechecked the final compiled UI and includes those 5 diagnosis tests.
 
-The live browser check additionally verifies explicit status-only reads, normal inspect selection despite DOM MouseEvent arguments, stop-all and invalidation of unexecuted approvals after both uncertainty and still_errdisabled, manual internal targets, safe exact table text, confirmation/cancellation, malformed-result uncertainty, RAM-only credentials across navigation and clearing on refresh/session expiry. Browser JavaScript errors: zero in both smoke checks. The fixture server was stopped after checks.
+## New read-only diagnosis coverage
 
-## Important limits
+Tests cover supported/unsupported model and IOS/image profiles; unknown platform stops before the second read phase; exactly fixed read commands, one request-owned ASKPASS and no configuration/retry; timeout cleanup; input injection rejection; strict command boundaries, pagination/control/size rejection; per-source unavailable handling; VLAN 100 only; no Gi uplink offered as a direct client port; dynamic-MAC evidence at most medium confidence; historical-only DAI low confidence; binding-only unknown; no movement confirmation; typed API report validation; session/Origin/CSRF, independent scan permission and scope enforcement; known-router denial; busy admission; no repair tickets, persistent results or credential leakage.
 
-PowerShell syntax parsing and mocked ctypes calls **are not Windows execution**. IIS, Task Scheduler behavior, the kernel Job Object implementation, organization OpenSSH/ASKPASS compatibility, RADIUS and device firmware still require authorized staging acceptance. Deployed-source parity is not known. The updater checks port readiness, not end-to-end HTTPS/application/device health; follow the Persian post-install checklist.
+The authenticated live-browser check exercises the actual diagnosis endpoint with synthetic parsed CLI fixtures. It verifies Fa0/7 observation versus recorded Fa0/12, the explicit non-confirmation warning, no repair action and no IP/MAC search-result storage. Existing recovery/inspection checks still pass, including stop-all after uncertainty/still_errdisabled, approval invalidation, exact safe description text, manual targets and credential RAM lifecycle.
 
-Existing data, settings, accounts and permissions are preserved, including existing passwords. An authorized administrator must rotate any old known/default password through the UI. Rollback restores code only; it never automatically replaces the current database. Returning to old code also returns its weaknesses.
+## Branding/background coverage
 
-The first full UI run exposed an obsolete combined-request-only assertion; it was updated for the explicit status-only path and the complete 107-test suite subsequently passed. A browser check exposed the status-only button disappearing with empty results; this was corrected and the expanded live smoke passed. Historical defect reproduction assertions are marked inactive; current acceptance tests are separate.
+Actual offline HTML tests verify the login and automatic two-workspace chooser use the byte-identical embedded sidebar logo with the exact full company name underneath. Both themes, chooser widths 320/390/768/1440, account/inventory preservation and matching dashboard/equipment background and FX behavior were checked. No external logo request is needed. Existing user theme and reduced-motion policy remain in control.
 
-KDF/versioning migration, proxy-aware per-client login rate limiting and full CSP redesign are not represented as completed; see `SECURITY_NOTES.md`. No real credentials, production database, or equipment screenshots were used or included.
+## Limits
+
+No production deployment, actual device communication, real credentials, production database or equipment screenshots were used. The disposable synthetic server was stopped after checks.
+
+PowerShell syntax parsing and mocked ctypes calls are not Windows execution. IIS, Task Scheduler, Windows kernel Job Object behavior, organization OpenSSH/ASKPASS compatibility, RADIUS and the actual branch IOS remain staging acceptance tasks. The new profile is a conservative initial parser for WS-C2960-24TT-L / VLAN 100, not certification of every firmware release. No raw version/serial/log data is released, no switch configuration changes occur and no client move is declared confirmed.
+
+Existing data/settings/accounts/scopes are preserved. Rotate any old known/default password through the authorized UI; the patch does not reset existing accounts. Rollback restores code only and never automatically replaces the current database. Use the backup and updater from the same patch version because allowlists changed from 20 to 21 payload files.
+
+KDF migration, trusted-proxy client-IP-aware login limiting and full CSP redesign remain separate work; see `SECURITY_NOTES.md`.

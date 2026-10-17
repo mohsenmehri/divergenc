@@ -288,7 +288,7 @@ const Access = (() => {
       const p=field('رمز عبور','auth-password','password');p.input.autocomplete='current-password';
       const error=el('p',{id:'auth-error',role:'alert',class:'category-error'});
       const submit=el('button',{type:'submit',class:'btn btn-primary',id:'auth-submit',text:'ورود'});
-      form.append(el('h2',{id:'auth-title',text:'ورود به فام'}),
+      form.append(el('h2',{id:'auth-title',text:'ورود به فام'}),FamBrand.create('fam-brand-login'),
         el('p',{class:'hint',text:'نسخه محلی HTML — حساب‌ها و داده‌ها در همین مرورگر نگهداری می‌شوند. این محدودیت‌ها جای امنیت سمت سرور را نمی‌گیرند.'}));
       if(storageError){form.append(el('p',{role:'alert',text:'حساب‌های ذخیره‌شده قابل خواندن نیستند یا ذخیره‌سازی مرورگر مسدود است. برای جلوگیری از از‌دست‌رفتن دسترسی، راه‌اندازی مجدد خودکار انجام نمی‌شود. نسخه پشتیبان مرورگر را بررسی کنید.'}));}
       else{

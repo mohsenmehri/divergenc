@@ -35,7 +35,7 @@ USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 # Outer wall clock for the helper process per operation.  It must exceed
 # equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
 # helper while it is still supervising an ssh.exe child.
-EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95}
+EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95, "diagnose": 95}
 # RFC1918 plus the user-authorized building/shared-address range (RFC6598).
 # Deliberately not all of 100/8 or arbitrary public targets.
 ALLOWED_IPV4_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"))
@@ -49,8 +49,8 @@ def _unb64(value: str) -> bytes:
     return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
 
 
-def _input(value, *, recovery=False):
-    expected = {"host", "username", "password"} | ({"interface", "ticket"} if recovery else set())
+def _input(value, *, recovery=False, diagnosis=False):
+    expected = {"host", "username", "password"} | ({"interface", "ticket"} if recovery else {"clientIp", "clientMac"} if diagnosis else set())
     if not isinstance(value, dict) or set(value) != expected:
         raise ValueError
     host, username, password = value["host"], value["username"], value["password"]
@@ -76,6 +76,11 @@ def _input(value, *, recovery=False):
         if not isinstance(interface, str) or not INTERFACE.fullmatch(interface) or not isinstance(ticket, str) or not 40 <= len(ticket) <= 1024:
             raise ValueError
         result |= {"interface": interface, "ticket": ticket}
+    if diagnosis:
+        if __package__:from .equipment_diagnostics import client
+        else:from equipment_diagnostics import client
+        target=client(value['clientIp'],value['clientMac'])
+        result.update(clientIp=target['ip'],clientMac=target['mac'])
     return result
 
 
@@ -140,6 +145,8 @@ def _execute(app, payload):
 def _failure(value):
     code = value.get("error") if isinstance(value, dict) else ""
     return {
+        "unsupported_platform": "مدل یا نسخهٔ IOS این تجهیز با پروفایل تشخیص WS-C2960-24TT-L قابل تأیید نیست؛ تغییری اعمال نشد.",
+        "diagnosis_unreadable": "شواهد تشخیص کامل یا قابل تأیید نیست؛ محل کلاینت نامشخص است. هیچ تغییری اعمال نشد.",
         "recovery_uncertain": "اثر عملیات روی پورت نامشخص است؛ ممکن است shutdown اجرا شده باشد. عملیات متوقف شد؛ پیش از هر اقدام، وضعیت همان پورت را با اپراتور مجاز بررسی کنید. فعال‌سازی خودکار انجام نمی‌شود.",
         "equipment_busy": "تجهیز یا ظرفیت SSH مشغول است؛ عملیات جدیدی اجرا نشد. پس از پایان درخواست قبلی، دوباره وضعیت را بررسی کنید.",
         "ticket_consumed": "این تأیید قبلاً مصرف شده است؛ دوباره بررسی و پورت را تأیید کنید.",
@@ -233,6 +240,24 @@ def register_equipment_ops(app, *, data, fail, allowed):
         try:output,redacted=descriptions_table(result.get('output'),value['username'],value['password'])
         except ProbeError:fail(502,_failure({'error':'descriptions_unreadable'}))
         return jsonify(host=value['host'],source='server-ssh',checkedAt=int(time.time()*1000),command='show interfaces description',output=output,redacted=redacted or result.get('redacted') is True)
+
+    @app.post('/api/equipment/diagnose')
+    def equipment_diagnose():
+        authorize('diagnose')
+        try:value=_input(data(),diagnosis=True)
+        except (ValueError,TypeError):fail(400,'IP یا MAC کلاینت و مشخصات اتصال معتبر نیست؛ حداقل یکی از IP/MAC لازم است.')
+        authorize('diagnose',value['host'])
+        result=run({'operation':'diagnose',**value})
+        if not isinstance(result,dict) or result.get('ok') is not True:
+            fail(429 if isinstance(result,dict) and result.get('error')=='equipment_busy' else 502,_failure(result))
+        try:
+            if __package__:from .equipment_diagnostics import validate_report
+            else:from equipment_diagnostics import validate_report
+            report=validate_report(result.get('report'))
+            if report['client']!={'ip':value['clientIp'],'mac':value['clientMac']}:raise ValueError('wrong client')
+            if any(secret.casefold() in json.dumps(report).casefold() for secret in (value['username'],value['password'])):raise ValueError('sensitive output')
+        except (ValueError,TypeError,KeyError):fail(502,_failure({'error':'diagnosis_unreadable'}))
+        return jsonify(host=value['host'],source='server-ssh',checkedAt=int(time.time()*1000),report=report)
 
     @app.post("/api/equipment/recover")
     def equipment_recover():

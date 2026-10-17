@@ -14,6 +14,10 @@ if os.environ.get('FAM_EQUIPMENT_FIXTURE')!='SYNTHETIC_ONLY':
 with tempfile.TemporaryDirectory() as directory:
     repaired=set()
     def executor(job):
+        if job['operation']=='diagnose':
+            from server import equipment_diagnostics as diagnosis
+            from server.tests.test_equipment_diagnostics import VERSION,transcript
+            return {'ok':True,'report':diagnosis.assess(diagnosis.profile(VERSION),diagnosis.client(job['clientIp'],job['clientMac']),transcript())}
         if job['host']=='10.53.0.3':return {'ok':False,'error':'connection_timeout'}
         if job['operation']=='descriptions':return {'ok':True,'output':'Interface                      Status         Protocol Description\nGi0/1                          up             up       Fixture uplink\nGi0/7                          down           down     <img src=x onerror=alert(1)>\n'}
         if job['operation']=='recover':

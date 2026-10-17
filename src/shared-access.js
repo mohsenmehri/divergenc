@@ -188,7 +188,7 @@ const Access = (() => {
       const u=field('نام کاربری','auth-username','text'),p=field('رمز عبور','auth-password','password');
       u.input.autocomplete='username';p.input.autocomplete='current-password';
       const error=el('p',{id:'auth-error',role:'alert'}),submit=el('button',{type:'submit',id:'auth-submit',class:'btn btn-primary',text:'ورود به سرور'});
-      form.append(el('h2',{text:'ورود به فام'}),el('p',{class:'hint',text:'نسخهٔ مرکزی — حساب‌ها و داده‌ها روی سرور مشترک‌اند. اتصال به سرور برای ورود و ثبت تغییرات لازم است.'}),u.node,p.node,error,submit);
+      form.append(el('h2',{text:'ورود به فام'}),FamBrand.create('fam-brand-login'),el('p',{class:'hint',text:'نسخهٔ مرکزی — حساب‌ها و داده‌ها روی سرور مشترک‌اند. اتصال به سرور برای ورود و ثبت تغییرات لازم است.'}),u.node,p.node,error,submit);
       form.addEventListener('submit',async e=>{
         e.preventDefault();submit.disabled=true;error.textContent='';
         try{const result=await FamShared.api('login',{username:username(u.input.value),password:p.input.value});FamShared.setCsrf(result.csrf);establish(result.user);p.input.value='';root.remove();resolve();}

@@ -43,7 +43,20 @@ s=s.replace(' — Passwords and sheet locks in this app only SIMULATE the Excel 
 s=s.replace('data-default-theme="original"','data-default-theme="original" data-fam-variant="shared"',1)
 s=s.replace('<title>','<title>فام مرکزی — ',1)
 s=re.sub(r'<meta name="fam-release" content="[^"]*">','<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-FIX-20261017">',s,count=1)
+s=s.replace('<head>', '<head>\n<meta name="fam-client-diagnosis-release" content="FAM-CLIENT-DIAGNOSIS-20261018">',1)
 s=s.replace('\n</head>','\n<style id="fam-shared-css">\n'+(root/'src/shared-sync.css').read_text()+'\n</style>\n</head>',1)
 s=s.replace('\n</body>','\n<script id="fam-shared-js">\n'+(root/'src/shared-sync.js').read_text()+'\n</script>\n</body>',1)
 p=root/'server/private_ui/FAM.html';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)
 print('Built protected central two-theme client:',p.relative_to(root))
+
+# Minimal IIS login keeps its strict script/style policy; only the existing
+# trusted inline PNG is allowed, with no extra deployed file or network request.
+logo=re.search(r'<div class="brand-logo">\s*(<img[^>]+>)',s).group(1)
+logo=re.sub(r'alt="[^"]*"','alt="لوگوی فام"',logo)
+login=root/'server/www/login.html'
+text=login.read_text()
+identity='<figure class="login-brand">'+logo+'<figcaption>تجارت الکترونیک و فناوری اطلاعات ملل (فام)</figcaption></figure>'
+text,n=re.subn(r'<div class="mark"[^>]*>.*?</div>|<figure class="login-brand">.*?</figure>',lambda _:identity,text,count=1,flags=re.S);assert n==1
+text=re.sub(r'\n    <p class="subtitle">.*?</p>','',text)
+if 'img-src' not in text:text=text.replace("script-src 'self';", "img-src 'self' data:; script-src 'self';")
+login.write_text(text)

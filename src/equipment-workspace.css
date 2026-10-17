@@ -1,7 +1,7 @@
-/* Equipment v2 — isolated design system, RTL, light/dark, no legacy card maze. */
-#equipment-workspace,.eq-dialog{--eq-accent:#6b9cff;--eq-bg:#111a2b;--eq-surface:#182337;--eq-soft:#202e44;--eq-line:#2c3a50;--eq-text:#eaf0fa;--eq-muted:#9fadc2;--eq-success:#74d8bd;--eq-warning:#efc57a;--eq-danger:#ff9eaa;color:var(--eq-text);font-family:inherit;line-height:1.8;direction:rtl;box-sizing:border-box}
+/* Equipment v2 — shared dashboard palette/background, RTL, light/dark. */
+#equipment-workspace,.eq-dialog{--eq-accent:var(--cyan);--eq-bg:var(--bg-1);--eq-surface:var(--glass);--eq-soft:var(--glass-2);--eq-line:var(--stroke);--eq-text:var(--txt-0);--eq-muted:var(--txt-1);--eq-success:#74d8bd;--eq-warning:#efc57a;--eq-danger:#ff9eaa;color:var(--eq-text);font-family:inherit;line-height:1.8;direction:rtl;box-sizing:border-box}
 html[data-ui-theme="light"] #equipment-workspace,html[data-ui-theme="light"] .eq-dialog{--eq-accent:#315edb;--eq-bg:#f4f6fa;--eq-surface:#fff;--eq-soft:#f5f7fb;--eq-line:#e3e8f0;--eq-text:#1e2e48;--eq-muted:#65758c;--eq-success:#167d66;--eq-warning:#986515;--eq-danger:#bc3450}
-#equipment-workspace{max-width:1600px;margin:0 auto;background:var(--eq-bg);border:1px solid var(--eq-line);border-radius:18px;box-shadow:0 12px 40px #0000000a;overflow:clip;isolation:isolate}
+#equipment-workspace{max-width:1600px;margin:0 auto;background:transparent;border:1px solid var(--eq-line);border-radius:18px;box-shadow:0 12px 40px #0000000a;overflow:clip;isolation:isolate}
 #equipment-workspace *,.eq-dialog *{box-sizing:border-box}
 #view-equipment>.view-head .sub{font-size:10px;letter-spacing:1.4px}
 .eq-workspace-header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:28px 32px 24px;background:var(--eq-surface)}
@@ -48,9 +48,9 @@ html[data-ui-theme="light"] #equipment-workspace,html[data-ui-theme="light"] .eq
 /* Fit the existing flex content container; horizontal scrolling is table-only. */
 #equipment-workspace{width:100%;min-width:0;flex-shrink:1}
 #view-equipment.active>.content{display:block;min-width:0;max-width:100%;padding:22px;overflow-x:clip}
-html:has(#view-equipment.active) #fx-stage{display:none!important}
-#view-equipment.active{background:#101a2b}
-html[data-ui-theme="light"] #view-equipment.active{background:#f4f6fa}
+/* Keep the same global FX and background as the dashboard; light-theme FX
+   and reduced-motion preferences remain controlled by the shared theme. */
+#view-equipment.active{background:transparent}
 html[data-ui-theme="light"] #view-equipment.active>.view-head{background:#fff;color:#1e2e48}
 @media(max-width:760px){#view-equipment.active>.content{padding:12px 9px}.eq-main{overflow:hidden}}
 #equipment-server-note{max-width:1600px;margin:0 auto 12px;padding:0 2px;font-size:10px;background:transparent;border:0;color:#a7b6cb}
@@ -61,7 +61,7 @@ html:has(#view-equipment.active) #topbar .top-search,
 html:has(#view-equipment.active) #topbar [data-act="open-file"],
 html:has(#view-equipment.active) #topbar [data-act="save-now"],
 html:has(#view-equipment.active) #topbar #save-indicator{display:none!important}
-html:has(#view-equipment.active) #topbar{display:flex;flex-wrap:nowrap;min-height:64px;padding:12px 18px;gap:10px;background:#111a2b;border-bottom:1px solid #2c3a50;box-shadow:none}
+html:has(#view-equipment.active) #topbar{display:flex;flex-wrap:nowrap;min-height:64px;padding:12px 18px;gap:10px}
 html[data-ui-theme="light"]:has(#view-equipment.active) #topbar{background:#fff;border-color:#e3e8f0;color:#1e2e48}
 html:has(#view-equipment.active) #topbar .page-title{min-width:0}
 html[data-ui-theme="light"]:has(#view-equipment.active) #topbar #top-title{color:#1e2e48}

@@ -1,0 +1,8 @@
+/* One vertical identity on login and the two-workspace chooser, in both themes. */
+.fam-brand-lockup{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;margin:0 auto;text-align:center;max-width:100%;direction:rtl}
+.fam-brand-art{display:block;width:88px;height:90px;max-width:100%;object-fit:contain;flex-shrink:0}
+.fam-brand-caption{max-width:100%;font-family:inherit;font-size:clamp(11px,1.2vw,14px);font-weight:650;line-height:1.9;color:var(--txt-0);text-wrap:balance;overflow-wrap:anywhere}
+.fam-brand-login{margin:8px auto 20px}
+.fam-brand-workspace{margin:0 auto 24px}
+.fam-brand-workspace .fam-brand-art{width:98px;height:100px}
+@media(max-width:640px){.fam-brand-art,.fam-brand-workspace .fam-brand-art{width:76px;height:78px}.fam-brand-workspace{margin-bottom:18px}.fam-brand-caption{font-size:11px}.fam-brand-lockup{gap:10px}}

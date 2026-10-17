@@ -5,7 +5,7 @@ import re
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT=Path(__file__).resolve().parents[1]
-STAMP=(2026,10,16,0,0,0)
+STAMP=(2026,10,18,0,0,0)
 # The server patch must never carry runtime secrets, databases, keys, logs,
 # a virtual environment, or the retired Netmiko/Paramiko wheels.
 FORBIDDEN_SUFFIXES={'.pfx','.p12','.pem','.key','.sqlite3','.sqlite3-wal','.sqlite3-shm','.log','.whl','.pyc'}
@@ -54,6 +54,7 @@ FILES=(
     (ROOT/'server'/'app.py','app.py'),
     (ROOT/'server'/'account_policy.py','account_policy.py'),
     (ROOT/'server'/'equipment_guard.py','equipment_guard.py'),
+    (ROOT/'server'/'equipment_diagnostics.py','equipment_diagnostics.py'),
     (ROOT/'server'/'manage.py','manage.py'),
     (ROOT/'server'/'bootstrap_admin.py','bootstrap_admin.py'),
     (ROOT/'server'/'windows'/'preflight_backup.py','preflight_backup.py'),
@@ -76,6 +77,7 @@ for source,name in FILES:
     (payload/name).write_bytes(source.read_bytes())
 expected=''.join(f'{hashlib.sha256((payload/name).read_bytes()).hexdigest()}  {name}\n' for _,name in FILES)
 (payload/'SHA256SUMS.txt').write_text(expected,encoding='utf8')
+(server/'CLIENT-MOVE-DIAGNOSIS-FA.txt').write_bytes((ROOT/'docs'/'CLIENT_MOVE_DIAGNOSIS_FA.md').read_bytes())
 local=ROOT/'patches'/'fam-custom-access-local'
 local.mkdir(parents=True,exist_ok=True)
 (local/'FAM.html').write_bytes((ROOT/'FAM.html').read_bytes())
