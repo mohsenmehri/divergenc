@@ -1,0 +1,69 @@
+---
+# All tasks carry no_log; tags cannot bypass the surrounding pre-check in normal use.
+- name: Read the full status table before touching this exact interface
+  cisco.ios.ios_command:
+    commands:
+      - show interfaces status
+  register: fam_before_raw
+  changed_when: false
+  no_log: true
+
+- name: Validate the complete pre-check table
+  ansible.builtin.set_fact:
+    fam_before: "{{ fam_before_raw.stdout[0] | fam_status }}"
+    cacheable: false
+  no_log: true
+
+- name: Require the exact interface to exist in the pre-check
+  ansible.builtin.assert:
+    that:
+      - fam_interface in fam_before.interfaces
+  no_log: true
+
+- name: Do not flap a port that is no longer err-disabled
+  ansible.builtin.set_fact:
+    fam_outcomes: "{{ fam_outcomes + [{'interface':fam_interface,'result':'not_errdisabled'}] }}"
+    cacheable: false
+  when: fam_interface not in fam_before.errdisabled
+  no_log: true
+
+- name: Cycle and verify the exact confirmed err-disabled interface
+  when: fam_interface in fam_before.errdisabled
+  block:
+    - name: Send only shutdown and no shutdown under the single interface
+      cisco.ios.ios_config:
+        parents: "interface {{ fam_interface }}"
+        lines:
+          - shutdown
+          - no shutdown
+        match: none
+        replace: line
+        running_config: "!"
+        save_when: never
+        backup: false
+      diff: false
+      # running_config is a truthy sentinel: match:none always sends both
+      # ordered lines, without fetching the device's full running-config.
+    - name: Read status again, never assume the write means recovery succeeded
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces status
+      register: fam_after_raw
+      changed_when: false
+    - name: Validate the complete post-check table
+      ansible.builtin.set_fact:
+        fam_after: "{{ fam_after_raw.stdout[0] | fam_status }}"
+        cacheable: false
+    - name: Require the same interface to exist after the operation
+      ansible.builtin.assert:
+        that:
+          - fam_interface in fam_after.interfaces
+    - name: Record only the verified outcome
+      ansible.builtin.set_fact:
+        fam_outcomes: "{{ fam_outcomes + [{'interface':fam_interface,'result':('still_errdisabled' if fam_interface in fam_after.errdisabled else 'recovered')}] }}"
+        cacheable: false
+    - name: Stop this switch if recovery did not resolve the error
+      ansible.builtin.assert:
+        that:
+          - fam_interface not in fam_after.errdisabled
+  no_log: true

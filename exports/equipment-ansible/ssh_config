@@ -1,0 +1,10 @@
+# libssh reads this file (OpenSSH -o arguments are NOT used by network_cli).
+# Verify keys out of band and provision the controller's ~/.ssh/known_hosts.
+Host *
+    StrictHostKeyChecking yes
+    UserKnownHostsFile ~/.ssh/known_hosts
+    IdentitiesOnly yes
+    PubkeyAuthentication no
+    PasswordAuthentication yes
+    PreferredAuthentications keyboard-interactive,password
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr,aes128-cbc

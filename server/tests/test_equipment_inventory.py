@@ -19,15 +19,16 @@ class EquipmentInventoryTests(api.CentralTests):
         r=self.post(self.a,'users',p);self.assertEqual(r.status_code,200,r.json);return self.login('eq-worker')
     def test_building_shared_range_roundtrip_import_and_scope_enforcement(self):
         p=self.populated()
-        p['inventory']['nodes'][0]['host']='100.100.1.22'
-        p['inventory']['nodes'][1]['host']='100.108.1.22'
+        nodes={n['id']:n for n in p['inventory']['nodes']}
+        nodes['node-one']['host']='100.100.1.22'
+        nodes['node-two']['host']='100.108.1.22'
         self.assertEqual(self.write(self.a,p,kind='import').status_code,200)
         p=self.eq().json
-        self.assertEqual([n['host'] for n in p['inventory']['nodes']],['100.100.1.22','100.108.1.22'])
-        p['inventory']['nodes'][1]['host']='100.107.1.22'
+        self.assertEqual({n['id']:n['host'] for n in p['inventory']['nodes']},{'node-one':'100.100.1.22','node-two':'100.108.1.22'})
+        next(n for n in p['inventory']['nodes'] if n['id']=='node-two')['host']='100.107.1.22'
         self.assertEqual(self.write(self.a,p).status_code,200)
         for host in ['100.63.255.255','100.128.0.0','100.1.1.22','8.8.8.8','::1','100.100.1.256']:
-            p=self.eq().json;p['inventory']['nodes'][0]['host']=host
+            p=self.eq().json;next(n for n in p['inventory']['nodes'] if n['id']=='node-one')['host']=host
             self.assertEqual(self.write(self.a,p).status_code,400)
         scope={k:['*'] for k in DEFAULT_INVENTORY['catalog']};scope['regions']=['region-1']
         worker=self.worker(['equipment-scan'],scope);calls=[]
