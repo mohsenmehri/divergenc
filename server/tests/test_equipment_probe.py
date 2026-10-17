@@ -41,6 +41,8 @@ Gi1/0/7   --                 err-disabled 20           auto   auto 10/100/1000Ba
 TABLE_RECOVERED = TABLE_ERRDISABLED.replace("err-disabled 10 ", "notconnect   10 ")
 
 
+DESCRIPTION_TABLE = "Interface                      Status         Protocol Description\nGi0/1                          up             up       Uplink core\nGi0/7                          down           down     ATM 17\nGi0/8                          admin down     down     Spare\n"
+
 class FakeProcess:
     """Stands in for the ssh.exe Popen handle."""
 
@@ -224,6 +226,24 @@ class SshExeTransportTests(ProbeHarness):
         self.calls.clear()
         result=self.run_probe(self.recover_job(), [{'out':TABLE_ERRDISABLED},{'out':''},{'out':missing}])
         self.assertEqual(result, {'ok':False,'error':'status_unreadable'})
+
+    def test_descriptions_uses_only_fixed_read_command_and_preserves_table(self):
+        result=self.run_probe({**self.status_job(),'operation':'descriptions'},[{'out':'Private banner '+PASSWORD+'\nSwitch#'+DESCRIPTION_TABLE+'Switch#exit\n'}])
+        self.assertEqual(result,{'ok':True,'output':DESCRIPTION_TABLE,'redacted':False})
+        self.assertEqual(self.calls[0]['stdin'],'terminal length 0\nshow interfaces description\nexit\n')
+        self.assertNotIn(PASSWORD,str(result));self.assertNotIn('Switch#',result['output'])
+
+    def test_descriptions_redacts_credentials_and_sensitive_payload_only(self):
+        table=DESCRIPTION_TABLE.replace('ATM 17','token SUPER-SENSITIVE').replace('Uplink core',PASSWORD)
+        result=self.run_probe({**self.status_job(),'operation':'descriptions'},[{'out':table}])
+        self.assertTrue(result['ok']);self.assertTrue(result['redacted']);self.assertNotIn(PASSWORD,result['output']);self.assertNotIn('SUPER-SENSITIVE',result['output']);self.assertIn('[REDACTED]',result['output'])
+
+    def test_descriptions_rejects_partial_unexpected_paginated_and_oversized_output(self):
+        for table in ('','Interface Status Protocol Description\n',DESCRIPTION_TABLE+'unexpected banner\n',DESCRIPTION_TABLE+'--More--',DESCRIPTION_TABLE+'x'*100001,DESCRIPTION_TABLE.replace('ATM 17','\x1b[31msecret')):
+            result=self.run_probe({**self.status_job(),'operation':'descriptions'},[{'out':table}]);self.assertEqual(result,{'ok':False,'error':'descriptions_unreadable'})
+        count=len(self.calls)
+        result=equipment_probe.execute({**self.status_job(),'operation':'descriptions','interface':'Gi0/1'})
+        self.assertEqual(result,{'ok':False,'error':'invalid_request'});self.assertEqual(len(self.calls),count)
 
     def test_password_is_only_in_child_environment_never_argv_or_askpass_file(self):
         self.run_probe(self.status_job(), [{"out": TABLE_CLEAN}])

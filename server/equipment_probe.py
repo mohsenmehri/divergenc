@@ -18,10 +18,11 @@ Security contract
   policy is ``accept-new`` (record on first contact, refuse any later change);
   ``strict`` requires the key to be pre-trusted.  Host-key checking is never
   disabled.
-* Only two fixed command sequences exist (status / bounded recovery).  There is
+* Only fixed status / interface-description / bounded recovery sequences exist. There is
   no terminal, free-form command, ``enable``, ``write memory`` or ``copy``.
-* Raw CLI output, banners, prompts and ssh diagnostics never leave this
-  process; callers only receive stable, redacted codes.
+* Banners, prompts, arbitrary CLI and ssh diagnostics never leave this process.
+  The explicitly requested interface-description table alone may be displayed,
+  with credential-bearing description fields redacted and no persistent copy.
 """
 from __future__ import annotations
 
@@ -55,10 +56,11 @@ SECRET_ENV = "FAM_EQUIPMENT_SSH_SECRET"
 # FAM backend never kills this helper while ssh.exe is still being supervised.
 CONNECT_TIMEOUT = 10
 SESSION_TIMEOUT = 25
-HELPER_DEADLINE = {"status": 30, "recover": 85}
+HELPER_DEADLINE = {"status": 30, "descriptions": 30, "recover": 85}
 MAX_OUTPUT_BYTES = 1024 * 1024
 
 STATUS_COMMANDS = ("terminal length 0", "show interfaces status", "exit")
+DESCRIPTION_COMMANDS = ("terminal length 0", "show interfaces description", "exit")
 
 # Win32 OpenSSH uses CreateProcess, which cannot directly execute a .cmd/.ps1
 # file. Build a tiny .NET Framework executable in the per-session directory.
@@ -447,6 +449,41 @@ def status(job):
     return {"ok": True, "ports": ports}
 
 
+DESCRIPTION_HEADER = re.compile(r"^\s*Interface\s+Status\s+Protocol\s+Description\s*$",re.I)
+DESCRIPTION_ROW = re.compile(r"^(\s*([A-Za-z][A-Za-z0-9/.-]{0,63})\s+(?:(?:admin(?:istratively)?\s+)?(?:up|down)|deleted|reset|unknown)\s+(?:up|down|unknown)(?:\s+|$))(.*)$",re.I)
+DESCRIPTION_PROMPT = re.compile(r"^[^\s#>]{1,64}[#>]\s*(?=Interface\b)",re.I)
+
+def descriptions_table(output,username,password):
+    """Only the fixed read-only command's table, never banner/prompt/CLI.
+    Preserve table spacing/newlines. Sensitive description payloads are redacted.
+    Called both in the child and the API before crossing the browser boundary.
+    """
+    if not isinstance(output,str) or len(output)>100000 or cli_errors(output) or '--More--' in output or re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u202a-\u202e\u2066-\u2069]',output):raise ProbeError('descriptions_unreadable')
+    lines=[];seen=set();started=False;redacted=False
+    for raw in output.splitlines():
+        line=DESCRIPTION_PROMPT.sub('',raw,count=1)
+        if DESCRIPTION_HEADER.fullmatch(line):
+            if started:raise ProbeError('descriptions_unreadable')
+            started=True;lines.append(line);continue
+        if not started:continue
+        if re.fullmatch(r'(?:[^\s#>]{1,64}[#>]\s*(?:exit)?|exit)\s*',line,re.I):break
+        if not line.strip():lines.append(line);continue
+        match=DESCRIPTION_ROW.fullmatch(line)
+        if not match or not any(c.isdigit() for c in match[2]) or match[2].lower() in seen or len(seen)>=2048:raise ProbeError('descriptions_unreadable')
+        seen.add(match[2].lower());description=match[3]
+        sensitive=any(secret and secret.casefold() in description.casefold() for secret in (username,password)) or re.search(r'\b(?:password|secret|community|key(?:-string)?|token|authorization|api[_-]?key|access[_-]?token)\b\s*(?:[:=]\s*|\s+)\S+|BEGIN[^\n]*PRIVATE KEY|(?:radius|tacacs)[^\n]*\bkey\s+\S+',description,re.I)
+        if sensitive:line=match[1]+'[REDACTED]';redacted=True
+        lines.append(line)
+    if not started or not seen:raise ProbeError('descriptions_unreadable')
+    while lines and not lines[-1].strip():lines.pop()
+    return '\n'.join(lines)+'\n',redacted
+
+def descriptions(job):
+    output=session_output(job,DESCRIPTION_COMMANDS,Deadline(HELPER_DEADLINE['descriptions']))
+    table,redacted=descriptions_table(output,job['username'],job['password'])
+    return {'ok':True,'output':table,'redacted':redacted}
+
+
 def recovery_commands(interface: str):
     # This is the only allowed configuration sequence.  Do not enable, save,
     # or execute any caller-provided command.
@@ -475,7 +512,7 @@ def execute(value):
     """Run one already-decoded, bounded job and return only its safe result."""
     if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}):
         return {"ok": False, "error": "invalid_request"}
-    if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
+    if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "descriptions", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
         return {"ok": False, "error": "invalid_request"}
     try:
         address = ipaddress.ip_address(value["host"])
@@ -490,13 +527,13 @@ def execute(value):
         return {"ok": False, "error": "invalid_request"}
     if value["operation"] == "recover" and (not isinstance(value.get("interface"), str) or not INTERFACE.fullmatch(value["interface"])):
         return {"ok": False, "error": "invalid_request"}
-    if value["operation"] == "status" and "interface" in value:
+    if value["operation"] != "recover" and "interface" in value:
         return {"ok": False, "error": "invalid_request"}
     job = {"host": str(address), "username": value["username"], "password": password}
     if value["operation"] == "recover":
         job["interface"] = value["interface"]
     try:
-        return status(job) if value["operation"] == "status" else recover(job)
+        return {"status":status,"descriptions":descriptions,"recover":recover}[value["operation"]](job)
     except ProbeError as exc:
         return {"ok": False, "error": exc.code}
     except subprocess.TimeoutExpired:

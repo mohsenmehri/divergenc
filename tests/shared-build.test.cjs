@@ -28,7 +28,7 @@ test('only a minimal login shell is static while the interactive client remains 
 test('the deployed client has a verifiable release marker',()=>{
  const local=read('FAM.html'),central=read(CENTRAL);
  for(const html of [local,central]){
-  assert.match(html,/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
+  assert.match(html,html===central?/<meta name="fam-release" content="FAM-SERVER-MANUAL-IP-DES-20261017">/:/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
   assert.match(html,/FAM UI-17 · 2026-10-13/);
   assert.match(html,/operation-primary-action/);
   assert.match(html,/function manageCategorySections\(categoryId\)/);
@@ -118,4 +118,10 @@ test('SERVER tools and device pages use one simple real SSH workflow, never LOCA
  assert.match(tools,/FamEquipmentLive.mount\(content\)/);assert.doesNotMatch(tools,/simulateErr|سناریوی ساختگی|errdisabledUI/);
  assert.match(device,/FamEquipmentLive.mount\(main,node.id\)/);assert.doesNotMatch(device,/equipment-demo-scenario|async function runCheck/);
  const live=read('src/equipment-live-server.js');assert.match(live,/equipment\/check/);assert.match(live,/equipment\/recover/);assert.match(live,/data.source!==\'server-ssh\'/);assert.doesNotMatch(live,/localStorage|sessionStorage/);
+});
+
+test('SERVER manual-IP and description output use the scoped API and text-only rendering',()=>{
+ const html=read(CENTRAL),live=html.match(/<script id="fam-equipment-management-js">([\s\S]*?)<\/script>/)[1];
+ assert.match(live,/eq-live-manual-ip/);assert.match(live,/FamEquipmentInventory.privateIP/);assert.match(live,/equipment\/descriptions/);assert.match(live,/pre=el\('pre','eq-live-command-output',item.output\)/);assert.match(live,/whiteSpace:'pre'/);assert.doesNotMatch(live,/innerHTML|localStorage|sessionStorage/);
+ const helper=read('server/equipment_probe.py');assert.match(helper,/DESCRIPTION_COMMANDS = \("terminal length 0", "show interfaces description", "exit"\)/);
 });

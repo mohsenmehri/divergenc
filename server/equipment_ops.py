@@ -21,6 +21,10 @@ import subprocess
 import time
 
 from flask import g, jsonify
+try:
+    from .equipment_probe import descriptions_table, ProbeError
+except ImportError:
+    from equipment_probe import descriptions_table, ProbeError
 
 INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
 # Same allowlist as equipment_probe.USERNAME: the name is passed to ssh.exe -l
@@ -29,7 +33,7 @@ USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 # Outer wall clock for the helper process per operation.  It must exceed
 # equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
 # helper while it is still supervising an ssh.exe child.
-EXECUTOR_TIMEOUT = {"status": 40, "recover": 95}
+EXECUTOR_TIMEOUT = {"status": 40, "descriptions": 40, "recover": 95}
 RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
 
 
@@ -134,6 +138,7 @@ def _failure(value):
         "authentication_failed": "نام کاربری یا رمز تجهیز پذیرفته نشد.",
         "connection_timeout": "اتصال SSH به تجهیز در زمان مجاز پاسخ نداد.",
         "connection_failed": "بررسی تجهیز انجام نشد؛ دسترسی SSH و وضعیت تجهیز را بررسی کنید.",
+        "descriptions_unreadable": "خروجی show int des کامل یا قابل تأیید نیست؛ متن خام دیگری نمایش داده نمی‌شود.",
         "status_unreadable": "اتصال انجام شد اما جدول کامل وضعیت پورت‌ها قابل تأیید نیست؛ وضعیت نامشخص است، نه بدون خطا.",
     }.get(code, "بررسی تجهیز انجام نشد.")
 
@@ -176,6 +181,18 @@ def register_equipment_ops(app, *, data, fail, allowed):
         ports = _ports_or_fail(result, fail)
         tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
         return jsonify(host=value["host"], source="server-ssh", checkedAt=int(time.time()*1000), errDisabledPorts=ports, recoveryTickets=tickets)
+
+    @app.post('/api/equipment/descriptions')
+    def equipment_descriptions():
+        authorize('descriptions')
+        try:value=_input(data())
+        except ValueError:fail(400,'IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.')
+        authorize('descriptions',value['host'])
+        result=_execute(app,{'operation':'descriptions',**value})
+        if not isinstance(result,dict) or result.get('ok') is not True:fail(502,_failure(result))
+        try:output,redacted=descriptions_table(result.get('output'),value['username'],value['password'])
+        except ProbeError:fail(502,_failure({'error':'descriptions_unreadable'}))
+        return jsonify(host=value['host'],source='server-ssh',checkedAt=int(time.time()*1000),command='show interfaces description',output=output,redacted=redacted or result.get('redacted') is True)
 
     @app.post("/api/equipment/recover")
     def equipment_recover():

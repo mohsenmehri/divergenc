@@ -39,7 +39,21 @@ for module in ('equipment-local-preview','equipment-tools'):
     s,n=re.subn(r'<script id="fam-'+module+r'-js">.*?</script>',lambda _: '<script id="fam-'+module+'-js">\n'+source+'</script>',s,flags=re.S);assert n==1
 # Facade must exist before the equipment controllers initialise on DOMContentLoaded.
 s=s.replace('<script id="fam-equipment-local-preview-js">','<script id="fam-equipment-server-store-js">\n'+(root/'src/equipment-server-store.js').read_text()+'</script>\n<script id="fam-equipment-local-preview-js">',1)
-s=s.replace('\n</body>','\n<script id="fam-equipment-management-js">\n'+(root/'src/equipment-live-server.js').read_text()+'</script>\n</body>',1)
+live=(root/'src/equipment-live-server.js').read_text()
+live=live.replace(' let pane=null,'," let manualIP='',manualTargets=[],descriptionBusy=false,descriptions=[];\n let pane=null,",1)
+needle="return d.nodes.filter(n=>d.catalog.types.some(t=>t.id===n.typeId&&t.kind==='switch'));"
+assert needle in live
+live=live.replace(needle,"return [...d.nodes.filter(n=>d.catalog.types.some(t=>t.id===n.typeId&&t.kind==='switch')),...( ['types','models','regions','siteKinds','sites'].every(k=>Access.current()?.equipmentScope?.[k]?.includes('*'))?manualTargets.filter(n=>!d.nodes.some(x=>x.host===n.host)):[])];",1)
+live=live.replace('function invalidate(){epoch++;','function invalidate(){descriptions=[];epoch++;',1)
+live=live.replace('pane.append(fieldset);if(busy)','pane.append(fieldset);manualControls(pane);if(busy)',1)
+live=live.replace('pane.append(out);report();',"pane.append(out);const cli=el('section');cli.id='eq-live-descriptions';pane.append(cli);report();",1)
+live=live.replace('if(!root)return;root.replaceChildren();','if(!root)return;descriptionsView();root.replaceChildren();',1)
+live=live.replace("if(busy)return;try{allowed('equipment-scan');","if(busy||descriptionBusy)return;try{allowed('equipment-scan');",1)
+needle_scan='break;}report();}}\n   finally';assert needle_scan in live
+live=live.replace(needle_scan,"break;}report();}if(token===epoch)await descriptionsRead(results.filter(r=>r.state==='checked').map(r=>r.node),token);}\n   finally",1)
+live=live.replace('function clear(){invalidate();',"function clear(){manualIP='';manualTargets=[];descriptionBusy=false;invalidate();",1)
+live=live.replace(' function draw(){',(root/'src/equipment-server-port-additions.js').read_text()+'\n function draw(){',1)
+s=s.replace('\n</body>','\n<script id="fam-equipment-management-js">\n'+live+'</script>\n</body>',1)
 a=s.index('function clearLog() {');b=s.index('/* ---------- results',a)
 s=s[:a]+"""function clearLog(){
  if(!Access.require('clear-history'))return false;
@@ -69,6 +83,7 @@ s=s.replace('localStorage.setItem(LS_KEY_UI,',"localStorage.setItem(LS_KEY_UI+':
 s=s.replace(' — Passwords and sheet locks in this app only SIMULATE the Excel workbook behavior. They are NOT real security. All data lives in the browser; anyone with the file/data can read it.',' — Central mode: the server enforces authentication, permissions and versioned writes; HTTPS and private database storage are required.')
 s=s.replace('data-default-theme="original"','data-default-theme="original" data-fam-variant="shared"',1)
 s=s.replace('<title>','<title>فام مرکزی — ',1)
+s=re.sub(r'<meta name="fam-release" content="[^"]*">','<meta name="fam-release" content="FAM-SERVER-MANUAL-IP-DES-20261017">',s,count=1)
 s=s.replace('\n</head>','\n<style id="fam-shared-css">\n'+(root/'src/shared-sync.css').read_text()+'\n</style>\n</head>',1)
 s=s.replace('\n</body>','\n<script id="fam-shared-js">\n'+(root/'src/shared-sync.js').read_text()+'\n</script>\n</body>',1)
 p=root/'server/private_ui/FAM.html';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)

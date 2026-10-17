@@ -54,6 +54,16 @@ class EquipmentInventoryTests(api.CentralTests):
         self.assertEqual(self.post(w,'equipment/check',value).status_code,403);self.assertEqual(calls,[])
         value['host']='10.44.0.1';self.assertEqual(self.post(w,'equipment/check',value).status_code,200);self.assertEqual(calls,['10.44.0.1'])
 
+    def test_description_read_requires_operation_and_scoped_host(self):
+        from server.tests.test_equipment_probe import DESCRIPTION_TABLE
+        self.populated();scope={k:['*'] for k in DEFAULT_INVENTORY['catalog']};scope['regions']=['region-1'];w=self.worker(['equipment-scan'],scope);calls=[]
+        self.app.config.update(EQUIPMENT_OPS_ENABLED=True,EQUIPMENT_EXECUTOR=lambda job:(calls.append(job['host']) or {'ok':True,'output':DESCRIPTION_TABLE}))
+        body={'host':'10.44.0.2','username':'fixture','password':'synthetic'}
+        self.assertEqual(self.post(w,'equipment/descriptions',body).status_code,403);body['host']='10.99.9.9';self.assertEqual(self.post(w,'equipment/descriptions',body).status_code,403);self.assertEqual(calls,[])
+        body['host']='10.44.0.1';self.assertEqual(self.post(w,'equipment/descriptions',body).status_code,200);self.assertEqual(calls,['10.44.0.1'])
+        p=self.a.get('/api/users').json;worker=next(u for u in p['users'] if u['username']=='eq-worker');worker['permissions'].remove('equipment-scan');self.assertEqual(self.post(self.a,'users',p).status_code,200)
+        self.assertEqual(self.post(self.login('eq-worker'),'equipment/descriptions',body).status_code,403);self.assertEqual(calls,['10.44.0.1'])
+
     def test_history_clear_rechecks_authority_and_preserves_other_data_and_undo_snapshots(self):
         before=self.state()['state'];self.assertTrue(len(before['sheets']['CHANGE_LOG']['rows'])>1);w=self.worker([]);self.assertEqual(self.post(w,'history/clear',{'confirm':True}).status_code,403);self.assertEqual(self.post(self.a,'history/clear',{'confirm':True}).status_code,200);after=self.state()['state'];self.assertEqual(self.a.get('/api/status').json['historyFloor'],self.state()['historyFloor']);self.assertEqual(len(after['sheets']['CHANGE_LOG']['rows']),1);self.assertEqual(before['sheets']['Network'],after['sheets']['Network'])
 

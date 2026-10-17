@@ -15,10 +15,11 @@ with tempfile.TemporaryDirectory() as directory:
     repaired=set()
     def executor(job):
         if job['host']=='10.53.0.3':return {'ok':False,'error':'connection_timeout'}
+        if job['operation']=='descriptions':return {'ok':True,'output':'Interface                      Status         Protocol Description\nGi0/1                          up             up       Fixture uplink\nGi0/7                          down           down     <img src=x onerror=alert(1)>\n'}
         if job['operation']=='recover':
             repaired.add((job['host'],job['interface']))
             return {'ok':True,'recovery':'recovered'}
-        ports=[{'interface':'Gi0/7','description':'Fixture port'}] if job['host']=='10.53.0.1' and ('10.53.0.1','Gi0/7') not in repaired else []
+        ports=[{'interface':'Gi0/7','description':'Fixture port'}] if job['host'] in {'10.53.0.1','10.53.0.9'} and (job['host'],'Gi0/7') not in repaired else []
         return {'ok':True,'ports':ports}
     app=create_app({'TESTING':True,'COOKIE_SECURE':False,'PUBLIC_ORIGIN':'http://localhost:8765','DB_PATH':str(Path(directory)/'synthetic.sqlite3'),'EQUIPMENT_OPS_ENABLED':True,'EQUIPMENT_EXECUTOR':executor})
     client=app.test_client();login=client.post('/api/login',json={'username':'admin','password':'1109'},headers={'Origin':'http://localhost:8765'}).json

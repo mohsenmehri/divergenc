@@ -157,6 +157,19 @@ class EquipmentOpsTests(unittest.TestCase):
         result=self.post('/api/equipment/check',{'host':'10.2.52.2','username':'fixture','password':'temporary'})
         self.assertEqual(result.status_code,502);self.assertIn('نامشخص',result.json['error']);self.assertNotIn('PRIVATE CLI',result.get_data(as_text=True))
 
+    def test_descriptions_endpoint_returns_only_verified_table_and_checks_origin_and_csrf(self):
+        from server.tests.test_equipment_probe import DESCRIPTION_TABLE
+        self.app.config['EQUIPMENT_EXECUTOR']=lambda job:{'ok':True,'output':'Private banner\nSwitch#'+DESCRIPTION_TABLE+'Switch#\n'}
+        body={'host':'10.2.52.2','username':'fixture-user','password':'temporary-test-password'}
+        response=self.post('/api/equipment/descriptions',body)
+        self.assertEqual(response.status_code,200,response.json);self.assertEqual(response.json['output'],DESCRIPTION_TABLE);self.assertEqual(response.json['command'],'show interfaces description');self.assertEqual(response.json['source'],'server-ssh')
+        self.assertNotIn('Private banner',str(response.json));self.assertNotIn('Switch#',str(response.json))
+        self.assertEqual(self.post('/api/equipment/descriptions',body,csrf=False).status_code,403)
+        self.assertEqual(self.post('/api/equipment/descriptions',{**body,'command':'show run'}).status_code,400)
+        self.assertEqual(self.post('/api/equipment/descriptions',{**body,'host':'8.8.8.8'}).status_code,400)
+        self.app.config['EQUIPMENT_EXECUTOR']=lambda job:{'ok':True,'output':'SECRET RAW CLI'}
+        response=self.post('/api/equipment/descriptions',body);self.assertEqual(response.status_code,502);self.assertNotIn('SECRET RAW CLI',str(response.json))
+
     def test_errdisabled_parser_discards_raw_cli_output(self):
         output = """Port Name Status Vlan Duplex Speed Type
 Gi0/1 users err-disabled 1 auto auto 10/100/1000BaseTX
