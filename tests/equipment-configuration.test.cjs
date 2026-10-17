@@ -17,7 +17,8 @@ before(async()=>{
  inventoryBefore=await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3'));
 });
 after(async()=>{await browser?.close();});
-async function radius(){await page.locator('#equipment-radius-user').fill('fake-config-radius-user');await page.locator('#equipment-radius-password').fill('fake-config-radius-secret');await page.getByRole('button',{name:'ورود به فضای تجهیزات',exact:true}).click();}
+async function radius(){} // Inventory no longer requires device credentials.
+
 const targets=()=>page.locator('#eq-config-targets');
 const field=(index,key)=>page.locator('#eq-config-rule-'+index+'-'+key);
 async function commands(){await page.locator('#eq-config-commands').fill('interface GigabitEthernet0/1\n description '+marker);}
@@ -26,15 +27,15 @@ test('configuration tab has a command editor and blocks empty target selection o
  assert.ok(await page.locator('#eq-config-review').isDisabled());assert.match(await targets().innerText(),/حداقل یک شرط/);
  await commands();assert.ok(await page.locator('#eq-config-review').isDisabled());
  await field(0,'typeId').selectOption('type-router');await field(0,'regionId').selectOption('region-2');
- assert.match(await targets().innerText(),/28 نود یکتا/);assert.match(await targets().innerText(),/1 نود نیازمند تکمیل/);assert.ok(await page.locator('#eq-config-review').isEnabled());
+ assert.match(await targets().innerText(),/28 تجهیز یکتا/);assert.match(await targets().innerText(),/1 تجهیز نیازمند تکمیل/);assert.ok(await page.locator('#eq-config-review').isEnabled());
 });
 test('multiple target groups union AND filters and deduplicate models shared with region groups',async()=>{
  await page.locator('#eq-config-add-rule').click();assert.ok(await page.locator('#eq-config-review').isDisabled());
  await field(1,'modelId').selectOption('model-1841');assert.equal(await field(1,'typeId').inputValue(),'type-router');
  await page.locator('#eq-config-add-rule').click();await field(2,'typeId').selectOption('type-switch');await field(2,'modelId').selectOption('model-2960');
- assert.match(await targets().innerText(),/30 نود یکتا/);assert.equal(await targets().locator('tbody tr').count(),25);
+ assert.match(await targets().innerText(),/30 تجهیز یکتا/);assert.equal(await targets().locator('tbody tr').count(),25);
  await targets().getByRole('button',{name:'بعدی',exact:true}).click();assert.equal(await targets().locator('tbody tr').count(),5);await targets().getByRole('button',{name:'قبلی',exact:true}).click();
- await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/fam-config-targets.png',fullPage:true});
+ await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/fam-config-targets.png',fullPage:true,animations:'disabled',timeout:30000});
 });
 test('review lists exact destinations, requires acknowledgment, and cancel does not simulate or change inventory',async()=>{
  await page.locator('#eq-config-review').click();assert.equal(await page.locator('#eq-config-confirm .eq-config-review-list > div').count(),30);
@@ -44,7 +45,7 @@ test('review lists exact destinations, requires acknowledgment, and cancel does 
 });
 test('confirmed deployment is explicitly dry-run only, never changes inventory or persists command text',async()=>{
  await page.locator('#eq-config-review').click();await page.locator('#eq-config-ack').check();await page.locator('#eq-config-confirm-submit').click();
- assert.equal(await page.locator('#eq-config-confirm').count(),0);assert.match(await targets().innerText(),/شبیه‌سازی برای 30 نود تکمیل شد/);assert.match(await targets().innerText(),/شبیه‌سازی شد · بدون ارسال/);
+ assert.equal(await page.locator('#eq-config-confirm').count(),0);assert.match(await targets().innerText(),/شبیه‌سازی برای 30 تجهیز تکمیل شد/);assert.match(await targets().innerText(),/شبیه‌سازی شد · بدون ارسال/);
  assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3')),inventoryBefore);
  const storage=await page.evaluate(()=>JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)]));for(const text of [marker,'fake-config-radius-secret','fake-config-radius-user'])assert.ok(!storage.includes(text));
  assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
@@ -53,14 +54,14 @@ test('editing commands invalidates old outcomes; drafts survive tab/database nav
  await page.locator('#eq-config-commands').fill('description '+marker+'-EDITED');assert.doesNotMatch(await targets().innerText(),/شبیه‌سازی برای/);
  await page.locator('#equipment-tab-inventory').click();await page.locator('#equipment-tab-configuration').click();assert.equal(await page.locator('#eq-config-commands').inputValue(),'description '+marker+'-EDITED');
  await page.locator('#workspace-to-database').click();await page.locator('#workspace-to-equipment').click();assert.equal(await page.locator('#eq-config-commands').inputValue(),'description '+marker+'-EDITED');
- await page.locator('#stat-line').click();await page.locator('#account-logout').click();await page.locator('#auth-username').waitFor();await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await page.locator('#workspace-enter-equipment').click();assert.ok(await page.locator('#equipment-radius-password').isVisible());await radius();
+ await page.locator('#stat-line').click();await page.locator('#account-logout').click();await page.locator('#auth-username').waitFor();await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await page.locator('#workspace-enter-equipment').click();assert.equal(await page.locator('#equipment-radius-password').count(),0);await radius();
  await page.locator('#equipment-tab-configuration').click();assert.equal(await page.locator('#eq-config-commands').inputValue(),'');assert.equal(await field(0,'regionId').inputValue(),'');
 });
 test('inventory category selection can prefill a configuration target; mobile themes do not overflow',async()=>{
- await page.locator('#equipment-tab-inventory').click();await page.locator('#eq-filter-typeId').selectOption('type-router');await page.locator('#eq-filter-regionId').selectOption('region-2');
- await page.getByRole('button',{name:'پیکربندی این انتخاب',exact:true}).click();assert.equal(await field(0,'typeId').inputValue(),'type-router');assert.equal(await field(0,'regionId').inputValue(),'region-2');assert.match(await targets().innerText(),/28 نود یکتا/);
+ await page.locator('#equipment-tab-inventory').click();await page.locator('#eq-filter-toggle').click();await page.locator('#eq-filter-typeId').selectOption('type-router');await page.locator('#eq-filter-regionId').selectOption('region-2');
+ await page.getByRole('button',{name:'پیکربندی این انتخاب',exact:true}).click();assert.equal(await field(0,'typeId').inputValue(),'type-router');assert.equal(await field(0,'regionId').inputValue(),'region-2');assert.match(await targets().innerText(),/28 تجهیز یکتا/);
  await commands();await page.setViewportSize({width:390,height:844});for(const theme of ['light','original']){await page.evaluate(value=>FamTheme.set(value),theme);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
- assert.ok(await page.locator('#eq-config-commands').evaluate(n=>n.getBoundingClientRect().height>=210));await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/fam-config-mobile.png',fullPage:true});
+ assert.ok(await page.locator('#eq-config-commands').evaluate(n=>n.getBoundingClientRect().height>=210));await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/fam-config-mobile.png',fullPage:true,animations:'disabled',timeout:30000});
  await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await page.locator('#workspace-enter-equipment').click();await radius();await page.locator('#equipment-tab-configuration').click();assert.equal(await page.locator('#eq-config-commands').inputValue(),'');
  assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
 });

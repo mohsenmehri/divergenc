@@ -28,7 +28,7 @@ test('only a minimal login shell is static while the interactive client remains 
 test('the deployed client has a verifiable release marker',()=>{
  const local=read('FAM.html'),central=read(CENTRAL);
  for(const html of [local,central]){
-  assert.match(html,html===central?/<meta name="fam-release" content="FAM-SERVER-MANUAL-IP-DES-20261017">/:/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
+  assert.match(html,html===central?/<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-20261017">/:/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
   assert.match(html,/FAM UI-17 · 2026-10-13/);
   assert.match(html,/operation-primary-action/);
   assert.match(html,/function manageCategorySections\(categoryId\)/);
@@ -113,11 +113,13 @@ test('original XLSM bytes remain untouched',()=>{
  assert.equal(sha,'bf1d5519e8e47b79212ef7bfbb7f0a6585faf6ae8604fd1f73a3af2a3b89ed66');
 });
 
-test('SERVER tools and device pages use one simple real SSH workflow, never LOCAL error scenarios',()=>{
- const html=read(CENTRAL),tools=html.match(/<script id="fam-equipment-tools-js">([\s\S]*?)<\/script>/)[1],device=html.match(/<script id="fam-equipment-local-preview-js">([\s\S]*?)<\/script>/)[1];
- assert.match(tools,/FamEquipmentLive.mount\(content\)/);assert.doesNotMatch(tools,/simulateErr|سناریوی ساختگی|errdisabledUI/);
- assert.match(device,/FamEquipmentLive.mount\(main,node.id\)/);assert.doesNotMatch(device,/equipment-demo-scenario|async function runCheck/);
- const live=read('src/equipment-live-server.js');assert.match(live,/equipment\/check/);assert.match(live,/equipment\/recover/);assert.match(live,/data.source!==\'server-ssh\'/);assert.doesNotMatch(live,/localStorage|sessionStorage/);
+test('new equipment workspace is flat, shared and contains no legacy scenario UI',()=>{
+ const html=read(CENTRAL),local=read('FAM.html'),workspace=read('src/equipment-workspace.js');
+ for(const doc of [html,local]){assert.match(doc,/id="fam-equipment-workspace-js"/);assert.doesNotMatch(doc,/id="fam-equipment-local-preview-(?:js|css)"/);assert.ok(doc.includes(workspace));}
+ assert.doesNotMatch(workspace,/runCheck|equipment-demo-scenario|credentials=/);assert.match(workspace,/equipmentTools.mount\(main,section\)/);
+ const tools=read('src/equipment-tools.js');assert.doesNotMatch(tools,/simulateErr|سناریوی ساختگی|errdisabledUI|eq-tool-errdisabled/);
+ const live=read('src/equipment-live-server.js');assert.match(live,/equipment\/inspect/);assert.match(live,/equipment\/recover/);assert.doesNotMatch(live,/localStorage|sessionStorage|innerHTML/);
+ assert.doesNotMatch(read('scripts/build_shared.py'),/needle_result|source.replace|needle_scan/);
 });
 
 test('SERVER manual-IP and description output use the scoped API and text-only rendering',()=>{

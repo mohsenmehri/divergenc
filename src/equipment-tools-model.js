@@ -1,7 +1,7 @@
 /* Pure LOCAL equipment import / checklist / switch simulation. No I/O. */
 (()=>{
  'use strict';const M=FamEquipmentInventory;
- const columns=['نام نود','IP','نوع تجهیز','الگوی نوع','مدل تجهیز','منطقه','نوع محل','الگوی محل','محل استقرار','شناسه نود'];
+ const columns=['نام تجهیز','IP','نوع تجهیز','الگوی نوع','مدل تجهیز','منطقه','نوع محل','الگوی محل','محل استقرار','شناسه تجهیز'];
  const uid=()=>crypto.randomUUID(),idOK=id=>typeof id==='string'&&/^[\w-]{1,80}$/.test(id);
  function inventoryRows(value){const d=M.validate(value),find=(key,id)=>d.catalog[key].find(x=>x.id===id);return [columns.slice(),...d.nodes.map(n=>[n.name,n.host,find('types',n.typeId)?.name||'',find('types',n.typeId)?.kind||'',find('models',n.modelId)?.name||'',find('regions',n.regionId)?.name||'',find('siteKinds',n.siteKindId)?.name||'',find('siteKinds',n.siteKindId)?.kind||'',find('sites',n.siteId)?.name||'',n.id])];}
  function catalogSnapshot(value){
@@ -25,16 +25,16 @@
    try{
     if(row.length>10)throw Error('ستون اضافی مجاز نیست.');
     const r=Array.from({length:10},(_,j)=>row[j]===null||row[j]===undefined?'':String(row[j]).trim());
-    for(const index of [0,2,4,5,6,8])if(!M.validName(r[index]))throw Error('نام نود و همهٔ مشخصات دسته‌بندی باید معتبر و تکمیل باشند.');
+    for(const index of [0,2,4,5,6,8])if(!M.validName(r[index]))throw Error('نام تجهیز و همهٔ مشخصات دسته‌بندی باید معتبر و تکمیل باشند.');
     if(!M.privateIP(r[1]))throw Error('IPv4 خصوصی معتبر نیست.');
     if(!['router','switch','other'].includes(r[3])||!['branch','building','datacenter','other'].includes(r[7]))throw Error('الگوی نوع یا الگوی محل معتبر نیست.');
     if(seenIPs.has(r[1])||r[9]&&seenIDs.has(r[9]))throw Error('IP یا شناسه در خود فایل تکراری است.');seenIPs.add(r[1]);if(r[9])seenIDs.add(r[9]);
     const matches=byIP.get(r[1])||[],byID=r[9]?byId.get(r[9]):null;
     if(matches.length>1)throw Error('IP در موجودی قبلی مبهم و تکراری است.');
-    if(byID&&matches.length&&matches[0].id!==byID.id||!byID&&r[9]&&matches.length&&matches[0].id!==r[9])throw Error('شناسه و IP به یک نود اشاره نمی‌کنند.');
-    const previous=byID||matches[0];if(previous&&targetIDs.has(previous.id))throw Error('یک نود موجود در چند ردیف هدف گرفته شده است.');if(previous)targetIDs.add(previous.id);if(previous&&!update)throw Error('نود موجود است؛ برای ویرایش، به‌روزرسانی صریح را فعال کنید.');
-    if(r[9]&&!byID)throw Error('شناسه نود در موجودی فعلی وجود ندارد؛ برای نود جدید شناسه را خالی بگذارید.');
-    if(r[9]&&!idOK(r[9]))throw Error('شناسه نود معتبر نیست.');
+    if(byID&&matches.length&&matches[0].id!==byID.id||!byID&&r[9]&&matches.length&&matches[0].id!==r[9])throw Error('شناسه و IP به یک تجهیز اشاره نمی‌کنند.');
+    const previous=byID||matches[0];if(previous&&targetIDs.has(previous.id))throw Error('یک تجهیز موجود در چند ردیف هدف گرفته شده است.');if(previous)targetIDs.add(previous.id);if(previous&&!update)throw Error('تجهیز موجود است؛ برای ویرایش، به‌روزرسانی صریح را فعال کنید.');
+    if(r[9]&&!byID)throw Error('شناسه تجهیز در موجودی فعلی وجود ندارد؛ برای تجهیز جدید شناسه را خالی بگذارید.');
+    if(r[9]&&!idOK(r[9]))throw Error('شناسه تجهیز معتبر نیست.');
     const namedType=next.catalog.types.find(x=>x.name===r[2]),namedKind=next.catalog.siteKinds.find(x=>x.name===r[6]);
     if(namedType&&namedType.kind!==r[3]||namedKind&&namedKind.kind!==r[7])throw Error('الگوی دسته با دستهٔ موجود سازگار نیست.');
     const type=define('types',r[2],{kind:r[3]}),model=define('models',r[4],{typeId:type.id}),region=define('regions',r[5]),kind=define('siteKinds',r[6],{kind:r[7]}),site=define('sites',r[8],{siteKindId:kind.id});
@@ -42,7 +42,7 @@
     if(previous){const index=next.nodes.findIndex(n=>n.id===previous.id);next.nodes[index]=node;counts.updated++;}else{next.nodes.push(node);counts.added++;}
    }catch(e){errors.push({row:i+1,message:e.message});}
   }
-  if(!counts.added&&!counts.updated&&!errors.length)errors.push({row:0,message:'فایل نود قابل ثبت ندارد.'});
+  if(!counts.added&&!counts.updated&&!errors.length)errors.push({row:0,message:'فایل تجهیز قابل ثبت ندارد.'});
   let clean=null;if(!errors.length)try{clean=M.validate(next);const hosts=new Set();for(const n of clean.nodes){if(hosts.has(n.host)&&counts.updated)throw Error('پس از تغییر، IP تکراری ایجاد می‌شود.');hosts.add(n.host);}}catch(e){errors.push({row:0,message:e.message});clean=null;}
   return {next:errors.length?null:clean,errors,counts,base:JSON.stringify(base)};
  }
@@ -58,7 +58,7 @@
  }
  function applicable(node,standards){return validateStandards(standards).items.filter(s=>s.modelId===node.modelId&&(!s.siteKindId||s.siteKindId===node.siteKindId)&&(!s.siteId||s.siteId===node.siteId));}
  function audit(value,standards,nodeId,text){
-  const inventory=M.validate(value),node=inventory.nodes.find(n=>n.id===nodeId);if(!node||M.incomplete(node))throw Error('یک نود با مشخصات تکمیل‌شده انتخاب کنید.');
+  const inventory=M.validate(value),node=inventory.nodes.find(n=>n.id===nodeId);if(!node||M.incomplete(node))throw Error('یک تجهیز با مشخصات تکمیل‌شده انتخاب کنید.');
   if(typeof text!=='string'||text.length>12000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(text))throw Error('متن آزمایشی معتبر نیست (حداکثر ۱۲۰۰۰ نویسه).');
   const policies=applicable(node,standards),lines=text.split(/\r?\n/).map(l=>l.trim());
   const rows=policies.flatMap(s=>s.checks.map(c=>{let pass=c.operator==='contains'?text.includes(c.pattern):c.operator==='not-contains'?!text.includes(c.pattern):lines.includes(c.pattern);return {standard:s.name,check:c.name,status:!text.trim()?'unknown':pass?'ok':'fail'};}));

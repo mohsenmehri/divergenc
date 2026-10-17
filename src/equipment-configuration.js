@@ -25,7 +25,7 @@
     const matched=inventory.nodes.filter(node=>clean.some(rule=>M.matches(node,rule)));
     const targets=matched.filter(node=>!M.incomplete(node));
     const hosts=new Map();for(const node of inventory.nodes)hosts.set(node.host,(hosts.get(node.host)||0)+1);
-    if(targets.some(node=>hosts.get(node.host)>1))throw Error('یکی از مقصدها IP تکراری در موجودی دارد؛ ابتدا تعارض IP نودها را برطرف کنید.');
+    if(targets.some(node=>hosts.get(node.host)>1))throw Error('یکی از مقصدها IP تکراری در موجودی دارد؛ ابتدا تعارض IP تجهیزات را برطرف کنید.');
     return {targets,matchedCount:matched.length,incompleteCount:matched.length-targets.length,rules:clean,
       signature:JSON.stringify({inventory,rules:clean})};
   }
@@ -63,15 +63,15 @@
     }
     function rows(){
       targetBox.replaceChildren();
-      if(!plan){targetBox.append(note('گروه‌های مقصد را کامل کنید تا نودهای هدف نمایش داده شوند.'));return;}
+      if(!plan){targetBox.append(note('گروه‌های مقصد را کامل کنید تا تجهیزاتی هدف نمایش داده شوند.'));return;}
       const count=plan.targets.length;
       const status=el('div','eq-config-summary');status.setAttribute('role','status');
-      status.append(el('strong','',count+' نود یکتا در مقصد'),el('span','eq-muted',plan.incompleteCount+' نود نیازمند تکمیل کنار گذاشته شد · هر نود مشترک فقط یک‌بار'));
+      status.append(el('strong','',count+' تجهیز یکتا در مقصد'),el('span','eq-muted',plan.incompleteCount+' تجهیز نیازمند تکمیل کنار گذاشته شد · هر تجهیز مشترک فقط یک‌بار'));
       targetBox.append(status);
-      if(outcome)targetBox.append(note('شبیه‌سازی برای '+outcome.size+' نود تکمیل شد. هیچ اتصال یا ارسال دستور واقعی انجام نشد.'));
-      if(!count){targetBox.append(note('هیچ نود کامل و قابل انتخابی با این شرط‌ها وجود ندارد.'));return;}
+      if(outcome)targetBox.append(note('شبیه‌سازی برای '+outcome.size+' تجهیز تکمیل شد. هیچ اتصال یا ارسال دستور واقعی انجام نشد.'));
+      if(!count){targetBox.append(note('هیچ تجهیز کامل و قابل انتخابی با این شرط‌ها وجود ندارد.'));return;}
       page=Math.min(page,Math.ceil(count/PAGE_SIZE)-1);
-      const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');table.setAttribute('aria-label','نودهای مقصد پیکربندی');
+      const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');table.setAttribute('aria-label','تجهیزاتی مقصد پیکربندی');
       const head=el('thead'),tr=el('tr');for(const title of ['نام و IP','نوع / مدل','منطقه / محل','وضعیت نمایشی'])tr.append(el('th','',title));head.append(tr);table.append(head);
       const body=el('tbody');
       for(const node of plan.targets.slice(page*PAGE_SIZE,(page+1)*PAGE_SIZE)){
@@ -95,7 +95,7 @@
     function drawRules(){
       ruleBox.replaceChildren();
       rules.forEach((rule,index)=>{
-        if(index)ruleBox.append(el('div','eq-config-or','یا — اجتماع گروه‌ها، بدون نود تکراری'));
+        if(index)ruleBox.append(el('div','eq-config-or','یا — اجتماع گروه‌ها، بدون تجهیز تکراری'));
         const card=el('section','eq-config-rule'),top=el('div','eq-config-rule-top');top.append(el('strong','','گروه هدف '+(index+1)+' · شرط‌ها با «و»'));
         const remove=button('حذف گروه',()=>{changed();rules.splice(index,1);if(!rules.length)rules=[{}];drawRules();refresh();},'eq-mini-action eq-danger');remove.setAttribute('aria-label','حذف گروه هدف '+(index+1));top.append(remove);card.append(top);
         const grid=el('div','eq-config-rule-fields');
@@ -126,16 +126,16 @@
       dialog=el('dialog','eq-dialog eq-dialog-wide');dialog.id='eq-config-confirm';dialog.setAttribute('aria-labelledby','eq-config-confirm-title');
       const close=()=>suspend();dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
       const title=el('h3','','بازبینی دیپلوی نمایشی');title.id='eq-config-confirm-title';
-      dialog.append(title,note('فقط شبیه‌سازی: '+info.lineCount+' خط دستور برای '+live.targets.length+' نود یکتا. هیچ SSH، API یا فرمان واقعی اجرا نمی‌شود.',true));
+      dialog.append(title,note('فقط شبیه‌سازی: '+info.lineCount+' خط دستور برای '+live.targets.length+' تجهیز یکتا. هیچ SSH، API یا فرمان واقعی اجرا نمی‌شود.',true));
       const list=el('div','eq-config-review-list');
       for(const node of live.targets)list.append(el('div','',node.name+' · '+node.host));dialog.append(list);
-      const label=el('label','eq-config-ack'),ack=el('input');ack.type='checkbox';ack.id='eq-config-ack';label.append(ack,el('span','','نودهای مقصد را بازبینی کردم؛ فقط شبیه‌سازی بدون ارسال دستور انجام شود.'));
+      const label=el('label','eq-config-ack'),ack=el('input');ack.type='checkbox';ack.id='eq-config-ack';label.append(ack,el('span','','تجهیزاتی مقصد را بازبینی کردم؛ فقط شبیه‌سازی بدون ارسال دستور انجام شود.'));
       const error=el('div','eq-error');error.setAttribute('role','alert');
       const submit=button('تأیید و شبیه‌سازی دیپلوی',()=>{
         if(!ack.checked||!isAuthorized())return;
         try{
           const current=buildPlan(getInventory(),rules);validateDraft(draft);
-          if(snapshot.revision!==revision||snapshot.signature!==current.signature||snapshot.text!==draft)throw Error('متن یا نودهای مقصد تغییر کرده‌اند؛ این پنجره را ببندید و دوباره بازبینی کنید.');
+          if(snapshot.revision!==revision||snapshot.signature!==current.signature||snapshot.text!==draft)throw Error('متن یا تجهیزاتی مقصد تغییر کرده‌اند؛ این پنجره را ببندید و دوباره بازبینی کنید.');
           // Intentionally no executor: record ONLY a RAM-only dry-run marker.
           outcome=new Set(current.targets.map(node=>node.id));plan=current;close();rows();ready();
         }catch(e){error.textContent=e.message;submit.disabled=true;ack.disabled=true;}
@@ -144,7 +144,7 @@
     }
     function mount(main){
       suspend();container=el('section','eq-config-workspace');main.append(container);
-      const head=el('div','eq-config-heading');head.append(el('div','eq-eyebrow','CONFIGURATION · OFFLINE DRY RUN'),el('h3','','پیکربندی گروهی'),el('p','eq-muted','دستورها را بنویسید، دسته‌های مقصد را انتخاب و قبل از دیپلوی، نودهای هدف را بازبینی کنید.'));container.append(head);
+      const head=el('div','eq-config-heading');head.append(el('div','eq-eyebrow','CONFIGURATION · OFFLINE DRY RUN'),el('h3','','پیکربندی گروهی'),el('p','eq-muted','دستورها را بنویسید، دسته‌های مقصد را انتخاب و قبل از دیپلوی، تجهیزاتی هدف را بازبینی کنید.'));container.append(head);
       container.append(note('نسخهٔ لوکال: فقط شبیه‌سازی دیپلوی؛ هیچ دستور واقعی ارسال نمی‌شود. متن فقط در حافظه می‌ماند. رمز و پیکربندی حساس واقعی وارد نکنید. اعتبارسنجی نحوی Cisco انجام نمی‌شود.',true));
       const layout=el('div','eq-config-layout'),editor=el('article','eq-config-card'),targets=el('article','eq-config-card');
       editor.append(el('h4','','۱. متن پیکربندی'));
@@ -154,7 +154,7 @@
       editor.append(draftStatus,button('پاک‌کردن متن',()=>{changed();draft='';text.value='';rows();ready();text.focus();}));
       targets.append(el('h4','','۲. انتخاب دسته‌های مقصد'),el('p','eq-muted','در هر گروه، شرط‌ها با «و» ترکیب می‌شوند؛ بین گروه‌ها «یا» است. مثلاً روتر + منطقه ۲، یا مدل 1841، یا سوئیچ + مدل 2960. انتخاب خالی مجاز نیست.'));
       ruleBox=el('div','eq-config-rules');targets.append(ruleBox);layout.append(editor,targets);container.append(layout);
-      const preview=el('section','eq-config-card eq-config-preview');preview.append(el('h4','','۳. نودهای مقصد و دیپلوی نمایشی'));targetBox=el('div');targetBox.id='eq-config-targets';preview.append(targetBox);
+      const preview=el('section','eq-config-card eq-config-preview');preview.append(el('h4','','۳. تجهیزاتی مقصد و دیپلوی نمایشی'));targetBox=el('div');targetBox.id='eq-config-targets';preview.append(targetBox);
       review=button('بازبینی و دیپلوی نمایشی',confirmPreview,'btn btn-primary');review.id='eq-config-review';preview.append(tools(review));container.append(preview);drawRules();refresh();
     }
     return Object.freeze({mount,suspend,clear,useSelection});

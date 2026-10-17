@@ -30,7 +30,7 @@
     const heading=node('h1','','از کجا شروع کنیم؟');heading.id='workspace-title';
     shell.append(top,node('p','workspace-kicker','ONE ACCOUNT · TWO WORKSPACES'),heading,node('p','workspace-intro','فضای کاری خود را انتخاب کنید؛ هر زمان خواستید بین دو بخش جابه‌جا شوید.'));
     const choices=node('div','workspace-options');
-    for(const [view,title,sub,index]of [['panel','پایگاه داده','داشبورد، جست‌وجو و مدیریت داده‌های شبکه','01'],['equipment','مدیریت تجهیزات','نودها، دسته‌بندی‌ها و نمای مدیریت تجهیز','02']]){
+    for(const [view,title,sub,index]of [['panel','پایگاه داده','داشبورد، جست‌وجو و مدیریت داده‌های شبکه','01'],['equipment','مدیریت تجهیزات','فهرست تجهیزات، بررسی پورت‌ها و ابزارهای آفلاین','02']]){
       const allowed=Access.viewAllowed(view),button=node('button','workspace-option workspace-option-'+view);button.type='button';button.id='workspace-enter-'+view;button.disabled=!allowed;button.setAttribute('aria-label',title);
       const icon=node('span','workspace-symbol');icon.append(symbol(view));
       button.append(node('span','workspace-number',index),icon,node('strong','',title),node('span','workspace-description',sub),node('span','workspace-enter',allowed?'ورود به این بخش ←':'دسترسی به این بخش ندارید'));

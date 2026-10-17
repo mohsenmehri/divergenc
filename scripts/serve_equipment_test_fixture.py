@@ -23,11 +23,21 @@ with tempfile.TemporaryDirectory() as directory:
         result={'ok':True,'ports':ports}
         if job['operation']=='inspect':result.update(descriptions=executor({**job,'operation':'descriptions'}),timings={'preparationMs':10,'sshMs':20})
         return result
-    app=create_app({'TESTING':True,'COOKIE_SECURE':False,'PUBLIC_ORIGIN':'http://localhost:8765','DB_PATH':str(Path(directory)/'synthetic.sqlite3'),'EQUIPMENT_OPS_ENABLED':True,'EQUIPMENT_EXECUTOR':executor})
-    client=app.test_client();login=client.post('/api/login',json={'username':'admin','password':'1109'},headers={'Origin':'http://localhost:8765'}).json
+    origin=os.environ.get('FAM_EQUIPMENT_FIXTURE_ORIGIN','http://localhost:8765')
+    app=create_app({'TESTING':True,'COOKIE_SECURE':False,'PUBLIC_ORIGIN':origin,'DB_PATH':str(Path(directory)/'synthetic.sqlite3'),'EQUIPMENT_OPS_ENABLED':True,'EQUIPMENT_EXECUTOR':executor})
+    # Only this disposable fixture marks its UI as synthetic. Production files,
+    # host/origin/CSRF policy and packaged service are not modified.
+    from flask import request
+    @app.after_request
+    def mark_fixture(response):
+        if response.mimetype=='text/html' and request.path in {'/app','/FAM.html'}:
+            response.direct_passthrough=False
+            response.set_data(response.get_data(as_text=True).replace("central()?'نسخهٔ مرکزی'", "central()?'محیط آزمایشی · نتیجه‌ها ساختگی‌اند'"))
+        return response
+    client=app.test_client();login=client.post('/api/login',json={'username':'admin','password':'1109'},headers={'Origin':origin}).json
     env=client.get('/api/equipment/state').json
     env['inventory']['nodes']=[{'id':'fixture-'+str(i),'name':'Fixture switch '+str(i),'host':'10.53.0.'+str(i),'typeId':'type-switch','modelId':'model-2960','regionId':'region-1','siteKindId':'kind-building','siteId':'building-0'} for i in (1,2,3)]
     import uuid
-    response=client.post('/api/equipment/state',json={'revision':env['revision'],'requestId':str(uuid.uuid4()),'kind':'inventory','value':env['inventory']},headers={'Origin':'http://localhost:8765','X-FAM-CSRF':login['csrf']})
+    response=client.post('/api/equipment/state',json={'revision':env['revision'],'requestId':str(uuid.uuid4()),'kind':'inventory','value':env['inventory']},headers={'Origin':origin,'X-FAM-CSRF':login['csrf']})
     assert response.status_code==200
     serve(app,host='0.0.0.0',port=8765,threads=8)

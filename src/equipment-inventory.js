@@ -40,7 +40,7 @@
     const lists={typeId:'types',modelId:'models',regionId:'regions',siteKindId:'siteKinds',siteId:'sites'};
     const nodes=value.nodes.map(item=>{
       const clean=identity(item);if(!privateIP(item.host))throw Error('IP خصوصی معتبر نیست.');clean.host=item.host;
-      for(const field of fields){const ref=item[field];if(ref!==null&&(typeof ref!=='string'||!catalog[lists[field]].some(entry=>entry.id===ref)))throw Error('ارجاع دستهٔ نود معتبر نیست.');clean[field]=ref;}
+      for(const field of fields){const ref=item[field];if(ref!==null&&(typeof ref!=='string'||!catalog[lists[field]].some(entry=>entry.id===ref)))throw Error('ارجاع دستهٔ تجهیز معتبر نیست.');clean[field]=ref;}
       if(clean.modelId&&catalog.models.find(m=>m.id===clean.modelId).typeId!==clean.typeId)throw Error('مدل باید متعلق به نوع تجهیز انتخاب‌شده باشد.');
       if(clean.siteId&&catalog.sites.find(m=>m.id===clean.siteId).siteKindId!==clean.siteKindId)throw Error('محل باید متعلق به نوع محل انتخاب‌شده باشد.');
       if(item.legacyPath!==undefined){if(typeof item.legacyPath!=='string'||item.legacyPath.length>300||/[\x00-\x1f\x7f]/.test(item.legacyPath))throw Error('مسیر قبلی معتبر نیست.');clean.legacyPath=item.legacyPath;}
@@ -61,14 +61,14 @@
   function removeCategory(value,key,id){
     const next=structuredClone(value),refs={types:'typeId',models:'modelId',regions:'regionId',siteKinds:'siteKindId',sites:'siteId'};
     if(!refs[key])throw Error('دسته معتبر نیست.');
-    if(next.nodes.some(n=>n[refs[key]]===id))throw Error('این دسته در نودها استفاده شده است؛ ابتدا نودها را ویرایش یا از دسته خارج کنید.');
+    if(next.nodes.some(n=>n[refs[key]]===id))throw Error('این دسته در تجهیزات استفاده شده است؛ ابتدا تجهیزات را ویرایش یا از دسته خارج کنید.');
     if(key==='types'&&next.catalog.models.some(m=>m.typeId===id))throw Error('ابتدا مدل‌های وابسته به این نوع تجهیز را حذف یا جابه‌جا کنید.');
     if(key==='siteKinds'&&next.catalog.sites.some(m=>m.siteKindId===id))throw Error('ابتدا محل‌های وابسته را حذف یا جابه‌جا کنید.');
     next.catalog[key]=next.catalog[key].filter(item=>item.id!==id);return validate(next);
   }
   function unassign(value,id,field){
     if(!fields.includes(field))throw Error('دسته معتبر نیست.');
-    const next=structuredClone(value),node=next.nodes.find(n=>n.id===id);if(!node)throw Error('نود پیدا نشد.');
+    const next=structuredClone(value),node=next.nodes.find(n=>n.id===id);if(!node)throw Error('تجهیز پیدا نشد.');
     node[field]=null;if(field==='typeId')node.modelId=null;if(field==='siteKindId')node.siteId=null;
     return validate(next);
   }
@@ -83,7 +83,7 @@
       for(const c of t.categories){
         check(c);if(!Array.isArray(c.nodes)||!Array.isArray(c.sections)||c.sections.length>100)throw Error('گروه قبلی معتبر نیست.');
         const transfer=(nodes,section)=>{
-          if(nodes.length>2000)throw Error('تعداد نودهای قبلی معتبر نیست.');
+          if(nodes.length>2000)throw Error('تعداد تجهیزاتی قبلی معتبر نیست.');
           for(const n of nodes){
             check(n);if(!privateIP(n.host))throw Error('IP نسخهٔ قبلی معتبر نیست.');
             let kind=null,site=null;

@@ -16,9 +16,9 @@ const Access = (() => {
       ['edit-cells','ویرایش مستقیم سلول‌ها'],['save-results','ذخیرهٔ تغییرات نتایج جست‌وجو'],['add-record','افزودن رکورد'],['remove-record','حذف رکورد'],['undo-remove','بازگردانی آخرین حذف']]},
     {title:'ابزارها و عملیات‌ها',items:[
       ['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
-    {title:'عملیات تجهیزات',items:[['equipment-add','افزودن نود'],['equipment-edit','ویرایش و خروج از دسته'],['equipment-delete','حذف نود'],['equipment-catalog','مدیریت دسته‌های تجهیزات'],['equipment-cards','مدیریت کارت‌های تجهیزات'],['equipment-import','ورود اکسل تجهیزات'],['equipment-export','خروجی اکسل تجهیزات'],['equipment-configuration','پیکربندی نمایشی گروهی'],['equipment-standards','تعریف و ویرایش استانداردها'],['equipment-audit','بررسی و خروجی چک‌لیست'],['equipment-scan','بررسی پورت‌های سوئیچ'],['equipment-repair','رفع نمایشی خطای پورت']]},
+    {title:'عملیات تجهیزات',items:[['equipment-add','افزودن تجهیز'],['equipment-edit','ویرایش و خروج از دسته'],['equipment-delete','حذف تجهیز'],['equipment-catalog','مدیریت دسته‌های تجهیزات'],['equipment-cards','مدیریت کارت‌های تجهیزات'],['equipment-import','ورود اکسل تجهیزات'],['equipment-export','خروجی اکسل تجهیزات'],['equipment-configuration','پیکربندی آفلاین'],['equipment-standards','تعریف و ویرایش استانداردها'],['equipment-audit','بررسی و خروجی چک‌لیست'],['equipment-scan','بررسی پورت‌های سوئیچ'],['equipment-repair','رفع نمایشی خطای پورت']]},
     {title:'مدیریت',items:[
-      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','مدیریت تجهیزات (پیش‌نمایش)']]}
+      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','دسترسی به تجهیزات']]}
   ];
   const PERMISSIONS=new Set(PERMISSION_GROUPS.flatMap(group=>group.items.map(([id])=>id)));
   const allPermissions=()=>[...PERMISSIONS];
@@ -159,7 +159,7 @@ const Access = (() => {
         if(!a&&hidden)throw Error('رکورد خارج از محدودهٔ مجاز است.');
         const permission=key==='nodes'?(!a?'equipment-add':!b?'equipment-delete':'equipment-edit'):'equipment-catalog';
         if(!can(permission))throw Error('مجوز این تغییر تجهیزات را ندارید.');
-        if(key==='nodes'){if(b&&whole.some(n=>n.id!==id&&n.host===b.host))throw Error('این IP در کل موجودی استفاده شده است.');if(a&&!equipmentNode(a)||b&&!equipmentNode(b))throw Error('نود خارج از محدودهٔ مجاز است.');}
+        if(key==='nodes'){if(b&&whole.some(n=>n.id!==id&&n.host===b.host))throw Error('این IP در کل موجودی استفاده شده است.');if(a&&!equipmentNode(a)||b&&!equipmentNode(b))throw Error('تجهیز خارج از محدودهٔ مجاز است.');}
         else if(!equipmentRef(key,id)||b&&key==='models'&&!equipmentRef('types',b.typeId)||b&&key==='sites'&&!equipmentRef('siteKinds',b.siteKindId))throw Error('دسته خارج از محدودهٔ مجاز است.');
         const target=key==='nodes'?out.nodes:out.catalog[key],index=target.findIndex(x=>x.id===id);if(!b)target.splice(index,1);else if(index<0)target.push(b);else target[index]=b;
       }

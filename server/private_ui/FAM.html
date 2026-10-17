@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="fam-release" content="FAM-SERVER-MANUAL-IP-DES-20261017">
+<meta name="fam-equipment-release" content="FAM-EQUIPMENT-V2-20261017">
+<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-20261017">
 <title>فام مرکزی — تجارت الکترونیک و فناوری اطلاعات ملل (فام)</title>
 <style>
 /* Vazirmatn (SIL OFL 1.1) — embedded so Persian typography is consistent on every machine */
@@ -1855,238 +1856,7 @@ html[data-ui-theme="light"] .fam-light-select{display:block;}
   });
 })();
 </script>
-<style id="fam-equipment-local-preview-css">
-/* Equipment workspace: Prime-inspired inventory/tree/Device 360, with FAM themes. */
-#equipment-workspace{--eq-accent:var(--cyan,#39bce1);max-width:1500px;margin:0 auto;line-height:1.8;background:var(--bg-0);padding:22px;border:1px solid var(--stroke-2);border-radius:14px;box-shadow:0 12px 35px #00000012}
-#equipment-workspace *,.eq-dialog *{box-sizing:border-box}
-.eq-heading h3{margin:0;color:var(--txt-0);font-size:21px;font-weight:800;line-height:1.6}
-.eq-heading p{margin:4px 0 18px;color:var(--txt-2);font-size:12px;line-height:1.9}
-.eq-eyebrow{font-family:ui-monospace,Consolas,monospace;font-size:10px;letter-spacing:2px;color:var(--eq-accent,var(--cyan));margin-bottom:8px;direction:ltr;text-align:right}
-.eq-muted{font-size:12px;color:var(--txt-2);line-height:1.9}
-.eq-notice{border:1px solid var(--stroke-2);background:var(--bg-2);border-radius:10px;padding:11px 15px;margin:0 0 18px;color:var(--txt-1);font-size:12px;line-height:2}
-.eq-notice.warning{border-inline-start:3px solid var(--amber);background:color-mix(in srgb,var(--amber) 5%,var(--bg-1))}
-.eq-gate{max-width:570px;margin:30px auto 50px;border:1px solid var(--stroke-2);background:var(--bg-1);padding:32px;border-radius:18px;box-shadow:0 20px 55px #0000000d}
-.eq-gate-mark{width:48px;height:48px;border:1px solid color-mix(in srgb,var(--eq-accent) 35%,var(--stroke-2));background:color-mix(in srgb,var(--eq-accent) 10%,var(--bg-1));border-radius:14px;display:grid;place-items:center;color:var(--eq-accent);font:bold 24px ui-monospace,monospace;margin-bottom:20px}
-.eq-auth-form{display:grid;gap:16px;margin-bottom:20px}
-.eq-field{display:grid;gap:7px;font-size:12px;color:var(--txt-1)}
-.eq-field .inp{width:100%;min-height:42px}
-.eq-error{color:var(--red);font-size:12px;line-height:1.9}
-.eq-error:empty{display:none}
-.eq-session-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:15px;font-size:12px}
-.eq-session-bar .btn{margin-inline-start:auto}
-.eq-session-dot{width:7px;height:7px;flex-shrink:0;background:var(--eq-accent);border-radius:50%;box-shadow:0 0 0 4px color-mix(in srgb,var(--eq-accent) 10%,transparent)}
-.eq-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:22px;align-items:start}
-.eq-tree{background:var(--bg-1);border:1px solid var(--stroke-2);border-radius:12px;padding:18px 10px;position:sticky;top:18px;max-height:75vh;overflow:auto}
-.eq-tree h4{font-size:13px;margin:0 8px 15px}.eq-tree .eq-eyebrow{margin-inline:8px}
-.eq-tree-link{display:block;width:100%;border:0;border-radius:7px;background:transparent;color:var(--txt-1);font:inherit;font-size:12px;text-align:right;cursor:pointer;padding:9px 11px;margin:3px 0;line-height:1.8;overflow-wrap:anywhere;transition:background .15s}
-.eq-tree-link:hover{background:var(--bg-2)}
-.eq-tree-link.selected{background:color-mix(in srgb,var(--eq-accent) 12%,var(--bg-1));color:var(--eq-accent);font-weight:700;box-shadow:inset -3px 0 0 var(--eq-accent)}
-.eq-tree-link.depth-1{padding-inline-start:25px}.eq-tree-link.depth-2{padding-inline-start:42px;font-size:11px}
-.eq-main{min-width:0}
-.eq-breadcrumbs{display:flex;gap:5px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--txt-2);margin:0 0 16px}
-.eq-breadcrumbs .btn{font-size:11px;padding:3px 7px;min-height:26px}
-.eq-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}
-.eq-metric{display:flex;flex-direction:column;gap:5px;padding:16px 18px;background:var(--bg-1);border:1px solid var(--stroke-2);border-radius:10px}
-.eq-metric strong{font-family:ui-monospace,Consolas,monospace;font-size:23px;color:var(--txt-0);line-height:1.3;font-weight:600}
-.eq-metric span{font-size:11px;color:var(--txt-2)}
-.eq-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.eq-main>.eq-tools{margin-bottom:18px}
-.eq-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:25px}
-.eq-card{border:1px solid var(--stroke-2);background:var(--bg-1);border-radius:12px;overflow:hidden;transition:border-color .15s,transform .15s;min-width:0}
-.eq-card:hover{border-color:var(--eq-accent);transform:translateY(-2px)}
-.eq-card-main{border:0;width:100%;padding:22px;background:transparent;cursor:pointer;color:var(--txt-0);display:flex;flex-direction:column;align-items:start;gap:8px;font:inherit;text-align:right;min-height:140px}
-.eq-card-main strong{font-size:16px;overflow-wrap:anywhere}
-.eq-device-icon{width:43px;height:43px;display:grid;place-items:center;background:color-mix(in srgb,var(--eq-accent) 10%,var(--bg-1));color:var(--eq-accent);border:1px solid color-mix(in srgb,var(--eq-accent) 30%,var(--stroke-2));border-radius:11px;font:26px ui-monospace,monospace;flex-shrink:0}
-.eq-card>.eq-tools{padding:9px 14px;border-top:1px solid var(--stroke-2);background:var(--bg-2)}
-.eq-danger{color:var(--red)!important}
-.eq-table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin:18px 0 10px}
-.eq-table-toolbar h4{margin:0;font-size:14px}.eq-table-toolbar .inp{width:250px;max-width:100%;font-size:12px}
-.eq-table-wrap{overflow:auto;max-width:100%;border:1px solid var(--stroke-2);border-radius:10px;background:var(--bg-1)}
-.eq-table{width:100%;border-collapse:collapse;text-align:right;font-size:12px;min-width:600px}
-.eq-table th{padding:12px 14px;background:var(--bg-2);color:var(--txt-2);font-size:11px;font-weight:500;border-bottom:1px solid var(--stroke-2);white-space:nowrap}
-.eq-table td{padding:13px 14px;border-bottom:1px solid var(--stroke-2);color:var(--txt-1)}
-.eq-table tr:last-child td{border-bottom:0}.eq-table tbody tr:hover{background:color-mix(in srgb,var(--eq-accent) 3%,var(--bg-1))}
-.eq-mono{direction:ltr;text-align:right;font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
-.eq-node-link{border:0;background:transparent;color:var(--eq-accent);font:inherit;font-weight:700;text-align:right;cursor:pointer;padding:0;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--eq-accent) 30%,transparent);text-underline-offset:4px}
-.eq-badge{font-size:10px;display:inline-block;padding:3px 9px;border-radius:5px;border:1px solid var(--stroke-2);color:var(--txt-2);white-space:nowrap;background:var(--bg-2)}
-.eq-table .eq-empty{padding:35px 22px;text-align:center;color:var(--txt-2);white-space:normal}
-.eq-device-title{display:flex;align-items:start;gap:14px;flex-wrap:wrap}.eq-device-title>.eq-badge{margin-inline-start:auto}.eq-device-title .eq-heading{min-width:0}.eq-device-title h3{overflow-wrap:anywhere}
-.eq-tabs{display:flex;gap:20px;overflow:auto;border-bottom:1px solid var(--stroke-2);margin:0 0 22px}
-.eq-tab{background:none;border:0;border-bottom:2px solid transparent;padding:13px 0;color:var(--txt-2);font:inherit;font-size:12px;white-space:nowrap;cursor:pointer}
-.eq-tab.active{border-bottom-color:var(--eq-accent);color:var(--eq-accent);font-weight:700}
-.eq-scenario{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--txt-2)}.eq-scenario .inp{width:185px;font-size:12px}
-.eq-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--stroke-2);background:var(--bg-1);border-radius:10px;margin:20px 0}
-.eq-info{padding:17px 20px;border-bottom:1px solid var(--stroke-2);display:flex;flex-direction:column;gap:7px;overflow-wrap:anywhere}.eq-info strong{font-size:12px;color:var(--txt-1);font-weight:500}
-.eq-status{margin:20px 0 16px;padding:16px;border:1px solid var(--stroke-2);border-radius:10px;background:var(--bg-1);font-size:12px;line-height:2;color:var(--txt-1)}
-.eq-status.error{border-inline-start:3px solid var(--amber)}.eq-status.ok{border-inline-start:3px solid var(--green)}
-.eq-dialog{width:min(480px,calc(100vw - 32px));max-height:85vh;overflow:auto;border:1px solid var(--stroke-2);border-radius:14px;background:var(--bg-1);color:var(--txt-1);padding:26px;direction:rtl;box-shadow:0 30px 90px #0004}
-.eq-dialog::backdrop{background:#07121db0;backdrop-filter:blur(4px)}
-.eq-editor{display:grid;gap:17px}.eq-editor .eq-heading p{margin-bottom:0}
-#equipment-workspace button:focus-visible,.eq-dialog button:focus-visible{outline:2px solid var(--eq-accent,var(--cyan));outline-offset:3px}
-@media(max-width:1100px){.eq-layout{grid-template-columns:190px minmax(0,1fr);gap:15px}.eq-metrics{gap:8px}.eq-metric{padding:13px 10px}.eq-metric strong{font-size:19px}}
-@media(max-width:760px){.eq-layout{grid-template-columns:minmax(0,1fr)}.eq-tree{position:static;max-height:240px}.eq-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.eq-info-grid{grid-template-columns:minmax(0,1fr)}.eq-gate{padding:23px 18px;margin:8px auto 25px}.eq-session-bar .btn{margin-inline-start:0}.eq-card-grid{grid-template-columns:minmax(0,1fr)}.eq-device-title>.eq-badge{margin-inline-start:0}.eq-heading h3{font-size:18px}.eq-main>.eq-tools{align-items:stretch}.eq-scenario .inp{max-width:100%}}
 
-@media(max-width:760px){#equipment-workspace{padding:14px 10px}}
-
-/* Workspace redesign: horizontal navigation, oversized device families,
-   location folders, compact section tiles and a separate inventory workbench. */
-#equipment-workspace{--eq-accent:var(--cyan,#2fd4c4);padding:0;border-radius:22px;overflow:hidden;background:var(--bg-1);box-shadow:0 18px 55px #0000001a}
-#equipment-workspace .btn,.eq-dialog .btn{background-image:none!important;box-shadow:none!important;border-radius:10px;min-height:35px;padding:7px 13px;font-size:11px;font-weight:600;transition:background-color .16s,border-color .16s,transform .16s}
-#equipment-workspace .btn-ghost,.eq-dialog .btn-ghost{background-color:transparent;color:var(--txt-1);border:1px solid var(--stroke-2)}
-#equipment-workspace .btn-ghost:hover,.eq-dialog .btn-ghost:hover{background-color:var(--bg-2);border-color:var(--txt-2)}
-#equipment-workspace .btn-primary,.eq-dialog .btn-primary{background-color:#366ee8!important;border:1px solid #477cf2;color:#fff!important;border-radius:11px;padding-inline:18px}
-#equipment-workspace .btn-primary:hover,.eq-dialog .btn-primary:hover{background-color:#285ed3!important;transform:translateY(-1px)}
-#equipment-workspace .btn-amber{background-color:#ad791b!important;color:#fff!important;border-color:#c18b27}
-.eq-session-bar{padding:14px 25px;margin:0;border-bottom:1px solid var(--stroke-2);background:var(--bg-2);font-size:11px}
-.eq-session-bar .btn{min-height:29px!important;padding:3px 10px!important;font-size:10px!important;border-radius:7px!important}
-.eq-notice.eq-demo-note{font-size:11px;margin:0;border:0;border-bottom:1px dashed var(--stroke-2);border-radius:0;padding:8px 25px;background:transparent;color:var(--txt-2)}
-.eq-type-nav{display:flex;gap:6px;align-items:center;padding:18px 25px 0;overflow:auto}
-.eq-tree-link{flex:0 0 auto;width:auto;display:flex;align-items:center;gap:9px;margin:0;border:1px solid transparent;border-radius:11px;padding:8px 16px;font-size:12px}
-.eq-tree-link.selected{box-shadow:none;background:color-mix(in srgb,#477cf2 12%,var(--bg-1));border-color:color-mix(in srgb,#477cf2 40%,var(--stroke-2));color:var(--txt-0)}
-.eq-tree-link .eq-device-icon{width:24px;height:24px;background:none;border:0;border-radius:0;color:inherit}.eq-tree-link .eq-device-icon svg{width:21px;height:21px}
-.eq-nav-count{font:10px ui-monospace,monospace;min-width:20px;text-align:center;border-radius:6px;background:var(--bg-2);padding:1px 5px;color:var(--txt-2)}
-.eq-layout{display:block!important;padding:22px 25px 26px}.eq-main{width:100%}
-.eq-breadcrumbs{margin-bottom:22px;gap:6px}.eq-breadcrumbs .btn{border:0!important;padding:0 3px!important;background:none!important;min-height:22px!important;font-weight:400!important;font-size:11px!important;color:var(--txt-2)}
-.eq-breadcrumbs .btn:hover{color:var(--eq-accent)}
-.eq-hero{display:flex;gap:28px;align-items:center;justify-content:space-between;margin:0 0 24px}
-.eq-hero-copy{min-width:0}.eq-hero .eq-heading h3{font-size:25px;letter-spacing:-.6px}.eq-hero .eq-heading p{margin:8px 0 0;font-size:12px}
-.eq-eyebrow{font-size:9px;letter-spacing:2.2px;margin-bottom:8px;color:var(--txt-2)}
-.eq-metrics{display:flex;margin:0;gap:0;flex-shrink:0;border:1px solid var(--stroke-2);border-radius:14px;overflow:hidden;background:var(--bg-2)}
-.eq-metric{border:0;border-radius:0;background:transparent;padding:14px 22px;min-width:85px;gap:5px;align-items:center}
-.eq-metric+.eq-metric{border-inline-start:1px solid var(--stroke-2)}.eq-metric strong{font-size:26px;font-weight:500;line-height:1}.eq-metric span{font-size:10px}
-.eq-group-actions{justify-content:flex-end;margin-bottom:13px!important}.eq-group-actions .btn:not(.btn-primary){border-style:dashed!important}
-.eq-card-grid{gap:15px;margin-bottom:30px;grid-template-columns:repeat(3,minmax(0,1fr))}.eq-grid-type{grid-template-columns:repeat(2,minmax(0,1fr))}
-.eq-grid-section{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.eq-card{--card-accent:#6585ad;border:1px solid var(--stroke-2);border-radius:17px;position:relative;background:linear-gradient(145deg,color-mix(in srgb,var(--card-accent) 9%,var(--bg-1)),var(--bg-1) 80%);overflow:hidden}
-.eq-card::before{content:'';position:absolute;inset-inline-end:-45px;top:-45px;width:130px;height:130px;border:1px solid color-mix(in srgb,var(--card-accent) 17%,transparent);border-radius:50%;pointer-events:none}
-.eq-card:hover{border-color:color-mix(in srgb,var(--card-accent) 65%,var(--stroke-2));transform:translateY(-3px);box-shadow:0 8px 24px #00000012}
-.tone-router{--card-accent:#658ffc}.tone-switch{--card-accent:#35b8a6}.tone-branch{--card-accent:#a089ef}.tone-building{--card-accent:#d4a35d}.tone-datacenter{--card-accent:#3cb5ca}.tone-location{--card-accent:#6d99c8}
-.eq-card-main{display:flex;align-items:stretch;gap:0;min-height:218px;padding:22px 22px 16px;position:relative;z-index:1}
-.eq-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:19px}
-.eq-device-icon{display:grid;width:44px;height:44px;color:var(--card-accent,var(--eq-accent));border-radius:13px;background:color-mix(in srgb,var(--card-accent,var(--eq-accent)) 12%,var(--bg-1));border:1px solid color-mix(in srgb,var(--card-accent,var(--eq-accent)) 22%,var(--stroke-2))}
-.eq-device-icon svg{display:block;width:26px;height:26px}
-.eq-card-label{font:8px ui-monospace,Consolas,monospace;letter-spacing:1.5px;color:var(--txt-2);direction:ltr}
-.eq-card-copy{display:flex;flex-direction:column;gap:5px;margin-bottom:18px}.eq-card-copy strong{font-size:18px;font-weight:800;line-height:1.65}.eq-card-copy .eq-muted{font-size:11px}
-.eq-card-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:22px}.eq-card-chips>span{font-size:9px;line-height:1.7;border:1px solid var(--stroke-2);border-radius:5px;background:var(--bg-1);padding:3px 6px;color:var(--txt-2)}
-.eq-card-footer{margin-top:auto;padding-top:13px;border-top:1px solid var(--stroke-2);display:flex;gap:8px;justify-content:space-between;align-items:center;font-size:10px;color:var(--txt-1)}
-.eq-card-arrow{height:25px;width:25px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--card-accent) 12%,var(--bg-1));color:var(--card-accent);font-size:17px;transform:rotate(-90deg)}
-.eq-card>.eq-tools{justify-content:flex-end;gap:4px;margin:0 12px 9px;padding:0;border:0;background:transparent;position:relative;z-index:2}
-.eq-mini-action{font:inherit;font-size:10px;border:0;background:transparent;color:var(--txt-2);padding:3px 8px;border-radius:5px;cursor:pointer}.eq-mini-action:hover{background:var(--bg-2);color:var(--txt-0)}
-.eq-card-type .eq-card-main{min-height:235px;padding:26px 27px 18px}.eq-card-type .eq-device-icon{width:56px;height:56px;border-radius:17px}.eq-card-type .eq-device-icon svg{width:33px;height:33px}.eq-card-type .eq-card-copy strong{font-size:28px}.eq-card-type .eq-card-footer{font-size:11px}
-.eq-card-section{border-radius:12px;background:var(--bg-2)}.eq-card-section::before{display:none}
-.eq-card-section .eq-card-main{display:grid;grid-template-columns:38px minmax(0,1fr) 27px;align-items:center;gap:13px;min-height:86px;padding:17px 17px 9px}
-.eq-card-section .eq-card-top{margin:0}.eq-card-section .eq-device-icon{width:36px;height:36px;border-radius:10px}.eq-card-section .eq-device-icon svg{width:22px;height:22px}.eq-card-section .eq-card-label{display:none}
-.eq-card-section .eq-card-copy{margin:0;gap:1px}.eq-card-section .eq-card-copy strong{font-size:13px;line-height:1.9}.eq-card-section .eq-card-footer{padding:0;margin:0;border:0}.eq-card-section .eq-card-footer>span:first-child{display:none}
-.eq-card-section>.eq-tools{margin:0 12px 7px}.eq-card-section .eq-mini-action{font-size:9px}
-.eq-inventory-panel{border:1px solid var(--stroke-2);border-radius:16px;background:var(--bg-1);overflow:hidden;margin-top:8px}
-.eq-table-toolbar{padding:18px 20px;margin:0;border-bottom:1px solid var(--stroke-2);gap:12px}.eq-table-toolbar h4{font-size:14px;margin:0 0 3px}.eq-table-toolbar .eq-muted{font-size:10px}
-.eq-table-toolbar .inp{background:var(--bg-2);border:1px solid var(--stroke-2);border-radius:9px;width:205px;font-size:11px;min-height:35px}.eq-table-toolbar .eq-tools{gap:8px}
-.eq-table-wrap{border:0;border-radius:0}.eq-table th{font-size:10px;padding:11px 20px}.eq-table td{padding:16px 20px;font-size:11px}.eq-table .eq-tools{gap:5px}.eq-table .eq-tools .btn{font-size:10px;padding:4px 8px;min-height:28px}
-.eq-node-link{text-decoration:none;display:flex;align-items:center;gap:8px}.eq-node-link::before{content:'';height:6px;width:6px;background:var(--eq-accent);border-radius:50%;flex-shrink:0}.eq-node-link:hover{text-decoration:underline;text-underline-offset:4px}
-.eq-badge{border-radius:20px;padding:3px 9px;font-size:9px}
-.eq-device-title{padding:5px 0 20px}.eq-device-title .eq-device-icon{width:52px;height:52px}.eq-tabs{gap:6px;background:var(--bg-2);padding:5px;border-radius:12px;border:1px solid var(--stroke-2);margin-bottom:22px}.eq-tab{border:0;border-radius:8px;padding:9px 17px;font-size:11px}.eq-tab.active{background:var(--bg-1);color:var(--txt-0);box-shadow:0 2px 8px #00000012}
-.eq-gate{max-width:620px;margin:35px auto;padding:34px;border-radius:20px;background:radial-gradient(ellipse at top right,color-mix(in srgb,#477cf2 10%,transparent),transparent 65%),var(--bg-1)}
-.eq-gate-mark{border-radius:15px;color:#7297ff;background:color-mix(in srgb,#477cf2 10%,var(--bg-1));border-color:color-mix(in srgb,#477cf2 30%,var(--stroke-2));width:52px;height:52px}
-.eq-gate .eq-auth-form>.btn{min-height:44px!important}.eq-gate .eq-field .inp{border-radius:10px;background:var(--bg-2)}
-.eq-dialog{border-radius:20px;padding:28px}.eq-editor .eq-field .inp{border-radius:10px}.eq-editor .eq-tools{justify-content:flex-end}
-@media(max-width:1100px){.eq-card-main{padding:18px}.eq-card-grid{gap:10px}.eq-card-label{font-size:7px;letter-spacing:.7px}.eq-card-top{gap:5px}.eq-card-copy strong{font-size:16px}.eq-card-chips{gap:4px}.eq-hero{gap:16px}.eq-metric{padding:12px 16px}.eq-hero .eq-heading h3{font-size:22px}}
-@media(max-width:760px){
- #equipment-workspace{padding:0;border-radius:16px}.eq-layout{padding:17px 14px}.eq-session-bar{padding:12px 14px;gap:8px}.eq-session-bar .eq-muted{width:100%;order:3;font-size:10px}.eq-session-bar .btn{margin-inline-start:auto}.eq-type-nav{padding:14px 14px 0;gap:3px}.eq-tree-link{padding:7px 11px;font-size:11px}.eq-notice.eq-demo-note{padding:8px 14px;font-size:10px}
- .eq-hero{display:block;margin-bottom:18px}.eq-hero .eq-heading h3{font-size:21px}.eq-metrics{margin-top:16px;display:inline-flex}.eq-metric{padding:10px 19px;min-width:85px}.eq-metric strong{font-size:21px}.eq-metric span{font-size:9px}
- .eq-card-grid,.eq-grid-type,.eq-grid-section{grid-template-columns:minmax(0,1fr)}.eq-card-type .eq-card-main{min-height:205px;padding:22px}.eq-card-type .eq-card-copy strong{font-size:25px}.eq-card-main{min-height:195px}.eq-card-section .eq-card-main{min-height:78px}.eq-card-label{font-size:8px;letter-spacing:1px}
- .eq-group-actions{gap:7px}.eq-group-actions .btn{font-size:10px}.eq-table-toolbar{padding:15px;align-items:stretch}.eq-table-toolbar>.eq-tools{width:100%}.eq-table-toolbar .inp{flex:1;min-width:100px;width:150px}.eq-table-toolbar .btn{padding-inline:10px}.eq-table{min-width:570px}
- .eq-gate{margin:16px 12px;padding:24px 18px}.eq-tab{padding:8px 12px;font-size:10px}.eq-breadcrumbs{margin-bottom:17px}
-}
-/* Flex children must fill their available canvas rather than shrink-to-fit. */
-#equipment-workspace{width:100%;min-width:0;max-width:1500px}
-/* Faceted inventory: one canonical node, several user-defined classifications. */
-.eq-smart-cards{grid-template-columns:repeat(3,minmax(0,1fr));margin:22px 0}
-.eq-smart-cards .eq-card-main{min-height:150px;gap:14px;padding:20px}
-.eq-smart-cards .eq-card-main>strong{font-size:17px}.eq-smart-cards .eq-muted{font-size:11px}
-.eq-facet-nav{padding:18px 0 10px;border-bottom:1px solid var(--stroke-2);margin-bottom:14px}.eq-facet-nav .eq-tree-link{padding:8px 11px;font-size:11px}
-.eq-smart-groups{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:20px}
-.eq-smart-groups .eq-card-main{min-height:100px;padding:16px;gap:8px}.eq-smart-groups .eq-card-main>strong{font-size:14px}
-.eq-smart-groups .eq-badge{align-self:flex-start}.eq-smart-groups .eq-tools{justify-content:flex-start}
-.eq-group-selected{border-color:var(--eq-accent);background:color-mix(in srgb,var(--eq-accent) 8%,var(--bg-1))}
-.eq-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:16px;background:var(--bg-2);border:1px solid var(--stroke-2);border-radius:12px;margin:20px 0 12px}
-.eq-filters .eq-field{font-size:10px;min-width:0}.eq-filters .inp{width:100%;min-width:0;min-height:36px;font-size:11px}
-.eq-active-filters{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.eq-filter-chip{font:inherit;font-size:10px;background:color-mix(in srgb,var(--eq-accent) 9%,var(--bg-1));color:var(--txt-1);border:1px solid var(--stroke-2);border-radius:20px;padding:5px 10px;cursor:pointer}
-.eq-active-filter{border-color:var(--eq-accent)!important;color:var(--eq-accent)!important}
-.eq-node-sub{display:block;color:var(--txt-2);font-size:10px;margin-top:4px}.eq-table td{vertical-align:top}
-.eq-dialog-wide{width:min(760px,calc(100vw - 32px))}
-.eq-node-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.eq-node-fields>[hidden]{display:none!important}
-.eq-node-fields .inp{min-width:0}
-.eq-catalog-shell{display:grid;gap:18px;margin:18px 0}
-.eq-catalog-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:start}
-.eq-catalog-list{max-height:46vh;overflow:auto;border:1px solid var(--stroke-2);border-radius:10px}
-.eq-catalog-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px;border-bottom:1px solid var(--stroke-2);font-size:12px}
-.eq-catalog-row:last-child{border-bottom:0}.eq-catalog-row strong{display:block;overflow-wrap:anywhere}.eq-catalog-row .eq-muted{display:block;font-size:10px}
-@media(max-width:1000px){.eq-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.eq-smart-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.eq-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px}.eq-smart-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.eq-smart-cards .eq-card-main{min-height:142px;padding:14px;gap:10px}.eq-smart-cards .eq-card-main>strong{font-size:14px}.eq-smart-cards .eq-muted{font-size:10px}.eq-smart-groups{grid-template-columns:repeat(2,minmax(0,1fr))}.eq-smart-groups .eq-card-main{padding:12px}.eq-facet-nav{padding-inline:0}.eq-facet-nav .eq-tree-link{font-size:10px}.eq-catalog-body{grid-template-columns:minmax(0,1fr)}.eq-node-fields{grid-template-columns:minmax(0,1fr)}.eq-catalog-list{max-height:30vh}.eq-hero+.eq-tools .btn{font-size:10px}}
-.eq-smart-groups{grid-template-columns:repeat(3,minmax(0,1fr))}
-.eq-groups-types,.eq-groups-datacenters{grid-template-columns:repeat(2,minmax(0,1fr))}
-.eq-groups-regions{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media(max-width:1000px){.eq-groups-regions{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.eq-smart-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* Compact editable shortcuts: roughly half the old 205px card height. */
-.eq-cards-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 10px}
-.eq-cards-toolbar h4{margin:0;font-size:12px;color:var(--txt-1)}
-.eq-smart-cards{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0 0 18px}
-.eq-smart-cards .eq-card{border-radius:12px;min-width:0}
-.eq-smart-cards .eq-card::before{width:90px;height:90px;inset-inline-end:-40px;top:-50px;pointer-events:none}
-.eq-smart-cards .eq-card-main{min-height:70px;padding:11px 12px 5px;gap:4px}
-.eq-shortcut-title{display:flex;align-items:center;gap:7px;min-width:0;width:100%}
-.eq-shortcut-title strong{font-size:13px;line-height:1.6;min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.eq-smart-cards .eq-device-icon{width:28px;height:28px;min-width:28px;border-radius:9px;margin:0}
-.eq-smart-cards .eq-device-icon svg{width:18px;height:18px}
-.eq-smart-cards .eq-muted{font-size:10px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.eq-smart-cards .eq-tools{padding:3px 10px 8px;gap:12px;justify-content:flex-start;margin:0}
-.eq-smart-cards .eq-mini-action{font-size:10px;padding:1px 0;min-height:24px}
-.eq-card-editor{display:grid;gap:16px;margin-top:18px}
-.eq-smart-cards .eq-notice{grid-column:1/-1}
-@media(max-width:1150px){.eq-smart-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:760px){.eq-smart-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.eq-smart-cards .eq-card-main{min-height:70px;padding:10px 10px 5px}.eq-shortcut-title strong{font-size:12px}}
-/* Compact actual category cards, with direct catalog CRUD on each card. */
-.eq-smart-groups{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.eq-smart-groups .eq-card{border-radius:12px}
-.eq-smart-groups .eq-card::before{width:75px;height:75px;top:-38px;inset-inline-end:-30px}
-.eq-smart-groups .eq-card-main{min-height:48px;padding:8px 10px 4px;gap:2px}
-.eq-group-title{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;min-width:0}
-.eq-group-title strong{font-size:12px;line-height:1.65;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.eq-smart-groups .eq-badge{font-size:9px;padding:1px 6px;flex-shrink:0}
-.eq-smart-groups .eq-muted{font-size:9px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.eq-smart-groups .eq-tools{margin:0;padding:2px 8px 6px;gap:8px;justify-content:flex-start}
-.eq-smart-groups .eq-mini-action{min-height:24px;font-size:10px;padding:1px 2px}
-.eq-smart-groups>.eq-notice{grid-column:1/-1}
-@media(max-width:1000px){.eq-smart-groups{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:760px){.eq-smart-groups{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.eq-smart-groups .eq-tools{gap:5px;padding-inline:6px}}
-/* Configuration planner: RAM-only text, explicit target rules, dry-run review. */
-.eq-workspace-tabs{margin:16px 24px 0;width:max-content;max-width:calc(100% - 48px)}
-.eq-config-heading h3{font-size:22px;margin:0 0 8px;color:var(--txt-0)}
-.eq-config-heading>.eq-muted{margin:0 0 20px}
-.eq-config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:16px;align-items:start}
-.eq-config-card{min-width:0;padding:18px;border:1px solid var(--stroke-2);border-radius:14px;background:var(--bg-1)}
-.eq-config-card>h4{font-size:13px;margin:0 0 14px;color:var(--txt-0)}
-.eq-config-card>.eq-muted{font-size:11px;margin:0 0 14px}
-.eq-config-card .eq-field{min-width:0}
-.eq-config-card textarea.eq-config-commands{display:block;width:100%;min-width:0;height:260px;min-height:235px;resize:vertical;font:12px/1.9 ui-monospace,Consolas,monospace;text-align:left;tab-size:2;padding:12px;white-space:pre;overflow:auto;background:var(--bg-0);color:var(--txt-0);border:1px solid var(--stroke-2);border-radius:10px}
-.eq-config-rule{border:1px solid var(--stroke-2);border-radius:10px;background:var(--bg-2);padding:12px;margin-bottom:12px}
-.eq-config-rule-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;font-size:11px;color:var(--txt-1)}
-.eq-config-rule-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.eq-config-rule-fields .eq-field{font-size:10px}.eq-config-rule-fields .eq-field:last-child{grid-column:1/-1}
-.eq-config-rule-fields .inp{width:100%;min-width:0;font-size:11px;min-height:36px}
-.eq-config-or{text-align:center;color:var(--eq-accent);font-size:10px;margin:10px 0}
-.eq-config-preview{margin-top:16px}
-.eq-config-summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;font-size:14px;color:var(--txt-0)}
-.eq-config-summary .eq-muted{font-size:10px}
-.eq-config-preview>.eq-tools{margin-top:16px}.eq-config-preview .eq-table-wrap{max-height:330px;border:1px solid var(--stroke-2);border-radius:10px}
-.eq-config-review-list{max-height:220px;overflow:auto;border:1px solid var(--stroke-2);border-radius:9px;margin:14px 0;font-size:11px;line-height:2.2;padding:10px 14px;overflow-wrap:anywhere}
-.eq-config-ack{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--txt-1);line-height:1.9;margin:18px 0}
-.eq-config-ack input{flex-shrink:0;margin-top:5px;accent-color:#366ee8}
-@media(max-width:1000px){.eq-config-layout{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:760px){.eq-workspace-tabs{margin:12px 14px 0;max-width:calc(100% - 28px)}.eq-config-card{padding:13px}.eq-config-heading h3{font-size:18px}.eq-config-card textarea.eq-config-commands{height:230px;min-height:210px;font-size:11px}.eq-config-rule{padding:10px}.eq-config-ack{font-size:11px}}
-</style>
 <style id="fam-workspace-launcher-css">
 /* Full-screen, keyboard-accessible workspace selection after FAM login. */
 html.workspace-choosing,html.workspace-choosing body{overflow:hidden!important;height:100%}
@@ -2142,11 +1912,79 @@ html.workspace-choosing,html.workspace-choosing body{overflow:hidden!important;h
 .eq-tool-content #eq-audit-report,.eq-tool-content #eq-err-report{display:grid;gap:12px;min-width:0}
 @media(max-width:1000px){.eq-tool-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:760px){.eq-tool-card{padding:13px}.eq-tool-switch{grid-template-columns:minmax(0,1fr);gap:6px}.eq-tool-options{align-items:stretch}.eq-tool-options>.eq-field{width:100%}.eq-tool-content .eq-tabs{gap:3px}.eq-tool-content .eq-tools .btn{font-size:11px}}
-.eq-err-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;list-style-position:inside;margin:0;padding:0;font-size:11px;line-height:1.9}.eq-err-steps li{padding:11px;border:1px solid var(--stroke-2);border-radius:10px;background:var(--bg-1);color:var(--txt-1)}.eq-err-steps li[aria-current]{border-color:#4e83e8;color:var(--txt-0);background:rgba(65,115,225,.14)}
-.eq-err-port-list{display:grid;gap:8px;max-height:380px;overflow:auto}.eq-err-port-row{display:grid;gap:7px;border:1px solid var(--stroke-2);border-radius:10px;padding:12px;background:var(--bg-1)}
-.eq-err-confirm{max-width:760px;width:calc(100% - 28px);max-height:85vh;overflow:auto}.eq-err-confirm>.eq-table-wrap{max-height:300px;overflow:auto;margin:16px 0}.eq-err-confirm .eq-table{min-width:460px}.eq-err-confirm .eq-tools{margin-top:16px}
-@media(max-width:760px){.eq-err-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
-dialog.eq-err-confirm .eq-table{min-width:0;width:100%;table-layout:fixed}dialog.eq-err-confirm .eq-table th,dialog.eq-err-confirm .eq-table td{white-space:normal;overflow-wrap:anywhere;padding:8px 6px;font-size:11px}dialog.eq-err-confirm .eq-table th:first-child{width:40%}
+
+.eq-tool-card{background:var(--eq-surface);border-color:var(--eq-line)}.eq-tool-content .eq-tool-options,.eq-tool-check{background:var(--eq-soft);border-color:var(--eq-line)}.eq-tool-card h4,.eq-tool-policy strong{color:var(--eq-text)}.eq-tool-policy{border-color:var(--eq-line)}
+</style>
+<style id="fam-equipment-workspace-css">
+/* Equipment v2 — isolated design system, RTL, light/dark, no legacy card maze. */
+#equipment-workspace,.eq-dialog{--eq-accent:#6b9cff;--eq-bg:#111a2b;--eq-surface:#182337;--eq-soft:#202e44;--eq-line:#2c3a50;--eq-text:#eaf0fa;--eq-muted:#9fadc2;--eq-success:#74d8bd;--eq-warning:#efc57a;--eq-danger:#ff9eaa;color:var(--eq-text);font-family:inherit;line-height:1.8;direction:rtl;box-sizing:border-box}
+html[data-ui-theme="light"] #equipment-workspace,html[data-ui-theme="light"] .eq-dialog{--eq-accent:#315edb;--eq-bg:#f4f6fa;--eq-surface:#fff;--eq-soft:#f5f7fb;--eq-line:#e3e8f0;--eq-text:#1e2e48;--eq-muted:#65758c;--eq-success:#167d66;--eq-warning:#986515;--eq-danger:#bc3450}
+#equipment-workspace{max-width:1600px;margin:0 auto;background:var(--eq-bg);border:1px solid var(--eq-line);border-radius:18px;box-shadow:0 12px 40px #0000000a;overflow:clip;isolation:isolate}
+#equipment-workspace *,.eq-dialog *{box-sizing:border-box}
+#view-equipment>.view-head .sub{font-size:10px;letter-spacing:1.4px}
+.eq-workspace-header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:28px 32px 24px;background:var(--eq-surface)}
+.eq-eyebrow{font:10px/1.5 ui-monospace,monospace;letter-spacing:2px;color:var(--eq-accent)}
+.eq-workspace-header h2{font-size:25px;line-height:1.7;letter-spacing:-.6px;margin:6px 0 3px;font-weight:800;color:var(--eq-text)}
+.eq-workspace-header p,.eq-page-heading p{font-size:12px;color:var(--eq-muted);margin:0}
+.eq-environment{font-size:10px;display:flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--eq-line);border-radius:20px;color:var(--eq-muted);white-space:nowrap}
+.eq-environment:before{content:'';height:6px;width:6px;border-radius:50%;background:var(--eq-accent)}
+.eq-primary-nav{display:flex;gap:4px;padding:0 24px;background:var(--eq-surface);border-bottom:1px solid var(--eq-line);overflow-x:auto;scrollbar-width:thin}
+.eq-nav-item{display:flex;align-items:center;gap:8px;white-space:nowrap;padding:15px 14px 17px;border:0;border-bottom:3px solid transparent;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--eq-muted);cursor:pointer}
+.eq-nav-item:hover{color:var(--eq-text);background:var(--eq-soft)}.eq-nav-item.active{color:var(--eq-accent);border-bottom-color:var(--eq-accent)}
+.eq-icon{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:22px;height:22px;color:var(--eq-accent)}.eq-icon svg{width:21px;height:21px}.eq-nav-item .eq-icon{color:inherit;width:18px}.eq-nav-item svg{width:18px}
+.eq-main{padding:26px 28px 30px;min-width:0;display:flex;flex-direction:column;gap:20px}.eq-page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.eq-page-title{margin:0 0 3px;font-size:17px;font-weight:750;color:var(--eq-text)}.eq-page-title:focus{outline:none}
+.eq-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.eq-heading h3{font-size:17px;color:var(--eq-text);margin:0}.eq-heading p{font-size:11px;color:var(--eq-muted);margin:5px 0 0}
+#equipment-workspace .btn,.eq-dialog .btn{display:inline-flex;justify-content:center;align-items:center;gap:7px;font-family:inherit;font-weight:600;font-size:11px;padding:8px 13px;min-height:37px;border-radius:8px;background-image:none!important;box-shadow:none!important;transition:background .15s,border-color .15s;white-space:nowrap}
+#equipment-workspace .btn-ghost,.eq-dialog .btn-ghost{color:var(--eq-text);background:var(--eq-surface);border:1px solid var(--eq-line)}
+#equipment-workspace .btn-ghost:hover,.eq-dialog .btn-ghost:hover{background:var(--eq-soft);border-color:var(--eq-muted)}
+#equipment-workspace .btn-primary,.eq-dialog .btn-primary{background:#3767df!important;border:1px solid #3767df;color:#fff!important}
+#equipment-workspace .btn-primary:hover,.eq-dialog .btn-primary:hover{background:#2855c7!important}
+#equipment-workspace button:disabled,.eq-dialog button:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+#equipment-workspace :is(button,input,select,summary):focus-visible,.eq-dialog :is(button,input,select,textarea,summary):focus-visible{outline:2px solid var(--eq-accent);outline-offset:3px}
+#equipment-workspace .inp,.eq-dialog .inp{font:inherit;font-size:12px;min-width:0;max-width:100%;width:100%;min-height:39px;border:1px solid var(--eq-line);border-radius:8px;background:var(--eq-surface)!important;color:var(--eq-text)!important;padding:8px 11px;box-shadow:none!important}
+#equipment-workspace .inp::placeholder,.eq-dialog .inp::placeholder{color:var(--eq-muted);opacity:.8}
+#equipment-workspace option,.eq-dialog option{background:var(--eq-surface);color:var(--eq-text)}
+.eq-field{display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--eq-muted);min-width:0}.eq-muted{color:var(--eq-muted);font-size:11px}.eq-danger{color:var(--eq-danger)!important}.eq-error{color:var(--eq-danger);font-size:12px;overflow-wrap:anywhere}.eq-error:empty{display:none}
+.eq-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.eq-stat{display:flex;align-items:flex-start;gap:13px;padding:19px 17px;background:var(--eq-surface);border:1px solid var(--eq-line);border-radius:11px;min-width:0}
+.eq-stat>.eq-icon{width:37px;height:37px;border:1px solid var(--eq-line);background:var(--eq-soft);border-radius:10px;margin-top:3px}.eq-stat>div{display:flex;flex-direction:column;min-width:0}.eq-stat strong{font-size:28px;line-height:1.7;font-weight:750;color:var(--eq-text)}.eq-stat small{font-size:9px;color:var(--eq-muted)}
+.eq-inventory-panel{background:var(--eq-surface);border:1px solid var(--eq-line);border-radius:12px;min-width:0;overflow:visible}.eq-list-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px}.eq-search{display:flex;align-items:center;position:relative;flex:1;min-width:220px;max-width:440px}.eq-search>.eq-icon{position:absolute;inset-inline-start:11px;color:var(--eq-muted);width:18px}.eq-search input.inp{padding-inline-start:38px!important}.eq-sort{display:flex;align-items:center;gap:7px;margin-inline-start:auto;font-size:10px;color:var(--eq-muted);white-space:nowrap}.eq-sort select.inp{width:130px;font-size:11px}
+.eq-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:16px;border-top:1px solid var(--eq-line);background:var(--eq-soft)}.eq-active-filters{display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px 14px}.eq-filter-chip{font:inherit;font-size:10px;padding:4px 9px;border:1px solid var(--eq-line);border-radius:6px;background:var(--eq-soft);color:var(--eq-accent);cursor:pointer}
+.eq-table-wrap{overflow:auto;max-width:100%;min-width:0;border:1px solid var(--eq-line);border-radius:10px;background:var(--eq-surface)}.eq-inventory-panel .eq-table-wrap{border:0;border-radius:0}.eq-table{width:100%;min-width:660px;border-collapse:collapse;text-align:right;font-size:11px}.eq-table th{font-size:10px;font-weight:600;color:var(--eq-muted);background:var(--eq-soft);padding:12px 17px;white-space:nowrap;border-block:1px solid var(--eq-line)}.eq-table td{padding:15px 17px;color:var(--eq-text);border-bottom:1px solid var(--eq-line)}.eq-table tr:last-child td{border-bottom:0}.eq-table tbody tr:hover{background:var(--eq-soft)}
+.eq-device-cell{display:flex;align-items:center;gap:10px}.eq-device-cell>.eq-icon{width:32px;height:32px;background:var(--eq-soft);border:1px solid var(--eq-line);border-radius:8px}.eq-node-link{font:inherit;font-weight:700;color:var(--eq-text);padding:0;text-align:right;background:none;border:0;cursor:pointer}.eq-node-link:hover{color:var(--eq-accent);text-decoration:underline}.eq-node-sub{display:block;font-size:10px;line-height:1.8;color:var(--eq-muted);margin-top:3px}.eq-mono{font-family:ui-monospace,Consolas,monospace;direction:ltr;unicode-bidi:plaintext;text-align:right}
+.eq-badge{font-size:9px;padding:3px 8px;color:var(--eq-muted);background:var(--eq-soft);border:1px solid var(--eq-line);border-radius:5px;white-space:nowrap}.eq-badge.complete{color:var(--eq-success)}.eq-badge.warning{color:var(--eq-warning)}.eq-badge.complete:before{content:'✓';margin-inline-end:5px}
+.eq-row-menu{position:relative;width:32px}.eq-row-menu summary{display:grid;place-items:center;font-size:15px;color:var(--eq-muted);list-style:none;cursor:pointer;width:32px;height:30px;border-radius:6px}.eq-row-menu summary::-webkit-details-marker{display:none}.eq-row-menu[open] summary{background:var(--eq-soft);color:var(--eq-accent)}.eq-row-menu>.eq-tools{min-width:140px;padding-top:6px}.eq-row-menu>.eq-tools .btn{min-height:30px;padding:4px 9px;font-size:10px}
+.eq-table .eq-empty{text-align:center;padding:42px 20px}.eq-empty>.eq-icon{width:48px;height:48px;background:var(--eq-soft);border-radius:50%;margin:0 auto 10px}.eq-empty h4{font-size:14px;margin:5px}.eq-empty p{font-size:11px;color:var(--eq-muted);margin:5px}
+.eq-pagination{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border-top:1px solid var(--eq-line);font-size:10px;color:var(--eq-muted)}.eq-pagination .btn{min-height:30px!important;padding:4px 11px!important;font-size:10px!important}.eq-shortcuts{padding:14px 0 0;border-top:1px solid var(--eq-line);font-size:11px;color:var(--eq-muted)}.eq-shortcuts>summary{cursor:pointer;width:max-content}.eq-shortcut-list{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}.eq-shortcut{display:flex;align-items:center;gap:7px;border:1px solid var(--eq-line);border-radius:8px;padding:7px;background:var(--eq-surface)}.eq-shortcut-open,.eq-mini-action{border:0;background:none;font:inherit;font-size:10px;color:var(--eq-accent);cursor:pointer;padding:3px 6px}.eq-shortcut-open{font-size:11px;color:var(--eq-text)}
+.eq-notice{font-size:11px;line-height:1.9;padding:11px 13px;margin:0;border:1px solid var(--eq-line);border-radius:8px;color:var(--eq-muted);background:var(--eq-soft);overflow-wrap:anywhere}.eq-notice.warning{color:var(--eq-warning);border-inline-start:3px solid var(--eq-warning)}.eq-dialog{border:1px solid var(--eq-line);background:var(--eq-surface);border-radius:15px;padding:24px;width:min(510px,calc(100vw - 28px));max-height:88dvh;overflow:auto;box-shadow:0 30px 90px #0005}.eq-dialog::backdrop{background:#0a142b99;backdrop-filter:blur(5px)}.eq-dialog-wide{width:min(760px,calc(100vw - 28px))}.eq-dialog>.eq-tools:first-child{align-items:flex-start;justify-content:space-between;flex-wrap:nowrap;margin-bottom:22px}.eq-close{background:none;border:1px solid var(--eq-line);border-radius:6px;color:var(--eq-muted);font:inherit;font-size:10px;padding:4px 8px;cursor:pointer;white-space:nowrap}.eq-editor{display:flex;flex-direction:column;gap:18px}.eq-node-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.eq-node-fields [hidden]{display:none!important}.eq-editor>.eq-tools{border-top:1px solid var(--eq-line);padding-top:16px;justify-content:flex-end}.eq-delete-confirm{background:#b9304c!important;border:1px solid #b9304c;color:white!important}.eq-device-lead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.eq-device-lead>.eq-icon{width:44px;height:44px;border:1px solid var(--eq-line);border-radius:12px}.eq-device-lead>.eq-badge{margin-inline-start:auto}.eq-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;border:1px solid var(--eq-line);border-radius:10px;overflow:hidden;background:var(--eq-line);margin:22px 0}.eq-detail-grid>div{padding:14px 16px;background:var(--eq-surface)}.eq-detail-grid dt{font-size:10px;color:var(--eq-muted)}.eq-detail-grid dd{font-size:12px;margin:5px 0 0;color:var(--eq-text);overflow-wrap:anywhere}#eq-device-details>.eq-tools:last-child{margin-top:18px}
+.eq-offline-card{padding:38px;border:1px solid var(--eq-line);border-radius:12px;background:var(--eq-surface);display:flex;flex-direction:column;gap:20px}.eq-offline-card>.eq-icon{width:52px;height:52px;background:var(--eq-soft);border-radius:12px}.eq-offline-card .eq-heading{max-width:650px}
+.eq-live-workspace{min-width:0;display:flex;flex-direction:column;gap:18px}.eq-live-inputs{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}.eq-live-workspace fieldset{margin:0;padding:20px;min-width:0;border:1px solid var(--eq-line);border-radius:12px;background:var(--eq-surface);display:flex;flex-direction:column;gap:14px}.eq-live-workspace legend{padding:0 7px;font-size:12px;font-weight:650;color:var(--eq-text)}.eq-live-workspace fieldset:disabled{opacity:.65}.eq-live-workspace fieldset fieldset{padding:14px;background:var(--eq-soft);border-radius:8px}.eq-live-workspace fieldset fieldset legend{font-size:10px;color:var(--eq-muted)}.eq-live-workspace .eq-node-fields{grid-template-columns:1fr;gap:13px}.eq-tool-switch-list{display:flex;flex-direction:column;gap:0;max-height:250px;overflow:auto;border:1px solid var(--eq-line);border-radius:8px}.eq-tool-switch-list>.eq-tool-checkbox{padding:12px;border-bottom:1px solid var(--eq-line)}.eq-tool-switch-list>.eq-tool-checkbox:last-child{border:0}.eq-tool-checkbox{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--eq-text);cursor:pointer;min-width:0;line-height:1.8}.eq-tool-checkbox input{flex-shrink:0;accent-color:var(--eq-accent);width:15px;height:15px}.eq-tool-checkbox span{overflow-wrap:anywhere}.eq-live-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.eq-live-command-output{font:11px/1.9 ui-monospace,Consolas,monospace!important;background:var(--eq-bg);color:var(--eq-text);max-width:100%;border-color:var(--eq-line)!important}#eq-live-report{display:flex;flex-direction:column;gap:14px;min-width:0}#eq-live-report>.btn{align-self:flex-start}#eq-live-descriptions{display:flex;flex-direction:column;gap:12px;min-width:0}#eq-live-descriptions>h4{margin:0;font-size:13px}#eq-live-descriptions .eq-cli-card{border:1px solid var(--eq-line);padding:12px 16px;border-radius:10px;background:var(--eq-surface);font-size:11px;min-width:0}#eq-live-descriptions summary{cursor:pointer;color:var(--eq-text)}
+.eq-config-heading h3{display:none}.eq-config-heading p{font-size:11px;color:var(--eq-muted);margin:0 0 14px}.eq-config-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}.eq-config-card{min-width:0;padding:20px;border:1px solid var(--eq-line);border-radius:12px;background:var(--eq-surface)}.eq-config-card>h4{font-size:12px;color:var(--eq-text);margin:0 0 14px}.eq-config-card textarea.eq-config-commands{width:100%;height:260px;min-height:235px;resize:vertical;font:12px/1.9 ui-monospace,monospace;white-space:pre;padding:14px;background:var(--eq-bg);color:var(--eq-text);border:1px solid var(--eq-line);border-radius:8px}.eq-config-rule{padding:13px;border:1px solid var(--eq-line);border-radius:8px;background:var(--eq-soft);margin:10px 0}.eq-config-rule-top,.eq-config-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--eq-muted)}.eq-config-rule-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}.eq-config-rule-fields .eq-field:last-child{grid-column:1/-1}.eq-config-or{text-align:center;color:var(--eq-accent);font-size:10px}.eq-config-preview{margin-top:16px}.eq-config-preview>.eq-tools{margin-top:15px}.eq-config-preview .eq-table-wrap{max-height:350px;margin-top:12px}.eq-config-review-list{max-height:220px;overflow:auto;border:1px solid var(--eq-line);border-radius:8px;margin:15px 0;padding:12px;font-size:11px;overflow-wrap:anywhere}.eq-config-ack{display:flex;gap:9px;margin:16px 0;font-size:11px}
+@media(min-width:1600px){.eq-main{padding:30px 36px}.eq-table td{padding-block:18px}}
+@media(max-width:1100px){.eq-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.eq-primary-nav{padding-inline:15px}.eq-nav-item{padding-inline:11px;font-size:11px}.eq-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.eq-config-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){#equipment-workspace{border-radius:12px}.eq-workspace-header{padding:21px 17px;align-items:flex-start;flex-direction:column;gap:10px}.eq-workspace-header h2{font-size:22px}.eq-workspace-header p{font-size:10px}.eq-environment{font-size:9px}.eq-primary-nav{padding-inline:8px;gap:0}.eq-nav-item{padding:12px 10px;font-size:10px;gap:5px}.eq-nav-item svg{width:15px}.eq-main{padding:19px 14px;gap:17px}.eq-page-title{font-size:16px}.eq-page-heading p{font-size:10px}.eq-overview{gap:9px}.eq-stat{padding:13px 10px;gap:9px}.eq-stat>.eq-icon{width:28px;height:28px}.eq-stat strong{font-size:24px}.eq-stat small{font-size:8px}.eq-stat .eq-muted{font-size:10px}.eq-list-toolbar{padding:12px;gap:9px}.eq-search{min-width:160px;max-width:none;flex-basis:100%}.eq-sort{font-size:9px}.eq-sort select.inp{width:110px;font-size:10px}.eq-filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px;gap:10px}.eq-pagination{flex-wrap:wrap;font-size:9px}.eq-pagination .eq-tools{gap:5px}.eq-live-inputs{grid-template-columns:minmax(0,1fr)}.eq-live-workspace fieldset{padding:15px}.eq-node-fields{grid-template-columns:1fr}.eq-dialog{padding:20px 16px}.eq-detail-grid{grid-template-columns:1fr}.eq-dialog .eq-tools .btn{font-size:10px}.eq-offline-card{padding:22px}.eq-config-card{padding:14px}.eq-config-rule-fields{gap:8px}.eq-table{min-width:630px}#equipment-workspace .btn{white-space:normal;font-size:10px}.eq-page-heading>.eq-tools{width:100%}.eq-tool-card{padding:14px}}
+@media(prefers-reduced-motion:reduce){#equipment-workspace *,.eq-dialog *{transition:none!important;scroll-behavior:auto!important}}
+/* Fit the existing flex content container; horizontal scrolling is table-only. */
+#equipment-workspace{width:100%;min-width:0;flex-shrink:1}
+#view-equipment.active>.content{display:block;min-width:0;max-width:100%;padding:22px;overflow-x:clip}
+html:has(#view-equipment.active) #fx-stage{display:none!important}
+#view-equipment.active{background:#101a2b}
+html[data-ui-theme="light"] #view-equipment.active{background:#f4f6fa}
+html[data-ui-theme="light"] #view-equipment.active>.view-head{background:#fff;color:#1e2e48}
+@media(max-width:760px){#view-equipment.active>.content{padding:12px 9px}.eq-main{overflow:hidden}}
+#equipment-server-note{max-width:1600px;margin:0 auto 12px;padding:0 2px;font-size:10px;background:transparent;border:0;color:#a7b6cb}
+html[data-ui-theme="light"] #equipment-server-note{color:#65758c}
+#equipment-server-note.warning{color:#d18a32}
+/* Equipment has its own search/import: do not show workbook controls here. */
+html:has(#view-equipment.active) #topbar .top-search,
+html:has(#view-equipment.active) #topbar [data-act="open-file"],
+html:has(#view-equipment.active) #topbar [data-act="save-now"],
+html:has(#view-equipment.active) #topbar #save-indicator{display:none!important}
+html:has(#view-equipment.active) #topbar{display:flex;flex-wrap:nowrap;min-height:64px;padding:12px 18px;gap:10px;background:#111a2b;border-bottom:1px solid #2c3a50;box-shadow:none}
+html[data-ui-theme="light"]:has(#view-equipment.active) #topbar{background:#fff;border-color:#e3e8f0;color:#1e2e48}
+html:has(#view-equipment.active) #topbar .page-title{min-width:0}
+html[data-ui-theme="light"]:has(#view-equipment.active) #topbar #top-title{color:#1e2e48}
+html[data-ui-theme="light"]:has(#view-equipment.active) #topbar :is(.icon-btn,.stat-pill){background:#f5f7fb;color:#4e6180;border-color:#e3e8f0}
+@media(max-width:760px){html:has(#view-equipment.active) #topbar{padding:10px;gap:7px}html:has(#view-equipment.active) #topbar #top-sub{display:none}html:has(#view-equipment.active) #topbar .spacer{min-width:0;flex:1}html:has(#view-equipment.active) #topbar #stat-line{max-width:65px;overflow:hidden}html:has(#view-equipment.active) #topbar .top-actions{width:auto;flex-wrap:nowrap}}
 </style>
 <style id="fam-shared-css">
 /* Central status is the only new chrome; both themes share the same layout. */
@@ -2794,7 +2632,7 @@ html[data-fam-variant="shared"] #shared-status{display:none!important;}
     <section class="view" id="view-equipment">
       <div class="view-head">
         <div class="title-ico g-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="6" rx="2"/><rect x="3" y="15" width="18" height="6" rx="2"/><path d="M8 9v6M16 9v6M6 6h.01M6 18h.01"/></svg></div>
-        <div><h2>مدیریت تجهیزات</h2><div class="sub">NETWORK INVENTORY · GROUPS · DEVICE 360°</div></div>
+        <div><h2>مدیریت تجهیزات</h2><div class="sub">INVENTORY · NETWORK OPERATIONS</div></div>
         <div class="head-actions"><button type="button" class="btn btn-primary btn-sm" id="workspace-to-database" data-act="switch-view" data-view="panel">پایگاه داده ←</button><button type="button" class="btn btn-ghost btn-sm" data-workspace-picker>انتخاب بخش</button></div>
       </div>
       <div class="content"><div id="equipment-workspace"></div></div>
@@ -3472,7 +3310,7 @@ function recoverSearchIndex(showMsg) {
    Rendering: views
    ================================================================ */
 const VIEW_TITLES = {
-  equipment: ["مدیریت تجهیزات", "Local UI Preview — No SSH"],
+  equipment: ["مرکز تجهیزات", "Inventory · Network Operations"],
   panel: ["داشبورد عملیات شبکه", "Network Operations Dashboard"],
   results: ["نتایج جستجو", "Search Results"],
   sheet: ["مرور بخش‌های شبکه", "Network Sections"],
@@ -8764,9 +8602,9 @@ const Access = (() => {
       ['edit-cells','ویرایش مستقیم سلول‌ها'],['save-results','ذخیرهٔ تغییرات نتایج جست‌وجو'],['add-record','افزودن رکورد'],['remove-record','حذف رکورد'],['undo-remove','بازگردانی آخرین حذف']]},
     {title:'ابزارها و عملیات‌ها',items:[
       ['refresh-panel','بازسازی پنل'],['refresh-index','بازسازی ایندکس جست‌وجو'],['import-data','ورود فایل'],['export-xlsx','خروجی Excel'],['backup-server','پشتیبان‌گیری'],['restore-data','بازیابی از پشتیبان'],['empty-data','خالی‌کردن داده‌ها'],['reset-data','بازنشانی کامل داده‌ها']]},
-    {title:'عملیات تجهیزات',items:[['equipment-add','افزودن نود'],['equipment-edit','ویرایش و خروج از دسته'],['equipment-delete','حذف نود'],['equipment-catalog','مدیریت دسته‌های تجهیزات'],['equipment-cards','مدیریت کارت‌های تجهیزات'],['equipment-import','ورود اکسل تجهیزات'],['equipment-export','خروجی اکسل تجهیزات'],['equipment-configuration','پیکربندی نمایشی گروهی'],['equipment-standards','تعریف و ویرایش استانداردها'],['equipment-audit','بررسی و خروجی چک‌لیست'],['equipment-scan','بررسی پورت‌های سوئیچ'],['equipment-repair','رفع نمایشی خطای پورت']]},
+    {title:'عملیات تجهیزات',items:[['equipment-add','افزودن تجهیز'],['equipment-edit','ویرایش و خروج از دسته'],['equipment-delete','حذف تجهیز'],['equipment-catalog','مدیریت دسته‌های تجهیزات'],['equipment-cards','مدیریت کارت‌های تجهیزات'],['equipment-import','ورود اکسل تجهیزات'],['equipment-export','خروجی اکسل تجهیزات'],['equipment-configuration','پیکربندی آفلاین'],['equipment-standards','تعریف و ویرایش استانداردها'],['equipment-audit','بررسی و خروجی چک‌لیست'],['equipment-scan','بررسی پورت‌های سوئیچ'],['equipment-repair','رفع خطای پورت با تأیید']]},
     {title:'مدیریت',items:[
-      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','مدیریت تجهیزات (پیش‌نمایش)']]}
+      ['manage-regions','مدیریت مناطق و استان‌ها'],['manage-categories','مدیریت دسته‌بندی‌ها'],['manage-users','مدیریت کاربران و دسترسی‌ها'],['equipment-operations','دسترسی به تجهیزات']]}
   ];
   const PERMISSIONS=new Set(PERMISSION_GROUPS.flatMap(group=>group.items.map(([id])=>id)));
   const allPermissions=()=>[...PERMISSIONS];
@@ -8854,7 +8692,7 @@ const Access = (() => {
         if(!a&&hidden)throw Error('رکورد خارج از محدودهٔ مجاز است.');
         const permission=key==='nodes'?(!a?'equipment-add':!b?'equipment-delete':'equipment-edit'):'equipment-catalog';
         if(!can(permission))throw Error('مجوز این تغییر تجهیزات را ندارید.');
-        if(key==='nodes'){if(b&&whole.some(n=>n.id!==id&&n.host===b.host))throw Error('این IP در کل موجودی استفاده شده است.');if(a&&!equipmentNode(a)||b&&!equipmentNode(b))throw Error('نود خارج از محدودهٔ مجاز است.');}
+        if(key==='nodes'){if(b&&whole.some(n=>n.id!==id&&n.host===b.host))throw Error('این IP در کل موجودی استفاده شده است.');if(a&&!equipmentNode(a)||b&&!equipmentNode(b))throw Error('تجهیز خارج از محدودهٔ مجاز است.');}
         else if(!equipmentRef(key,id)||b&&key==='models'&&!equipmentRef('types',b.typeId)||b&&key==='sites'&&!equipmentRef('siteKinds',b.siteKindId))throw Error('دسته خارج از محدودهٔ مجاز است.');
         const target=key==='nodes'?out.nodes:out.catalog[key],index=target.findIndex(x=>x.id===id);if(!b)target.splice(index,1);else if(index<0)target.push(b);else target[index]=b;
       }
@@ -9295,7 +9133,7 @@ async function startProvinceAdd(selectedName) {
     const lists={typeId:'types',modelId:'models',regionId:'regions',siteKindId:'siteKinds',siteId:'sites'};
     const nodes=value.nodes.map(item=>{
       const clean=identity(item);if(!privateIP(item.host))throw Error('IP خصوصی معتبر نیست.');clean.host=item.host;
-      for(const field of fields){const ref=item[field];if(ref!==null&&(typeof ref!=='string'||!catalog[lists[field]].some(entry=>entry.id===ref)))throw Error('ارجاع دستهٔ نود معتبر نیست.');clean[field]=ref;}
+      for(const field of fields){const ref=item[field];if(ref!==null&&(typeof ref!=='string'||!catalog[lists[field]].some(entry=>entry.id===ref)))throw Error('ارجاع دستهٔ تجهیز معتبر نیست.');clean[field]=ref;}
       if(clean.modelId&&catalog.models.find(m=>m.id===clean.modelId).typeId!==clean.typeId)throw Error('مدل باید متعلق به نوع تجهیز انتخاب‌شده باشد.');
       if(clean.siteId&&catalog.sites.find(m=>m.id===clean.siteId).siteKindId!==clean.siteKindId)throw Error('محل باید متعلق به نوع محل انتخاب‌شده باشد.');
       if(item.legacyPath!==undefined){if(typeof item.legacyPath!=='string'||item.legacyPath.length>300||/[\x00-\x1f\x7f]/.test(item.legacyPath))throw Error('مسیر قبلی معتبر نیست.');clean.legacyPath=item.legacyPath;}
@@ -9316,14 +9154,14 @@ async function startProvinceAdd(selectedName) {
   function removeCategory(value,key,id){
     const next=structuredClone(value),refs={types:'typeId',models:'modelId',regions:'regionId',siteKinds:'siteKindId',sites:'siteId'};
     if(!refs[key])throw Error('دسته معتبر نیست.');
-    if(next.nodes.some(n=>n[refs[key]]===id))throw Error('این دسته در نودها استفاده شده است؛ ابتدا نودها را ویرایش یا از دسته خارج کنید.');
+    if(next.nodes.some(n=>n[refs[key]]===id))throw Error('این دسته در تجهیزات استفاده شده است؛ ابتدا تجهیزات را ویرایش یا از دسته خارج کنید.');
     if(key==='types'&&next.catalog.models.some(m=>m.typeId===id))throw Error('ابتدا مدل‌های وابسته به این نوع تجهیز را حذف یا جابه‌جا کنید.');
     if(key==='siteKinds'&&next.catalog.sites.some(m=>m.siteKindId===id))throw Error('ابتدا محل‌های وابسته را حذف یا جابه‌جا کنید.');
     next.catalog[key]=next.catalog[key].filter(item=>item.id!==id);return validate(next);
   }
   function unassign(value,id,field){
     if(!fields.includes(field))throw Error('دسته معتبر نیست.');
-    const next=structuredClone(value),node=next.nodes.find(n=>n.id===id);if(!node)throw Error('نود پیدا نشد.');
+    const next=structuredClone(value),node=next.nodes.find(n=>n.id===id);if(!node)throw Error('تجهیز پیدا نشد.');
     node[field]=null;if(field==='typeId')node.modelId=null;if(field==='siteKindId')node.siteId=null;
     return validate(next);
   }
@@ -9338,7 +9176,7 @@ async function startProvinceAdd(selectedName) {
       for(const c of t.categories){
         check(c);if(!Array.isArray(c.nodes)||!Array.isArray(c.sections)||c.sections.length>100)throw Error('گروه قبلی معتبر نیست.');
         const transfer=(nodes,section)=>{
-          if(nodes.length>2000)throw Error('تعداد نودهای قبلی معتبر نیست.');
+          if(nodes.length>2000)throw Error('تعداد تجهیزاتی قبلی معتبر نیست.');
           for(const n of nodes){
             check(n);if(!privateIP(n.host))throw Error('IP نسخهٔ قبلی معتبر نیست.');
             let kind=null,site=null;
@@ -9405,7 +9243,7 @@ async function startProvinceAdd(selectedName) {
     const matched=inventory.nodes.filter(node=>clean.some(rule=>M.matches(node,rule)));
     const targets=matched.filter(node=>!M.incomplete(node));
     const hosts=new Map();for(const node of inventory.nodes)hosts.set(node.host,(hosts.get(node.host)||0)+1);
-    if(targets.some(node=>hosts.get(node.host)>1))throw Error('یکی از مقصدها IP تکراری در موجودی دارد؛ ابتدا تعارض IP نودها را برطرف کنید.');
+    if(targets.some(node=>hosts.get(node.host)>1))throw Error('یکی از مقصدها IP تکراری در موجودی دارد؛ ابتدا تعارض IP تجهیزات را برطرف کنید.');
     return {targets,matchedCount:matched.length,incompleteCount:matched.length-targets.length,rules:clean,
       signature:JSON.stringify({inventory,rules:clean})};
   }
@@ -9443,15 +9281,15 @@ async function startProvinceAdd(selectedName) {
     }
     function rows(){
       targetBox.replaceChildren();
-      if(!plan){targetBox.append(note('گروه‌های مقصد را کامل کنید تا نودهای هدف نمایش داده شوند.'));return;}
+      if(!plan){targetBox.append(note('گروه‌های مقصد را کامل کنید تا تجهیزاتی هدف نمایش داده شوند.'));return;}
       const count=plan.targets.length;
       const status=el('div','eq-config-summary');status.setAttribute('role','status');
-      status.append(el('strong','',count+' نود یکتا در مقصد'),el('span','eq-muted',plan.incompleteCount+' نود نیازمند تکمیل کنار گذاشته شد · هر نود مشترک فقط یک‌بار'));
+      status.append(el('strong','',count+' تجهیز یکتا در مقصد'),el('span','eq-muted',plan.incompleteCount+' تجهیز نیازمند تکمیل کنار گذاشته شد · هر تجهیز مشترک فقط یک‌بار'));
       targetBox.append(status);
-      if(outcome)targetBox.append(note('شبیه‌سازی برای '+outcome.size+' نود تکمیل شد. هیچ اتصال یا ارسال دستور واقعی انجام نشد.'));
-      if(!count){targetBox.append(note('هیچ نود کامل و قابل انتخابی با این شرط‌ها وجود ندارد.'));return;}
+      if(outcome)targetBox.append(note('شبیه‌سازی برای '+outcome.size+' تجهیز تکمیل شد. هیچ اتصال یا ارسال دستور واقعی انجام نشد.'));
+      if(!count){targetBox.append(note('هیچ تجهیز کامل و قابل انتخابی با این شرط‌ها وجود ندارد.'));return;}
       page=Math.min(page,Math.ceil(count/PAGE_SIZE)-1);
-      const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');table.setAttribute('aria-label','نودهای مقصد پیکربندی');
+      const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');table.setAttribute('aria-label','تجهیزاتی مقصد پیکربندی');
       const head=el('thead'),tr=el('tr');for(const title of ['نام و IP','نوع / مدل','منطقه / محل','وضعیت نمایشی'])tr.append(el('th','',title));head.append(tr);table.append(head);
       const body=el('tbody');
       for(const node of plan.targets.slice(page*PAGE_SIZE,(page+1)*PAGE_SIZE)){
@@ -9475,7 +9313,7 @@ async function startProvinceAdd(selectedName) {
     function drawRules(){
       ruleBox.replaceChildren();
       rules.forEach((rule,index)=>{
-        if(index)ruleBox.append(el('div','eq-config-or','یا — اجتماع گروه‌ها، بدون نود تکراری'));
+        if(index)ruleBox.append(el('div','eq-config-or','یا — اجتماع گروه‌ها، بدون تجهیز تکراری'));
         const card=el('section','eq-config-rule'),top=el('div','eq-config-rule-top');top.append(el('strong','','گروه هدف '+(index+1)+' · شرط‌ها با «و»'));
         const remove=button('حذف گروه',()=>{changed();rules.splice(index,1);if(!rules.length)rules=[{}];drawRules();refresh();},'eq-mini-action eq-danger');remove.setAttribute('aria-label','حذف گروه هدف '+(index+1));top.append(remove);card.append(top);
         const grid=el('div','eq-config-rule-fields');
@@ -9506,16 +9344,16 @@ async function startProvinceAdd(selectedName) {
       dialog=el('dialog','eq-dialog eq-dialog-wide');dialog.id='eq-config-confirm';dialog.setAttribute('aria-labelledby','eq-config-confirm-title');
       const close=()=>suspend();dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
       const title=el('h3','','بازبینی دیپلوی نمایشی');title.id='eq-config-confirm-title';
-      dialog.append(title,note('فقط شبیه‌سازی: '+info.lineCount+' خط دستور برای '+live.targets.length+' نود یکتا. هیچ SSH، API یا فرمان واقعی اجرا نمی‌شود.',true));
+      dialog.append(title,note('فقط شبیه‌سازی: '+info.lineCount+' خط دستور برای '+live.targets.length+' تجهیز یکتا. هیچ SSH، API یا فرمان واقعی اجرا نمی‌شود.',true));
       const list=el('div','eq-config-review-list');
       for(const node of live.targets)list.append(el('div','',node.name+' · '+node.host));dialog.append(list);
-      const label=el('label','eq-config-ack'),ack=el('input');ack.type='checkbox';ack.id='eq-config-ack';label.append(ack,el('span','','نودهای مقصد را بازبینی کردم؛ فقط شبیه‌سازی بدون ارسال دستور انجام شود.'));
+      const label=el('label','eq-config-ack'),ack=el('input');ack.type='checkbox';ack.id='eq-config-ack';label.append(ack,el('span','','تجهیزاتی مقصد را بازبینی کردم؛ فقط شبیه‌سازی بدون ارسال دستور انجام شود.'));
       const error=el('div','eq-error');error.setAttribute('role','alert');
       const submit=button('تأیید و شبیه‌سازی دیپلوی',()=>{
         if(!ack.checked||!isAuthorized())return;
         try{
           const current=buildPlan(getInventory(),rules);validateDraft(draft);
-          if(snapshot.revision!==revision||snapshot.signature!==current.signature||snapshot.text!==draft)throw Error('متن یا نودهای مقصد تغییر کرده‌اند؛ این پنجره را ببندید و دوباره بازبینی کنید.');
+          if(snapshot.revision!==revision||snapshot.signature!==current.signature||snapshot.text!==draft)throw Error('متن یا تجهیزاتی مقصد تغییر کرده‌اند؛ این پنجره را ببندید و دوباره بازبینی کنید.');
           // Intentionally no executor: record ONLY a RAM-only dry-run marker.
           outcome=new Set(current.targets.map(node=>node.id));plan=current;close();rows();ready();
         }catch(e){error.textContent=e.message;submit.disabled=true;ack.disabled=true;}
@@ -9524,7 +9362,7 @@ async function startProvinceAdd(selectedName) {
     }
     function mount(main){
       suspend();container=el('section','eq-config-workspace');main.append(container);
-      const head=el('div','eq-config-heading');head.append(el('div','eq-eyebrow','CONFIGURATION · OFFLINE DRY RUN'),el('h3','','پیکربندی گروهی'),el('p','eq-muted','دستورها را بنویسید، دسته‌های مقصد را انتخاب و قبل از دیپلوی، نودهای هدف را بازبینی کنید.'));container.append(head);
+      const head=el('div','eq-config-heading');head.append(el('div','eq-eyebrow','CONFIGURATION · OFFLINE DRY RUN'),el('h3','','پیکربندی گروهی'),el('p','eq-muted','دستورها را بنویسید، دسته‌های مقصد را انتخاب و قبل از دیپلوی، تجهیزاتی هدف را بازبینی کنید.'));container.append(head);
       container.append(note('نسخهٔ لوکال: فقط شبیه‌سازی دیپلوی؛ هیچ دستور واقعی ارسال نمی‌شود. متن فقط در حافظه می‌ماند. رمز و پیکربندی حساس واقعی وارد نکنید. اعتبارسنجی نحوی Cisco انجام نمی‌شود.',true));
       const layout=el('div','eq-config-layout'),editor=el('article','eq-config-card'),targets=el('article','eq-config-card');
       editor.append(el('h4','','۱. متن پیکربندی'));
@@ -9534,7 +9372,7 @@ async function startProvinceAdd(selectedName) {
       editor.append(draftStatus,button('پاک‌کردن متن',()=>{changed();draft='';text.value='';rows();ready();text.focus();}));
       targets.append(el('h4','','۲. انتخاب دسته‌های مقصد'),el('p','eq-muted','در هر گروه، شرط‌ها با «و» ترکیب می‌شوند؛ بین گروه‌ها «یا» است. مثلاً روتر + منطقه ۲، یا مدل 1841، یا سوئیچ + مدل 2960. انتخاب خالی مجاز نیست.'));
       ruleBox=el('div','eq-config-rules');targets.append(ruleBox);layout.append(editor,targets);container.append(layout);
-      const preview=el('section','eq-config-card eq-config-preview');preview.append(el('h4','','۳. نودهای مقصد و دیپلوی نمایشی'));targetBox=el('div');targetBox.id='eq-config-targets';preview.append(targetBox);
+      const preview=el('section','eq-config-card eq-config-preview');preview.append(el('h4','','۳. تجهیزاتی مقصد و دیپلوی نمایشی'));targetBox=el('div');targetBox.id='eq-config-targets';preview.append(targetBox);
       review=button('بازبینی و دیپلوی نمایشی',confirmPreview,'btn btn-primary');review.id='eq-config-review';preview.append(tools(review));container.append(preview);drawRules();refresh();
     }
     return Object.freeze({mount,suspend,clear,useSelection});
@@ -9546,7 +9384,7 @@ async function startProvinceAdd(selectedName) {
 /* Pure LOCAL equipment import / checklist / switch simulation. No I/O. */
 (()=>{
  'use strict';const M=FamEquipmentInventory;
- const columns=['نام نود','IP','نوع تجهیز','الگوی نوع','مدل تجهیز','منطقه','نوع محل','الگوی محل','محل استقرار','شناسه نود'];
+ const columns=['نام تجهیز','IP','نوع تجهیز','الگوی نوع','مدل تجهیز','منطقه','نوع محل','الگوی محل','محل استقرار','شناسه تجهیز'];
  const uid=()=>crypto.randomUUID(),idOK=id=>typeof id==='string'&&/^[\w-]{1,80}$/.test(id);
  function inventoryRows(value){const d=M.validate(value),find=(key,id)=>d.catalog[key].find(x=>x.id===id);return [columns.slice(),...d.nodes.map(n=>[n.name,n.host,find('types',n.typeId)?.name||'',find('types',n.typeId)?.kind||'',find('models',n.modelId)?.name||'',find('regions',n.regionId)?.name||'',find('siteKinds',n.siteKindId)?.name||'',find('siteKinds',n.siteKindId)?.kind||'',find('sites',n.siteId)?.name||'',n.id])];}
  function catalogSnapshot(value){
@@ -9570,16 +9408,16 @@ async function startProvinceAdd(selectedName) {
    try{
     if(row.length>10)throw Error('ستون اضافی مجاز نیست.');
     const r=Array.from({length:10},(_,j)=>row[j]===null||row[j]===undefined?'':String(row[j]).trim());
-    for(const index of [0,2,4,5,6,8])if(!M.validName(r[index]))throw Error('نام نود و همهٔ مشخصات دسته‌بندی باید معتبر و تکمیل باشند.');
+    for(const index of [0,2,4,5,6,8])if(!M.validName(r[index]))throw Error('نام تجهیز و همهٔ مشخصات دسته‌بندی باید معتبر و تکمیل باشند.');
     if(!M.privateIP(r[1]))throw Error('IPv4 خصوصی معتبر نیست.');
     if(!['router','switch','other'].includes(r[3])||!['branch','building','datacenter','other'].includes(r[7]))throw Error('الگوی نوع یا الگوی محل معتبر نیست.');
     if(seenIPs.has(r[1])||r[9]&&seenIDs.has(r[9]))throw Error('IP یا شناسه در خود فایل تکراری است.');seenIPs.add(r[1]);if(r[9])seenIDs.add(r[9]);
     const matches=byIP.get(r[1])||[],byID=r[9]?byId.get(r[9]):null;
     if(matches.length>1)throw Error('IP در موجودی قبلی مبهم و تکراری است.');
-    if(byID&&matches.length&&matches[0].id!==byID.id||!byID&&r[9]&&matches.length&&matches[0].id!==r[9])throw Error('شناسه و IP به یک نود اشاره نمی‌کنند.');
-    const previous=byID||matches[0];if(previous&&targetIDs.has(previous.id))throw Error('یک نود موجود در چند ردیف هدف گرفته شده است.');if(previous)targetIDs.add(previous.id);if(previous&&!update)throw Error('نود موجود است؛ برای ویرایش، به‌روزرسانی صریح را فعال کنید.');
-    if(r[9]&&!byID)throw Error('شناسه نود در موجودی فعلی وجود ندارد؛ برای نود جدید شناسه را خالی بگذارید.');
-    if(r[9]&&!idOK(r[9]))throw Error('شناسه نود معتبر نیست.');
+    if(byID&&matches.length&&matches[0].id!==byID.id||!byID&&r[9]&&matches.length&&matches[0].id!==r[9])throw Error('شناسه و IP به یک تجهیز اشاره نمی‌کنند.');
+    const previous=byID||matches[0];if(previous&&targetIDs.has(previous.id))throw Error('یک تجهیز موجود در چند ردیف هدف گرفته شده است.');if(previous)targetIDs.add(previous.id);if(previous&&!update)throw Error('تجهیز موجود است؛ برای ویرایش، به‌روزرسانی صریح را فعال کنید.');
+    if(r[9]&&!byID)throw Error('شناسه تجهیز در موجودی فعلی وجود ندارد؛ برای تجهیز جدید شناسه را خالی بگذارید.');
+    if(r[9]&&!idOK(r[9]))throw Error('شناسه تجهیز معتبر نیست.');
     const namedType=next.catalog.types.find(x=>x.name===r[2]),namedKind=next.catalog.siteKinds.find(x=>x.name===r[6]);
     if(namedType&&namedType.kind!==r[3]||namedKind&&namedKind.kind!==r[7])throw Error('الگوی دسته با دستهٔ موجود سازگار نیست.');
     const type=define('types',r[2],{kind:r[3]}),model=define('models',r[4],{typeId:type.id}),region=define('regions',r[5]),kind=define('siteKinds',r[6],{kind:r[7]}),site=define('sites',r[8],{siteKindId:kind.id});
@@ -9587,7 +9425,7 @@ async function startProvinceAdd(selectedName) {
     if(previous){const index=next.nodes.findIndex(n=>n.id===previous.id);next.nodes[index]=node;counts.updated++;}else{next.nodes.push(node);counts.added++;}
    }catch(e){errors.push({row:i+1,message:e.message});}
   }
-  if(!counts.added&&!counts.updated&&!errors.length)errors.push({row:0,message:'فایل نود قابل ثبت ندارد.'});
+  if(!counts.added&&!counts.updated&&!errors.length)errors.push({row:0,message:'فایل تجهیز قابل ثبت ندارد.'});
   let clean=null;if(!errors.length)try{clean=M.validate(next);const hosts=new Set();for(const n of clean.nodes){if(hosts.has(n.host)&&counts.updated)throw Error('پس از تغییر، IP تکراری ایجاد می‌شود.');hosts.add(n.host);}}catch(e){errors.push({row:0,message:e.message});clean=null;}
   return {next:errors.length?null:clean,errors,counts,base:JSON.stringify(base)};
  }
@@ -9603,7 +9441,7 @@ async function startProvinceAdd(selectedName) {
  }
  function applicable(node,standards){return validateStandards(standards).items.filter(s=>s.modelId===node.modelId&&(!s.siteKindId||s.siteKindId===node.siteKindId)&&(!s.siteId||s.siteId===node.siteId));}
  function audit(value,standards,nodeId,text){
-  const inventory=M.validate(value),node=inventory.nodes.find(n=>n.id===nodeId);if(!node||M.incomplete(node))throw Error('یک نود با مشخصات تکمیل‌شده انتخاب کنید.');
+  const inventory=M.validate(value),node=inventory.nodes.find(n=>n.id===nodeId);if(!node||M.incomplete(node))throw Error('یک تجهیز با مشخصات تکمیل‌شده انتخاب کنید.');
   if(typeof text!=='string'||text.length>12000||/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(text))throw Error('متن آزمایشی معتبر نیست (حداکثر ۱۲۰۰۰ نویسه).');
   const policies=applicable(node,standards),lines=text.split(/\r?\n/).map(l=>l.trim());
   const rows=policies.flatMap(s=>s.checks.map(c=>{let pass=c.operator==='contains'?text.includes(c.pattern):c.operator==='not-contains'?!text.includes(c.pattern):lines.includes(c.pattern);return {standard:s.name,check:c.name,status:!text.trim()?'unknown':pass?'ok':'fail'};}));
@@ -9647,9 +9485,9 @@ async function startProvinceAdd(selectedName) {
    ['فرم پویای ورود تجهیزات FAM — بدون رمز'],['زمان دریافت',generatedAt],['این فایل از آخرین دسته‌بندی‌های همین موجودی ساخته شده است؛ فایل ثابت نیست.'],
    ['۱. ردیف ۲ به بعد برگه تجهیزات را تکمیل کنید؛ سرستون‌ها را تغییر ندهید.'],['۲. نام‌های مجاز و وابستگی‌ها در برگه دسته‌ها هستند؛ مدل و محل منوی وابسته به نوع دارند.'],
    ['۳. الگوی نوع: router / switch / other. الگوی محل: branch / building / datacenter / other. الگوی دقیق هر دسته در برگه دسته‌ها آمده است.'],
-   ['۴. همهٔ ستون‌ها به جز شناسه نود لازم‌اند. برای افزودن، شناسه خالی؛ برای ویرایش از خروجی موجودی و حالت به‌روزرسانی استفاده کنید.'],
-   ['۵. ابتدا در ابزارها پیش‌نمایش و سپس تأیید کنید. هیچ نود خارج از فایل حذف نمی‌شود.'],['۶. اگر دسته‌ها را پس از دریافت فایل تغییر دادید، فرم جدید بگیرید و فقط ردیف‌های تجهیزات را منتقل کنید.'],
-   ['برگه‌های مخفیِ فهرست‌ها و اطلاعات قالب را حذف یا ویرایش نکنید. تغییر نودها به‌تنهایی قالب را قدیمی نمی‌کند؛ تغییر دسته‌ها می‌کند.'],
+   ['۴. همهٔ ستون‌ها به جز شناسه تجهیز لازم‌اند. برای افزودن، شناسه خالی؛ برای ویرایش از خروجی موجودی و حالت به‌روزرسانی استفاده کنید.'],
+   ['۵. ابتدا در ابزارها پیش‌نمایش و سپس تأیید کنید. هیچ تجهیز خارج از فایل حذف نمی‌شود.'],['۶. اگر دسته‌ها را پس از دریافت فایل تغییر دادید، فرم جدید بگیرید و فقط ردیف‌های تجهیزات را منتقل کنید.'],
+   ['برگه‌های مخفیِ فهرست‌ها و اطلاعات قالب را حذف یا ویرایش نکنید. تغییر تجهیزات به‌تنهایی قالب را قدیمی نمی‌کند؛ تغییر دسته‌ها می‌کند.'],
    ['نمونه‌ها از دسته‌های فعلی ساخته می‌شوند و خودکار وارد نمی‌شوند. اگر دسته‌های لازم وجود ندارند، ابتدا آن‌ها را در برنامه تعریف کنید.'],
    ['حداکثر ۴۰۰۰ ردیف، ۵ مگابایت، بدون فرمول؛ هیچ رمز یا کانفیگ در فایل ننویسید.'],
    ['فقط دسته‌های موجود مجازند؛ دستهٔ جدید را ابتدا در برنامه بسازید و فرم تازه بگیرید. اکسل ورود دستیِ خارج از فهرست را با خطای Stop رد می‌کند؛ کپی/چسباندن ممکن است آن را دور بزند، پس ایمپورت دوباره همهٔ ردیف‌ها را کنترل می‌کند.'],['نام و IP را خودتان بنویسید؛ IP خصوصی، یکتا و تکمیل مشخصات هنگام ایمپورت بررسی می‌شوند. الگوها نیز فقط مقدار سازگار با نوع انتخاب‌شده را می‌پذیرند.']
@@ -9709,10 +9547,10 @@ async function startProvinceAdd(selectedName) {
 (()=>{
  'use strict';const M=FamEquipmentInventory,T=FamEquipmentToolsModel,E=FamEquipmentExcel,KEY='fam.equipment.standards.v1';
  function create({getInventory,saveInventory,isAuthorized}){
-  let pane=null,mode='errdisabled',generation=0,preview=null,importError='',update=false,standards={version:1,items:[]},standardIssue='';
-  let draft=null,nodeId='',observed='',auditResult=null,auditQuery='',selected=new Set(),scenarios={},filters={},page=0,errResult=null,errSignature='',errAt='';
-  let errRevision=0,repairDialog=null,portSelected=new Set(),recovered=new Set();
-  try{const raw=FamEquipmentServer.storage.getItem(KEY);if(raw!==null)standards=T.validateStandards(JSON.parse(raw));}catch(e){standardIssue='استانداردهای ذخیره‌شده قابل خواندن نیست؛ برای حفظ اطلاعات ویرایش غیرفعال است.';}
+  let pane=null,mode='excel',generation=0,preview=null,importError='',update=false,standards={version:1,items:[]},standardIssue='';
+  let draft=null,nodeId='',observed='',auditResult=null,auditQuery='';
+  const storage=typeof FamEquipmentServer!=='undefined'?FamEquipmentServer.storage:localStorage;
+  try{const raw=storage.getItem(KEY);if(raw!==null)standards=T.validateStandards(JSON.parse(raw));}catch(e){standardIssue='استانداردهای ذخیره‌شده قابل خواندن نیست؛ برای حفظ اطلاعات ویرایش غیرفعال است.';}
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
   const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const b=el('button',cls,text);b.type='button';b.addEventListener('click',handler);const permission=({'خروجی همهٔ تجهیزات':'equipment-export','خروجی اکسل چک‌لیست':'equipment-audit','ذخیره استاندارد':'equipment-standards'})[text];if(permission&&!isAuthorized(permission))b.disabled=true;if(text==='دریافت فرم ورود از دسته‌های فعلی'&&!isAuthorized('equipment-import')&&!isAuthorized('equipment-export'))b.disabled=true;return b;};
   const tools=(...items)=>{const row=el('div','eq-tools');row.append(...items);return row;};
@@ -9734,7 +9572,7 @@ async function startProvinceAdd(selectedName) {
    parent.append(note('ورود اکسل واقعیِ مشخصات تجهیزات؛ بدون تغییر فایل‌های پایگاه داده. ثبت فقط پس از پیش‌نمایش و تأیید انجام می‌شود. رمز یا کانفیگ در فایل تجهیزات نگذارید.'));
    const templateButton=button('دریافت فرم ورود از دسته‌های فعلی',template);templateButton.id='eq-download-template';parent.append(tools(templateButton,button('خروجی همهٔ تجهیزات',exportInventory)));
    parent.append(note('قالب زنده است: هر بار از آخرین دسته‌ها و نام‌های همین برنامه ساخته می‌شود؛ دسته‌ها فقط از فهرست مجاز با خطای توقف انتخاب می‌شوند؛ مدل، محل و الگوها وابسته‌اند. دستهٔ جدید را ابتدا در برنامه بسازید. ابتدا فرم به‌روز بگیرید، ردیف‌ها را تکمیل و سپس همین‌جا وارد کنید. بعد از تغییر دسته‌ها، فایل قبلی قابل ورود نیست.'));
-   const options=el('div','eq-tool-options');check(options,'به‌روزرسانی نودهای موجود بر اساس شناسه / IP',update,value=>{update=value;preview=null;draw();},'eq-import-update');parent.append(options);
+   const options=el('div','eq-tool-options');check(options,'به‌روزرسانی تجهیزاتی موجود بر اساس شناسه / IP',update,value=>{update=value;preview=null;draw();},'eq-import-update');parent.append(options);
    const label=el('label','eq-field','انتخاب فایل xlsx تجهیزات'),file=el('input','inp');file.disabled=!isAuthorized('equipment-import');file.type='file';file.accept='.xlsx';file.id='eq-inventory-file';label.append(file);parent.append(label);
    file.addEventListener('change',async()=>{
     const f=file.files[0],token=++generation;preview=null;importError='';if(!f)return;
@@ -9745,14 +9583,14 @@ async function startProvinceAdd(selectedName) {
     }catch(e){importError=e.message;}if(token===generation&&isAuthorized())draw();
    });
    if(importError)parent.append(note(importError,true));
-   if(preview){const p=preview;parent.append(note(p.counts.added+' نود جدید · '+p.counts.updated+' ویرایش · '+p.counts.categories+' دستهٔ جدید · '+p.errors.length+' خطا — هنوز ثبت نشده است.',!!p.errors.length));
+   if(preview){const p=preview;parent.append(note(p.counts.added+' تجهیز جدید · '+p.counts.updated+' ویرایش · '+p.counts.categories+' دستهٔ جدید · '+p.errors.length+' خطا — هنوز ثبت نشده است.',!!p.errors.length));
     if(p.errors.length){table(parent,['ردیف','خطا'],p.errors.slice(0,100).map(x=>[x.row||'کل فایل',x.message]));if(p.errors.length>100)parent.append(note('فقط ۱۰۰ خطای اول نمایش داده شده؛ همهٔ خطاها باید برطرف شوند.'));}
-    else{const body=table(parent,['نام','IP','نوع / مدل','منطقه / محل'],p.next.nodes.slice(0,25).map(n=>[n.name,n.host,p.next.catalog.models.find(x=>x.id===n.modelId)?.name||'',p.next.catalog.sites.find(x=>x.id===n.siteId)?.name||'']));body.closest('table').setAttribute('aria-label','پیش‌نمایش موجودی پس از ورود');parent.append(note('پیش‌نمایش ۲۵ نود اولِ کل موجودیِ پس از ثبت؛ هیچ نودی خارج از فایل حذف نمی‌شود.'));
-     const apply=button('تأیید و ثبت ورود',()=>{try{allowed('equipment-import');if(p.base!==JSON.stringify(M.validate(getInventory())))throw Error('موجودی تغییر کرده؛ فایل را دوباره پیش‌نمایش کنید.');if(!confirm('ورود '+p.counts.added+' نود جدید و ویرایش '+p.counts.updated+' نود ثبت شود؟'))return;saveInventory(p.next);preview=null;importError='ورود با موفقیت ثبت شد؛ دسته‌بندی‌ها خودکار به‌روز شدند.';draw();}catch(e){importError=e.name==='QuotaExceededError'?'فضای مرورگر کافی نیست؛ هیچ ردیفی ثبت نشد.':e.message;draw();}},'btn btn-primary');apply.id='eq-import-apply';parent.append(apply);}
+    else{const body=table(parent,['نام','IP','نوع / مدل','منطقه / محل'],p.next.nodes.slice(0,25).map(n=>[n.name,n.host,p.next.catalog.models.find(x=>x.id===n.modelId)?.name||'',p.next.catalog.sites.find(x=>x.id===n.siteId)?.name||'']));body.closest('table').setAttribute('aria-label','پیش‌نمایش موجودی پس از ورود');parent.append(note('پیش‌نمایش ۲۵ تجهیز اولِ کل موجودیِ پس از ثبت؛ هیچ تجهیزی خارج از فایل حذف نمی‌شود.'));
+     const apply=button('تأیید و ثبت ورود',()=>{try{allowed('equipment-import');if(p.base!==JSON.stringify(M.validate(getInventory())))throw Error('موجودی تغییر کرده؛ فایل را دوباره پیش‌نمایش کنید.');if(!confirm('ورود '+p.counts.added+' تجهیز جدید و ویرایش '+p.counts.updated+' تجهیز ثبت شود؟'))return;saveInventory(p.next);preview=null;importError='ورود با موفقیت ثبت شد؛ دسته‌بندی‌ها خودکار به‌روز شدند.';draw();}catch(e){importError=e.name==='QuotaExceededError'?'فضای مرورگر کافی نیست؛ هیچ ردیفی ثبت نشد.':e.message;draw();}},'btn btn-primary');apply.id='eq-import-apply';parent.append(apply);}
    }
   }
   function newDraft(){return {id:id(),name:'',modelId:'',siteKindId:null,siteId:null,checks:[{id:id(),name:'',operator:'exact-line',pattern:''}]};}
-  function saveStandards(next){allowed('equipment-standards');if(standardIssue)throw Error(standardIssue);const clean=T.validateStandards(next);try{FamEquipmentServer.storage.setItem(KEY,JSON.stringify(clean));}catch(e){throw Error('استاندارد ذخیره نشد؛ فضای مرورگر را بررسی کنید.');}standards=clean;auditResult=null;}
+  function saveStandards(next){allowed('equipment-standards');if(standardIssue)throw Error(standardIssue);const clean=T.validateStandards(next);try{storage.setItem(KEY,JSON.stringify(clean));}catch(e){throw Error('استاندارد ذخیره نشد؛ فضای مرورگر را بررسی کنید.');}standards=clean;auditResult=null;}
   function standardsUI(parent){
    parent.append(note('استاندارد بر اساس مدل و محل استفاده اعمال می‌شود. آیتم‌ها تطبیق متنیِ دادهٔ آزمایشی‌اند، نه تحلیل کامل Cisco. متن کانفیگ واقعی یا رمز وارد نکنید.'));
    if(standardIssue)parent.append(note(standardIssue,true));
@@ -9769,417 +9607,31 @@ async function startProvinceAdd(selectedName) {
    editor.addEventListener('submit',event=>{event.preventDefault();try{const model=find('models',s.modelId);if(!model||!['router','switch'].includes(find('types',model.typeId)?.kind)||s.siteKindId&&!find('siteKinds',s.siteKindId)||s.siteId&&find('sites',s.siteId)?.siteKindId!==s.siteKindId)throw Error('مدل و محل معتبر و سازگار انتخاب کنید.');const next=structuredClone(standards),at=next.items.findIndex(x=>x.id===s.id);if(at<0)next.items.push(s);else next.items[at]=s;saveStandards(next);draft=newDraft();draw();}catch(e){error.textContent=e.message;}});
    list.append(el('h4','','استانداردهای تعریف‌شده'));
    for(const policy of standards.items.filter(p=>find('models',p.modelId)&&(!p.siteKindId||find('siteKinds',p.siteKindId))&&(!p.siteId||find('sites',p.siteId)))){const row=el('article','eq-tool-policy');row.append(el('strong','',policy.name),el('p','eq-muted',name('models',policy.modelId)+' · '+(policy.siteId?name('sites',policy.siteId):policy.siteKindId?name('siteKinds',policy.siteKindId):'همهٔ محل‌ها')+' · '+policy.checks.length+' آیتم'));
-    const edit=button('ویرایش',()=>{draft=structuredClone(policy);draw();}),remove=button('حذف',()=>{if(!confirm('فقط استاندارد «'+policy.name+'» حذف شود؟ نودها حذف نمی‌شوند.'))return;try{saveStandards({version:1,items:standards.items.filter(x=>x.id!==policy.id)});draft=newDraft();draw();}catch(e){alert(e.message);}});edit.disabled=remove.disabled=!!standardIssue||!isAuthorized('equipment-standards');edit.setAttribute('aria-label','ویرایش استاندارد '+policy.name);remove.setAttribute('aria-label','حذف استاندارد '+policy.name);row.append(tools(edit,remove));list.append(row);}
+    const edit=button('ویرایش',()=>{draft=structuredClone(policy);draw();}),remove=button('حذف',()=>{if(!confirm('فقط استاندارد «'+policy.name+'» حذف شود؟ تجهیزات حذف نمی‌شوند.'))return;try{saveStandards({version:1,items:standards.items.filter(x=>x.id!==policy.id)});draft=newDraft();draw();}catch(e){alert(e.message);}});edit.disabled=remove.disabled=!!standardIssue||!isAuthorized('equipment-standards');edit.setAttribute('aria-label','ویرایش استاندارد '+policy.name);remove.setAttribute('aria-label','حذف استاندارد '+policy.name);row.append(tools(edit,remove));list.append(row);}
    if(!standards.items.length)list.append(note('استانداردی تعریف نشده؛ نتیجهٔ بررسی بدون استاندارد «تأییدشده» محسوب نمی‌شود.'));grid.append(editor,list);parent.append(grid);
-   const audit=el('section','eq-tool-card');audit.append(el('h4','','بررسی نود و خروجی چک‌لیست'));
-   const nodeSelectBox=el('div');input(audit,'جست‌وجوی نام یا IP نود',auditQuery,v=>{auditQuery=v;drawNodeOptions();},'eq-audit-search');
-   function drawNodeOptions(){nodeSelectBox.replaceChildren();const nodes=getInventory().nodes.filter(n=>n.id===nodeId||[n.name,n.host].some(x=>x.toLowerCase().includes(auditQuery.toLowerCase())));select(nodeSelectBox,'نود مورد بررسی',nodes.map(n=>({id:n.id,name:n.name+' · '+n.host})),nodeId,v=>{nodeId=v;observed='';auditResult=null;draw();},'eq-audit-node');}
+   const audit=el('section','eq-tool-card');audit.append(el('h4','','بررسی تجهیز و خروجی چک‌لیست'));
+   const nodeSelectBox=el('div');input(audit,'جست‌وجوی نام یا IP تجهیز',auditQuery,v=>{auditQuery=v;drawNodeOptions();},'eq-audit-search');
+   function drawNodeOptions(){nodeSelectBox.replaceChildren();const nodes=getInventory().nodes.filter(n=>n.id===nodeId||[n.name,n.host].some(x=>x.toLowerCase().includes(auditQuery.toLowerCase())));select(nodeSelectBox,'تجهیز مورد بررسی',nodes.map(n=>({id:n.id,name:n.name+' · '+n.host})),nodeId,v=>{nodeId=v;observed='';auditResult=null;draw();},'eq-audit-node');}
    drawNodeOptions();audit.append(nodeSelectBox);if(nodeId){const n=getInventory().nodes.find(n=>n.id===nodeId);if(n)audit.append(note(name('models',n.modelId)+' · '+name('sites',n.siteId)));}
-   const observedLabel=el('label','eq-field','کانفیگ ساختگی همین نود (فقط RAM)'),text=el('textarea','inp eq-tool-observed');text.id='eq-audit-observed';text.dir='ltr';text.maxLength=12000;text.spellcheck=false;text.autocomplete='off';text.value=observed;observedLabel.append(text);audit.append(observedLabel);
-   const report=el('div');report.id='eq-audit-report';const exportButton=button('خروجی اکسل چک‌لیست',()=>{try{allowed('equipment-audit');if(!auditResult)throw Error('ابتدا بررسی را اجرا کنید.');const live=T.audit(getInventory(),standards,nodeId,observed);if(live.signature!==auditResult.signature)throw Error('نود یا استاندارد تغییر کرده؛ بررسی را دوباره اجرا کنید.');download([['چک‌لیست',[
-    ['منبع','نود','IP','استاندارد','آیتم','نتیجه','زمان'],...auditResult.rows.map(r=>[auditResult.source,auditResult.node.name,auditResult.node.host,r.standard,r.check,auditLabel(r.status),auditResult.at])]]],'FAM-Checklist-DEMO.xlsx');}catch(e){report.replaceChildren(note(e.message,true));}});exportButton.id='eq-audit-export';exportButton.disabled=!isAuthorized('equipment-audit')||!auditResult?.rows.length;
+   const observedLabel=el('label','eq-field','کانفیگ ساختگی همین تجهیز (فقط RAM)'),text=el('textarea','inp eq-tool-observed');text.id='eq-audit-observed';text.dir='ltr';text.maxLength=12000;text.spellcheck=false;text.autocomplete='off';text.value=observed;observedLabel.append(text);audit.append(observedLabel);
+   const report=el('div');report.id='eq-audit-report';const exportButton=button('خروجی اکسل چک‌لیست',()=>{try{allowed('equipment-audit');if(!auditResult)throw Error('ابتدا بررسی را اجرا کنید.');const live=T.audit(getInventory(),standards,nodeId,observed);if(live.signature!==auditResult.signature)throw Error('تجهیز یا استاندارد تغییر کرده؛ بررسی را دوباره اجرا کنید.');download([['چک‌لیست',[
+    ['منبع','تجهیز','IP','استاندارد','آیتم','نتیجه','زمان'],...auditResult.rows.map(r=>[auditResult.source,auditResult.node.name,auditResult.node.host,r.standard,r.check,auditLabel(r.status),auditResult.at])]]],'FAM-Checklist-DEMO.xlsx');}catch(e){report.replaceChildren(note(e.message,true));}});exportButton.id='eq-audit-export';exportButton.disabled=!isAuthorized('equipment-audit')||!auditResult?.rows.length;
    text.addEventListener('input',()=>{observed=text.value;auditResult=null;report.replaceChildren();exportButton.disabled=true;});
    const run=button('بررسی چک‌لیست آزمایشی',()=>{try{allowed('equipment-audit');auditResult={...T.audit(getInventory(),standards,nodeId,observed),at:new Date().toISOString()};draw();}catch(e){report.replaceChildren(note(e.message,true));}},'btn btn-primary');run.id='eq-audit-run';run.disabled=!!standardIssue||!isAuthorized('equipment-audit');
-   audit.append(tools(run,exportButton),report);if(auditResult){report.append(note(auditResult.source+'؛ نتیجه، وضعیت واقعی دستگاه نیست.'));if(!auditResult.rows.length)report.append(note('استاندارد متناسب با مدل و محل این نود تعریف نشده است.',true));else table(report,['استاندارد','آیتم','نتیجه'],auditResult.rows.map(r=>[r.standard,r.check,auditLabel(r.status)]));}parent.append(audit);
+   audit.append(tools(run,exportButton),report);if(auditResult){report.append(note(auditResult.source+'؛ نتیجه، وضعیت واقعی دستگاه نیست.'));if(!auditResult.rows.length)report.append(note('استاندارد متناسب با مدل و محل این تجهیز تعریف نشده است.',true));else table(report,['استاندارد','آیتم','نتیجه'],auditResult.rows.map(r=>[r.standard,r.check,auditLabel(r.status)]));}parent.append(audit);
   }
   const auditLabel=status=>({ok:'منطبق (آزمایشی)',fail:'نامنطبق (آزمایشی)',unknown:'نامشخص / بررسی‌نشده'})[status];
-  function closeRepair(){FamEquipmentLive.suspend();}
-  function invalidateErr(){FamEquipmentLive.invalidate();}
-  function draw(){if(!pane)return;pane.replaceChildren();const nav=el('nav','eq-tabs');nav.setAttribute('aria-label','ابزارهای تجهیزات');for(const [key,title]of [['errdisabled','بررسی و رفع خطای پورت‌ها'],['excel','ورود و خروج اکسل'],['standards','استانداردها و چک‌لیست']]){const b=button(title,()=>{generation++;closeRepair();mode=key;draw();},'eq-tab'+(mode===key?' active':''));b.id='eq-tool-'+key;b.setAttribute('aria-pressed',String(mode===key));nav.append(b);}pane.append(nav);const content=el('section','eq-tool-content');pane.append(content);if(mode==='excel')excel(content);else if(mode==='standards')standardsUI(content);else FamEquipmentLive.mount(content);}
-  function mount(main){if(auditResult)try{if(T.audit(getInventory(),standards,nodeId,observed).signature!==auditResult.signature)auditResult=null;}catch(e){auditResult=null;}if(errResult&&errSignature!==JSON.stringify(getInventory()))invalidateErr();pane=el('section','eq-tools-workspace');main.append(pane);draw();}
-  function suspend(){generation++;closeRepair();}
-  function clear(){generation++;invalidateErr();if(pane)pane.querySelectorAll('textarea').forEach(n=>n.value='');preview=null;importError='';observed='';auditResult=null;nodeId='';auditQuery='';selected.clear();scenarios={};filters={};errResult=null;errSignature='';draft=null;pane=null;mode='errdisabled';page=0;update=false;}
-  window.addEventListener('storage',event=>{if(event.key===KEY){try{standards=T.validateStandards(JSON.parse(FamEquipmentServer.storage.getItem(KEY)||'{"version":1,"items":[]}'));standardIssue='';draft=null;auditResult=null;}catch(e){standardIssue='استانداردهای سرور معتبر نیستند؛ ویرایش غیرفعال است.';}}});
+  function draw(){if(!pane)return;pane.replaceChildren();const content=el('section','eq-tool-content');pane.append(content);if(mode==='standards')standardsUI(content);else excel(content);}
+  function mount(main,initialMode='excel'){mode=initialMode==='standards'?'standards':'excel';if(auditResult)try{if(T.audit(getInventory(),standards,nodeId,observed).signature!==auditResult.signature)auditResult=null;}catch(e){auditResult=null;}pane=el('section','eq-tools-workspace');main.append(pane);draw();}
+  function suspend(){generation++;pane=null;}
+  function clear(){generation++;if(pane)pane.querySelectorAll('textarea').forEach(n=>n.value='');preview=null;importError='';observed='';auditResult=null;nodeId='';auditQuery='';draft=null;pane=null;mode='excel';update=false;}
+  window.addEventListener('storage',event=>{if(event.key===KEY){try{standards=T.validateStandards(JSON.parse(storage.getItem(KEY)||'{"version":1,"items":[]}'));standardIssue='';draft=null;auditResult=null;}catch(e){standardIssue='استانداردهای ذخیره‌شده معتبر نیستند؛ ویرایش غیرفعال است.';}}});
   return Object.freeze({mount,suspend,clear,exportInventory});
  }
  globalThis.FamEquipmentTools=Object.freeze({create});
 })();
 </script>
-<script id="fam-equipment-server-store-js">
-/* Central equipment cache: authoritative server, never browser storage.
-   A pending write blocks interaction until acknowledged; conflicts/unknown
-   delivery never auto-overwrite or claim success. No CLI/credentials enter it. */
-window.FamEquipmentServer=(()=>{
- 'use strict';const keys={'fam.equipment.inventory.v3':'inventory','fam.equipment.cards.v1':'cards','fam.equipment.standards.v1':'standards'};
- let cache=null,busy=false,timer=null,refreshing=false;const view=()=>cache?.inventory||{version:3,catalog:{types:[],models:[],regions:[],siteKinds:[],sites:[]},nodes:[]};
- function note(message,error=false){let n=document.getElementById('equipment-server-note');if(!n){n=document.createElement('div');n.id='equipment-server-note';n.className='eq-notice';document.querySelector('#view-equipment .content')?.prepend(n);}n.textContent=message;n.classList.toggle('warning',error);}
- function block(message,error=false){let n=document.getElementById('equipment-server-block');if(!n){n=document.createElement('section');n.id='equipment-server-block';n.setAttribute('role','alertdialog');n.className='shared-box';Object.assign(n.style,{position:'fixed',inset:'20% 15% auto',zIndex:2147483647,background:'var(--bg-1)',padding:'28px',border:'2px solid #6389da',borderRadius:'16px'});document.body.append(n);}n.replaceChildren();const text=document.createElement('p');text.textContent=message;n.append(text);document.getElementById('layout').inert=true;document.getElementById('modal-overlay').inert=true;if(error){const button=document.createElement('button');button.className='btn btn-primary';button.textContent='دریافت وضعیت قطعی سرور';button.onclick=()=>location.reload();n.append(button);}}
- function apply(value){cache=value;for(const key of Object.keys(keys))window.dispatchEvent(new StorageEvent('storage',{key}));document.dispatchEvent(new Event('fam-equipment-changed'));note('تجهیزات مرکزی · نسخهٔ '+cache.revision+' · ثبت‌ها فقط با تأیید سرور قطعی‌اند.');}
- async function load(){if(!Access.can('equipment')){cache=null;return;}apply(await FamShared.api('equipment/state'));if(!timer)timer=setInterval(poll,8000);}
- async function poll(){if(busy||document.getElementById('equipment-server-block')||refreshing||!Access.can('equipment'))return;refreshing=true;try{const next=await FamShared.api('equipment/state');if(next.revision!==cache?.revision){const editing=!document.querySelector('#user-form')&&(document.querySelector('dialog[open],#modal-overlay.show')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'));if(editing){note('موجودی سرور تغییر کرده است؛ پیش از ثبت/ورود اکسل، صفحه را تازه و تغییر را دوباره بازبینی کنید.',true);}else apply(next);}}catch(e){note('دریافت تغییرات تجهیزات انجام نشد؛ ثبت محلی به معنی ثبت روی سرور نیست.',true);}finally{refreshing=false;}}
- const storage={getItem(key){const field=keys[key];return field&&cache?JSON.stringify(cache[field]):null;},setItem(key,value){const kind=keys[key];if(!kind||!cache||busy)throw Error('تجهیزات سرور آماده نیست یا ثبت قبلی پایان نیافته است.');const parsed=JSON.parse(value),request={revision:cache.revision,requestId:crypto.randomUUID(),kind,value:parsed};busy=true;block('در حال ثبت قطعی تجهیزات روی سرور…');FamShared.api('equipment/state',request).then(result=>{busy=false;document.getElementById('equipment-server-block')?.remove();if(!document.getElementById('shared-block')){document.getElementById('layout').inert=false;document.getElementById('modal-overlay').inert=false;}apply(result);note('تغییر تجهیزات روی سرور ثبت شد · نسخهٔ '+cache.revision);}).catch(error=>{busy=false;block(error.message+'\nموفقیت ثبت تأیید نشده؛ درخواست خودکار تکرار نمی‌شود. وضعیت قطعی سرور را دریافت کنید.',true);});}};
- document.addEventListener('fam-access-changed',()=>{const loaded=cache!==null;cache=null;if(loaded&&Access.current())queueMicrotask(()=>load().catch(()=>{}));});
- return Object.freeze({load,storage,inventory:view,pending:()=>busy,blocked:()=>!!document.getElementById('equipment-server-block')});
-})();
-</script>
-<script id="fam-equipment-local-preview-js">
-/* Local-only Equipment UI. Canonical nodes + derived facets; RADIUS in closure RAM only. */
-document.addEventListener('DOMContentLoaded',()=>{
-  const root=document.getElementById('equipment-workspace');if(!root)return;
-  const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',OLD_KEY='fam.equipment.inventory.v2',CARDS_KEY='fam.equipment.cards.v1';
-  let fullInventory=M.defaults(),inventory=M.defaults(),storageIssue='',migrationNote='',credentials=null,path={},activeDialog=null,epoch=0;
-  let scenario='clean',result=null,tab='overview',search='',busy=false,facet='overview',filters={},activeField=null,onlyReview=false;
-  let cardSettings=M.defaultCards(),cardsIssue='',groupIssue='',workspaceTab='inventory';
-  const checks=new Map(),uid=()=>crypto.randomUUID();
-  const can=()=>typeof Access!=='undefined'&&Access.can('equipment');
-  const configuration=FamEquipmentConfiguration.create({getInventory:()=>Access.equipmentView(fullInventory),isAuthorized:()=>!!credentials&&can()&&Access.can('equipment-configuration')&&credentials.userId===Access.current()?.id});
-  const equipmentTools=FamEquipmentTools.create({getInventory:()=>Access.equipmentView(fullInventory),saveInventory:next=>save(next),isAuthorized:(operation='equipment')=>!!credentials&&can()&&Access.can(operation)&&credentials.userId===Access.current()?.id});
-  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-  const button=(text,handler,cls='btn btn-ghost btn-sm')=>{const n=el('button',cls,text);n.type='button';n.addEventListener('click',handler);const permission=({'＋ افزودن نود':'equipment-add','＋ نود':'equipment-add','مدیریت این دسته‌ها':'equipment-catalog','افزودن نود':'equipment-add','حذف نود':'equipment-delete','مدیریت دسته‌ها':'equipment-catalog','＋ افزودن زیرمجموعه':'equipment-catalog','خروجی اکسل همهٔ تجهیزات':'equipment-export','پیکربندی این انتخاب':'equipment-configuration','تأیید بازیابی Gi0/1':'equipment-repair','بررسی وضعیت پورت‌ها':'equipment-scan','ویرایش مشخصات نود':'equipment-edit','＋ افزودن کارت':'equipment-cards'})[text];if(permission&&!Access.can(permission))n.disabled=true;return n;};
-  const tools=(...buttons)=>{const n=el('div','eq-tools');n.append(...buttons);return n;};
-  const notice=(text,cls='')=>el('div','eq-notice '+cls,text);
-  function heading(title,sub){const n=el('div','eq-heading');n.append(el('h3','',title),el('p','',sub));return n;}
-  function metric(value,label){const n=el('div','eq-metric');n.append(el('strong','',String(value)),el('span','',label));return n;}
-  const catalog=(key)=>inventory.catalog[key];
-  const find=(key,id)=>catalog(key).find(item=>item.id===id);
-  const nameOf=(key,id)=>find(key,id)?.name||'تعیین نشده';
-  const lookup={typeId:'types',modelId:'models',regionId:'regions',siteKindId:'siteKinds',siteId:'sites'};
-  const selected=()=>{const node=inventory.nodes.find(n=>n.id===path.node);return {node,type:find('types',node?.typeId),model:find('models',node?.modelId),region:find('regions',node?.regionId),siteKind:find('siteKinds',node?.siteKindId),site:find('sites',node?.siteId)};};
-  function load(){
-    try{
-      const raw=FamEquipmentServer.storage.getItem(KEY);
-      if(raw){inventory=M.validate(JSON.parse(raw));return;}
-      const old=FamEquipmentServer.storage.getItem(OLD_KEY);
-      if(old){inventory=M.migrateV2(JSON.parse(old));FamEquipmentServer.storage.setItem(KEY,JSON.stringify(inventory));migrationNote='فهرست قبلی بدون حذف منتقل شد. مدل، منطقه یا محل نامشخص را در «نیازمند تکمیل» مشخص کنید؛ نسخهٔ قبلی دست‌نخورده باقی مانده است.';}
-    }catch(e){storageIssue='فهرست محلی قابل خواندن یا ذخیره نیست؛ برای حفظ اطلاعات، تغییرات غیرفعال است. داده‌های مرورگر را پاک نکنید.';}
-  }
-  function loadCards(){
-    try{const raw=FamEquipmentServer.storage.getItem(CARDS_KEY);if(raw!==null)cardSettings=M.validateCards(JSON.parse(raw));}
-    catch(e){cardsIssue='تنظیمات کارت‌ها قابل خواندن نیست؛ برای حفظ اطلاعات، ویرایش کارت‌ها غیرفعال است. دسته‌ها و نودها حذف نشده‌اند.';}
-  }
-  function saveCards(next){
-    if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
-    if(!Access.can('equipment-cards'))throw Error('مجوز مدیریت کارت‌های تجهیزات ندارید.');
-    if(cardsIssue)throw Error(cardsIssue);
-    const clean=M.validateCards(next);
-    try{FamEquipmentServer.storage.setItem(CARDS_KEY,JSON.stringify(clean));}catch(e){throw Error('تنظیمات کارت ذخیره نشد؛ فضای ذخیره‌سازی مرورگر را بررسی کنید.');}
-    cardSettings=clean;
-  }
-  function save(next){
-    if(!can()||!credentials||credentials.userId!==Access.current()?.id)throw Error('دوباره وارد بخش تجهیزات شوید.');
-    if(storageIssue)throw Error(storageIssue);
-    const clean=Access.equipmentMerge(fullInventory,next);FamEquipmentServer.storage.setItem(KEY,JSON.stringify(clean));fullInventory=clean;inventory=Access.equipmentView(clean);document.dispatchEvent(new Event('fam-equipment-changed'));groupIssue='';
-    for(const [field,key]of Object.entries(lookup))if(filters[field]&&!find(key,filters[field])){delete filters[field];if(activeField===field)activeField=null;}
-  }
-  const navigate=next=>{epoch++;path=next;result=null;tab='overview';busy=false;render();};
-  function lock(){
-    epoch++;credentials=null;path={};result=null;busy=false;checks.clear();configuration.clear();equipmentTools.clear();workspaceTab='inventory';
-    activeDialog?.close();activeDialog?.remove();activeDialog=null;
-    root.querySelectorAll('input[type=password]').forEach(n=>{n.value='';});render();
-  }
-  function icon(kind){
-    const box=el('span','eq-device-icon');box.setAttribute('aria-hidden','true');
-    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-    for(const [key,value]of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.6','stroke-linecap':'round','stroke-linejoin':'round'}))svg.setAttribute(key,value);
-    const shapes={router:[['circle',{cx:12,cy:12,r:9}],['path',{d:'M8 8h8v8M16 8l-8 8M4 12h3M17 12h3'}]],switch:[['rect',{x:2,y:5,width:20,height:14,rx:3}],['path',{d:'M6 10h2M11 10h2M16 10h2M6 14h2M11 14h2M16 14h2'}]],branch:[['path',{d:'M12 21s7-5 7-12a7 7 0 0 0-14 0c0 7 7 12 7 12Z'}],['circle',{cx:12,cy:9,r:2.5}]],building:[['path',{d:'M4 21V7h9v14M13 11h7v10M2 21h20M7 10h3M7 14h3M7 18h3M16 14h1M16 18h1M7 7V3h9v8'}]],datacenter:[['rect',{x:4,y:3,width:16,height:7,rx:2}],['rect',{x:4,y:14,width:16,height:7,rx:2}],['path',{d:'M8 6.5h.01M11 6.5h5M8 17.5h.01M11 17.5h5M12 10v4'}]],other:[['path',{d:'m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5'}]]};
-    for(const [tag,attrs]of shapes[kind]||shapes.other){const shape=document.createElementNS(svg.namespaceURI,tag);for(const [key,value]of Object.entries(attrs))shape.setAttribute(key,value);svg.append(shape);}box.append(svg);return box;
-  }
-  function gate(){
-    const card=el('article','eq-gate');
-    const mark=el('div','eq-gate-mark','R');mark.setAttribute('aria-hidden','true');
-    card.append(mark,el('div','eq-eyebrow','EQUIPMENT ACCESS'),heading('ورود به مدیریت تجهیزات','ابتدا اطلاعات RADIUS را وارد کنید؛ سپس نوع تجهیز و محل استقرار را انتخاب کنید.'));
-    const form=el('form','eq-auth-form');form.autocomplete='off';
-    for(const [id,label,type] of [['equipment-radius-user','نام کاربری RADIUS','text'],['equipment-radius-password','رمز RADIUS','password']]){
-      const field=el('label','eq-field',label),input=el('input','inp');input.id=id;input.type=type;input.required=true;input.maxLength=type==='password'?512:128;input.autocomplete=type==='password'?'new-password':'off';input.dir='ltr';field.append(input);form.append(field);
-    }
-    const error=el('div','eq-error');error.setAttribute('role','alert');
-    const submit=el('button','btn btn-primary','ورود به فضای تجهیزات');submit.type='submit';
-    form.append(error,submit);
-    form.addEventListener('submit',event=>{
-      event.preventDefault();if(!can())return;
-      const user=form.querySelector('#equipment-radius-user'),password=form.querySelector('#equipment-radius-password');
-      if(!user.value.trim()||!password.value){error.textContent='نام کاربری و رمز RADIUS را وارد کنید.';return;}
-      credentials={userId:Access.current().id,username:user.value.trim(),password:password.value};password.value='';user.value='';path={};render();
-    });
-    card.append(form,notice('پیش‌نمایش محلی: فقط اطلاعات ساختگی وارد کنید. این مرحله احراز هویت واقعی RADIUS نیست. رمز ذخیره یا ارسال نمی‌شود.','warning'),el('p','eq-muted','پیش‌فرض: RADIUS · مسیر حساب Local و Enable در مرحلهٔ بعد طراحی می‌شود و فعلاً اجرا نمی‌شود.'));
-    root.append(card);
-  }
-  function selectField(form,id,label,items,value='',required=true){
-    const wrap=el('label','eq-field',label),select=el('select','inp');select.id=id;select.required=required;
-    const placeholder=el('option','',required?'انتخاب کنید…':'همه');placeholder.value='';select.append(placeholder);
-    for(const item of items){const option=el('option','',item.name);option.value=item.id;select.append(option);}select.value=value||'';wrap.append(select);form.append(wrap);return select;
-  }
-  function textField(form,id,label,value='',maxLength=80){
-    const wrap=el('label','eq-field',label),input=el('input','inp');input.id=id;input.value=value;input.maxLength=maxLength;input.required=true;wrap.append(input);form.append(wrap);return {input,wrap};
-  }
-  function dialogShell(title,description,wide=false){
-    const dialog=el('dialog','eq-dialog'+(wide?' eq-dialog-wide':''));activeDialog=dialog;
-    const close=()=>{dialog.close();dialog.remove();activeDialog=null;};
-    dialog.addEventListener('cancel',e=>{e.preventDefault();close();});
-    dialog.append(heading(title,description));document.body.append(dialog);return {dialog,close};
-  }
-  function editNode(node=null){
-    if(!Access.can(node?'equipment-edit':'equipment-add'))return;
-    if(!can()||storageIssue)return;
-    const initial=node||{...filters};
-    if(initial.modelId&&!initial.typeId)initial.typeId=find('models',initial.modelId)?.typeId;
-    if(initial.siteId&&!initial.siteKindId)initial.siteKindId=find('sites',initial.siteId)?.siteKindId;
-    const {dialog,close}=dialogShell(node?'ویرایش نود':'افزودن نود','همهٔ مشخصات را انتخاب کنید؛ عضویت در دسته‌ها خودکار است. هیچ رمز عبوری ذخیره نمی‌شود.',true);
-    const form=el('form','eq-editor eq-node-editor');form.autocomplete='off';
-    const grid=el('div','eq-node-fields');
-    const name=textField(grid,'eq-edit-name','نام نود',node?.name||'').input;
-    const host=textField(grid,'eq-edit-host','IP خصوصی تجهیز',node?.host||'',15).input;host.dir='ltr';host.placeholder='10.2.35.2';
-    const type=selectField(grid,'eq-node-type','نوع تجهیز',catalog('types'),initial.typeId);
-    const model=selectField(grid,'eq-node-model','مدل تجهیز',[],initial.modelId);
-    const newModel=textField(grid,'eq-node-new-model','نام مدل جدید');newModel.wrap.hidden=true;newModel.input.required=false;
-    const region=selectField(grid,'eq-node-region','منطقه',catalog('regions'),initial.regionId);
-    const siteKind=selectField(grid,'eq-node-site-kind','نوع محل استقرار',catalog('siteKinds'),initial.siteKindId);
-    const site=selectField(grid,'eq-node-site','نام شعبه / ساختمان / دیتا سنتر',[],initial.siteId);
-    const newSite=textField(grid,'eq-node-new-site','نام محل جدید');newSite.wrap.hidden=true;newSite.input.required=false;
-    const repopulate=(select,items,value,extra)=>{select.replaceChildren();const o=el('option','','انتخاب کنید…');o.value='';select.append(o);for(const item of [...items,{id:'__new__',name:extra}]){const o=el('option','',item.name);o.value=item.id;select.append(o);}select.value=items.some(i=>i.id===value)?value:'';};
-    const toggleNew=(select,field)=>{field.wrap.hidden=select.value!=='__new__';field.input.required=!field.wrap.hidden;};
-    const models=value=>{repopulate(model,catalog('models').filter(m=>m.typeId===type.value),value,'＋ تعریف مدل جدید');model.disabled=!type.value;toggleNew(model,newModel);};
-    const sites=value=>{repopulate(site,catalog('sites').filter(s=>s.siteKindId===siteKind.value),value,'＋ تعریف محل جدید');site.disabled=!siteKind.value;toggleNew(site,newSite);};
-    models(initial.modelId);sites(initial.siteId);
-    type.addEventListener('change',()=>models(null));siteKind.addEventListener('change',()=>sites(null));
-    model.addEventListener('change',()=>toggleNew(model,newModel));site.addEventListener('change',()=>toggleNew(site,newSite));
-    const error=el('div','eq-error');error.setAttribute('role','alert');
-    const submit=el('button','btn btn-primary','ذخیره نود');submit.type='submit';
-    form.append(grid,notice('یک نود، چند دسته: مثلاً Router / 1841 / منطقه ۱ / ساختمان مرکزی رضوان. تغییر مشخصات، دسته‌ها را خودکار به‌روز می‌کند.'),error,tools(submit,button('انصراف',close)));
-    form.addEventListener('submit',event=>{
-      event.preventDefault();try{
-        if(!M.privateIP(host.value.trim()))throw Error('فقط IPv4 خصوصی معتبر وارد کنید.');
-        const next=structuredClone(inventory);
-        const define=(key,label,parent)=>{
-          const name=label.trim();if(!M.validName(name))throw Error('نام معتبر برای مدل یا محل جدید وارد کنید.');
-          let item=next.catalog[key].find(item=>item.name===name&&Object.entries(parent).every(([k,v])=>item[k]===v));
-          if(!item){item={id:uid(),name,...parent};next.catalog[key].push(item);}return item.id;
-        };
-        const modelId=model.value==='__new__'?define('models',newModel.input.value,{typeId:type.value}):model.value;
-        const siteId=site.value==='__new__'?define('sites',newSite.input.value,{siteKindId:siteKind.value}):site.value;
-        const item={id:node?.id||uid(),name:name.value.trim(),host:host.value.trim(),typeId:type.value,modelId,regionId:region.value,siteKindId:siteKind.value,siteId,...(node?.legacyPath?{legacyPath:node.legacyPath}:{})};
-        save(M.upsertNode(next,item));checks.delete(item.id);close();result=null;render();
-      }catch(e){error.textContent=e.name==='QuotaExceededError'?'فضای مرورگر کافی نیست؛ هیچ تغییری ذخیره نشد.':e.message;}
-    });
-    dialog.append(form);dialog.showModal();name.focus();
-  }
-  function manageCatalog(initialKey='types',initialItem=null,preset={}){
-    if(!Access.can('equipment-catalog'))return;
-    if(!can()||storageIssue)return;
-    const {dialog,close}=dialogShell('مدیریت دسته‌بندی‌ها','نوع‌ها، مدل‌ها، مناطق و محل‌ها را خودتان تعریف کنید. دستهٔ استفاده‌شده بدون تعیین تکلیف نودها حذف نمی‌شود.',true);
-    const shell=el('div','eq-catalog-shell'),keySelect=selectField(shell,'eq-catalog-dimension','بخش موردنظر',Object.entries(M.dimensions).map(([id,name])=>({id,name})),initialKey);
-    keySelect.options[0].disabled=true;
-    const body=el('div','eq-catalog-body');shell.append(body);
-    function draw(target=null){
-      body.replaceChildren();const key=keySelect.value,editor=el('form','eq-editor'),list=el('div','eq-catalog-list');
-      const name=textField(editor,'eq-catalog-name','نام '+M.dimensions[key],target?.name||'').input;
-      let parent=null,kind=null;
-      if(key==='models')parent=selectField(editor,'eq-catalog-parent','نوع تجهیز',catalog('types'),target?.typeId||preset.typeId);
-      if(key==='sites')parent=selectField(editor,'eq-catalog-parent','نوع محل',catalog('siteKinds'),target?.siteKindId||preset.siteKindId);
-      if(key==='types'||key==='siteKinds')kind=selectField(editor,'eq-catalog-kind','الگوی نمایش',key==='types'?[{id:'router',name:'روتر'},{id:'switch',name:'سوئیچ'},{id:'other',name:'سایر'}]:[{id:'branch',name:'شعبه'},{id:'building',name:'ساختمان'},{id:'datacenter',name:'دیتا سنتر'},{id:'other',name:'سایر'}],target?.kind||preset.kind||'other');
-      const error=el('div','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary',target?'ذخیره تغییرات':'افزودن دسته');submit.type='submit';
-      editor.append(error,tools(submit,button('فرم جدید',()=>draw())));
-      editor.addEventListener('submit',event=>{event.preventDefault();try{
-        if(!M.validName(name.value.trim()))throw Error('نام معتبر وارد کنید.');
-        const next=structuredClone(inventory),item={id:target?.id||uid(),name:name.value.trim()};
-        if(parent)item[key==='models'?'typeId':'siteKindId']=parent.value;if(kind)item.kind=kind.value;
-        const index=next.catalog[key].findIndex(n=>n.id===item.id);if(index<0)next.catalog[key].push(item);else next.catalog[key][index]=item;
-        save(next);draw();render();
-      }catch(e){error.textContent=e.message;}});
-      for(const item of catalog(key)){
-        const row=el('div','eq-catalog-row'),label=el('div');label.append(el('strong','',item.name));
-        if(item.typeId||item.siteKindId)label.append(el('span','eq-muted',nameOf(item.typeId?'types':'siteKinds',item.typeId||item.siteKindId)));
-        const edit=button('ویرایش',()=>draw(item),'eq-mini-action');edit.setAttribute('aria-label','ویرایش '+item.name);
-        const remove=button('حذف',()=>{if(!confirm('دستهٔ «'+item.name+'» حذف شود؟ نودها حذف نمی‌شوند.'))return;try{save(M.removeCategory(inventory,key,item.id));draw();render();}catch(e){error.textContent=e.message;}},'eq-mini-action eq-danger');remove.setAttribute('aria-label','حذف '+item.name);
-        row.append(label,tools(edit,remove));list.append(row);
-      }
-      if(!catalog(key).length)list.append(notice('هنوز موردی تعریف نشده است.'));body.append(editor,list);
-    }
-    keySelect.addEventListener('change',()=>draw());dialog.append(shell,tools(button('بستن',close)));draw(initialItem);dialog.showModal();
-  }
-  function groupCatalogKey(){return ['buildings','datacenters'].includes(facet)?'sites':facet;}
-  function groupPreset(){
-    if(facet==='models')return {typeId:filters.typeId};
-    if(facet==='buildings'||facet==='datacenters')return {siteKindId:catalog('siteKinds').find(item=>item.kind===(facet==='buildings'?'building':'datacenter'))?.id};
-    return {};
-  }
-  function removeGroup(key,item){
-    if(!Access.can('equipment-catalog'))return;
-    if(!confirm('دستهٔ «'+item.name+'» حذف شود؟ نودها حذف نمی‌شوند؛ دستهٔ دارای نود یا زیرمجموعه قابل حذف نیست.'))return;
-    try{save(M.removeCategory(inventory,key,item.id));render();}
-    catch(e){groupIssue=e.name==='QuotaExceededError'?'دسته حذف نشد؛ فضای ذخیره‌سازی مرورگر کافی نیست.':e.message;render();}
-  }
-  function removeNode(node){
-    if(!Access.can('equipment-delete'))return;
-    if(!confirm('نود «'+node.name+'» از کل فهرست و همهٔ دسته‌ها حذف شود؟ این کار روی تجهیز واقعی اثری ندارد.'))return;
-    try{save({...inventory,nodes:inventory.nodes.filter(n=>n.id!==node.id)});checks.delete(node.id);if(path.node===node.id)path={};render();}catch(e){alert(e.message);}
-  }
-  function removeMembership(node,field){
-    if(!Access.can('equipment-edit'))return;
-    const label=nameOf(lookup[field],node[field]);
-    if(!confirm('«'+node.name+'» فقط از دستهٔ «'+label+'» خارج شود؟ خود نود حذف نمی‌شود و در «نیازمند تکمیل» باقی می‌ماند.'))return;
-    try{save(M.unassign(inventory,node.id,field));render();}catch(e){alert(e.message);}
-  }
-  function applyFilter(field,id){
-    if(id)filters[field]=id;else delete filters[field];activeField=id?field:null;onlyReview=false;path={};search='';
-    if(field==='typeId'&&filters.modelId&&find('models',filters.modelId)?.typeId!==id)delete filters.modelId;
-    if(field==='modelId'&&id)filters.typeId=find('models',id).typeId;
-    if(field==='siteKindId'&&filters.siteId&&find('sites',filters.siteId)?.siteKindId!==id)delete filters.siteId;
-    if(field==='siteId'&&id)filters.siteKindId=find('sites',id).siteKindId;
-    navigate({});
-  }
-  const facets=[['overview','همهٔ نودها','other'],['types','نوع تجهیز','router'],['models','مدل تجهیز','switch'],['regions','منطقه','branch'],['siteKinds','نوع محل','building'],['buildings','ساختمان‌ها','building'],['datacenters','دیتا سنتر','datacenter']];
-  function cardTargets(key){
-    if(key==='buildings'||key==='datacenters')return catalog('sites').filter(item=>find('siteKinds',item.siteKindId)?.kind===(key==='buildings'?'building':'datacenter'));
-    return catalog(key);
-  }
-  function cardTarget(card){return card.refId?cardTargets(card.facet).find(item=>item.id===card.refId):null;}
-  function openCard(card){
-    if(card.refId&&!cardTarget(card)){editCard(card);return;}
-    filters={};activeField=null;onlyReview=false;search='';facet=card.facet;
-    if(card.refId)applyFilter(M.cardFields[card.facet],card.refId);else navigate({});
-  }
-  function editCard(card=null){
-    if(!Access.can('equipment-cards'))return;
-    if(!can()||!credentials||cardsIssue)return;
-    const {dialog,close}=dialogShell(card?'ویرایش کارت':'افزودن کارت','این کارت فقط میان‌بُر نمایش است؛ تغییر یا حذف آن، دسته‌ها و نودها را حذف نمی‌کند.');
-    const form=el('form','eq-editor eq-card-editor');
-    const name=textField(form,'eq-card-name','نام کارت',card?.name||'').input;
-    const axis=selectField(form,'eq-card-axis','نمایش بر اساس',facets.slice(1).map(([id,name])=>({id,name})),card?.facet||'types');axis.options[0].disabled=true;
-    const target=selectField(form,'eq-card-target','دستهٔ مشخص (اختیاری)',[],null,false);
-    const populate=ref=>{
-      target.replaceChildren();const all=el('option','','همهٔ دسته‌های این بخش');all.value='';target.append(all);
-      for(const item of cardTargets(axis.value)){const option=el('option','',item.name+(item.typeId?' · '+nameOf('types',item.typeId):''));option.value=item.id;target.append(option);}
-      if(ref&&!cardTargets(axis.value).some(item=>item.id===ref)){const missing=el('option','','دستهٔ قبلی حذف شده؛ مقصد جدید انتخاب کنید');missing.value=ref;target.append(missing);}
-      target.value=ref||'';
-    };
-    populate(card?.refId);axis.addEventListener('change',()=>populate(null));
-    const error=el('div','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary','ذخیره کارت');submit.type='submit';
-    form.append(error,tools(submit,button('انصراف',close)));
-    form.addEventListener('submit',event=>{event.preventDefault();try{
-      if(target.value&&!cardTargets(axis.value).some(item=>item.id===target.value))throw Error('مقصد کارت در دسترس نیست؛ یک مقصد معتبر انتخاب کنید.');
-      const next=structuredClone(cardSettings),item={id:card?.id||uid(),name:name.value.trim(),facet:axis.value,refId:target.value||null};
-      const index=next.cards.findIndex(c=>c.id===item.id);if(index<0)next.cards.push(item);else next.cards[index]=item;
-      saveCards(next);close();render();
-    }catch(e){error.textContent=e.message;}});
-    dialog.append(form);dialog.showModal();name.focus();
-  }
-  function deleteCard(card){
-    if(!Access.can('equipment-cards'))return;
-    if(!confirm('فقط کارت «'+card.name+'» حذف شود؟ دسته‌ها و تمام نودها باقی می‌مانند.'))return;
-    try{saveCards({...cardSettings,cards:cardSettings.cards.filter(c=>c.id!==card.id)});render();}catch(e){alert(e.message);}
-  }
-  function groupItems(){
-    if(facet==='overview')return [];
-    if(['buildings','datacenters'].includes(facet)){
-      const kind=facet==='buildings'?'building':'datacenter';return catalog('sites').filter(s=>find('siteKinds',s.siteKindId)?.kind===kind).map(item=>({item,field:'siteId',count:inventory.nodes.filter(n=>n.siteId===item.id).length}));
-    }
-    const field={types:'typeId',models:'modelId',regions:'regionId',siteKinds:'siteKindId'}[facet];
-    return catalog(facet).filter(item=>facet!=='models'||!filters.typeId||item.typeId===filters.typeId).map(item=>({item,field,count:inventory.nodes.filter(n=>n[field]===item.id).length}));
-  }
-  function filtersBar(){
-    const bar=el('div','eq-filters');
-    for(const [field,key,title]of [['typeId','types','نوع تجهیز'],['modelId','models','مدل تجهیز'],['regionId','regions','منطقه'],['siteKindId','siteKinds','نوع محل'],['siteId','sites','محل استقرار']]){
-      const items=catalog(key).filter(item=>key==='models'?!filters.typeId||item.typeId===filters.typeId:key==='sites'?!filters.siteKindId||item.siteKindId===filters.siteKindId:true);
-      const select=selectField(bar,'eq-filter-'+field,title,items,filters[field],false);select.addEventListener('change',()=>applyFilter(field,select.value));
-    }
-    return bar;
-  }
-  function table(rows,container){
-    const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');table.setAttribute('aria-label','فهرست نودها');
-    const head=el('thead'),hr=el('tr');for(const title of ['نام و IP','نوع / مدل','منطقه','محل استقرار','وضعیت','مدیریت'])hr.append(el('th','',title));head.append(hr);table.append(head);
-    const body=el('tbody');
-    for(const node of rows){
-      const tr=el('tr'),name=el('td'),link=button(node.name,()=>{navigate({node:node.id});runCheck();},'eq-node-link');name.append(link,el('span','eq-node-sub eq-mono',node.host));
-      const type=el('td');type.append(el('span','',nameOf('types',node.typeId)),el('span','eq-node-sub',nameOf('models',node.modelId)));
-      const region=el('td','',nameOf('regions',node.regionId)),site=el('td');site.append(el('span','',nameOf('sites',node.siteId)),el('span','eq-node-sub',nameOf('siteKinds',node.siteKindId)));
-      const status=el('td');status.append(el('span','eq-badge',M.incomplete(node)?'نیازمند تکمیل':checks.has(node.id)?'بررسی نمایشی شد':'بررسی نشده'));
-      const edit=button('ویرایش',()=>editNode(node));edit.disabled=!Access.can('equipment-edit');const actions=el('td'),buttons=tools(edit,button('حذف نود',()=>removeNode(node),'btn btn-ghost btn-sm eq-danger'));
-      if(activeField&&filters[activeField]===node[activeField])buttons.append(button('حذف از دسته',()=>removeMembership(node,activeField)));
-      actions.append(buttons);tr.append(name,type,region,site,status,actions);body.append(tr);
-    }
-    if(!rows.length){const row=el('tr'),cell=el('td','eq-empty','نودی در این انتخاب وجود ندارد. «افزودن نود» مشخصات همین دسته را از قبل انتخاب می‌کند.');cell.colSpan=6;row.append(cell);body.append(row);}
-    table.append(body);wrap.append(table);container.append(wrap);
-  }
-  function inventoryView(main){
-    const hero=el('div','eq-hero'),copy=el('div','eq-hero-copy');copy.append(el('div','eq-eyebrow','SMART DEVICE GROUPS'),heading('یک نود؛ چند دستهٔ خودکار','نوع، مدل، منطقه و محل را انتخاب کنید؛ نود در همهٔ دسته‌های مرتبط دیده می‌شود.'));
-    const stats=el('div','eq-metrics');stats.append(metric(inventory.nodes.length,'نود یکتا'),metric(inventory.nodes.filter(M.incomplete).length,'نیازمند تکمیل'));hero.append(copy,stats);main.append(hero);
-    main.append(tools(button('＋ افزودن نود',()=>editNode(),'btn btn-primary btn-sm'),button('مدیریت دسته‌ها',()=>manageCatalog()),button('پیکربندی این انتخاب',()=>{configuration.useSelection(filters);workspaceTab='configuration';navigate({});}),button('نیازمند تکمیل ('+inventory.nodes.filter(M.incomplete).length+')',()=>{onlyReview=!onlyReview;if(onlyReview){filters={};activeField=null;}path={};render();},'btn btn-ghost btn-sm'+(onlyReview?' eq-active-filter':''))));
-    const nav=el('nav','eq-type-nav eq-facet-nav');nav.setAttribute('aria-label','روش دسته‌بندی');
-    for(const [key,label,kind]of facets){const b=button('',()=>{facet=key;render();},'eq-tree-link'+(facet===key?' selected':''));b.append(icon(kind),el('span','',label));nav.append(b);}main.append(nav);
-    if(facet==='overview'){
-      const toolbar=el('div','eq-cards-toolbar');toolbar.append(el('h4','','کارت‌های من'));
-      const add=button('＋ افزودن کارت',()=>editCard());add.disabled=!!cardsIssue||!Access.can('equipment-cards');toolbar.append(add);main.append(toolbar);
-      const cards=el('div','eq-card-grid eq-smart-cards');
-      for(const item of cardSettings.cards){
-        if(item.refId&&!cardTarget(item)&&Object.values(fullInventory.catalog).some(items=>items.some(x=>x.id===item.refId)))continue;
-        const [,,kind]=facets.find(f=>f[0]===item.facet),card=el('article','eq-card tone-'+kind),go=button('',()=>openCard(item),'eq-card-main');
-        go.setAttribute('aria-label','باز کردن '+item.name);
-        const title=el('div','eq-shortcut-title');title.append(icon(kind),el('strong','',item.name));
-        const target=cardTarget(item),hint=item.refId?(target?.name||'مقصد حذف شده؛ ویرایش کنید'):({types:'همهٔ انواع تجهیز',models:'همهٔ مدل‌ها',regions:'همهٔ مناطق',siteKinds:'همهٔ انواع محل',buildings:'همهٔ ساختمان‌ها',datacenters:'همهٔ دیتا سنترها'})[item.facet];
-        go.title=item.name+' — '+hint;
-        go.append(title,el('span','eq-muted',hint));
-        const edit=button('ویرایش',()=>editCard(item),'eq-mini-action'),remove=button('حذف',()=>deleteCard(item),'eq-mini-action eq-danger');
-        edit.setAttribute('aria-label','ویرایش کارت '+item.name);remove.setAttribute('aria-label','حذف کارت '+item.name);edit.disabled=remove.disabled=!!cardsIssue||!Access.can('equipment-cards');
-        card.append(go,tools(edit,remove));cards.append(card);
-      }
-      if(!cardSettings.cards.length)cards.append(notice('کارتی ندارید؛ با «افزودن کارت» میان‌بُر دلخواه بسازید. دسته‌ها از تب‌های بالا همچنان در دسترس‌اند.'));
-      main.append(cards);
-    }else{
-      const key=groupCatalogKey(),headingRow=el('div','eq-table-toolbar');
-      const addCategory=button('＋ افزودن زیرمجموعه',()=>manageCatalog(key,null,groupPreset()));addCategory.disabled=!!storageIssue||!Access.can('equipment-catalog');
-      headingRow.append(el('h4','',facets.find(f=>f[0]===facet)[1]),tools(addCategory,button('مدیریت این دسته‌ها',()=>manageCatalog(key))));main.append(headingRow);
-      if(groupIssue)main.append(notice(groupIssue,'warning'));
-      const grid=el('div','eq-card-grid eq-smart-groups eq-groups-'+facet);for(const {item,field,count}of groupItems()){
-        const box=el('article','eq-card'+(filters[field]===item.id?' eq-group-selected':'')),go=button('',()=>applyFilter(field,item.id),'eq-card-main');
-        const title=el('div','eq-group-title');title.append(el('strong','',item.name),el('span','eq-badge',count+' نود'));go.append(title);go.title=item.name;
-        if(item.typeId)go.append(el('span','eq-muted',nameOf('types',item.typeId)));if(item.siteKindId)go.append(el('span','eq-muted',nameOf('siteKinds',item.siteKindId)));
-        const add=button('＋ نود',()=>{applyFilter(field,item.id);editNode();},'eq-mini-action');add.setAttribute('aria-label','＋ نود در این دسته');
-        const edit=button('ویرایش',()=>manageCatalog(key,item),'eq-mini-action');edit.setAttribute('aria-label','ویرایش دسته '+item.name);
-        const remove=button('حذف',()=>removeGroup(key,item),'eq-mini-action eq-danger');remove.setAttribute('aria-label','حذف دسته '+item.name);
-        add.disabled=!!storageIssue||!Access.can('equipment-add');edit.disabled=remove.disabled=!!storageIssue||!Access.can('equipment-catalog');
-        box.append(go,tools(add,edit,remove));grid.append(box);
-      }if(!groupItems().length)grid.append(notice('هنوز دسته‌ای تعریف نشده؛ از «افزودن زیرمجموعه» استفاده کنید.'));main.append(grid);
-    }
-    main.append(filtersBar());
-    const context=el('div','eq-active-filters');for(const field of M.fields)if(filters[field])context.append(button(nameOf(lookup[field],filters[field])+' ×',()=>applyFilter(field,''),'eq-filter-chip'));
-    if(Object.keys(filters).length||onlyReview)context.append(button('پاک‌کردن فیلترها',()=>{filters={};activeField=null;onlyReview=false;render();}));main.append(context);
-    const panel=el('section','eq-inventory-panel'),bar=el('div','eq-table-toolbar');bar.append(el('h4','','فهرست نودها'));
-    const input=el('input','inp');input.id='equipment-node-search';input.placeholder='جست‌وجوی نام یا IP…';input.setAttribute('aria-label','جست‌وجوی نود');input.value=search;
-    const list=el('div');const draw=()=>{list.replaceChildren();table(inventory.nodes.filter(node=>M.matches(node,filters)&&(!onlyReview||M.incomplete(node))&&[node.name,node.host].some(v=>v.toLowerCase().includes(search.toLowerCase()))),list);};
-    input.addEventListener('input',()=>{search=input.value;draw();});bar.append(input);panel.append(bar,list);main.append(panel);draw();
-    main.append(el('p','eq-muted','حذف از یک دسته، خود نود را حذف نمی‌کند. دسته‌های هر نود از مشخصات آن ساخته می‌شوند؛ جابه‌جایی دستی یا کپی نود لازم نیست.'));
-    const exportAll=button('خروجی اکسل همهٔ تجهیزات',()=>equipmentTools.exportInventory());exportAll.id='eq-inventory-export-all';main.append(tools(exportAll));
-  }
-  function deviceView(main){
-    const {node}=selected();main.append(heading(node.name,node.host),button('ویرایش مشخصات نود',()=>editNode(node)));
-    FamEquipmentLive.mount(main,node.id);
-  }
-  function render(){
-    inventory=Access.equipmentView(fullInventory);
-    FamEquipmentLive.suspend();configuration.suspend();equipmentTools.suspend();root.replaceChildren();if(!can()){root.append(notice('برای ورود به مدیریت تجهیزات مجوز لازم است.'));return;}
-    if(credentials&&credentials.userId!==Access.current()?.id){credentials=null;checks.clear();path={};configuration.clear();equipmentTools.clear();workspaceTab='inventory';}
-    if(!credentials)credentials={userId:Access.current()?.id,username:'demo-only',password:''};
-    const top=el('div','eq-session-bar');top.append(el('span','eq-session-dot'),el('strong','','نشست کاربری سرور'),el('span','eq-muted','تجهیزات مرکزی · بررسی پورت‌ها با SSH واقعی'),button('بازنشانی پیش‌نویس‌های نمایشی',lock));root.append(top);
-    root.append(notice('نسخه مرکزی · مشخصات و استانداردها روی سرور ثبت می‌شوند؛ بررسی و رفع خطای پورت‌ها در ابزارها با SSH واقعی انجام می‌شود؛ پیکربندی و تطبیق کانفیگ همچنان آفلاین/نمایشی‌اند.','eq-demo-note'));
-    if(storageIssue)root.append(notice(storageIssue,'warning'));if(cardsIssue)root.append(notice(cardsIssue,'warning'));if(migrationNote)root.append(notice(migrationNote));
-    const sections=el('nav','eq-tabs eq-workspace-tabs');sections.setAttribute('role','tablist');sections.setAttribute('aria-label','بخش‌های تجهیزات');
-    for(const [key,label]of [['inventory','فهرست تجهیزات'],['configuration','پیکربندی'],['tools','ابزارها']]){
-      if(key==='configuration'&&!Access.can('equipment-configuration'))continue;
-      const tabButton=button(label,()=>{epoch++;busy=false;if(result?.state==='checking')result=null;workspaceTab=key;render();},'eq-tab'+(workspaceTab===key?' active':''));
-      tabButton.id='equipment-tab-'+key;tabButton.setAttribute('role','tab');tabButton.setAttribute('aria-selected',String(workspaceTab===key));sections.append(tabButton);
-    }root.append(sections);
-    const layout=el('div','eq-layout'),main=el('div','eq-main');layout.append(main);root.append(layout);
-    if(workspaceTab==='configuration'&&Access.can('equipment-configuration'))configuration.mount(main);else if(workspaceTab==='tools')equipmentTools.mount(main);else if(selected().node){main.append(button('← بازگشت به فهرست نودها',()=>navigate({})));deviceView(main);}else inventoryView(main);
-  }
-  // A RADIUS credential session belongs to the MAIN FAM login, not to a tab.
-  // Navigation never writes credentials to persistent storage or destroys them.
-  document.addEventListener('click',event=>{
-    const target=event.target.closest?.('[data-view], [data-act="go-cp"], #account-logout');if(!target)return;
-    if(target.id==='account-logout'){lock();return;}
-    if(target.dataset.view==='equipment'){render();return;}
-    if(credentials){configuration.suspend();equipmentTools.suspend();epoch++;busy=false;if(result?.state==='checking')result=null;activeDialog?.close();activeDialog?.remove();activeDialog=null;}
-  },true);
-  new MutationObserver(()=>{
-    if(credentials&&(document.documentElement.classList.contains('auth-pending')||!can()||credentials.userId!==Access.current()?.id))lock();
-    else if(!credentials&&can()&&!root.querySelector('#equipment-radius-user'))render();
-  }).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
-  document.addEventListener('fam-access-changed',()=>{epoch++;activeDialog?.close();activeDialog?.remove();activeDialog=null;configuration.clear();equipmentTools.clear();render();});
-  window.addEventListener('storage',event=>{if(event.key===KEY){epoch++;activeDialog?.close();activeDialog?.remove();activeDialog=null;configuration.clear();equipmentTools.clear();load();fullInventory=inventory;loadCards();render();}});
-  window.addEventListener('pagehide',lock); // Also clear before a page can enter BFCache.
-  load();fullInventory=inventory;loadCards();render();
-});
-</script>
+
 <script id="fam-workspace-launcher-js">
 /* Local workspace entry only: no credentials, persistence or network requests. */
 (()=>{
@@ -10213,7 +9665,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const heading=node('h1','','از کجا شروع کنیم؟');heading.id='workspace-title';
     shell.append(top,node('p','workspace-kicker','ONE ACCOUNT · TWO WORKSPACES'),heading,node('p','workspace-intro','فضای کاری خود را انتخاب کنید؛ هر زمان خواستید بین دو بخش جابه‌جا شوید.'));
     const choices=node('div','workspace-options');
-    for(const [view,title,sub,index]of [['panel','پایگاه داده','داشبورد، جست‌وجو و مدیریت داده‌های شبکه','01'],['equipment','مدیریت تجهیزات','نودها، دسته‌بندی‌ها و نمای مدیریت تجهیز','02']]){
+    for(const [view,title,sub,index]of [['panel','پایگاه داده','داشبورد، جست‌وجو و مدیریت داده‌های شبکه','01'],['equipment','مدیریت تجهیزات','فهرست تجهیزات، بررسی پورت‌ها و ابزارهای آفلاین','02']]){
       const allowed=Access.viewAllowed(view),button=node('button','workspace-option workspace-option-'+view);button.type='button';button.id='workspace-enter-'+view;button.disabled=!allowed;button.setAttribute('aria-label',title);
       const icon=node('span','workspace-symbol');icon.append(symbol(view));
       button.append(node('span','workspace-number',index),icon,node('strong','',title),node('span','workspace-description',sub),node('span','workspace-enter',allowed?'ورود به این بخش ←':'دسترسی به این بخش ندارید'));
@@ -10226,8 +9678,179 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.FamWorkspaceLauncher=Object.freeze({show,choose});
 })();
 </script>
+<script id="fam-equipment-server-store-js">
+/* Central equipment cache: authoritative server, never browser storage.
+   A pending write blocks interaction until acknowledged; conflicts/unknown
+   delivery never auto-overwrite or claim success. No CLI/credentials enter it. */
+window.FamEquipmentServer=(()=>{
+ 'use strict';const keys={'fam.equipment.inventory.v3':'inventory','fam.equipment.cards.v1':'cards','fam.equipment.standards.v1':'standards'};
+ let cache=null,busy=false,timer=null,refreshing=false;const view=()=>cache?.inventory||{version:3,catalog:{types:[],models:[],regions:[],siteKinds:[],sites:[]},nodes:[]};
+ function note(message,error=false){let n=document.getElementById('equipment-server-note');if(!n){n=document.createElement('div');n.id='equipment-server-note';n.className='eq-notice';document.querySelector('#view-equipment .content')?.prepend(n);}n.textContent=message;n.classList.toggle('warning',error);}
+ function block(message,error=false){let n=document.getElementById('equipment-server-block');if(!n){n=document.createElement('section');n.id='equipment-server-block';n.setAttribute('role','alertdialog');n.className='shared-box';Object.assign(n.style,{position:'fixed',inset:'20% 15% auto',zIndex:2147483647,background:'var(--bg-1)',padding:'28px',border:'2px solid #6389da',borderRadius:'16px'});document.body.append(n);}n.replaceChildren();const text=document.createElement('p');text.textContent=message;n.append(text);document.getElementById('layout').inert=true;document.getElementById('modal-overlay').inert=true;if(error){const button=document.createElement('button');button.className='btn btn-primary';button.textContent='دریافت وضعیت قطعی سرور';button.onclick=()=>location.reload();n.append(button);}}
+ function apply(value){cache=value;for(const key of Object.keys(keys))window.dispatchEvent(new StorageEvent('storage',{key}));document.dispatchEvent(new Event('fam-equipment-changed'));note('تجهیزات مرکزی · نسخهٔ '+cache.revision+' · ثبت‌ها فقط با تأیید سرور قطعی‌اند.');}
+ async function load(){if(!Access.can('equipment')){cache=null;return;}apply(await FamShared.api('equipment/state'));if(!timer)timer=setInterval(poll,8000);}
+ async function poll(){if(busy||document.getElementById('equipment-server-block')||refreshing||!Access.can('equipment'))return;refreshing=true;try{const next=await FamShared.api('equipment/state');if(next.revision!==cache?.revision){const editing=!document.querySelector('#user-form')&&(document.querySelector('dialog[open],#modal-overlay.show')||document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'));if(editing){note('موجودی سرور تغییر کرده است؛ پیش از ثبت/ورود اکسل، صفحه را تازه و تغییر را دوباره بازبینی کنید.',true);}else apply(next);}}catch(e){note('دریافت تغییرات تجهیزات انجام نشد؛ ثبت محلی به معنی ثبت روی سرور نیست.',true);}finally{refreshing=false;}}
+ const storage={getItem(key){const field=keys[key];return field&&cache?JSON.stringify(cache[field]):null;},setItem(key,value){const kind=keys[key];if(!kind||!cache||busy)throw Error('تجهیزات سرور آماده نیست یا ثبت قبلی پایان نیافته است.');const parsed=JSON.parse(value),request={revision:cache.revision,requestId:crypto.randomUUID(),kind,value:parsed};busy=true;block('در حال ثبت قطعی تجهیزات روی سرور…');FamShared.api('equipment/state',request).then(result=>{busy=false;document.getElementById('equipment-server-block')?.remove();if(!document.getElementById('shared-block')){document.getElementById('layout').inert=false;document.getElementById('modal-overlay').inert=false;}apply(result);note('تغییر تجهیزات روی سرور ثبت شد · نسخهٔ '+cache.revision);}).catch(error=>{busy=false;block(error.message+'\nموفقیت ثبت تأیید نشده؛ درخواست خودکار تکرار نمی‌شود. وضعیت قطعی سرور را دریافت کنید.',true);});}};
+ document.addEventListener('fam-access-changed',()=>{const loaded=cache!==null;cache=null;if(loaded&&Access.current())queueMicrotask(()=>load().catch(()=>{}));});
+ return Object.freeze({load,storage,inventory:view,pending:()=>busy,blocked:()=>!!document.getElementById('equipment-server-block')});
+})();
+</script>
+<script id="fam-equipment-workspace-js">
+/* Equipment workspace v2: flat navigation, canonical inventory, explicit operations.
+   Metadata adapters are shared; credentials belong exclusively to the live SSH UI. */
+document.addEventListener('DOMContentLoaded',()=>{
+ 'use strict';
+ const root=document.getElementById('equipment-workspace');if(!root)return;
+ const M=FamEquipmentInventory,KEY='fam.equipment.inventory.v3',CARDS_KEY='fam.equipment.cards.v1';
+ const central=()=>typeof FamEquipmentServer!=='undefined';
+ const storage={getItem:key=>central()?FamEquipmentServer.storage.getItem(key):localStorage.getItem(key),setItem:(key,value)=>central()?FamEquipmentServer.storage.setItem(key,value):localStorage.setItem(key,value)};
+ let fullInventory=M.defaults(),inventory=M.defaults(),storageIssue='',cardsIssue='',cardSettings=M.defaultCards();
+ let section='inventory',filters={},search='',page=0,sort='name',descending=false,onlyReview=false,showFilters=false,activeDialog=null,catalogKey='types';
+ const lookup={typeId:'types',modelId:'models',regionId:'regions',siteKindId:'siteKinds',siteId:'sites'},uid=()=>crypto.randomUUID();
+ const can=(op='equipment')=>Access.can('equipment')&&Access.can(op)&&!FamEquipmentServerBlocked();
+ function FamEquipmentServerBlocked(){return central()&&FamEquipmentServer.blocked();}
+ const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+ const button=(text,handler,cls='btn btn-ghost btn-sm',permission)=>{const n=el('button',cls,text);n.type='button';n.onclick=handler;if(permission)n.disabled=!can(permission);return n;};
+ const tools=(...items)=>{const n=el('div','eq-tools');n.append(...items);return n;};
+ const notice=(text,cls='')=>el('div','eq-notice '+cls,text);
+ function heading(title,sub){const n=el('div','eq-heading');n.append(el('h3','',title));if(sub)n.append(el('p','',sub));return n;}
+ const catalog=key=>inventory.catalog[key],find=(key,id)=>catalog(key).find(x=>x.id===id),nameOf=(key,id)=>find(key,id)?.name||'تعیین نشده';
+ const icons={inventory:'M4 4h16v5H4zM4 15h16v5H4zM8 9v6m8-6v6M7 6.5h.01M7 17.5h.01',ports:'M4 5h16v14H4zM7 9h2m2 0h2m2 0h2M7 13h2m2 0h2m2 0h2',standards:'M9 4h6v3H9zM9 5H5v16h14V5h-4M8 12l2 2 5-5M8 18h7',configuration:'m8 7-5 5 5 5m8-10 5 5-5 5m-3-13-2 20',excel:'M5 3h10l4 4v14H5zM14 3v5h5M8 12l5 6m0-6-5 6',catalog:'M3 4h7v6H3zM14 4h7v6h-7zM3 14h7v6H3zM14 14h7v6h-7z',search:'M21 21l-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',filter:'M4 5h16M7 12h10m-7 7h4',other:'M4 5h16v14H4zM8 9h8m-8 4h5',switch:'M3 6h18v12H3zM6 10h2m2 0h2m2 0h2m2 0h.1M6 14h2m2 0h2m2 0h2',router:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM8 8h8v8m0-8-8 8',branch:'M12 21s7-6 7-12A7 7 0 0 0 5 9c0 6 7 12 7 12ZM9 9a3 3 0 1 0 6 0 3 3 0 0 0-6 0',building:'M4 21V3h11v18M15 11h5v10M8 7h3m-3 5h3m-3 5h3',datacenter:'M4 3h16v7H4zM4 14h16v7H4zM8 6h.1M8 17h.1'};
+ function icon(key){const box=el('span','eq-icon');box.setAttribute('aria-hidden','true');const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');for(const[k,v]of Object.entries({viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':1.7,'stroke-linecap':'round','stroke-linejoin':'round'}))svg.setAttribute(k,v);const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',icons[key]||icons.other);svg.append(p);box.append(svg);return box;}
+ function load(){
+  storageIssue='';cardsIssue='';try{const raw=storage.getItem(KEY);if(raw)fullInventory=M.validate(JSON.parse(raw));else if(!central()){const old=localStorage.getItem('fam.equipment.inventory.v2');fullInventory=old?M.migrateV2(JSON.parse(old)):M.defaults();if(old)storage.setItem(KEY,JSON.stringify(fullInventory));}else fullInventory={version:3,catalog:{types:[],models:[],regions:[],siteKinds:[],sites:[]},nodes:[]};}catch(e){storageIssue='اطلاعات تجهیزات قابل خواندن نیست؛ برای حفظ داده‌ها ویرایش متوقف شد. داده‌ها را پاک نکنید.';}
+  inventory=Access.equipmentView(fullInventory);
+  try{const raw=storage.getItem(CARDS_KEY);cardSettings=raw?M.validateCards(JSON.parse(raw)):M.defaultCards();}catch(e){cardsIssue='میان‌برها قابل خواندن نیستند؛ اطلاعات تجهیزات محفوظ است.';}
+  for(const[field,key]of Object.entries(lookup))if(filters[field]&&!find(key,filters[field]))delete filters[field];
+ }
+ function save(next){if(!can()||storageIssue)throw Error(storageIssue||'مجوز یا وضعیت ثبت تغییر کرده است.');const clean=Access.equipmentMerge(fullInventory,next);storage.setItem(KEY,JSON.stringify(clean));fullInventory=clean;inventory=Access.equipmentView(clean);document.dispatchEvent(new Event('fam-equipment-changed'));}
+ function saveCards(next){if(!can('equipment-cards')||cardsIssue)throw Error(cardsIssue||'مجوز مدیریت میان‌برها ندارید.');const clean=M.validateCards(next);storage.setItem(CARDS_KEY,JSON.stringify(clean));cardSettings=clean;}
+ const configuration=FamEquipmentConfiguration.create({getInventory:()=>Access.equipmentView(fullInventory),isAuthorized:()=>can('equipment-configuration')});
+ const equipmentTools=FamEquipmentTools.create({getInventory:()=>Access.equipmentView(fullInventory),saveInventory:save,isAuthorized:can});
+ function closeDialog(){if(activeDialog){activeDialog.close();activeDialog.remove();activeDialog=null;}}
+ function go(key,nodeId){closeDialog();section=key;render(nodeId);root.querySelector('.eq-page-title')?.focus({preventScroll:true});}
+ function dialogShell(title,description,wide=false){closeDialog();const dialog=el('dialog','eq-dialog'+(wide?' eq-dialog-wide':''));activeDialog=dialog;dialog.setAttribute('aria-label',title);const close=closeDialog,head=tools(heading(title,description),button('بستن ×',close,'eq-close'));dialog.append(head);dialog.addEventListener('cancel',e=>{e.preventDefault();close();});document.body.append(dialog);return {dialog,close};}
+ function selectField(form,id,label,items,value='',required=true){const wrap=el('label','eq-field',label),select=el('select','inp');select.id=id;select.required=required;const empty=el('option','',required?'انتخاب کنید…':'همه');empty.value='';select.append(empty);for(const item of items){const o=el('option','',item.name);o.value=item.id;select.append(o);}select.value=value||'';wrap.append(select);form.append(wrap);return select;}
+ function textField(form,id,label,value='',maxLength=80){const wrap=el('label','eq-field',label),input=el('input','inp');input.id=id;input.value=value;input.maxLength=maxLength;input.required=true;wrap.append(input);form.append(wrap);return {input,wrap};}
+  function editNode(node=null){
+    if(!Access.can(node?'equipment-edit':'equipment-add'))return;
+    if(!can()||storageIssue)return;
+    const initial=node||{...filters};
+    if(initial.modelId&&!initial.typeId)initial.typeId=find('models',initial.modelId)?.typeId;
+    if(initial.siteId&&!initial.siteKindId)initial.siteKindId=find('sites',initial.siteId)?.siteKindId;
+    const {dialog,close}=dialogShell(node?'ویرایش تجهیز':'افزودن تجهیز','همهٔ مشخصات را انتخاب کنید؛ عضویت در دسته‌ها خودکار است. هیچ رمز عبوری ذخیره نمی‌شود.',true);
+    const form=el('form','eq-editor eq-node-editor');form.autocomplete='off';
+    const grid=el('div','eq-node-fields');
+    const name=textField(grid,'eq-edit-name','نام تجهیز',node?.name||'').input;
+    const host=textField(grid,'eq-edit-host','IP خصوصی تجهیز',node?.host||'',15).input;host.dir='ltr';host.placeholder='10.2.35.2';
+    const type=selectField(grid,'eq-node-type','نوع تجهیز',catalog('types'),initial.typeId);
+    const model=selectField(grid,'eq-node-model','مدل تجهیز',[],initial.modelId);
+    const newModel=textField(grid,'eq-node-new-model','نام مدل جدید');newModel.wrap.hidden=true;newModel.input.required=false;
+    const region=selectField(grid,'eq-node-region','منطقه',catalog('regions'),initial.regionId);
+    const siteKind=selectField(grid,'eq-node-site-kind','نوع محل استقرار',catalog('siteKinds'),initial.siteKindId);
+    const site=selectField(grid,'eq-node-site','نام شعبه / ساختمان / دیتاسنتر',[],initial.siteId);
+    const newSite=textField(grid,'eq-node-new-site','نام محل جدید');newSite.wrap.hidden=true;newSite.input.required=false;
+    const repopulate=(select,items,value,extra)=>{select.replaceChildren();const o=el('option','','انتخاب کنید…');o.value='';select.append(o);for(const item of [...items,{id:'__new__',name:extra}]){const o=el('option','',item.name);o.value=item.id;select.append(o);}select.value=items.some(i=>i.id===value)?value:'';};
+    const toggleNew=(select,field)=>{field.wrap.hidden=select.value!=='__new__';field.input.required=!field.wrap.hidden;};
+    const models=value=>{repopulate(model,catalog('models').filter(m=>m.typeId===type.value),value,'＋ تعریف مدل جدید');model.disabled=!type.value;toggleNew(model,newModel);};
+    const sites=value=>{repopulate(site,catalog('sites').filter(s=>s.siteKindId===siteKind.value),value,'＋ تعریف محل جدید');site.disabled=!siteKind.value;toggleNew(site,newSite);};
+    models(initial.modelId);sites(initial.siteId);
+    type.addEventListener('change',()=>models(null));siteKind.addEventListener('change',()=>sites(null));
+    model.addEventListener('change',()=>toggleNew(model,newModel));site.addEventListener('change',()=>toggleNew(site,newSite));
+    const error=el('div','eq-error');error.setAttribute('role','alert');
+    const submit=el('button','btn btn-primary','ذخیره تجهیز');submit.type='submit';
+    form.append(grid,notice('یک تجهیز، چند دسته: مثلاً Router / 1841 / منطقه ۱ / ساختمان مرکزی رضوان. تغییر مشخصات، دسته‌ها را خودکار به‌روز می‌کند.'),error,tools(submit,button('انصراف',close)));
+    form.addEventListener('submit',event=>{
+      event.preventDefault();try{
+        if(!M.privateIP(host.value.trim()))throw Error('فقط IPv4 خصوصی معتبر وارد کنید.');
+        const next=structuredClone(inventory);
+        const define=(key,label,parent)=>{
+          const name=label.trim();if(!M.validName(name))throw Error('نام معتبر برای مدل یا محل جدید وارد کنید.');
+          let item=next.catalog[key].find(item=>item.name===name&&Object.entries(parent).every(([k,v])=>item[k]===v));
+          if(!item){item={id:uid(),name,...parent};next.catalog[key].push(item);}return item.id;
+        };
+        const modelId=model.value==='__new__'?define('models',newModel.input.value,{typeId:type.value}):model.value;
+        const siteId=site.value==='__new__'?define('sites',newSite.input.value,{siteKindId:siteKind.value}):site.value;
+        const item={id:node?.id||uid(),name:name.value.trim(),host:host.value.trim(),typeId:type.value,modelId,regionId:region.value,siteKindId:siteKind.value,siteId,...(node?.legacyPath?{legacyPath:node.legacyPath}:{})};
+        save(M.upsertNode(next,item));close();render();
+      }catch(e){error.textContent=e.name==='QuotaExceededError'?'فضای مرورگر کافی نیست؛ هیچ تغییری ذخیره نشد.':e.message;}
+    });
+    dialog.append(form);dialog.showModal();name.focus();
+  }
+  function editCard(card=null){
+    if(!Access.can('equipment-cards'))return;
+    if(!can()||cardsIssue)return;
+    const {dialog,close}=dialogShell(card?'ویرایش کارت':'افزودن کارت','این کارت فقط میان‌بُر نمایش است؛ تغییر یا حذف آن، دسته‌ها و تجهیزات را حذف نمی‌کند.');
+    const form=el('form','eq-editor eq-card-editor');
+    const name=textField(form,'eq-card-name','نام کارت',card?.name||'').input;
+    const axis=selectField(form,'eq-card-axis','نمایش بر اساس',facets.slice(1).map(([id,name])=>({id,name})),card?.facet||'types');axis.options[0].disabled=true;
+    const target=selectField(form,'eq-card-target','دستهٔ مشخص (اختیاری)',[],null,false);
+    const populate=ref=>{
+      target.replaceChildren();const all=el('option','','همهٔ دسته‌های این بخش');all.value='';target.append(all);
+      for(const item of cardTargets(axis.value)){const option=el('option','',item.name+(item.typeId?' · '+nameOf('types',item.typeId):''));option.value=item.id;target.append(option);}
+      if(ref&&!cardTargets(axis.value).some(item=>item.id===ref)){const missing=el('option','','دستهٔ قبلی حذف شده؛ مقصد جدید انتخاب کنید');missing.value=ref;target.append(missing);}
+      target.value=ref||'';
+    };
+    populate(card?.refId);axis.addEventListener('change',()=>populate(null));
+    const error=el('div','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary','ذخیره کارت');submit.type='submit';
+    form.append(error,tools(submit,button('انصراف',close)));
+    form.addEventListener('submit',event=>{event.preventDefault();try{
+      if(target.value&&!cardTargets(axis.value).some(item=>item.id===target.value))throw Error('مقصد کارت در دسترس نیست؛ یک مقصد معتبر انتخاب کنید.');
+      const next=structuredClone(cardSettings),item={id:card?.id||uid(),name:name.value.trim(),facet:axis.value,refId:target.value||null};
+      const index=next.cards.findIndex(c=>c.id===item.id);if(index<0)next.cards.push(item);else next.cards[index]=item;
+      saveCards(next);close();render();
+    }catch(e){error.textContent=e.message;}});
+    dialog.append(form);dialog.showModal();name.focus();
+  }
+  function deleteCard(card){
+    if(!Access.can('equipment-cards'))return;
+    if(!confirm('فقط کارت «'+card.name+'» حذف شود؟ دسته‌ها و تمام تجهیزات باقی می‌مانند.'))return;
+    try{saveCards({...cardSettings,cards:cardSettings.cards.filter(c=>c.id!==card.id)});render();}catch(e){alert(e.message);}
+  }
+ const facets=[['overview','همهٔ تجهیزات','other'],['types','نوع تجهیز','router'],['models','مدل تجهیز','switch'],['regions','منطقه','branch'],['siteKinds','نوع محل','building'],['buildings','ساختمان‌ها','building'],['datacenters','دیتاسنترها','datacenter']];
+ function cardTargets(key){if(key==='buildings'||key==='datacenters')return catalog('sites').filter(x=>find('siteKinds',x.siteKindId)?.kind===(key==='buildings'?'building':'datacenter'));return catalog(key);}
+ function cardTarget(card){return card.refId?cardTargets(card.facet).find(x=>x.id===card.refId):null;}
+ function openCard(card){const target=cardTarget(card);if(card.refId&&!target){editCard(card);return;}filters={};onlyReview=false;search='';page=0;if(target){const field=M.cardFields[card.facet];filters[field]=target.id;if(target.typeId)filters.typeId=target.typeId;if(target.siteKindId)filters.siteKindId=target.siteKindId;}else if(card.facet==='buildings'||card.facet==='datacenters'){const k=catalog('siteKinds').find(x=>x.kind===(card.facet==='buildings'?'building':'datacenter'));if(k)filters.siteKindId=k.id;}showFilters=true;section='inventory';render();if(!target)root.querySelector('#eq-filter-'+M.cardFields[card.facet])?.focus();}
+ function applyFilter(field,value){if(value)filters[field]=value;else delete filters[field];if(field==='typeId')delete filters.modelId;if(field==='siteKindId')delete filters.siteId;page=0;render();}
+ function catalogEditor(key,item=null){if(!can('equipment-catalog')||storageIssue)return;const {dialog,close}=dialogShell(item?'ویرایش دسته':'افزودن دسته','دسته‌ها با شناسهٔ ثابت نگهداری می‌شوند؛ ویرایش نام، اطلاعات تجهیزات را تغییر نمی‌دهد.');const form=el('form','eq-editor'),name=textField(form,'eq-catalog-name',M.dimensions[key],item?.name||'').input;let parent,kind;
+  if(key==='models'||key==='sites')parent=selectField(form,'eq-catalog-parent',key==='models'?'نوع تجهیز':'نوع محل',catalog(key==='models'?'types':'siteKinds'),item?.typeId||item?.siteKindId);
+  if(key==='types'||key==='siteKinds')kind=selectField(form,'eq-catalog-kind','الگوی دسته',key==='types'?[{id:'router',name:'روتر'},{id:'switch',name:'سوئیچ'},{id:'other',name:'سایر'}]:[{id:'branch',name:'شعبه'},{id:'building',name:'ساختمان'},{id:'datacenter',name:'دیتاسنتر'},{id:'other',name:'سایر'}],item?.kind||'other');
+  const error=el('p','eq-error');error.setAttribute('role','alert');const submit=el('button','btn btn-primary','ذخیره دسته');submit.type='submit';form.append(error,tools(submit,button('انصراف',close)));form.onsubmit=e=>{e.preventDefault();try{const next=structuredClone(inventory),entry={id:item?.id||uid(),name:name.value.trim()};if(parent)entry[key==='models'?'typeId':'siteKindId']=parent.value;if(kind)entry.kind=kind.value;const at=next.catalog[key].findIndex(x=>x.id===entry.id);if(at<0)next.catalog[key].push(entry);else next.catalog[key][at]=entry;save(next);close();render();}catch(e){error.textContent=e.message;}};dialog.append(form);dialog.showModal();name.focus();
+ }
+ function confirmDelete(title,message,fn,action='حذف'){const {dialog,close}=dialogShell(title,message);const error=el('p','eq-error');error.setAttribute('role','alert');dialog.append(error,tools(button(action,()=>{try{fn();close();render();}catch(e){error.textContent=e.message;}},'btn eq-delete-confirm'),button('انصراف',close)));dialog.showModal();}
+ function removeNode(node){if(!can('equipment-delete'))return;confirmDelete('حذف تجهیز',node.name+' · '+node.host+' از موجودی حذف شود؟ این کار روی تجهیز واقعی اثری ندارد.',()=>save({...inventory,nodes:inventory.nodes.filter(x=>x.id!==node.id)}));}
+ function deviceDetails(node){const {dialog,close}=dialogShell('مشخصات تجهیز',node.name,true);dialog.id='eq-device-details';const lead=el('div','eq-device-lead');lead.append(icon(find('types',node.typeId)?.kind),heading(node.name,node.host),el('span','eq-badge','وضعیت اتصال: بررسی نشده'));dialog.append(lead);const info=el('dl','eq-detail-grid');for(const[label,value]of [['IP مدیریتی',node.host],...Object.entries(lookup).map(([field,key])=>[M.dimensions[key],nameOf(key,node[field])])]){const box=el('div');box.append(el('dt','',label),el('dd',label==='IP مدیریتی'?'eq-mono':'',value));info.append(box);}dialog.append(info,notice('اطلاعات بالا مشخصات ثبت‌شده است؛ باز کردن این پنجره هیچ اتصال یا فرمانی اجرا نمی‌کند.'));const actions=tools(button('ویرایش مشخصات',()=>editNode(node),'btn btn-ghost','equipment-edit'));if(find('types',node.typeId)?.kind==='switch')actions.append(button('بررسی پورت‌های این تجهیز',()=>{close();go('ports',node.id);},'btn btn-primary','equipment-scan'));dialog.append(actions);dialog.showModal();}
+ function filtersBar(){const bar=el('div','eq-filters');bar.id='eq-inventory-filters';for(const[field,key]of Object.entries(lookup)){const items=catalog(key).filter(x=>key==='models'?!filters.typeId||x.typeId===filters.typeId:key==='sites'?!filters.siteKindId||x.siteKindId===filters.siteKindId:true);const s=selectField(bar,'eq-filter-'+field,M.dimensions[key],items,filters[field],false);s.onchange=()=>applyFilter(field,s.value);}return bar;}
+ function filteredRows(){const q=search.trim().toLocaleLowerCase();return inventory.nodes.filter(n=>M.matches(n,filters)&&(!onlyReview||M.incomplete(n))&&(!q||[n.name,n.host,...Object.entries(lookup).map(([f,k])=>nameOf(k,n[f]))].join(' ').toLocaleLowerCase().includes(q))).sort((a,b)=>{const v=sort==='host'?a.host.split('.').reduce((x,y)=>x*256+Number(y),0)-b.host.split('.').reduce((x,y)=>x*256+Number(y),0):a.name.localeCompare(b.name,'fa',{numeric:true});return descending?-v:v;});}
+ function inventoryTable(container){const rows=filteredRows(),pages=Math.max(1,Math.ceil(rows.length/25));page=Math.min(page,pages-1);const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');table.setAttribute('aria-label','فهرست تجهیزات');const head=el('thead'),hr=el('tr');for(const text of ['تجهیز / IP مدیریتی','نوع / مدل','منطقه','محل استقرار','اطلاعات','عملیات'])hr.append(el('th','',text));head.append(hr);table.append(head);const body=el('tbody');
+  for(const node of rows.slice(page*25,page*25+25)){const tr=el('tr'),name=el('td'),identity=el('div','eq-device-cell'),copy=el('div');copy.append(button(node.name,()=>deviceDetails(node),'eq-node-link'),el('span','eq-node-sub eq-mono',node.host));identity.append(icon(find('types',node.typeId)?.kind),copy);name.append(identity);const type=el('td');type.append(el('span','',nameOf('types',node.typeId)),el('span','eq-node-sub',nameOf('models',node.modelId)));const site=el('td');site.append(el('span','',nameOf('sites',node.siteId)),el('span','eq-node-sub',nameOf('siteKinds',node.siteKindId)));const state=el('td');state.append(el('span','eq-badge'+(M.incomplete(node)?' warning':' complete'),M.incomplete(node)?'نیازمند تکمیل':'کامل'));const actions=el('td'),menu=el('details','eq-row-menu'),summary=el('summary','','•••');summary.setAttribute('aria-label','عملیات '+node.name);const content=tools(button('مشخصات',()=>deviceDetails(node)),button('ویرایش',()=>editNode(node),'btn btn-ghost btn-sm','equipment-edit'),button('حذف تجهیز',()=>removeNode(node),'btn btn-ghost btn-sm eq-danger','equipment-delete'));for(const field of Object.keys(filters))if(filters[field]===node[field])content.append(button('خروج از '+M.dimensions[lookup[field]],()=>{if(can('equipment-edit'))confirmDelete('خروج از دسته',node.name+' از دستهٔ «'+nameOf(lookup[field],node[field])+'» خارج شود؟ خود تجهیز حذف نمی‌شود؛ مشخصات مرتبط ممکن است نیازمند تکمیل شوند.',()=>save(M.unassign(inventory,node.id,field)),'تأیید خروج از دسته');},'btn btn-ghost btn-sm','equipment-edit'));menu.append(summary,content);actions.append(menu);tr.append(name,type,el('td','',nameOf('regions',node.regionId)),site,state,actions);body.append(tr);}
+  if(!rows.length){const tr=el('tr'),cell=el('td','eq-empty');cell.colSpan=6;cell.append(icon('search'),el('h4','',inventory.nodes.length?'تجهیزی با این مشخصات پیدا نشد':'اولین تجهیز را اضافه کنید'),el('p','',inventory.nodes.length?'عبارت جست‌وجو یا فیلترها را تغییر دهید.':'از «افزودن تجهیز» یا ورود فایل اکسل شروع کنید.'));tr.append(cell);body.append(tr);}table.append(body);wrap.append(table);const footer=el('div','eq-pagination'),prev=button('قبلی',()=>{page--;inventoryRefresh();}),next=button('بعدی',()=>{page++;inventoryRefresh();});prev.disabled=page===0;next.disabled=page>=pages-1;footer.append(el('span','',rows.length?'نمایش '+(page*25+1)+' تا '+Math.min((page+1)*25,rows.length)+' از '+rows.length+' تجهیز':'۰ تجهیز'),tools(prev,el('span','','صفحه '+(page+1)+' از '+pages),next));container.append(wrap,footer);
+ }
+ function inventoryRefresh(){const c=root.querySelector('#eq-inventory-results');if(c){c.replaceChildren();inventoryTable(c);}}
+ function inventoryView(main){const stats=el('div','eq-overview');const switches=inventory.nodes.filter(n=>find('types',n.typeId)?.kind==='switch').length,routers=inventory.nodes.filter(n=>find('types',n.typeId)?.kind==='router').length,incomplete=inventory.nodes.filter(M.incomplete).length;for(const[value,label,key,sub]of [[inventory.nodes.length,'کل تجهیزات','inventory','در محدودهٔ دسترسی شما'],[switches,'سوئیچ','switch','ثبت‌شده در موجودی'],[routers,'روتر','router','ثبت‌شده در موجودی'],[incomplete,'نیازمند تکمیل','standards','مشخصات ناقص، نه خطای اتصال']]){const box=el('article','eq-stat'),copy=el('div');copy.append(el('span','eq-muted',label),el('strong','',value.toLocaleString('fa-IR')),el('small','',sub));box.append(icon(key),copy);stats.append(box);}main.append(stats);
+  const panel=el('section','eq-inventory-panel'),bar=el('div','eq-list-toolbar'),query=el('label','eq-search');query.append(icon('search'));const input=el('input','inp');input.id='equipment-node-search';input.placeholder='جست‌وجوی نام، IP، مدل یا محل…';input.setAttribute('aria-label','جست‌وجوی تجهیزات');input.value=search;input.oninput=()=>{search=input.value;page=0;inventoryRefresh();};query.append(input);const filter=button('فیلترها'+(Object.keys(filters).length?' · '+Object.keys(filters).length:''),()=>{showFilters=!showFilters;render();},'btn btn-ghost');filter.prepend(icon('filter'));filter.setAttribute('aria-expanded',String(showFilters));filter.setAttribute('aria-controls','eq-inventory-filters');filter.id='eq-filter-toggle';const sortWrap=el('label','eq-sort','مرتب‌سازی '),order=el('select','inp');order.id='eq-inventory-sort';order.setAttribute('aria-label','مرتب‌سازی تجهیزات');for(const[v,t]of [['name','نام تجهیز'],['host','آدرس IP']]){const o=el('option','',t);o.value=v;order.append(o);}order.value=sort;order.onchange=()=>{sort=order.value;page=0;inventoryRefresh();};sortWrap.append(order);bar.append(query,filter,sortWrap);panel.append(bar);
+  if(showFilters)panel.append(filtersBar());const context=el('div','eq-active-filters');for(const[field,key]of Object.entries(lookup))if(filters[field])context.append(button(nameOf(key,filters[field])+' ×',()=>applyFilter(field,''),'eq-filter-chip'));if(onlyReview)context.append(button('نیازمند تکمیل ×',()=>{onlyReview=false;render();},'eq-filter-chip'));if(Object.keys(filters).length||onlyReview)context.append(button('پاک‌کردن فیلترها',()=>{filters={};onlyReview=false;page=0;render();}));if(context.childNodes.length)panel.append(context);
+  const results=el('div');results.id='eq-inventory-results';panel.append(results);main.append(panel);inventoryTable(results);
+  const footer=tools(button('مشخصات ناقص ('+incomplete+')',()=>{onlyReview=!onlyReview;page=0;render();}),button('پیکربندی این انتخاب',()=>{configuration.useSelection(filters);go('configuration');},'btn btn-ghost btn-sm','equipment-configuration'),button('خروجی اکسل همهٔ تجهیزات',()=>equipmentTools.exportInventory(),'btn btn-ghost btn-sm','equipment-export'));footer.lastChild.id='eq-inventory-export-all';main.append(footer);
+  const shortcuts=el('details','eq-shortcuts'),summary=el('summary','','میان‌برهای من');shortcuts.append(summary);const chips=el('div','eq-shortcut-list');for(const card of cardSettings.cards){if(card.refId&&!cardTarget(card)&&Object.values(fullInventory.catalog).some(xs=>xs.some(x=>x.id===card.refId)))continue;const row=el('div','eq-shortcut');row.append(button(card.name,()=>openCard(card),'eq-shortcut-open'),button('ویرایش',()=>editCard(card),'eq-mini-action','equipment-cards'),button('حذف',()=>deleteCard(card),'eq-mini-action eq-danger','equipment-cards'));chips.append(row);}chips.append(button('＋ افزودن میان‌بر',()=>editCard(),'btn btn-ghost btn-sm','equipment-cards'));shortcuts.append(chips);main.append(shortcuts);
+ }
+ function catalogView(main){const toolbar=el('div','eq-list-toolbar'),dimension=selectField(toolbar,'eq-catalog-dimension','نمایش دسته‌ها',Object.entries(M.dimensions).map(([id,name])=>({id,name})),catalogKey);dimension.options[0].disabled=true;dimension.onchange=()=>{catalogKey=dimension.value;render();};toolbar.append(button('＋ افزودن دسته',()=>catalogEditor(catalogKey),'btn btn-primary','equipment-catalog'));main.append(toolbar);const wrap=el('div','eq-table-wrap'),table=el('table','eq-table'),head=el('thead'),tr=el('tr');['نام دسته','وابسته به','تجهیزات مرتبط','عملیات'].forEach(t=>tr.append(el('th','',t)));head.append(tr);table.append(head);const body=el('tbody'),field=Object.keys(lookup).find(f=>lookup[f]===catalogKey);for(const item of catalog(catalogKey)){const r=el('tr');r.append(el('td','',item.name),el('td','',item.typeId?nameOf('types',item.typeId):item.siteKindId?nameOf('siteKinds',item.siteKindId):'—'),el('td','',String(inventory.nodes.filter(n=>n[field]===item.id).length)));const action=el('td');action.append(tools(button('ویرایش',()=>catalogEditor(catalogKey,item),'btn btn-ghost btn-sm','equipment-catalog'),button('حذف',()=>{if(can('equipment-catalog'))confirmDelete('حذف دسته','«'+item.name+'» حذف شود؟ دستهٔ استفاده‌شده قابل حذف نیست و هیچ تجهیزی حذف نخواهد شد.',()=>save(M.removeCategory(inventory,catalogKey,item.id)));},'btn btn-ghost btn-sm eq-danger','equipment-catalog')));r.append(action);body.append(r);}if(!catalog(catalogKey).length){const r=el('tr'),c=el('td','eq-empty','هنوز دسته‌ای تعریف نشده است.');c.colSpan=4;r.append(c);body.append(r);}table.append(body);wrap.append(table);main.append(wrap);}
+ const sections=[['inventory','فهرست تجهیزات','همهٔ تجهیزات، یک نمای روشن.'],['ports','بررسی پورت‌ها','انتخاب سوئیچ، بررسی خطا و رفع فقط با تأیید شما.'],['standards','استانداردها','تعریف چک‌لیست و تطبیق آفلاین بر اساس مدل و محل.'],['configuration','پیکربندی آفلاین','آماده‌سازی و پیش‌نمایش؛ بدون اجرای تنظیمات روی تجهیزات.'],['excel','ورود و خروج اکسل','قالب به‌روز، پیش‌نمایش و ثبت کنترل‌شدهٔ اطلاعات.'],['catalog','دسته‌بندی‌ها','تعریف و ویرایش نوع، مدل، منطقه و محل استقرار.']];
+ function render(nodeId){configuration.suspend();equipmentTools.suspend();window.FamEquipmentLive?.suspend();root.replaceChildren();root.dataset.design='equipment-v2';if(!Access.can('equipment')){root.append(notice('مجوز مشاهدهٔ تجهیزات ندارید.'));return;}inventory=Access.equipmentView(fullInventory);if(section==='configuration'&&!Access.can('equipment-configuration'))section='inventory';const current=sections.find(s=>s[0]===section)||sections[0];const head=el('header','eq-workspace-header'),copy=el('div');copy.append(el('span','eq-eyebrow','NETWORK WORKSPACE'),el('h2','','مرکز تجهیزات'),el('p','','موجودی و عملیات شبکه، بدون مسیرهای پیچیده.'));const mode=el('span','eq-environment',central()?'نسخهٔ مرکزی':'نسخهٔ محلی · بدون اتصال شبکه');head.append(copy,mode);root.append(head);
+  const nav=el('nav','eq-primary-nav');nav.setAttribute('aria-label','بخش‌های تجهیزات');for(const[key,label]of sections){if(key==='configuration'&&!Access.can('equipment-configuration'))continue;const b=button(label,()=>go(key),'eq-nav-item'+(section===key?' active':''));b.id='equipment-tab-'+key;b.prepend(icon(key));if(section===key)b.setAttribute('aria-current','page');nav.append(b);}root.append(nav);
+  const main=el('div','eq-main');const title=el('div','eq-page-heading'),titleCopy=el('div'),h=el('h3','eq-page-title',current[1]);h.tabIndex=-1;titleCopy.append(h,el('p','',current[2]));title.append(titleCopy);if(section==='inventory')title.append(tools(button('ورود اکسل',()=>go('excel'),'btn btn-ghost','equipment-import'),button('＋ افزودن تجهیز',()=>editNode(),'btn btn-primary','equipment-add')));main.append(title);if(storageIssue)main.append(notice(storageIssue,'warning'));if(cardsIssue)main.append(notice(cardsIssue,'warning'));root.append(main);
+  if(section==='inventory')inventoryView(main);else if(section==='catalog')catalogView(main);else if(section==='configuration')configuration.mount(main);else if(section==='excel'||section==='standards')equipmentTools.mount(main,section);else if(central())FamEquipmentLive.mount(main,nodeId);else{const card=el('section','eq-offline-card');card.append(icon('ports'),heading('اتصال از نسخهٔ سرور انجام می‌شود','نسخهٔ محلی موجودی و ابزارهای آفلاین را در اختیار شما قرار می‌دهد. مرورگر به سوئیچ SSH نمی‌زند و نتیجهٔ ساختگی نمایش داده نمی‌شود.'),notice('برای بررسی واقعی پورت‌ها، همین بخش را در FAM مرکزی باز کنید. نام کاربری و رمز را فقط در فرم اتصال نسخهٔ مرکزی وارد کنید.'));main.append(card);}
+ }
+ function reset(){closeDialog();configuration.clear();equipmentTools.clear();window.FamEquipmentLive?.clear();filters={};search='';page=0;onlyReview=false;showFilters=false;section='inventory';load();render();}
+ document.addEventListener('fam-access-changed',reset);window.addEventListener('pagehide',reset);
+ let refreshQueued=false;
+ window.addEventListener('storage',e=>{if([KEY,CARDS_KEY,'fam.equipment.standards.v1'].includes(e.key)&&!refreshQueued){refreshQueued=true;queueMicrotask(()=>{refreshQueued=false;closeDialog();load();render();});}});
+ document.addEventListener('click',e=>{const t=e.target.closest?.('[data-view],#account-logout,#workspace-logout');if(!t)return;if(['account-logout','workspace-logout'].includes(t.id)){reset();return;}if(t.dataset.view==='equipment'){load();render();}else if(t.dataset.view){closeDialog();configuration.suspend();equipmentTools.suspend();window.FamEquipmentLive?.suspend();}},true);
+ load();render();
+});
+</script>
 <script id="fam-equipment-management-js">
-/* Real, serial server-to-switch SSH. No scenarios, browser storage, CLI or
+/* Real, serial server-to-switch SSH. No scenarios, browser storage, arbitrary CLI or
    credentials in reports. Existing single-device endpoints enforce scope,
    operation permission, fixed commands, host keys and recovery pre/post checks. */
 window.FamEquipmentLive=(()=>{
@@ -10235,7 +9858,7 @@ window.FamEquipmentLive=(()=>{
  let manualIP='',manualTargets=[],descriptionBusy=false,descriptions=[];
  let pane=null,selected=new Set(),results=[],chosen=new Set(),auth={username:'',password:''},busy=false,epoch=0,search='',signature='',dialog=null,message='';
  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
- const button=(text,fn,id)=>{const b=el('button','btn btn-primary btn-sm',text);b.type='button';if(id)b.id=id;b.onclick=fn;return b;};
+ const button=(text,fn,id)=>{const b=el('button',['eq-live-scan','eq-live-manual-scan','eq-live-apply'].includes(id)?'btn btn-primary btn-sm':'btn btn-ghost btn-sm',text);b.type='button';if(id)b.id=id;b.onclick=fn;return b;};
  const inventory=()=>Access.equipmentView(FamEquipmentServer.inventory());
  const switches=()=>{const d=inventory();return [...d.nodes.filter(n=>d.catalog.types.some(t=>t.id===n.typeId&&t.kind==='switch')),...( ['types','models','regions','siteKinds','sites'].every(k=>Access.current()?.equipmentScope?.[k]?.includes('*'))?manualTargets.filter(n=>!d.nodes.some(x=>x.host===n.host)):[])];};
  const stamp=()=>JSON.stringify(inventory()),key=(r,p)=>r.node.id+':'+p.interface;
@@ -10265,7 +9888,7 @@ window.FamEquipmentLive=(()=>{
  function descriptionsView(){
   const root=pane?.querySelector('#eq-live-descriptions');if(!root)return;root.replaceChildren();root.append(el('h4','','خروجی show int des'),el('p','eq-muted','خروجی دستور ثابت show interfaces description با حفظ سطرها و فاصله‌ها؛ بنر، prompt و اطلاعات حساس نمایش داده نمی‌شوند.'));
   if(!descriptions.length)root.append(el('p','eq-muted','پس از بررسی موفق، خروجی اینجا نمایش داده می‌شود؛ دکمهٔ مستقل نمایش خروجی هم در دسترس است.'));
-  for(const item of descriptions){const card=el('section','eq-tool-card');card.append(el('h4','',item.node.name+' · '+item.node.host));if(item.error)card.append(el('p','eq-error',item.error));else{if(item.redacted)card.append(el('p','eq-notice warning','بخش حساس توضیحات با [REDACTED] پوشانده شده است.'));const pre=el('pre','eq-live-command-output',item.output);pre.dataset.host=item.node.host;pre.dir='ltr';pre.setAttribute('aria-label','خروجی show int des برای '+item.node.host);Object.assign(pre.style,{whiteSpace:'pre',overflow:'auto',maxHeight:'360px',textAlign:'left',unicodeBidi:'plaintext',fontFamily:'monospace',padding:'16px',border:'1px solid var(--border)',borderRadius:'10px'});card.append(pre);}root.append(card);}
+  for(const item of descriptions){const card=el('details','eq-cli-card');card.append(el('summary','',item.node.name+' · '+item.node.host+' · نمایش خروجی'));if(item.error)card.append(el('p','eq-error',item.error));else{if(item.redacted)card.append(el('p','eq-notice warning','بخش حساس توضیحات با [REDACTED] پوشانده شده است.'));const pre=el('pre','eq-live-command-output',item.output);pre.dataset.host=item.node.host;pre.dir='ltr';pre.setAttribute('aria-label','خروجی show int des برای '+item.node.host);Object.assign(pre.style,{whiteSpace:'pre',overflow:'auto',maxHeight:'360px',textAlign:'left',unicodeBidi:'plaintext',fontFamily:'monospace',padding:'16px',border:'1px solid var(--border)',borderRadius:'10px'});card.append(pre);}root.append(card);}
  }
  async function descriptionsRead(nodes,token){
   const items=[];
@@ -10280,7 +9903,7 @@ window.FamEquipmentLive=(()=>{
   }catch(error){message=error.message;report();}
  }
  function manualControls(parent){
-  const fieldset=el('fieldset');fieldset.disabled=busy;fieldset.id='eq-live-manual-box';fieldset.append(el('legend','','بررسی و رفع خطا با IP دستی'));
+  const fieldset=el('fieldset');fieldset.disabled=busy;fieldset.id='eq-live-manual-box';fieldset.append(el('legend','','یا بررسی با IP دستی'));
   const label=el('label','eq-field','IP خصوصی سوئیچ'),input=el('input','inp');input.id='eq-live-manual-ip';input.dir='ltr';input.inputMode='decimal';input.maxLength=15;input.value=manualIP;input.placeholder='مثال: 10.2.35.2';input.oninput=()=>{manualIP=input.value;};input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();run.click();}};label.append(input);
   const run=button('بررسی IP دستی',async()=>{if(busy||descriptionBusy)return;try{allowed('equipment-scan');manualTarget();await scan();}catch(error){message=error.message;report();}},'eq-live-manual-scan');
   const show=button('نمایش خروجی show int des',async()=>{if(busy||descriptionBusy)return;try{allowed('equipment-scan');if(manualIP.trim())manualTarget();await showDescriptions();}catch(error){message=error.message;report();}},'eq-live-show-descriptions');run.disabled=show.disabled=!Access.can('equipment-scan');
@@ -10292,11 +9915,12 @@ window.FamEquipmentLive=(()=>{
   return 'آماده‌سازی: '+(t.preparationMs/1000).toFixed(2)+' ثانیه · SSH و اجرای دستورها: '+(t.sshMs/1000).toFixed(2)+' ثانیه';
  }
 
- function draw(){if(!pane)return;pane.replaceChildren();const title=el('h3','','بررسی و رفع خطای پورت‌ها');pane.append(title,el('p','eq-notice','۱. انتخاب سوئیچ‌ها  ←  ۲. بررسی پورت‌ها  ←  ۳. تأیید و رفع خطا'));
-  const fieldset=el('fieldset');fieldset.disabled=busy;const legend=el('legend','','انتخاب سوئیچ یا سوئیچ‌ها');fieldset.append(legend);const query=el('input','inp');query.id='eq-live-search';query.placeholder='جست‌وجوی نام یا IP سوئیچ';query.setAttribute('aria-label',query.placeholder);query.value=search;const list=el('div','eq-tool-switch-list');Object.assign(list.style,{maxHeight:'280px',overflow:'auto'});
-  const listDraw=()=>{list.replaceChildren();const nodes=switches().filter(n=>(n.name+' '+n.host).toLowerCase().includes(search.toLowerCase()));for(const n of nodes){list.append(checkbox(n.name+' · '+n.host,selected.has(n.id),value=>{if(value&&selected.size>=MAX){message='در هر نوبت حداکثر '+MAX+' سوئیچ انتخاب کنید.';report();listDraw();return;}value?selected.add(n.id):selected.delete(n.id);invalidate();report();},'eq-live-node-'+n.id));}if(!nodes.length)list.append(el('p','eq-notice','سوئیچی در موجودی مجاز پیدا نشد. ابتدا نود را با نوع «سوئیچ» و IP درست ثبت کنید.'));};query.oninput=()=>{search=query.value;listDraw();};listDraw();fieldset.append(query,list,button('پاک‌کردن انتخاب‌ها',()=>{selected.clear();invalidate();draw();},'eq-live-clear-selection'),el('p','eq-muted','حداکثر ۵ سوئیچ در هر نوبت؛ بررسی‌ها یکی‌یکی از سرور FAM انجام می‌شوند.'));
-  const account=el('div','eq-node-fields');for(const [field,label,type]of [['username','نام کاربری سوئیچ (SSH / RADIUS)','text'],['password','رمز ورود سوئیچ','password']]){const wrap=el('label','eq-field',label),input=el('input','inp');input.id='eq-live-'+field;input.type=type;input.value=auth[field];input.autocomplete=type==='password'?'new-password':'off';input.maxLength=field==='password'?512:64;input.oninput=()=>{auth[field]=input.value;invalidate();report();};wrap.append(input);account.append(wrap);}fieldset.append(account,el('p','eq-muted','حساب مشترک سوئیچ‌های انتخاب‌شده؛ فقط در حافظه تا خروج از FAM. رمز ارسال‌شده به سرور ذخیره نمی‌شود.'));
-  const run=button('بررسی پورت‌ها',scan,'eq-live-scan');run.disabled=!Access.can('equipment-scan');fieldset.append(run);pane.append(fieldset);manualControls(pane);if(busy)pane.append(el('p','eq-notice','عملیات واقعی در حال اجراست؛ درخواست خودکار تکرار نمی‌شود.'));const out=el('section');out.id='eq-live-report';out.setAttribute('aria-live','polite');pane.append(out);const cli=el('section');cli.id='eq-live-descriptions';pane.append(cli);report();
+ function draw(){if(!pane)return;pane.replaceChildren();const grid=el('div','eq-live-inputs');
+  const fieldset=el('fieldset');fieldset.disabled=busy;fieldset.append(el('legend','','۱ · انتخاب سوئیچ‌ها'));const query=el('input','inp');query.id='eq-live-search';query.placeholder='جست‌وجوی نام یا IP سوئیچ';query.setAttribute('aria-label',query.placeholder);query.value=search;const list=el('div','eq-tool-switch-list');
+  const listDraw=()=>{list.replaceChildren();const nodes=switches().filter(n=>(n.name+' '+n.host).toLowerCase().includes(search.toLowerCase()));for(const n of nodes.slice(0,50))list.append(checkbox(n.name+' · '+n.host,selected.has(n.id),value=>{if(value&&selected.size>=MAX){message='در هر نوبت حداکثر '+MAX+' سوئیچ انتخاب کنید.';report();listDraw();return;}value?selected.add(n.id):selected.delete(n.id);invalidate();report();const count=pane?.querySelector('#eq-live-selection-count');if(count)count.textContent=selected.size+' از ۵ سوئیچ انتخاب شده';},'eq-live-node-'+n.id));if(nodes.length>50)list.append(el('p','eq-muted','۵۰ نتیجهٔ اول؛ برای یافتن سوئیچ دیگر نام یا IP را جست‌وجو کنید.'));if(!nodes.length)list.append(el('p','eq-notice','سوئیچی در موجودی مجاز نیست. تجهیز را با نوع «سوئیچ» و IP صحیح ثبت کنید.'));};query.oninput=()=>{search=query.value;listDraw();};listDraw();const selection=el('div','eq-live-summary'),count=el('span','eq-muted',selected.size+' از ۵ سوئیچ انتخاب شده');count.id='eq-live-selection-count';selection.append(count,button('پاک‌کردن انتخاب‌ها',()=>{selected.clear();invalidate();draw();},'eq-live-clear-selection'));fieldset.append(query,list,selection);
+  const run=button('بررسی پورت‌ها',scan,'eq-live-scan');run.disabled=!Access.can('equipment-scan');fieldset.append(run,el('p','eq-muted','بررسی از سرور FAM، بدون تکرار خودکار اتصال. نتیجهٔ نامشخص هرگز سالم گزارش نمی‌شود.'));
+  const account=el('fieldset');account.disabled=busy;account.append(el('legend','','۲ · اطلاعات اتصال'));const fields=el('div','eq-node-fields');for(const [field,label,type]of [['username','نام کاربری سوئیچ (SSH / RADIUS)','text'],['password','رمز ورود سوئیچ','password']]){const wrap=el('label','eq-field',label),input=el('input','inp');input.id='eq-live-'+field;input.type=type;input.dir='ltr';input.value=auth[field];input.autocomplete=type==='password'?'new-password':'off';input.maxLength=field==='password'?512:64;input.oninput=()=>{auth[field]=input.value;invalidate();report();};wrap.append(input);fields.append(wrap);}account.append(fields,el('p','eq-muted','حساب مشترک انتخاب‌ها؛ فقط در حافظه تا خروج از FAM. رمز ذخیره نمی‌شود.'));manualControls(account);grid.append(fieldset,account);pane.append(grid);
+  if(busy)pane.append(el('p','eq-notice','عملیات واقعی در حال اجراست؛ درخواست خودکار تکرار نمی‌شود.'));const out=el('section');out.id='eq-live-report';out.setAttribute('aria-live','polite');pane.append(out);const cli=el('section');cli.id='eq-live-descriptions';pane.append(cli);report();
  }
  async function scan(){if(busy||descriptionBusy)return;try{allowed('equipment-scan');const nodes=switches().filter(n=>selected.has(n.id));if(!nodes.length||nodes.length!==selected.size||nodes.length>MAX)throw Error('بین یک تا پنج سوئیچ مجاز انتخاب کنید.');if(!auth.username.trim()||!auth.password)throw Error('نام کاربری و رمز ورود سوئیچ را وارد کنید.');invalidate();signature=stamp();const token=epoch;busy=true;results=nodes.map(node=>({node:structuredClone(node),state:'waiting',ports:[]}));message='بررسی واقعی SSH از سرور FAM؛ اتصال ناموفق هرگز «بدون خطا» گزارش نمی‌شود.';draw();
    try{for(const r of results){if(token!==epoch||!valid())break;allowed('equipment-scan');r.state='checking';report();try{const data=await FamShared.api('equipment/inspect',{host:r.node.host,username:auth.username.trim(),password:auth.password},110000);if(token!==epoch||!valid())break;
@@ -10314,6 +9938,7 @@ window.FamEquipmentLive=(()=>{
  document.addEventListener('fam-access-changed',clear);window.addEventListener('pagehide',clear);document.addEventListener('click',e=>{if(e.target.closest?.('#account-logout,#workspace-logout'))clear();},true);
  return Object.freeze({mount(parent,nodeId){valid();pane=el('section','eq-live-workspace');parent.append(pane);if(nodeId&&!busy&&!selected.has(nodeId)){selected=new Set([nodeId]);invalidate();}draw();},suspend,invalidate,clear});
 })();
+
 </script>
 <script id="fam-shared-js">
 /* Central persistence adapter. The server, not browser storage, is authoritative.

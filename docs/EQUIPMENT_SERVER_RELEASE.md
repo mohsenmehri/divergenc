@@ -1,12 +1,14 @@
 # Central equipment test release — 2026-10-17
 
+**Current UI: Equipment v2.** The old nested equipment interface has been replaced. See [EQUIPMENT_V2_REDESIGN.md](EQUIPMENT_V2_REDESIGN.md) for the active six-section navigation, data-preservation contract and full 103-test UI validation. The earlier workflow descriptions below document the transport/security evolution; «Tools» and the old device screen are now replaced by the direct «بررسی پورت‌ها» destination.
+
 Scope selected: latest LOCAL inventory, categories, cards, per-model/location standards, dynamic Excel, configuration and simulated scan/recovery UX, with central metadata persistence and server-authorized operation permissions and stable-ID scopes. Latest correction explicitly requested a simple real multi-selection port workflow. The existing single-device executor is reused serially (up to five switches/ports per round); no freeform command, background worker or persistent job system was added.
 
 ## Deployment
 
 Use `releases/FAM-Custom-Access-SERVER-Patch.zip` on a **test copy** of the existing Windows/IIS deployment. Extract, take an independent verified FAM SQLite backup, and run `APPLY-CUSTOM-ACCESS-UPDATE.cmd` as administrator. Read bundled `README_FA.txt`. A code rollback is not a substitute for a database backup. Additive schema migration does not reseed existing accounts or replace the workbook.
 
-Package: 1,779,335 bytes. SHA256: `7ffe8f4dbe0dde9160c82682fbc5d457dfbb8af8bfa4cd652d1ac998e917c18a`.
+Package: 1,774,079 bytes. SHA256: `729686e31c4f29c68391a1c3d5f33289cdb2e273b68ac2f47ec27e5f178b7904`.
 
 The ten-file payload is checksum verified; the new `equipment_inventory.py` participates in installation, presence-aware backup and rollback. The full-install source allowlist also includes equipment backend modules; the historical full-install ZIP was not rebuilt in this release. No runtime DB, credentials, keys, known_hosts, logs, environment, or node_modules are shipped. Root SERVER ZIP mirrors the release ZIP. LOCAL release bytes and hash are unchanged.
 

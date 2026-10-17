@@ -79,3 +79,7 @@ Only a complete bounded interface-description table crosses the API, not raw ses
 ## Request-scoped SSH optimization
 
 The new inspect read performs the existing two allowlisted read commands in one supervised SSH child, not two authenticated sessions. It neither accepts commands from a caller nor retries authentication automatically. Recovery still performs verified pre-check, bounded port action and verified post-check; only the secret-free ASKPASS executable is reused within the same request. Deadline starts before its compilation, and request-owned cleanup runs in finally. There is no cross-user helper/credential/SSH-session cache. Inspection timing fields contain only validated nonnegative bounded integers; no debug CLI, device output or secret is logged for profiling.
+
+## Equipment workspace v2
+
+The replacement UI preserves existing server authorization/storage and native SSH boundaries. Inventory and offline tools no longer ask for device credentials. Only the direct server port page accepts SSH/RADIUS credentials in document RAM. Opening equipment details never automatically runs SSH. LOCAL no longer has a fake authentication gate or fabricated scan/recovery UI; it explicitly requires SERVER for connection. No database reset, broadened scope, credential persistence or new configuration-execution permission was introduced. See `EQUIPMENT_V2_REDESIGN.md`.

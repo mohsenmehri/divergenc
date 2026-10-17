@@ -109,7 +109,7 @@ def merge(user,old,next_value,fail):
             operation=('equipment-add' if x is None else 'equipment-delete' if y is None else 'equipment-edit') if key=='nodes' else 'equipment-catalog'
             if not permitted(user,operation):fail(403,'مجوز تغییر تجهیزات ندارید.')
             if key=='nodes':
-                if x and not node_allowed(user,x) or y and not node_allowed(user,y):fail(403,'نود خارج از محدوده است.')
+                if x and not node_allowed(user,x) or y and not node_allowed(user,y):fail(403,'تجهیز خارج از محدوده است.')
                 if y and any(z['id']!=ident and z['host']==y['host'] for z in old['nodes']):fail(400,'IP در کل موجودی تکراری است.')
             elif not ref(user,key,ident) or y and key=='models' and not ref(user,'types',y['typeId']) or y and key=='sites' and not ref(user,'siteKinds',y['siteKindId']):fail(403,'دسته خارج از محدوده است.')
             whole[:]=[z for z in whole if z['id']!=ident]
