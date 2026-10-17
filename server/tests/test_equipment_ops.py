@@ -170,6 +170,15 @@ class EquipmentOpsTests(unittest.TestCase):
         self.app.config['EQUIPMENT_EXECUTOR']=lambda job:{'ok':True,'output':'SECRET RAW CLI'}
         response=self.post('/api/equipment/descriptions',body);self.assertEqual(response.status_code,502);self.assertNotIn('SECRET RAW CLI',str(response.json))
 
+    def test_inspect_is_one_authorized_executor_call_with_safe_combined_result(self):
+        from server.tests.test_equipment_probe import DESCRIPTION_TABLE
+        calls=[]
+        def executor(job):
+            calls.append(job['operation']);return {'ok':True,'ports':[{'interface':'Gi0/7','description':'ATM'}],'descriptions':{'ok':True,'output':'Banner\nSwitch#'+DESCRIPTION_TABLE+'Switch#\n'},'timings':{'preparationMs':7,'sshMs':31,'unsafe':'never expose'}}
+        self.app.config['EQUIPMENT_EXECUTOR']=executor;body={'host':'10.2.52.2','username':'fixture','password':'temporary'}
+        response=self.post('/api/equipment/inspect',body);self.assertEqual(response.status_code,200,response.json);self.assertEqual(calls,['inspect']);self.assertEqual(response.json['descriptions']['output'],DESCRIPTION_TABLE);self.assertEqual(response.json['timings'],{'preparationMs':7,'sshMs':31});self.assertIn('Gi0/7',response.json['recoveryTickets'])
+        self.assertEqual(self.post('/api/equipment/inspect',body,csrf=False).status_code,403);self.assertEqual(self.post('/api/equipment/inspect',{**body,'command':'show run'}).status_code,400);self.assertEqual(calls,['inspect'])
+
     def test_errdisabled_parser_discards_raw_cli_output(self):
         output = """Port Name Status Vlan Duplex Speed Type
 Gi0/1 users err-disabled 1 auto auto 10/100/1000BaseTX

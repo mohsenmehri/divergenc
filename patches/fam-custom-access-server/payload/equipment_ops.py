@@ -33,7 +33,7 @@ USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 # Outer wall clock for the helper process per operation.  It must exceed
 # equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
 # helper while it is still supervising an ssh.exe child.
-EXECUTOR_TIMEOUT = {"status": 40, "descriptions": 40, "recover": 95}
+EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95}
 RFC1918_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
 
 
@@ -181,6 +181,27 @@ def register_equipment_ops(app, *, data, fail, allowed):
         ports = _ports_or_fail(result, fail)
         tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
         return jsonify(host=value["host"], source="server-ssh", checkedAt=int(time.time()*1000), errDisabledPorts=ports, recoveryTickets=tickets)
+
+    @app.post('/api/equipment/inspect')
+    def equipment_inspect():
+        authorize('status')
+        try:value=_input(data())
+        except ValueError:fail(400,'IP خصوصی، نام کاربری و رمز تجهیز معتبر نیست.')
+        authorize('status',value['host'])
+        result=_execute(app,{'operation':'inspect',**value})
+        ports=_ports_or_fail(result,fail)
+        description={'error':_failure({'error':'descriptions_unreadable'})}
+        raw=result.get('descriptions')
+        if isinstance(raw,dict) and raw.get('ok') is True:
+            try:
+                output,redacted=descriptions_table(raw.get('output'),value['username'],value['password'])
+                description={'output':output,'redacted':redacted or raw.get('redacted') is True}
+            except ProbeError:pass
+        timings=result.get('timings',{})
+        timings={k:timings[k] for k in ('preparationMs','sshMs') if isinstance(timings,dict) and type(timings.get(k)) is int and 0<=timings[k]<=65000}
+        return jsonify(host=value['host'],source='server-ssh',checkedAt=int(time.time()*1000),errDisabledPorts=ports,
+            recoveryTickets={p['interface']:_ticket(app,user_id=g.user['id'],host=value['host'],username=value['username'],interface=p['interface']) for p in ports},
+            descriptions=description,timings=timings)
 
     @app.post('/api/equipment/descriptions')
     def equipment_descriptions():

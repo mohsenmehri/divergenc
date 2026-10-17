@@ -20,7 +20,9 @@ with tempfile.TemporaryDirectory() as directory:
             repaired.add((job['host'],job['interface']))
             return {'ok':True,'recovery':'recovered'}
         ports=[{'interface':'Gi0/7','description':'Fixture port'}] if job['host'] in {'10.53.0.1','10.53.0.9'} and (job['host'],'Gi0/7') not in repaired else []
-        return {'ok':True,'ports':ports}
+        result={'ok':True,'ports':ports}
+        if job['operation']=='inspect':result.update(descriptions=executor({**job,'operation':'descriptions'}),timings={'preparationMs':10,'sshMs':20})
+        return result
     app=create_app({'TESTING':True,'COOKIE_SECURE':False,'PUBLIC_ORIGIN':'http://localhost:8765','DB_PATH':str(Path(directory)/'synthetic.sqlite3'),'EQUIPMENT_OPS_ENABLED':True,'EQUIPMENT_EXECUTOR':executor})
     client=app.test_client();login=client.post('/api/login',json={'username':'admin','password':'1109'},headers={'Origin':'http://localhost:8765'}).json
     env=client.get('/api/equipment/state').json

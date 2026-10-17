@@ -49,8 +49,13 @@ live=live.replace('pane.append(fieldset);if(busy)','pane.append(fieldset);manual
 live=live.replace('pane.append(out);report();',"pane.append(out);const cli=el('section');cli.id='eq-live-descriptions';pane.append(cli);report();",1)
 live=live.replace('if(!root)return;root.replaceChildren();','if(!root)return;descriptionsView();root.replaceChildren();',1)
 live=live.replace("if(busy)return;try{allowed('equipment-scan');","if(busy||descriptionBusy)return;try{allowed('equipment-scan');",1)
-needle_scan='break;}report();}}\n   finally';assert needle_scan in live
-live=live.replace(needle_scan,"break;}report();}if(token===epoch)await descriptionsRead(results.filter(r=>r.state==='checked').map(r=>r.node),token);}\n   finally",1)
+# Combined read: one HTTP job / one SSH handshake for both tables. No
+# automatic follow-up description request or authentication retry.
+live=live.replace("FamShared.api('equipment/check'", "FamShared.api('equipment/inspect'",1)
+needle_result="r.state='checked';r.checkedAt=data.checkedAt;"
+assert needle_result in live
+live=live.replace(needle_result,needle_result+"r.timings=data.timings;const d=data.descriptions;if(d&&typeof d.output==='string'&&d.output.length<=100000)descriptions.push({node:r.node,output:d.output,redacted:d.redacted===true});else descriptions.push({node:r.node,error:d?.error||'خروجی توضیحات قابل تأیید نیست.'});",1)
+live=live.replace('root.append(wrap);',"root.append(wrap);for(const r of results){const label=timingLabel(r);if(label)root.append(el('p','eq-muted',r.node.name+' · '+label));}",1)
 live=live.replace('function clear(){invalidate();',"function clear(){manualIP='';manualTargets=[];descriptionBusy=false;invalidate();",1)
 live=live.replace(' function draw(){',(root/'src/equipment-server-port-additions.js').read_text()+'\n function draw(){',1)
 s=s.replace('\n</body>','\n<script id="fam-equipment-management-js">\n'+live+'</script>\n</body>',1)

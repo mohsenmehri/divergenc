@@ -56,11 +56,13 @@ SECRET_ENV = "FAM_EQUIPMENT_SSH_SECRET"
 # FAM backend never kills this helper while ssh.exe is still being supervised.
 CONNECT_TIMEOUT = 10
 SESSION_TIMEOUT = 25
-HELPER_DEADLINE = {"status": 30, "descriptions": 30, "recover": 85}
+INSPECT_SESSION_TIMEOUT = 2 * SESSION_TIMEOUT
+HELPER_DEADLINE = {"status": 30, "inspect": 55, "descriptions": 30, "recover": 85}
 MAX_OUTPUT_BYTES = 1024 * 1024
 
 STATUS_COMMANDS = ("terminal length 0", "show interfaces status", "exit")
 DESCRIPTION_COMMANDS = ("terminal length 0", "show interfaces description", "exit")
+INSPECT_COMMANDS = ("terminal length 0", "show interfaces status", "show interfaces description", "exit")
 
 # Win32 OpenSSH uses CreateProcess, which cannot directly execute a .cmd/.ps1
 # file. Build a tiny .NET Framework executable in the per-session directory.
@@ -340,6 +342,13 @@ def _creation_flags() -> int:
     return getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
 
 
+def _cleanup_runtime(workdir,askpass=None):
+    try:
+        if askpass:os.remove(askpass)
+    except OSError:pass
+    shutil.rmtree(workdir,ignore_errors=True)
+
+
 def run_ssh(job, commands, timeout: float):
     """Run one bounded ssh.exe session; return (returncode, stdout, stderr, timed_out)."""
     for name in FORBIDDEN_CIPHERS:
@@ -348,12 +357,14 @@ def run_ssh(job, commands, timeout: float):
     executable = ssh_executable()
     argv = ssh_arguments(executable, job["host"], job["username"], known_hosts_file(), host_key_policy())
     script = ("\n".join(commands) + "\n").encode("ascii")
-    workdir = runtime_directory()
-    askpass = None
+    shared = job.get('_askpass')
+    workdir = shared[1] if shared else runtime_directory()
+    askpass = shared[0] if shared else None
     started = time.monotonic()
     process = None
     try:
-        askpass = prepare_askpass(workdir)
+        if askpass is None:askpass = prepare_askpass(workdir)
+        prepared = time.monotonic()
         process = subprocess.Popen(
             argv,
             stdin=subprocess.PIPE,
@@ -370,17 +381,16 @@ def run_ssh(job, commands, timeout: float):
             process.kill()
             out, err = process.communicate()
             timed_out = True
+        if '_timings' in job:
+            job['_timings'].update(preparationMs=round((prepared-started)*1000),sshMs=round((time.monotonic()-prepared)*1000))
+        if len(out)>MAX_OUTPUT_BYTES:raise ProbeError('connection_failed')
         return process.returncode, out[:MAX_OUTPUT_BYTES].decode("utf-8", "replace"), err[:65536].decode("utf-8", "replace"), timed_out
     finally:
         if process is not None and process.poll() is None:
             process.kill()
-        # The askpass file never contains the secret, but it must not outlive
-        # the session either.
-        try:
-            os.remove(askpass) if askpass else None
-        except OSError:
-            pass
-        shutil.rmtree(workdir, ignore_errors=True)
+        # Shared only within one bounded recovery request, never across users.
+        # Its owner removes the secret-free executable in its own finally.
+        if not shared:_cleanup_runtime(workdir,askpass)
 
 
 def classify_failure(stderr: str, timed_out: bool) -> str:
@@ -403,22 +413,21 @@ class Deadline:
     def __init__(self, seconds: float):
         self.until = time.monotonic() + seconds
 
-    def session_timeout(self) -> float:
+    def session_timeout(self, cap=SESSION_TIMEOUT) -> float:
         remaining = self.until - time.monotonic()
         if remaining <= 1:
             raise ProbeError("connection_timeout")
-        return min(SESSION_TIMEOUT, remaining)
+        return min(cap, remaining)
 
 
-def session_output(job, commands, deadline: Deadline) -> str:
-    code, out, err, timed_out = run_ssh(job, commands, deadline.session_timeout())
+def session_output(job, commands, deadline: Deadline, session_cap=SESSION_TIMEOUT) -> str:
+    code, out, err, timed_out = run_ssh(job, commands, deadline.session_timeout(session_cap))
     if timed_out or code != 0:
         raise ProbeError(classify_failure(err, timed_out))
     return out
 
 
-def status_table(job, deadline: Deadline) -> str:
-    output = session_output(job, STATUS_COMMANDS, deadline)
+def validate_status_output(output: str) -> str:
     rows = list(_table_rows(output))
     # Never call a partially parsed table clean. A single unknown/truncated
     # interface row can be the failing port even if other rows parsed normally.
@@ -435,13 +444,21 @@ def status_table(job, deadline: Deadline) -> str:
     return output
 
 
+def status_table(job, deadline: Deadline) -> str:
+    return validate_status_output(session_output(job,STATUS_COMMANDS,deadline))
+
+
 # --------------------------------------------------------------------------- #
 # Operations                                                                  #
 # --------------------------------------------------------------------------- #
 def status(job):
     deadline = Deadline(HELPER_DEADLINE["status"])
     # Fixed commands only.  Raw output is parsed then discarded.
-    ports = errdisabled_interfaces(status_table(job, deadline))
+    return safe_status_ports(status_table(job, deadline),job)
+
+
+def safe_status_ports(output,job):
+    ports = errdisabled_interfaces(output)
     for item in ports:
         # A device-controlled Name column must not reflect submitted credentials.
         if any(secret in item["description"] for secret in (job["username"], job["password"])):
@@ -484,6 +501,25 @@ def descriptions(job):
     return {'ok':True,'output':table,'redacted':redacted}
 
 
+def inspect_device(job):
+    """Both fixed reads in ONE SSH authentication/ASKPASS lifecycle.
+    Split at the actual description header; never auto-reconnect on failure.
+    If no boundary is available, fail closed rather than guess a clean table.
+    """
+    job['_timings']={}
+    output=session_output(job,INSPECT_COMMANDS,Deadline(HELPER_DEADLINE['inspect']),INSPECT_SESSION_TIMEOUT)
+    lines=output.splitlines();boundary=next((i for i,line in enumerate(lines) if DESCRIPTION_HEADER.fullmatch(DESCRIPTION_PROMPT.sub('',line,count=1))),None)
+    if boundary is None:raise ProbeError('descriptions_unreadable')
+    status_output='\n'.join(lines[:boundary])+'\n'
+    result=safe_status_ports(validate_status_output(status_output),job)
+    try:
+        table,redacted=descriptions_table('\n'.join(lines[boundary:])+'\n',job['username'],job['password'])
+        result['descriptions']={'ok':True,'output':table,'redacted':redacted}
+    except ProbeError:result['descriptions']={'ok':False,'error':'descriptions_unreadable'}
+    result['timings']=job['_timings']
+    return result
+
+
 def recovery_commands(interface: str):
     # This is the only allowed configuration sequence.  Do not enable, save,
     # or execute any caller-provided command.
@@ -492,8 +528,16 @@ def recovery_commands(interface: str):
 
 
 def recover(job):
+    deadline=Deadline(HELPER_DEADLINE['recover'])
+    workdir=runtime_directory();askpass=None
+    try:
+        askpass=prepare_askpass(workdir)
+        return _recover({**job,'_askpass':(askpass,workdir)},deadline)
+    finally:_cleanup_runtime(workdir,askpass)
+
+
+def _recover(job,deadline):
     interface = job["interface"]
-    deadline = Deadline(HELPER_DEADLINE["recover"])
     before=status_table(job, deadline)
     if interface not in {row[0] for row in _table_rows(before)}:raise ProbeError("status_unreadable")
     if interface not in errdisabled_ports(before):
@@ -512,7 +556,7 @@ def execute(value):
     """Run one already-decoded, bounded job and return only its safe result."""
     if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}):
         return {"ok": False, "error": "invalid_request"}
-    if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "descriptions", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
+    if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "inspect", "descriptions", "recover"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):
         return {"ok": False, "error": "invalid_request"}
     try:
         address = ipaddress.ip_address(value["host"])
@@ -533,7 +577,7 @@ def execute(value):
     if value["operation"] == "recover":
         job["interface"] = value["interface"]
     try:
-        return {"status":status,"descriptions":descriptions,"recover":recover}[value["operation"]](job)
+        return {"status":status,"inspect":inspect_device,"descriptions":descriptions,"recover":recover}[value["operation"]](job)
     except ProbeError as exc:
         return {"ok": False, "error": exc.code}
     except subprocess.TimeoutExpired:

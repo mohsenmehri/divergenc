@@ -33,3 +33,8 @@
   const show=button('نمایش خروجی show int des',async()=>{if(busy||descriptionBusy)return;try{allowed('equipment-scan');if(manualIP.trim())manualTarget();await showDescriptions();}catch(error){message=error.message;report();}},'eq-live-show-descriptions');run.disabled=show.disabled=!Access.can('equipment-scan');
   fieldset.append(label,run,show,el('p','eq-muted','از همان نام کاربری و رمز سوئیچ در بالا استفاده می‌شود. اتصال از سرور FAM است؛ IP دستی ذخیره نمی‌شود. رفع فقط بعد از انتخاب پورت و تأیید جداگانه انجام می‌شود.'));parent.append(fieldset);
  }
+
+ function timingLabel(result){
+  const t=result.timings;if(!t||!Number.isInteger(t.preparationMs)||!Number.isInteger(t.sshMs)||t.preparationMs<0||t.sshMs<0||t.preparationMs>65000||t.sshMs>65000)return '';
+  return 'آماده‌سازی: '+(t.preparationMs/1000).toFixed(2)+' ثانیه · SSH و اجرای دستورها: '+(t.sshMs/1000).toFixed(2)+' ثانیه';
+ }

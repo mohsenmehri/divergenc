@@ -117,7 +117,7 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertFalse(any(item.attrib.get('name')=='Network Operations control page to loopback service' for item in rules))
         fam=(server_root/'private_ui'/'FAM.html').read_text(encoding='utf8')
         self.assertIn('data-view="equipment"',fam)
-        self.assertIn('equipment/check',fam)
+        self.assertIn('equipment/inspect',fam)
         self.assertIn('p.description',fam)
         self.assertNotIn('equipment-ack',fam)
         self.assertNotIn('network-operations',fam)

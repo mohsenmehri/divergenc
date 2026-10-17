@@ -245,6 +245,31 @@ class SshExeTransportTests(ProbeHarness):
         result=equipment_probe.execute({**self.status_job(),'operation':'descriptions','interface':'Gi0/1'})
         self.assertEqual(result,{'ok':False,'error':'invalid_request'});self.assertEqual(len(self.calls),count)
 
+    def test_inspect_reads_both_tables_with_one_ssh_and_one_askpass(self):
+        result=self.run_probe({**self.status_job(),'operation':'inspect'},[{'out':TABLE_ERRDISABLED+'Switch#show interfaces description\n'+DESCRIPTION_TABLE+'Switch#exit\n'}])
+        self.assertTrue(result['ok']);self.assertEqual(result['descriptions']['output'],DESCRIPTION_TABLE)
+        self.assertEqual(len(result['ports']),2);self.assertEqual(len(self.calls),1);self.assertEqual(equipment_probe.prepare_askpass.call_count,1)
+        self.assertEqual(self.calls[0]['stdin'],'terminal length 0\nshow interfaces status\nshow interfaces description\nexit\n')
+        self.assertGreater(self.calls[0]['timeout'],equipment_probe.SESSION_TIMEOUT)
+        self.assertGreater(equipment_ops.EXECUTOR_TIMEOUT['inspect'],equipment_probe.HELPER_DEADLINE['inspect'])
+        self.assertEqual(set(result['timings']),{'preparationMs','sshMs'});self.assertTrue(all(type(v) is int and v>=0 for v in result['timings'].values()))
+        self.assertFalse(os.path.exists(self.calls[0]['askpass_path']));self.assertNotIn(PASSWORD,str(result))
+
+    def test_inspect_never_reconnects_on_ambiguous_boundary_or_timeout(self):
+        for step,error in [({'out':TABLE_CLEAN},'descriptions_unreadable'),({'hang':True},'connection_timeout')]:
+            self.calls.clear();result=self.run_probe({**self.status_job(),'operation':'inspect'},[step])
+            self.assertEqual(result,{'ok':False,'error':error});self.assertEqual(len(self.processes),1)
+
+    def test_inspect_keeps_valid_status_when_description_table_is_malformed(self):
+        result=self.run_probe({**self.status_job(),'operation':'inspect'},[{'out':TABLE_ERRDISABLED+'Interface Status Protocol Description\nGi0/1 malformed\n'}])
+        self.assertTrue(result['ok']);self.assertEqual(len(result['ports']),2);self.assertEqual(result['descriptions'],{'ok':False,'error':'descriptions_unreadable'});self.assertEqual(len(self.calls),1)
+
+    def test_recovery_compiles_askpass_once_but_preserves_three_ssh_safety_steps(self):
+        result=self.run_probe(self.recover_job(),[{'out':TABLE_ERRDISABLED},{'out':''},{'out':TABLE_RECOVERED}])
+        self.assertEqual(result,{'ok':True,'recovery':'recovered'});self.assertEqual(len(self.calls),3);self.assertEqual(equipment_probe.prepare_askpass.call_count,1)
+        paths={call['askpass_path'] for call in self.calls};self.assertEqual(len(paths),1);self.assertTrue(all(not os.path.exists(path) for path in paths))
+        self.assertEqual(self.calls[0]['stdin'],self.calls[2]['stdin']);self.assertIn('shutdown\nno shutdown',self.calls[1]['stdin'])
+
     def test_password_is_only_in_child_environment_never_argv_or_askpass_file(self):
         self.run_probe(self.status_job(), [{"out": TABLE_CLEAN}])
         call = self.calls[0]

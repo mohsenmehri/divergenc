@@ -6,7 +6,7 @@ Scope selected: latest LOCAL inventory, categories, cards, per-model/location st
 
 Use `releases/FAM-Custom-Access-SERVER-Patch.zip` on a **test copy** of the existing Windows/IIS deployment. Extract, take an independent verified FAM SQLite backup, and run `APPLY-CUSTOM-ACCESS-UPDATE.cmd` as administrator. Read bundled `README_FA.txt`. A code rollback is not a substitute for a database backup. Additive schema migration does not reseed existing accounts or replace the workbook.
 
-Package: 1,777,500 bytes. SHA256: `39e3e92f49c3d010fd4b7df9b66ce14e0b34a9656eb80080812356187b435671`.
+Package: 1,779,335 bytes. SHA256: `7ffe8f4dbe0dde9160c82682fbc5d457dfbb8af8bfa4cd652d1ac998e917c18a`.
 
 The ten-file payload is checksum verified; the new `equipment_inventory.py` participates in installation, presence-aware backup and rollback. The full-install source allowlist also includes equipment backend modules; the historical full-install ZIP was not rebuilt in this release. No runtime DB, credentials, keys, known_hosts, logs, environment, or node_modules are shipped. Root SERVER ZIP mirrors the release ZIP. LOCAL release bytes and hash are unchanged.
 
@@ -31,8 +31,8 @@ The constrained Windows SSH transport/recovery allowlist remains unchanged. The 
 
 ## Validation
 
-- Backend: **117 cases, 116 passed, 1 environment-specific skipped** using `.venv/bin/python -m unittest discover -s server/tests -p 'test_*.py'`. Includes central equipment coverage: persistence/restart, receipts/stale writes, scoped reads/merges, hidden dependencies, private-IP collision, operation denial, import capability, standards validation/parent privacy, scope session revocation, central history cleanup.
-- JavaScript: **58/58** shared-build and pure inventory/access/Excel/configuration/tools model tests.
+- Backend: **122 cases, 121 passed, 1 environment-specific skipped** using `.venv/bin/python -m unittest discover -s server/tests -p 'test_*.py'`. Includes central equipment coverage: persistence/restart, receipts/stale writes, scoped reads/merges, hidden dependencies, private-IP collision, operation denial, import capability, standards validation/parent privacy, scope session revocation, central history cleanup.
+- JavaScript: **59/59** shared-build and pure inventory/access/Excel/configuration/tools model tests.
 - Chromium integration: `FAM_EQUIPMENT_TEST_URL=http://localhost:8765 node scripts/smoke_equipment_server.cjs` against a disposable synthetic TESTING server. Actual private client, two isolated sessions, browser form save and reload, no equipment localStorage, shared real workflow presence, category rename and unsaved account draft preservation, central history broadcast, pending acknowledgment, coordinated workbook/equipment blocking and stale-write freeze. **Zero uncaught browser errors.**
 - Historical LOCAL full regression remains 110/110 from the preceding release; it was not rerun in full here because LOCAL source/artifact bytes are unchanged.
 - Windows/IIS installation, Microsoft Excel desktop and a real device connection were **not run**. No real device credentials were used.
@@ -52,3 +52,15 @@ After successful port checks, the server additionally reads the fixed `show inte
 Only a validated complete bounded table is returned. Prompt/banner/diagnostic content is removed, sensitive description payloads redacted, and table spacing/newlines preserved. The API repeats validation/redaction; output is rendered using textContent inside an LTR monospace pre, not HTML. Output, manual targets and credentials remain RAM only; no workbook/metadata/audit/browser-storage copy is written.
 
 New tests cover the fixed command bytes, whitespace preservation, banner/prompt removal, credential/token redaction, empty/partial/paginated/oversized/control-bearing output rejection, request-schema/CSRF/private-IP enforcement and host scope/operation denial. The browser fixture additionally covers manual IP scan and explicitly confirmed recovery, rejecting a public IP without a device call, standalone description reads, exact output comparison, an HTML-like description rendered as text (no image element), and absence of manual targets from central inventory. This uses the real authenticated API but a synthetic executor, never a live switch. Windows/IIS and real device connectivity remain unverified in this environment.
+
+## SSH latency optimization
+
+Inspection now uses `/api/equipment/inspect` to execute both fixed read commands in one SSH session (one helper launch, authentication and ASKPASS compilation), rather than separate status and automatic description requests. The original check and standalone description endpoints remain compatible; the latter runs only on explicit request. An unreadable boundary fails closed without reconnect/retry. Valid status with malformed description content can still return scoped port results with a separate sanitized description error.
+
+Recovery retains its three safety-critical SSH steps and deadline, but compiles a single secret-free ASKPASS executable inside the request-owned temporary directory. That executable is reused only within that bounded recovery, never across requests/users; the owner deletes it in finally on success/failure. Credentials remain in child RAM/environment only. No persistent helper binary, SSH multiplexing connection, credential cache, weak-cipher expansion or raw diagnostic log was introduced.
+
+Safe numeric `preparationMs` and `sshMs` metrics are returned for inspection and shown per switch. SSH time includes connection/authentication/command execution together; it does not separately measure RADIUS. Tests assert one SSH child and one ASKPASS compilation for combined inspection, no retry on timeout/missing boundary, and one compilation with all three mandatory recovery steps still present. The browser smoke verifies three combined requests for three switches and **zero** automatic standalone-description requests, alongside the existing manual-IP/recovery/output/privacy checks. These are structural/synthetic validations, not a live Windows/RADIUS speed benchmark. No percentage speedup is claimed.
+
+For the current interactive, bounded Windows-server workflow, retaining Python plus native OpenSSH avoids a migration that does not itself remove slow device authentication. Ansible is worth evaluating separately for inventory/playbook-oriented fleet automation and standardized scheduled jobs; no Ansible dependency, controller or deployment change is part of this patch.
+
+Combined inspection preserves the prior aggregate read budget: 50 s SSH session (two previous 25 s sessions), 55 s helper, 65 s parent, bounded 110 s browser wait. This avoids manufacturing a faster result by simply lowering the timeout for twice as many commands. Standalone reads and recovery retain their existing budgets.

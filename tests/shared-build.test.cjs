@@ -125,3 +125,9 @@ test('SERVER manual-IP and description output use the scoped API and text-only r
  assert.match(live,/eq-live-manual-ip/);assert.match(live,/FamEquipmentInventory.privateIP/);assert.match(live,/equipment\/descriptions/);assert.match(live,/pre=el\('pre','eq-live-command-output',item.output\)/);assert.match(live,/whiteSpace:'pre'/);assert.doesNotMatch(live,/innerHTML|localStorage|sessionStorage/);
  const helper=read('server/equipment_probe.py');assert.match(helper,/DESCRIPTION_COMMANDS = \("terminal length 0", "show interfaces description", "exit"\)/);
 });
+
+test('SERVER inspection uses one combined request and no automatic second description read',()=>{
+ const html=read(CENTRAL),live=html.match(/<script id="fam-equipment-management-js">([\s\S]*?)<\/script>/)[1];
+ assert.match(live,/FamShared.api\('equipment\/inspect'/);assert.match(live,/r.timings=data.timings/);
+ assert.doesNotMatch(live,/await descriptionsRead\(results.filter/);assert.match(live,/SSH و اجرای دستورها/);
+});

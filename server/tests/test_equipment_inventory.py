@@ -51,7 +51,7 @@ class EquipmentInventoryTests(api.CentralTests):
         calls=[]
         self.app.config.update(EQUIPMENT_OPS_ENABLED=True,EQUIPMENT_EXECUTOR=lambda job:(calls.append(job['host']) or {'ok':True,'ports':[]}))
         value={'host':'10.44.0.2','username':'fixture','password':'synthetic'}
-        self.assertEqual(self.post(w,'equipment/check',value).status_code,403);self.assertEqual(calls,[])
+        self.assertEqual(self.post(w,'equipment/check',value).status_code,403);self.assertEqual(self.post(w,'equipment/inspect',value).status_code,403);self.assertEqual(calls,[])
         value['host']='10.44.0.1';self.assertEqual(self.post(w,'equipment/check',value).status_code,200);self.assertEqual(calls,['10.44.0.1'])
 
     def test_description_read_requires_operation_and_scoped_host(self):
