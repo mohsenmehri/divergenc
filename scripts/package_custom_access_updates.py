@@ -52,6 +52,16 @@ if wheels.exists():
     wheels.rmdir()
 FILES=(
     (ROOT/'server'/'app.py','app.py'),
+    (ROOT/'server'/'account_policy.py','account_policy.py'),
+    (ROOT/'server'/'equipment_guard.py','equipment_guard.py'),
+    (ROOT/'server'/'manage.py','manage.py'),
+    (ROOT/'server'/'bootstrap_admin.py','bootstrap_admin.py'),
+    (ROOT/'server'/'windows'/'preflight_backup.py','preflight_backup.py'),
+    (ROOT/'server'/'windows'/'install.ps1','install.ps1'),
+    (ROOT/'server'/'windows'/'setup-ertebatat.ps1','setup-ertebatat.ps1'),
+    (ROOT/'server'/'windows'/'setup-common.psm1','setup-common.psm1'),
+    (ROOT/'server'/'windows'/'backup-daily.ps1','backup-daily.ps1'),
+    (ROOT/'server'/'windows'/'verify_deployment.py','verify_deployment.py'),
     (ROOT/'server'/'equipment_ops.py','equipment_ops.py'),
     (ROOT/'server'/'equipment_inventory.py','equipment_inventory.py'),
     (ROOT/'server'/'equipment_probe.py','equipment_probe.py'),

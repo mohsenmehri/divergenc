@@ -1,3 +1,5 @@
+> این سند داوریِ snapshot قبل از اصلاح است، نه وضعیت نسخهٔ اصلاح‌شده. نتیجهٔ پیاده‌سازی و راهنمای پچ فعلی: [SERVER_REVIEW_FIX_PATCH_FA.md](SERVER_REVIEW_FIX_PATCH_FA.md).
+
 # داوری مستقل هر سه گزارش — Python تجهیزات و SERVER
 
 تاریخ: ۲۰۲۶-۱۰-۱۷

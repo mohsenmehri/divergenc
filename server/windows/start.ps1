@@ -13,13 +13,13 @@ $env:FAM_EQUIPMENT_OPS_ENABLED='1'
 $env:FAM_EQUIPMENT_CONNECTOR_ENABLED='0'
 $env:FAM_EQUIPMENT_PYTHON=Join-Path $Root '.venv\Scripts\python.exe'
 $env:FAM_EQUIPMENT_SSH=Join-Path $env:SystemRoot 'System32\OpenSSH\ssh.exe'
-# Dedicated host-key store (public keys only). accept-new records a device key on
-# first contact and refuses any later change; set 'strict' to require pre-trusted keys.
+# Dedicated public-key store. Keys must be independently verified before use.
 $EquipmentDir=Join-Path (Split-Path -Parent $Config.DB) 'equipment'
 New-Item -ItemType Directory -Force -Path $EquipmentDir | Out-Null
 $env:FAM_EQUIPMENT_KNOWN_HOSTS=Join-Path $EquipmentDir 'known_hosts'
 $env:FAM_EQUIPMENT_RUNTIME_DIR=Join-Path $EquipmentDir 'tmp'
-$env:FAM_EQUIPMENT_HOST_KEY_POLICY='accept-new'
+if (!$env:FAM_EQUIPMENT_HOST_KEY_POLICY) { $env:FAM_EQUIPMENT_HOST_KEY_POLICY='strict' }
+if ($env:FAM_EQUIPMENT_HOST_KEY_POLICY -notin @('strict','accept-new')) { throw 'Invalid equipment host-key policy.' }
 $env:PYTHONUTF8='1'
 $env:PYTHONUNBUFFERED='1'
 New-Item -ItemType Directory -Force -Path $Config.LOG_DIR | Out-Null

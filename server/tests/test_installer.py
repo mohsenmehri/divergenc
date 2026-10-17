@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
+from unittest import mock
 import xml.etree.ElementTree as ET
 from werkzeug.serving import make_server, WSGIRequestHandler
 from server.app import create_app
@@ -22,6 +23,7 @@ class BackupChecks(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
         self.db=self.root/'fam.sqlite3'
+        bootstrap=mock.patch.dict(__import__('os').environ,{'FAM_INITIAL_PASSWORD':'Synthetic-bootstrap-password'});bootstrap.start();self.addCleanup(bootstrap.stop)
         create_app({'DB_PATH':str(self.db),'PUBLIC_ORIGIN':'https://'+HOST})
     def tearDown(self):self.temp.cleanup()
     def test_live_wal_and_accounts_preserved(self):
@@ -62,6 +64,7 @@ class HTTPSChecks(unittest.TestCase):
     def tearDownClass(cls):cls.certs.cleanup()
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.db=Path(self.temp.name)/'fam.sqlite3'
+        bootstrap=mock.patch.dict(__import__('os').environ,{'FAM_INITIAL_PASSWORD':'Synthetic-bootstrap-password'});bootstrap.start();self.addCleanup(bootstrap.stop)
         self.app=create_app({'DB_PATH':str(self.db),'PUBLIC_ORIGIN':'https://'+HOST})
         self.start('correct')
     def start(self,name):
@@ -174,25 +177,33 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertIn("'equipment_ops.py'",script)
         self.assertIn("'equipment_probe.py'",script)
         self.assertIn("'start.ps1'",script)
-        self.assertIn("'FAM-NetworkWorker'",script)
+        self.assertIn("No bootstrap/reset is allowed",script)
         self.assertIn('Test-OpenSshClient',script)
         self.assertIn("'System32\\OpenSSH\\ssh.exe'",script)
         self.assertIn('-Q cipher',script)
         self.assertIn("'aes128-cbc'",script)
         self.assertNotIn('pip install',script)
         self.assertNotIn('netmiko',script)
-        self.assertLess(script.index('Test-OpenSshClient;Stop-FamTask'),script.index('foreach($Name in $ExpectedNames){Copy-Required'))
+        self.assertLess(script.index('  Test-OpenSshClient\n'),script.index('foreach($Name in $ExpectedNames){Copy-Required'))
         self.assertFalse((patch/'WHEELS-SHA256SUMS.txt').exists())
         self.assertFalse((patch/'wheels').exists())
         self.assertIn("'web.config'",script)
         self.assertIn('Protect-PrivateUi',script)
+        self.assertIn('Protect-Backup $Backup',script)
+        self.assertIn('preflight_backup.py',script)
+        self.assertIn('presence.json',script)
+        self.assertIn('code-hashes.json',script)
+        self.assertIn('if($RollbackBackup)',script)
+        self.assertIn('Idempotent:',script)
+        self.assertIn('Remove-IfPresent $LegacyHtml',script)
+        self.assertIn('Installed file hash mismatch.',script)
         self.assertIn('categories TEXT', (payload/'app.py').read_text(encoding='utf8'))
         self.assertIn('const PERMISSION_GROUPS=',(payload/'FAM.html').read_text(encoding='utf8'))
         self.assertNotIn("id:'user-role'",(payload/'FAM.html').read_text(encoding='utf8'))
         self.assertIn('max-age=31536000',(payload/'web.config').read_text(encoding='utf8'))
         import hashlib
         entries={name:digest for digest,name in (line.split('  ',1) for line in (payload/'SHA256SUMS.txt').read_text(encoding='utf8').splitlines())}
-        self.assertEqual(set(entries),{'app.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js','web.config'})
+        self.assertEqual(set(entries),{'app.py','account_policy.py','equipment_guard.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py','FAM.html','login.html','login.css','login.js','web.config'})
         for name,digest in entries.items():self.assertEqual(digest,hashlib.sha256((payload/name).read_bytes()).hexdigest())
         self.assertEqual((payload/'app.py').read_bytes(),(root/'server'/'app.py').read_bytes())
         self.assertEqual((payload/'equipment_ops.py').read_bytes(),(root/'server'/'equipment_ops.py').read_bytes())
@@ -207,7 +218,7 @@ class IISConfigurationCheck(unittest.TestCase):
         from zipfile import ZipFile
         with ZipFile(release) as archive:
             names=set(archive.namelist())
-            self.assertEqual(names,{'APPLY-CUSTOM-ACCESS-UPDATE.cmd','APPLY-CUSTOM-ACCESS-UPDATE.ps1','README_FA.txt','payload/SHA256SUMS.txt',*('payload/'+n for n in entries)})
+            self.assertEqual(names,{'APPLY-CUSTOM-ACCESS-UPDATE.cmd','APPLY-CUSTOM-ACCESS-UPDATE.ps1','README_FA.txt','ROLLBACK-CUSTOM-ACCESS-UPDATE.ps1','ROLLBACK-CUSTOM-ACCESS-UPDATE.cmd','payload/SHA256SUMS.txt',*('payload/'+n for n in entries)})
             for name in entries:self.assertEqual(hashlib.sha256(archive.read('payload/'+name)).hexdigest(),entries[name])
             for name in names:
                 self.assertFalse(name.endswith(('.whl','.pfx','.key','.pem','.sqlite3','.log')),name)

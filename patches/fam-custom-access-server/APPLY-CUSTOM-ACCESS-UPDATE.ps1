@@ -1,84 +1,138 @@
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
-<#
-  Applies the FAM central custom-access/Equipment Management update.  Equipment
-  Management now connects directly from this FAM server to the device with the
-  Windows OpenSSH client (ssh.exe, legacy exception: aes128-cbc only); no Python
-  SSH library, VDI connector, service, or token is installed.  The update also
-  keeps the large interactive client outside IIS www: it is served by the
-  loopback backend only after a FAM session is verified.  Existing data and the
-  previous application files are backed up for rollback; no worksheet is changed.
-#>
+<# Offline SERVER repair: verified source allowlist; private SQLite backup;
+   rollback restores code only, never overwrites current user data. #>
 [CmdletBinding()]
-param([string]$InstallRoot='C:\FAM',[string]$DataDir='C:\FAMData')
+param([string]$InstallRoot='C:\FAM',[string]$DataDir='C:\FAMData',[string]$RollbackBackup='')
 $ErrorActionPreference='Stop';Set-StrictMode -Version Latest
-$PatchRoot=Split-Path -Parent $PSCommandPath;$Payload=Join-Path $PatchRoot 'payload';$Server=Join-Path $InstallRoot 'server'
-$StartPath=Join-Path $Server 'windows\start.ps1';$FAMPython=Join-Path $Server '.venv\Scripts\python.exe';$SshClient=Join-Path $env:SystemRoot 'System32\OpenSSH\ssh.exe';$EquipmentDir=Join-Path $DataDir 'equipment';$BackupDir=Join-Path $DataDir 'backups'
-$Stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
-$ExpectedNames=@('app.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js','web.config')
-$Target=@{
-  'equipment_inventory.py'=(Join-Path $Server 'equipment_inventory.py');'app.py'=(Join-Path $Server 'app.py');'equipment_ops.py'=(Join-Path $Server 'equipment_ops.py');'equipment_probe.py'=(Join-Path $Server 'equipment_probe.py');'start.ps1'=$StartPath;
-  'FAM.html'=(Join-Path $Server 'private_ui\FAM.html');'login.html'=(Join-Path $Server 'www\login.html');'login.css'=(Join-Path $Server 'www\login.css');
-  'login.js'=(Join-Path $Server 'www\login.js');'web.config'=(Join-Path $Server 'www\web.config')
-}
-$LegacyHtml=Join-Path $Server 'www\FAM.html';$Backup=$null;$Copied=$false;$TaskWasRunning=$false;$Presence=@{}
+$PatchRoot=Split-Path -Parent $PSCommandPath;$Payload=Join-Path $PatchRoot 'payload'
+$Server=Join-Path $InstallRoot 'server';$StartPath=Join-Path $Server 'windows\start.ps1'
+$FAMPython=Join-Path $Server '.venv\Scripts\python.exe'
+$SshClient=Join-Path $env:SystemRoot 'System32\OpenSSH\ssh.exe'
+$EquipmentDir=Join-Path $DataDir 'equipment';$BackupDir=Join-Path $DataDir 'backups'
+$ExpectedNames=@('app.py','account_policy.py','equipment_guard.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py','FAM.html','login.html','login.css','login.js','web.config')
+$Target=@{}
+foreach($Name in @('app.py','account_policy.py','equipment_guard.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py')){$Target[$Name]=Join-Path $Server $Name}
+foreach($Name in @('start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py')){$Target[$Name]=Join-Path $Server ('windows\'+$Name)}
+foreach($Name in @('login.html','login.css','login.js','web.config')){$Target[$Name]=Join-Path $Server ('www\'+$Name)}
+$Target['FAM.html']=Join-Path $Server 'private_ui\FAM.html'
+$LegacyHtml=Join-Path $Server 'www\FAM.html'
+$Backup=$null;$Copied=$false;$Stopped=$false;$DailyEnabled=$false;$DailyExists=$false;$Presence=@{}
 function Assert-File([string]$Path,[string]$Message){if(!(Test-Path -LiteralPath $Path -PathType Leaf)){throw $Message}}
-function Wait-Backend([bool]$Listening){$Until=(Get-Date).AddSeconds(30);do{$Open=!!(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue);if($Open -eq $Listening){return};Start-Sleep -Milliseconds 500}while((Get-Date)-lt $Until);if($Listening){throw 'The FAM backend did not listen within 30 seconds.'};throw 'The FAM backend did not stop within 30 seconds.'}
-function Stop-FamTask {
-  $Task=Get-ScheduledTask -TaskName 'FAM-Central' -ErrorAction SilentlyContinue
-  if(!$Task){throw 'FAM-Central is missing. This patch only applies to the installed central FAM server.'}
-  if($Task.Actions.Execute -notmatch 'powershell\.exe$' -or $Task.Actions.Arguments -notmatch [regex]::Escape($StartPath)){throw 'FAM-Central is not the expected FAM backend task. No file was changed.'}
-  $script:TaskWasRunning=$Task.State -eq 'Running';if($script:TaskWasRunning){Stop-ScheduledTask -TaskName 'FAM-Central';Wait-Backend $false}
-}
-function Start-FamTask{Start-ScheduledTask -TaskName 'FAM-Central';Wait-Backend $true}
+function Remove-IfPresent([string]$Path){if(Test-Path -LiteralPath $Path){Remove-Item -LiteralPath $Path -Force -ErrorAction Stop}}
 function Copy-Required([string]$From,[string]$To){New-Item -ItemType Directory -Force -Path (Split-Path -Parent $To)|Out-Null;Copy-Item -LiteralPath $From -Destination $To -Force}
+function Wait-Backend([bool]$Listening){
+  $Until=(Get-Date).AddSeconds(30)
+  do{$Open=!!(Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue);if($Open -eq $Listening){return};Start-Sleep -Milliseconds 500}while((Get-Date)-lt $Until)
+  throw 'Backend did not reach the required state within 30 seconds.'
+}
+function Validate-Task {
+  $Task=Get-ScheduledTask -TaskName 'FAM-Central' -ErrorAction Stop
+  if($Task.State -eq 'Disabled' -and !$RollbackBackup){throw 'FAM-Central is disabled; investigate and enable the installed task before applying.'}
+  if(@($Task.Actions).Count -ne 1 -or $Task.Actions.Execute -notmatch 'powershell\.exe$' -or $Task.Actions.Arguments -notmatch [regex]::Escape($StartPath)){throw 'Unexpected FAM-Central task; no change permitted.'}
+}
+function Stop-FamTask {
+  Validate-Task
+  $script:Stopped=$true
+  Disable-ScheduledTask -TaskName 'FAM-Central'|Out-Null
+  $Daily=Get-ScheduledTask -TaskName 'FAM-Central-Backup' -ErrorAction SilentlyContinue
+  if($Daily){
+    $script:DailyExists=$true;$script:DailyEnabled=$Daily.State -ne 'Disabled'
+    Disable-ScheduledTask -TaskName 'FAM-Central-Backup'|Out-Null
+    if($Daily.State -eq 'Running'){Stop-ScheduledTask -TaskName 'FAM-Central-Backup'}
+  }
+  Stop-ScheduledTask -TaskName 'FAM-Central';Wait-Backend $false
+}
+function Start-FamTask{Enable-ScheduledTask -TaskName 'FAM-Central'|Out-Null;Start-ScheduledTask -TaskName 'FAM-Central';Wait-Backend $true}
+function Resume-BackupTask{if($DailyExists -and $DailyEnabled){Enable-ScheduledTask -TaskName 'FAM-Central-Backup'|Out-Null}}
 function Test-OpenSshClient {
-  # Direct Equipment Management needs only the in-box Windows OpenSSH client.
-  # Verify it exists and that the single temporary legacy cipher is available;
-  # nothing is downloaded or pip-installed.
-  Assert-File $FAMPython 'Installed FAM Python is missing.'
-  Assert-File $SshClient 'Windows OpenSSH client (ssh.exe) is missing. Install the "OpenSSH Client" optional feature first. No file was changed.'
-  $Previous=$ErrorActionPreference;$ErrorActionPreference='Continue';try{$Ciphers=@(& $SshClient -Q cipher 2>$null);$Code=$LASTEXITCODE}finally{$ErrorActionPreference=$Previous}
-  if($Code -ne 0 -or @($Ciphers|Where-Object{"$_".Trim() -eq 'aes128-cbc'}).Count -ne 1){throw 'ssh.exe does not offer aes128-cbc; the FAM server OpenSSH client must support the temporary legacy cipher. No file was changed.'}
+  Assert-File $SshClient 'Windows OpenSSH client is missing. No download or change was performed.'
+  $Ciphers=@(& $SshClient -Q cipher 2>$null)
+  if($LASTEXITCODE -ne 0 -or 'aes128-cbc' -notin $Ciphers){throw 'OpenSSH must support aes128-cbc. No weak fallback is enabled.'}
   $Compilers=@('Framework64','Framework')|ForEach-Object{Join-Path $env:SystemRoot ('Microsoft.NET\'+$_+'\v4.0.30319\csc.exe')}|Where-Object{Test-Path -LiteralPath $_ -PathType Leaf}
-  if(!@($Compilers).Count){throw '.NET Framework 4.x compiler (csc.exe) is required for the temporary secret-free ASKPASS executable. No file was changed.'}
-  New-Item -ItemType Directory -Force -Path $EquipmentDir|Out-Null
+  if(!@($Compilers).Count){throw '.NET Framework 4.x csc.exe is required for the secret-free ASKPASS helper.'}
+}
+function Protect-Backup([string]$Path) {
+  $Acl=[Security.AccessControl.DirectorySecurity]::new();$Acl.SetAccessRuleProtection($true,$false)
+  foreach($SidText in @('S-1-5-18','S-1-5-32-544')){$Sid=[Security.Principal.SecurityIdentifier]::new($SidText);$Acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($Sid,'FullControl','ContainerInherit,ObjectInherit','None','Allow'))}
+  Set-Acl -LiteralPath $Path -AclObject $Acl
 }
 function Protect-PrivateUi {
   $Path=Join-Path $Server 'private_ui';$Acl=[Security.AccessControl.DirectorySecurity]::new();$Acl.SetAccessRuleProtection($true,$false)
   foreach($Pair in @(@('S-1-5-18','FullControl'),@('S-1-5-32-544','FullControl'),@('S-1-5-19','ReadAndExecute'))){$Sid=[Security.Principal.SecurityIdentifier]::new($Pair[0]);$Acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($Sid,$Pair[1],'ContainerInherit,ObjectInherit','None','Allow'))}
   Set-Acl -LiteralPath $Path -AclObject $Acl
 }
-function Restore-Backup {
-  if(!$Backup){return};Stop-ScheduledTask -TaskName 'FAM-Central' -ErrorAction SilentlyContinue;try{Wait-Backend $false}catch{}
-  foreach($Name in @('app.py','start.ps1','web.config')){Copy-Required (Join-Path $Backup $Name) $Target[$Name]}
-  Copy-Required (Join-Path $Backup 'legacy-FAM.html') $LegacyHtml
-  foreach($Name in @('equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js')){
-    if($Presence[$Name]){Copy-Required (Join-Path $Backup $Name) $Target[$Name]}else{Remove-Item -LiteralPath $Target[$Name] -Force -ErrorAction SilentlyContinue}
+function Validate-Backup([string]$Directory){
+  $Full=[IO.Path]::GetFullPath($Directory);$Parent=[IO.Path]::GetFullPath($BackupDir).TrimEnd('\')+'\'
+  if(!$Full.StartsWith($Parent,[StringComparison]::OrdinalIgnoreCase)){throw 'Rollback must use a private FAM backup directory.'}
+  $Saved=Get-Content -LiteralPath (Join-Path $Full 'presence.json') -Raw|ConvertFrom-Json
+  $Hashes=Get-Content -LiteralPath (Join-Path $Full 'code-hashes.json') -Raw|ConvertFrom-Json
+  $Keys=@($ExpectedNames)+@('legacy-FAM.html')
+  if((@($Saved.PSObject.Properties.Name|Sort-Object)-join '|') -ne (@($Keys|Sort-Object)-join '|')){throw 'Backup presence manifest does not match this repair version.'}
+  foreach($Name in $Keys){
+    if($Saved.$Name -isnot [bool]){throw 'Invalid presence value.'}
+    if($Saved.$Name){
+      Assert-File (Join-Path $Full $Name) 'Incomplete code backup.'
+      if($Hashes.$Name -notmatch '^[a-fA-F0-9]{64}$' -or (Get-FileHash -LiteralPath (Join-Path $Full $Name) -Algorithm SHA256).Hash -ine $Hashes.$Name){throw 'Backup code hash mismatch.'}
+    }
   }
+  return $Saved
 }
-try {
-  $Manifest=@{};foreach($Line in @(Get-Content -LiteralPath (Join-Path $Payload 'SHA256SUMS.txt')|Where-Object{$_.Trim()})){
-    if($Line -notmatch '^([a-fA-F0-9]{64})  ([A-Za-z0-9._-]+)$'){throw 'SHA256SUMS.txt is malformed.'};if($Manifest.ContainsKey($matches[2])){throw 'SHA256SUMS.txt has a duplicate entry.'};$Manifest[$matches[2]]=$matches[1]
+function Restore-Backup([string]$Directory){
+  $Saved=Validate-Backup $Directory
+  foreach($Name in $ExpectedNames){if($Saved.$Name){Copy-Required (Join-Path $Directory $Name) $Target[$Name]}else{Remove-IfPresent $Target[$Name]}}
+  if($Saved.'legacy-FAM.html'){Copy-Required (Join-Path $Directory 'legacy-FAM.html') $LegacyHtml}else{Remove-IfPresent $LegacyHtml}
+}
+try{
+  Assert-File $FAMPython 'Installed FAM virtual environment is missing. This is an update, not a fresh installer.'
+  Assert-File $Target['app.py'] 'Installed FAM app.py is missing.'
+  Assert-File (Join-Path $Server 'windows\settings.json') 'Installed settings.json is missing.'
+  $Config=Get-Content -LiteralPath (Join-Path $Server 'windows\settings.json') -Raw|ConvertFrom-Json
+  $DB=[IO.Path]::GetFullPath($Config.DB)
+  if(![IO.Path]::GetDirectoryName($DB).Equals([IO.Path]::GetFullPath($DataDir).TrimEnd('\'),[StringComparison]::OrdinalIgnoreCase)){throw 'DataDir differs from installed settings. Supply the correct private DataDir.'}
+  Assert-File $DB 'Existing FAM database is missing. No bootstrap/reset is allowed by this patch.'
+  Validate-Task
+  if($RollbackBackup){
+    $null=Validate-Backup $RollbackBackup
+    Stop-FamTask;Restore-Backup $RollbackBackup;Start-FamTask;Resume-BackupTask
+    Write-Host 'CODE ROLLBACK COMPLETE. Current database and user data were NOT restored or overwritten.';exit 0
   }
-  $ManifestList=(@($Manifest.Keys|Sort-Object)-join '|');$ExpectedList=(@($ExpectedNames|Sort-Object)-join '|');if($ManifestList -ne $ExpectedList){throw 'SHA256SUMS.txt must contain exactly the expected central payload files.'}
-  foreach($Name in $ExpectedNames){$Source=Join-Path $Payload $Name;Assert-File $Source ('Patch payload '+$Name+' is missing.');if((Get-FileHash -LiteralPath $Source -Algorithm SHA256).Hash -ine $Manifest[$Name]){throw ('Payload SHA256 mismatch for '+$Name+'. No file was changed.')}}
-  Assert-File $Target['app.py'] 'Installed FAM app.py is missing.';Assert-File $FAMPython 'Installed FAM Python is missing.';Assert-File $LegacyHtml 'Installed legacy FAM.html is missing.';Assert-File $Target['web.config'] 'Installed FAM web.config is missing.';Assert-File $StartPath 'Installed FAM start.ps1 is missing.'
-  if(!(Test-Path -LiteralPath $DataDir -PathType Container)){throw 'C:\FAMData is missing. No file was changed.'};New-Item -ItemType Directory -Force -Path $BackupDir|Out-Null
-  $Backup=Join-Path $BackupDir ('custom-access-'+$Stamp);New-Item -ItemType Directory -Force -Path $Backup|Out-Null
-  Copy-Required $Target['app.py'] (Join-Path $Backup 'app.py');Copy-Required $Target['start.ps1'] (Join-Path $Backup 'start.ps1');Copy-Required $LegacyHtml (Join-Path $Backup 'legacy-FAM.html');Copy-Required $Target['web.config'] (Join-Path $Backup 'web.config')
-  foreach($Name in @('equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','FAM.html','login.html','login.css','login.js')){$Presence[$Name]=Test-Path -LiteralPath $Target[$Name] -PathType Leaf;if($Presence[$Name]){Copy-Required $Target[$Name] (Join-Path $Backup $Name)}}
-  Test-OpenSshClient;Stop-FamTask;$Copied=$true
-  $RetiredWorker=Get-ScheduledTask -TaskName 'FAM-NetworkWorker' -ErrorAction SilentlyContinue
-  if($RetiredWorker){
-    if($RetiredWorker.State -eq 'Running'){Stop-ScheduledTask -TaskName 'FAM-NetworkWorker' -ErrorAction SilentlyContinue}
-    Disable-ScheduledTask -TaskName 'FAM-NetworkWorker' -ErrorAction SilentlyContinue | Out-Null
+  $Manifest=@{}
+  foreach($Line in @(Get-Content -LiteralPath (Join-Path $Payload 'SHA256SUMS.txt')|Where-Object{$_.Trim()})){
+    if($Line -notmatch '^([a-fA-F0-9]{64})  ([A-Za-z0-9._-]+)$' -or $Manifest.ContainsKey($matches[2])){throw 'Invalid or duplicate payload manifest entry.'}
+    $Manifest[$matches[2]]=$matches[1]
   }
-  foreach($Name in $ExpectedNames){Copy-Required (Join-Path $Payload $Name) $Target[$Name]}
-  Protect-PrivateUi;Start-FamTask
-  Write-Host '';Write-Host 'CUSTOM ACCESS + PRIVATE FAM UI UPDATE APPLIED.' -ForegroundColor Green;Write-Host ('Equipment Management: direct ssh.exe from this server; host keys: '+(Join-Path $EquipmentDir 'known_hosts'))
-  Write-Host ('Backup: '+$Backup);Write-Host 'Open the FAM root URL. Only login.html is IIS-static; the spreadsheet UI is released by the backend after session verification.';exit 0
+  if((@($Manifest.Keys|Sort-Object)-join '|') -ne (@($ExpectedNames|Sort-Object)-join '|')){throw 'Unexpected payload allowlist.'}
+  foreach($Name in $ExpectedNames){Assert-File (Join-Path $Payload $Name) 'Missing payload file.';if((Get-FileHash -LiteralPath (Join-Path $Payload $Name) -Algorithm SHA256).Hash -ine $Manifest[$Name]){throw 'Payload hash mismatch. No installed file was changed.'}}
+  Test-OpenSshClient
+  New-Item -ItemType Directory -Force -Path $BackupDir|Out-Null
+  $Stamp=(Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N').Substring(0,6)
+  $Backup=Join-Path $BackupDir ('custom-access-'+$Stamp)
+  New-Item -ItemType Directory -Force -Path $Backup|Out-Null
+  Protect-Backup $Backup
+  Stop-FamTask
+  # Use the FIXED, dependency-free backup validator before replacing old code.
+  & $FAMPython (Join-Path $Payload 'preflight_backup.py') $DB (Join-Path $Backup 'database.sqlite3')
+  if($LASTEXITCODE -ne 0){throw 'Verified database backup failed. Installed code was not changed.'}
+  $Hashes=@{}
+  foreach($Name in $ExpectedNames){$Presence[$Name]=Test-Path -LiteralPath $Target[$Name] -PathType Leaf;if($Presence[$Name]){Copy-Required $Target[$Name] (Join-Path $Backup $Name);$Hashes[$Name]=(Get-FileHash -LiteralPath (Join-Path $Backup $Name) -Algorithm SHA256).Hash}}
+  $Presence['legacy-FAM.html']=Test-Path -LiteralPath $LegacyHtml -PathType Leaf
+  if($Presence['legacy-FAM.html']){Copy-Required $LegacyHtml (Join-Path $Backup 'legacy-FAM.html');$Hashes['legacy-FAM.html']=(Get-FileHash -LiteralPath (Join-Path $Backup 'legacy-FAM.html') -Algorithm SHA256).Hash}
+  $Presence|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $Backup 'presence.json') -Encoding UTF8
+  $Hashes|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $Backup 'code-hashes.json') -Encoding UTF8
+  $Copied=$true
+  foreach($Name in $ExpectedNames){Copy-Required (Join-Path $Payload $Name) $Target[$Name];if((Get-FileHash -LiteralPath $Target[$Name] -Algorithm SHA256).Hash -ine $Manifest[$Name]){throw 'Installed file hash mismatch.'}}
+  # Idempotent: a second apply does not require a retired public FAM.html.
+  Remove-IfPresent $LegacyHtml
+  Protect-PrivateUi;Start-FamTask;Resume-BackupTask
+  Write-Host 'SERVER SECURITY + RECOVERY FIX APPLIED.' -ForegroundColor Green
+  Write-Host ('Private backup: '+$Backup)
+  Write-Host ('Host keys: '+(Join-Path $EquipmentDir 'known_hosts')+'; strict by default. Provision verified keys before device checks.')
 }catch{
-  $Message=$_.Exception.Message;if($Copied -and $Backup){try{Restore-Backup;Start-FamTask;Write-Warning 'The prior FAM application files were restored from the patch backup.'}catch{Write-Warning 'Automatic rollback failed; restore the files from the backup path shown above.'}}elseif($TaskWasRunning){try{Start-FamTask}catch{Write-Warning 'FAM-Central needs administrator review in Task Scheduler.'}}
-  Write-Host ('PATCH NOT COMPLETE: '+$Message) -ForegroundColor Red;exit 1
+  $Reason=$_.Exception.Message
+  if($RollbackBackup){try{Resume-BackupTask}catch{};Write-Error 'Rollback failed; backend may be stopped. Inspect the private backup and service status.' -ErrorAction Continue;exit 1}
+  if($Copied){
+    try{Stop-ScheduledTask -TaskName 'FAM-Central' -ErrorAction SilentlyContinue;Wait-Backend $false;Restore-Backup $Backup;Start-FamTask;Resume-BackupTask;Write-Warning 'Previous code restored; database was not overwritten.'}catch{Write-Error 'Automatic code rollback failed; backend may be stopped. Use the private backup and guide.' -ErrorAction Continue}
+  }elseif($Stopped){try{Start-FamTask;Resume-BackupTask}catch{Write-Error 'Could not restart the unchanged backend.' -ErrorAction Continue}}
+  Write-Error $Reason -ErrorAction Continue;exit 1
 }

@@ -28,7 +28,7 @@ test('only a minimal login shell is static while the interactive client remains 
 test('the deployed client has a verifiable release marker',()=>{
  const local=read('FAM.html'),central=read(CENTRAL);
  for(const html of [local,central]){
-  assert.match(html,html===central?/<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-20261017">/:/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
+  assert.match(html,html===central?/<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-FIX-20261017">/:/<meta name="fam-release" content="FAM-UI-17-IIS-20261013\.1">/);
   assert.match(html,/FAM UI-17 · 2026-10-13/);
   assert.match(html,/operation-primary-action/);
   assert.match(html,/function manageCategorySections\(categoryId\)/);
@@ -130,6 +130,12 @@ test('SERVER manual-IP and description output use the scoped API and text-only r
 
 test('SERVER inspection uses one combined request and no automatic second description read',()=>{
  const html=read(CENTRAL),live=html.match(/<script id="fam-equipment-management-js">([\s\S]*?)<\/script>/)[1];
- assert.match(live,/FamShared.api\('equipment\/inspect'/);assert.match(live,/r.timings=data.timings/);
+ assert.match(live,/FamShared.api\(statusOnly\?'equipment\/check':'equipment\/inspect'/);assert.match(live,/statusOnly=statusOnly===true/);assert.match(live,/eq-live-status-only/);assert.match(live,/r.timings=data.timings/);
  assert.doesNotMatch(live,/await descriptionsRead\(results.filter/);assert.match(live,/SSH و اجرای دستورها/);
+});
+
+test('SERVER recovery errors stop the batch and invalidate remaining approvals',()=>{
+ const live=read('src/equipment-live-server.js');
+ assert.match(live,/if\(result.recovery==='still_errdisabled'\)throw Error/);
+ assert.match(live,/port.ticket=''/);assert.match(live,/report\(\);break;\}chosen.delete/);
 });

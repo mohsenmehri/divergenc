@@ -11,6 +11,11 @@ import tempfile
 from datetime import datetime, timezone
 import uuid
 
+try:
+    from .account_policy import has_active_manager
+except ImportError:
+    from account_policy import has_active_manager
+
 TABLES={'state','users','settings','sessions','receipts','audit','undo','attempts'}
 
 def connect_read(path):
@@ -31,7 +36,7 @@ def check(db):
             from app import validate_state, Problem
         validate_state(json.loads(row[0]))
     except Problem as e:raise ValueError('Invalid workbook in backup: '+e.message) from e
-    if not db.execute('SELECT 1 FROM users WHERE role=1 AND enabled=1').fetchone():raise ValueError('No active administrator')
+    if not has_active_manager(db):raise ValueError('No active administrator')
 
 def backup(source,destination):
     destination=Path(destination).resolve()
@@ -62,6 +67,8 @@ def restore(source,destination,server_stopped=False):
             src.backup(prepared);check(prepared)
             prepared.execute('UPDATE state SET epoch=? WHERE id=1',(str(uuid.uuid4()),))
             for table in ('sessions','receipts','undo','attempts'):prepared.execute('DELETE FROM '+table)
+            for table in ('equipment_used_tickets','equipment_leases'):
+                if prepared.execute("SELECT 1 FROM sqlite_master WHERE name=?",(table,)).fetchone():prepared.execute('DELETE FROM '+table)
             prepared.commit()
         finally:src.close();prepared.close()
         if destination.exists():

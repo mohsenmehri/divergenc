@@ -15,8 +15,8 @@ Security contract
   default cipher list (``-o Ciphers=+aes128-cbc``).  ``3des-cbc``,
   ``aes192-cbc`` and ``aes256-cbc`` are never offered.
 * Host keys are verified with a dedicated ``known_hosts`` file.  The default
-  policy is ``accept-new`` (record on first contact, refuse any later change);
-  ``strict`` requires the key to be pre-trusted.  Host-key checking is never
+  policy is ``strict`` (requires an independently pre-trusted key);
+  explicit ``accept-new`` is TOFU, not equivalent to strict.  Host-key checking is never
   disabled.
 * Only fixed status / interface-description / bounded recovery sequences exist. There is
   no terminal, free-form command, ``enable``, ``write memory`` or ``copy``.
@@ -273,7 +273,7 @@ def runtime_directory() -> str:
 
 
 def host_key_policy() -> str:
-    value = os.environ.get("FAM_EQUIPMENT_HOST_KEY_POLICY", "accept-new").strip().lower()
+    value = os.environ.get("FAM_EQUIPMENT_HOST_KEY_POLICY", "strict").strip().lower()
     try:
         return HOST_KEY_POLICIES[value]
     except KeyError as exc:  # An unknown policy must never silently relax checking.
@@ -459,13 +459,24 @@ def status(job):
     return safe_status_ports(status_table(job, deadline),job)
 
 
+SENSITIVE_LABEL = re.compile(r'\b(?:password|secret|community|key(?:-string)?|token|authorization|api[_-]?key|access[_-]?token)\b\s*(?:[:=]\s*|\s+)\S+|BEGIN[^\n]*PRIVATE KEY|(?:radius|tacacs)[^\n]*\bkey\s+\S+',re.I)
+
+def sensitive_label(text,username,password):
+    folded=text.casefold()
+    return (any(secret and (secret.casefold() in folded or
+                (len(folded)>=8 and secret.casefold().startswith(folded)))
+                for secret in (username,password)) or bool(SENSITIVE_LABEL.search(text)) or
+            bool(re.search(r'[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]',text)))
+
 def safe_status_ports(output,job):
-    ports = errdisabled_interfaces(output)
-    for item in ports:
-        # A device-controlled Name column must not reflect submitted credentials.
-        if any(secret in item["description"] for secret in (job["username"], job["password"])):
-            item["description"] = ""
-    return {"ok": True, "ports": ports}
+    ports={}
+    for interface,name,status in _table_rows(output):
+        if status.lower() not in {'err-disabled','errdisable','errdisabled'}:continue
+        # Inspect the ORIGINAL field before bounding it. Otherwise a long secret
+        # can become a visible prefix which no longer matches its full value.
+        label=name.strip()
+        ports.setdefault(interface,'' if sensitive_label(label,job['username'],job['password']) else _clean_description(label))
+    return {'ok':True,'ports':[{'interface':i,'description':ports[i]} for i in sorted(ports)]}
 
 
 DESCRIPTION_HEADER = re.compile(r"^\s*Interface\s+Status\s+Protocol\s+Description\s*$",re.I)
@@ -490,7 +501,7 @@ def descriptions_table(output,username,password):
         match=DESCRIPTION_ROW.fullmatch(line)
         if not match or not any(c.isdigit() for c in match[2]) or match[2].lower() in seen or len(seen)>=2048:raise ProbeError('descriptions_unreadable')
         seen.add(match[2].lower());description=match[3]
-        sensitive=any(secret and secret.casefold() in description.casefold() for secret in (username,password)) or re.search(r'\b(?:password|secret|community|key(?:-string)?|token|authorization|api[_-]?key|access[_-]?token)\b\s*(?:[:=]\s*|\s+)\S+|BEGIN[^\n]*PRIVATE KEY|(?:radius|tacacs)[^\n]*\bkey\s+\S+',description,re.I)
+        sensitive=sensitive_label(description,username,password)
         if sensitive:line=match[1]+'[REDACTED]';redacted=True
         lines.append(line)
     if not started or not seen:raise ProbeError('descriptions_unreadable')
@@ -544,14 +555,20 @@ def _recover(job,deadline):
     if interface not in {row[0] for row in _table_rows(before)}:raise ProbeError("status_unreadable")
     if interface not in errdisabled_ports(before):
         return {"ok": True, "recovery": "not_errdisabled"}
-    config_output = session_output(job, recovery_commands(interface), deadline)
-    if cli_errors(config_output):
-        # e.g. insufficient privilege: do not claim recovery succeeded. Never save.
-        raise ProbeError("connection_failed")
-    after_table=status_table(job, deadline)
-    if interface not in {row[0] for row in _table_rows(after_table)}:raise ProbeError("status_unreadable")
-    after = errdisabled_ports(after_table)
-    return {"ok": True, "recovery": "still_errdisabled" if interface in after else "recovered"}
+    try:
+        config_output = session_output(job, recovery_commands(interface), deadline)
+        if cli_errors(config_output):
+            # e.g. insufficient privilege: do not claim recovery succeeded. Never save.
+            raise ProbeError("connection_failed")
+        after_table=status_table(job, deadline)
+        if interface not in {row[0] for row in _table_rows(after_table)}:raise ProbeError("status_unreadable")
+        after = errdisabled_ports(after_table)
+        return {"ok": True, "recovery": "still_errdisabled" if interface in after else "recovered"}
+    except Exception:
+        # After config may have started, neither delivery nor rollback is
+        # knowable. Never retry/enable an administratively disabled port here.
+        raise ProbeError('recovery_uncertain') from None
+
 
 
 def execute(value):
@@ -588,12 +605,52 @@ def execute(value):
         return {"ok": False, "error": "connection_failed"}
 
 
+_PROCESS_JOB = None
+
+def protect_process_tree():
+    """Fail closed on Windows if a kill-on-close Job cannot supervise us.
+
+    The sole non-inheritable Job handle lives until PROCESS EXIT, not a Python
+    finally (which would kill us before responding). Kernel close-on-exit also
+    covers an externally killed helper, compiler and detached ssh descendants.
+    """
+    global _PROCESS_JOB
+    if os.name != 'nt' or _PROCESS_JOB is not None:return
+    import ctypes
+    from ctypes import wintypes as w
+    class Basic(ctypes.Structure):
+        _fields_=[('process_time',ctypes.c_int64),('job_time',ctypes.c_int64),
+                  ('flags',ctypes.c_uint32),('min_ws',ctypes.c_size_t),('max_ws',ctypes.c_size_t),
+                  ('active',ctypes.c_uint32),('affinity',ctypes.c_size_t),
+                  ('priority',ctypes.c_uint32),('scheduling',ctypes.c_uint32)]
+    class IO(ctypes.Structure):
+        _fields_=[('v'+str(i),ctypes.c_uint64) for i in range(6)]
+    class Extended(ctypes.Structure):
+        _fields_=[('basic',Basic),('io',IO),('process_memory',ctypes.c_size_t),
+                  ('job_memory',ctypes.c_size_t),('peak_process',ctypes.c_size_t),('peak_job',ctypes.c_size_t)]
+    kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+    kernel.CreateJobObjectW.argtypes=[ctypes.c_void_p,w.LPCWSTR];kernel.CreateJobObjectW.restype=w.HANDLE
+    kernel.SetInformationJobObject.argtypes=[w.HANDLE,ctypes.c_int,ctypes.c_void_p,w.DWORD];kernel.SetInformationJobObject.restype=w.BOOL
+    kernel.AssignProcessToJobObject.argtypes=[w.HANDLE,w.HANDLE];kernel.AssignProcessToJobObject.restype=w.BOOL
+    kernel.GetCurrentProcess.argtypes=[];kernel.GetCurrentProcess.restype=w.HANDLE
+    kernel.CloseHandle.argtypes=[w.HANDLE];kernel.CloseHandle.restype=w.BOOL
+    handle=kernel.CreateJobObjectW(None,None)
+    if not handle:raise ProbeError('connection_failed')
+    limits=Extended();limits.basic.flags=0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    if not kernel.SetInformationJobObject(handle,9,ctypes.byref(limits),ctypes.sizeof(limits)) or not kernel.AssignProcessToJobObject(handle,kernel.GetCurrentProcess()):
+        kernel.CloseHandle(handle)
+        raise ProbeError('connection_failed')
+    _PROCESS_JOB=handle
+
 def main():
     try:
         value = json.loads(sys.stdin.buffer.read(4096).decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         respond({"ok": False, "error": "invalid_request"})
         return
+    try:protect_process_tree()
+    except Exception:
+        respond({'ok':False,'error':'connection_failed'});return
     respond(execute(value))
 
 

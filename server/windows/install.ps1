@@ -76,6 +76,8 @@ Set-Acl -Path $DataDir -AclObject $Acl
 & icacls $Root /grant '*S-1-5-19:(OI)(CI)RX' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Failed to grant LOCAL SERVICE read access to application files.' }
 @{PUBLIC_ORIGIN=$Origin;DB=(Join-Path $DataDir 'fam.sqlite3');LOG_DIR=(Join-Path $DataDir 'logs')} | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $PSScriptRoot 'settings.json')
+& $Python (Join-Path $Root 'bootstrap_admin.py') --db (Join-Path $DataDir 'fam.sqlite3') --origin $Origin
+if ($LASTEXITCODE -ne 0) { throw 'Secure bootstrap failed; no backend was started.' }
 $Action=New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$PSScriptRoot\start.ps1`"" -WorkingDirectory $Root
 $Principal=New-ScheduledTaskPrincipal -UserId 'S-1-5-19' -LogonType ServiceAccount -RunLevel Limited
 $Settings=New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries

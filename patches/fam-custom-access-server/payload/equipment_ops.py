@@ -22,9 +22,11 @@ import time
 
 from flask import g, jsonify
 try:
-    from .equipment_probe import descriptions_table, ProbeError
+    from .equipment_probe import descriptions_table, ProbeError, ENV_PASSTHROUGH
+    from .equipment_guard import EquipmentGuard, AdmissionError
 except ImportError:
-    from equipment_probe import descriptions_table, ProbeError
+    from equipment_probe import descriptions_table, ProbeError, ENV_PASSTHROUGH
+    from equipment_guard import EquipmentGuard, AdmissionError
 
 INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
 # Same allowlist as equipment_probe.USERNAME: the name is passed to ssh.exe -l
@@ -80,7 +82,7 @@ def _input(value, *, recovery=False):
 def _ticket(app, *, user_id, host, username, interface):
     # The browser needs an opaque one-time ticket, not a copy of its username.
     user_digest = hashlib.sha256(username.encode("utf-8")).hexdigest()
-    payload = json.dumps({"u": user_id, "h": host, "n": user_digest, "i": interface, "e": int(time.time()) + 300}, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    payload = json.dumps({"u": user_id, "h": host, "n": user_digest, "i": interface, "e": int(time.time()) + 300, "j": secrets.token_hex(16)}, separators=(",", ":"), sort_keys=True).encode("utf-8")
     tag = hmac.new(app.config["EQUIPMENT_TICKET_KEY"], payload, hashlib.sha256).digest()
     return _b64(payload) + "." + _b64(tag)
 
@@ -95,15 +97,16 @@ def _verify_ticket(app, value, *, user_id, host, username, interface):
         return False
     user_digest = hashlib.sha256(username.encode("utf-8")).hexdigest()
     return (hmac.compare_digest(tag, expected) and isinstance(decoded, dict) and
-            decoded == {"u": user_id, "h": host, "n": user_digest, "i": interface, "e": decoded.get("e")} and
-            isinstance(decoded.get("e"), int) and int(time.time()) <= decoded["e"])
+            decoded == {"u": user_id, "h": host, "n": user_digest, "i": interface, "e": decoded.get("e"), "j": decoded.get("j")} and
+            type(decoded.get("e")) is int and int(time.time()) <= decoded["e"] <= int(time.time())+300 and
+            isinstance(decoded.get("j"),str) and re.fullmatch(r"[a-f0-9]{32}",decoded["j"]) is not None)
 
 
 def _helper_environment(app):
-    """Environment for the helper: inherited process environment plus the
+    """Environment for the helper: minimal allowlisted OS environment plus the
     explicit ssh.exe / host-key settings.  No device credential is placed here;
     the helper receives the job on stdin only."""
-    env = dict(os.environ)
+    env = {key:os.environ[key] for key in ENV_PASSTHROUGH if key in os.environ}
     for key, name in (("EQUIPMENT_SSH", "FAM_EQUIPMENT_SSH"), ("EQUIPMENT_KNOWN_HOSTS", "FAM_EQUIPMENT_KNOWN_HOSTS"),
                       ("EQUIPMENT_HOST_KEY_POLICY", "FAM_EQUIPMENT_HOST_KEY_POLICY"), ("EQUIPMENT_RUNTIME_DIR", "FAM_EQUIPMENT_RUNTIME_DIR")):
         value = app.config.get(key)
@@ -128,15 +131,18 @@ def _execute(app, payload):
         )
         result = json.loads(completed.stdout.decode("utf-8"))
     except subprocess.TimeoutExpired:
-        return {"ok": False, "error": "connection_timeout"}
+        return {"ok": False, "error": "recovery_uncertain" if payload.get("operation")=="recover" else "connection_timeout"}
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return {"ok": False, "error": "connection_failed"}
+        return {"ok": False, "error": "recovery_uncertain" if payload.get("operation")=="recover" else "connection_failed"}
     return result if isinstance(result, dict) else {"ok": False, "error": "connection_failed"}
 
 
 def _failure(value):
     code = value.get("error") if isinstance(value, dict) else ""
     return {
+        "recovery_uncertain": "اثر عملیات روی پورت نامشخص است؛ ممکن است shutdown اجرا شده باشد. عملیات متوقف شد؛ پیش از هر اقدام، وضعیت همان پورت را با اپراتور مجاز بررسی کنید. فعال‌سازی خودکار انجام نمی‌شود.",
+        "equipment_busy": "تجهیز یا ظرفیت SSH مشغول است؛ عملیات جدیدی اجرا نشد. پس از پایان درخواست قبلی، دوباره وضعیت را بررسی کنید.",
+        "ticket_consumed": "این تأیید قبلاً مصرف شده است؛ دوباره بررسی و پورت را تأیید کنید.",
         "authentication_failed": "نام کاربری یا رمز تجهیز پذیرفته نشد.",
         "connection_timeout": "اتصال SSH به تجهیز در زمان مجاز پاسخ نداد.",
         "connection_failed": "بررسی تجهیز انجام نشد؛ دسترسی SSH و وضعیت تجهیز را بررسی کنید.",
@@ -146,6 +152,7 @@ def _failure(value):
 
 
 def _ports_or_fail(result, fail):
+    if isinstance(result,dict) and result.get('error')=='equipment_busy':fail(429,_failure(result))
     raw_ports = result.get("ports") if isinstance(result, dict) else None
     if not isinstance(result, dict) or result.get("ok") is not True or not isinstance(raw_ports, list):
         fail(502, _failure(result))
@@ -165,6 +172,16 @@ def _ports_or_fail(result, fail):
 def register_equipment_ops(app, *, data, fail, allowed):
     """Register authenticated browser endpoints for direct server-to-device SSH."""
 
+    guard = EquipmentGuard(app.config['DB_PATH'])
+    app.extensions['equipment_guard'] = guard
+
+    def run(payload, ticket=None):
+        try:
+            with guard.admit(payload['host'],ticket):
+                return _execute(app,payload)
+        except AdmissionError as error:
+            return {'ok':False,'error':error.code}
+
     def authorize(operation=None,host=None):
         if not app.config["EQUIPMENT_OPS_ENABLED"]:
             fail(404, "مدیریت تجهیزات فعال نشده است.")
@@ -179,7 +196,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
         except ValueError:
             fail(400, "IP داخلی مجاز، نام کاربری و رمز تجهیز معتبر نیست.")
         authorize("status",value["host"])
-        result = _execute(app, {"operation": "status", **value})
+        result = run({"operation": "status", **value})
         ports = _ports_or_fail(result, fail)
         tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
         return jsonify(host=value["host"], source="server-ssh", checkedAt=int(time.time()*1000), errDisabledPorts=ports, recoveryTickets=tickets)
@@ -190,7 +207,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
         try:value=_input(data())
         except ValueError:fail(400,'IP داخلی مجاز، نام کاربری و رمز تجهیز معتبر نیست.')
         authorize('status',value['host'])
-        result=_execute(app,{'operation':'inspect',**value})
+        result=run({'operation':'inspect',**value})
         ports=_ports_or_fail(result,fail)
         description={'error':_failure({'error':'descriptions_unreadable'})}
         raw=result.get('descriptions')
@@ -211,8 +228,8 @@ def register_equipment_ops(app, *, data, fail, allowed):
         try:value=_input(data())
         except ValueError:fail(400,'IP داخلی مجاز، نام کاربری و رمز تجهیز معتبر نیست.')
         authorize('descriptions',value['host'])
-        result=_execute(app,{'operation':'descriptions',**value})
-        if not isinstance(result,dict) or result.get('ok') is not True:fail(502,_failure(result))
+        result=run({'operation':'descriptions',**value})
+        if not isinstance(result,dict) or result.get('ok') is not True:fail(429 if isinstance(result,dict) and result.get('error')=='equipment_busy' else 502,_failure(result))
         try:output,redacted=descriptions_table(result.get('output'),value['username'],value['password'])
         except ProbeError:fail(502,_failure({'error':'descriptions_unreadable'}))
         return jsonify(host=value['host'],source='server-ssh',checkedAt=int(time.time()*1000),command='show interfaces description',output=output,redacted=redacted or result.get('redacted') is True)
@@ -225,9 +242,12 @@ def register_equipment_ops(app, *, data, fail, allowed):
         except ValueError:
             fail(400, "درخواست بازیابی معتبر نیست.")
         authorize("recover",value["host"])
-        if not _verify_ticket(app, value.pop("ticket"), user_id=g.user["id"], host=value["host"], username=value["username"], interface=value["interface"]):
+        ticket=value.pop("ticket")
+        if not _verify_ticket(app, ticket, user_id=g.user["id"], host=value["host"], username=value["username"], interface=value["interface"]):
             fail(409, "تأیید بررسی این پورت منقضی شده است؛ ابتدا وضعیت را دوباره بررسی کنید.")
-        result = _execute(app, {"operation": "recover", **value})
+        result = run({"operation": "recover", **value},ticket)
         if not isinstance(result, dict) or result.get("ok") is not True or result.get("recovery") not in {"recovered", "still_errdisabled", "not_errdisabled"}:
-            fail(502, _failure(result))
+            code=result.get('error') if isinstance(result,dict) else None
+            code=code if code in {'equipment_busy','ticket_consumed'} else 'recovery_uncertain'
+            return jsonify(error=_failure({'error':code}),code=code,requiresRecheck=True), (409 if code=='ticket_consumed' else 429 if code=='equipment_busy' else 502)
         return jsonify(host=value["host"], interface=value["interface"], recovery=result["recovery"])

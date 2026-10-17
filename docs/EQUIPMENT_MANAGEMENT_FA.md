@@ -54,7 +54,7 @@ Browser کاربر → HTTPS → FAM روی 10.16.243.18 → ssh.exe (Windows Op
 
 - `StrictHostKeyChecking=no` استفاده نمی‌شود.
 - کلیدهای میزبان در فایل اختصاصی `C:\FAMData\equipment\known_hosts` (فقط کلید عمومی تجهیز) ذخیره می‌شوند.
-- سیاست پیش‌فرض `accept-new` است: کلید تجهیز در نخستین اتصال ثبت و هر تغییر بعدی رد می‌شود (`connection_failed`). برای الزام به کلید از پیش‌تأییدشده، در `start.ps1` مقدار `FAM_EQUIPMENT_HOST_KEY_POLICY='strict'` بگذارید و اثر انگشت کلید را از مسیر مستقل با مدیر تجهیز تطبیق دهید و سپس کلید تأییدشده را به همان فایل اضافه کنید؛ خروجی ssh-keyscan به‌تنهایی قابل اعتماد نیست.
+- سیاست پیش‌فرض `strict` است: فقط کلید ازپیش‌تأییدشده پذیرفته می‌شود. راهنمای ثبت کلید و نصب/بازگشت: [SERVER_REVIEW_FIX_PATCH_FA.md](SERVER_REVIEW_FIX_PATCH_FA.md). مقدار صریح accept-new فقط TOFU است، نه strict؛ start.ps1 دیگر مقدار صریح را بی‌قید بازنویسی نمی‌کند. خروجی ssh-keyscan بدون تطبیق مستقل fingerprint قابل اعتماد نیست.
 
 ## زمان‌بندی
 

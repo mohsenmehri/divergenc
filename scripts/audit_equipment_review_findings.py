@@ -2,8 +2,8 @@
 
 PASS here means the stated current behavior was reproduced, NOT that it is safe.
 No production fixes are applied. All DBs are temporary and all SSH is mocked.
-Run: .venv/bin/python scripts/audit_equipment_review_findings.py -v
-After fixes, replace these snapshot assertions with the corrected contracts.
+Historical only: run against commit 59d7a4f, NOT the corrected tree.
+Current acceptance suite: python -m unittest server.tests.test_review_fixes -v.
 """
 from pathlib import Path
 import sys
@@ -259,5 +259,4 @@ class ReviewSnapshot(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    print('DIAGNOSTICS ONLY: PASS means reproduction of current behavior, NOT security approval. No actual device connection.', flush=True)
-    unittest.main()
+    raise SystemExit('Historical defect snapshot only; run server.tests.test_review_fixes for current acceptance.')

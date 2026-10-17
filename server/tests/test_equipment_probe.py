@@ -235,7 +235,7 @@ class SshExeTransportTests(ProbeHarness):
         self.assertEqual(result, {'ok':False,'error':'status_unreadable'})
         self.calls.clear()
         result=self.run_probe(self.recover_job(), [{'out':TABLE_ERRDISABLED},{'out':''},{'out':missing}])
-        self.assertEqual(result, {'ok':False,'error':'status_unreadable'})
+        self.assertEqual(result, {'ok':False,'error':'recovery_uncertain'})
 
     def test_descriptions_uses_only_fixed_read_command_and_preserves_table(self):
         result=self.run_probe({**self.status_job(),'operation':'descriptions'},[{'out':'Private banner '+PASSWORD+'\nSwitch#'+DESCRIPTION_TABLE+'Switch#exit\n'}])
@@ -340,7 +340,7 @@ class SshExeTransportTests(ProbeHarness):
 
     def test_recovery_rejected_by_device_changes_nothing_else(self):
         result = self.run_probe(self.recover_job("Gi1/0/1"), [{"out": TABLE_ERRDISABLED}, {"out": "% Invalid input detected at '^' marker.\n"}])
-        self.assertEqual(result, {"ok": False, "error": "connection_failed"})
+        self.assertEqual(result, {"ok": False, "error": "recovery_uncertain"})
         self.assertEqual(len(self.calls), 2)
 
     def test_session_timeouts_fit_inside_backend_executor_timeout(self):

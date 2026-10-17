@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ConnectorPackageChecks(unittest.TestCase):
+    @unittest.skipUnless((ROOT/'equipment_connector/connector.ps1').exists(), 'Historical connector fixture not included in SERVER-only bundles')
     def test_connector_needs_no_administrator_python_or_inbound_listener(self):
         connector = (ROOT / "equipment_connector" / "connector.ps1").read_text(encoding="utf8")
         launcher = (ROOT / "equipment_connector" / "START-FAM-EQUIPMENT-CONNECTOR.cmd").read_text(encoding="utf8")
@@ -27,7 +28,7 @@ class ConnectorPackageChecks(unittest.TestCase):
         self.assertIn("FAM_EQUIPMENT_CONNECTOR_ENABLED='0'", start)
         self.assertIn("System32\\OpenSSH\\ssh.exe", start)
         self.assertIn("FAM_EQUIPMENT_KNOWN_HOSTS", start)
-        self.assertIn("FAM_EQUIPMENT_HOST_KEY_POLICY='accept-new'", start)
+        self.assertIn("FAM_EQUIPMENT_HOST_KEY_POLICY='strict'", start)
         self.assertNotIn("StrictHostKeyChecking=no", start)
         self.assertNotIn("class EquipmentBroker", backend)
         self.assertNotIn('/api/equipment/connector/claim', backend)

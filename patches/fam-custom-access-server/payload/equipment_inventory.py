@@ -2,6 +2,7 @@
 Strict validation + current-session scopes + revision-checked atomic merges.
 Demo jobs remain RAM-only in the client; the existing SSH helper is separate.
 """
+import hashlib
 import copy
 import ipaddress
 import json
@@ -172,7 +173,7 @@ def register(app,connect,transaction,session,data,fail,packed):
             if not permitted(user):fail(403,'مجوز تجهیزات ندارید.')
             receipt_id='equipment:'+body['requestId'];digest=packed(body);receipt=db.execute('SELECT digest,response FROM receipts WHERE user_id=? AND request_id=?',(user['id'],receipt_id)).fetchone()
             if receipt:
-                if receipt['digest']!=__import__('hashlib').sha256(digest.encode()).hexdigest():fail(409,'شناسهٔ درخواست تکراری است.')
+                if receipt['digest']!=hashlib.sha256(digest.encode()).hexdigest():fail(409,'شناسهٔ درخواست تکراری است.')
                 return jsonify(envelope(user,db.execute('SELECT * FROM equipment_state WHERE id=1').fetchone()))
             row=db.execute('SELECT * FROM equipment_state WHERE id=1').fetchone()
             if row['revision']!=body['revision']:fail(409,'موجودی سرور تغییر کرده؛ صفحه را تازه و تغییر را دوباره بازبینی کنید.')
@@ -200,5 +201,5 @@ def register(app,connect,transaction,session,data,fail,packed):
                 inventory(out['inventory']);standards(out['standards']);cards(out['cards'])
             except (ValueError,TypeError,KeyError,OverflowError):fail(400,'مشخصات، وابستگی یا محتوای تجهیزات معتبر نیست؛ چیزی ثبت نشد.')
             db.execute('UPDATE equipment_state SET revision=revision+1,payload=? WHERE id=1',(packed(out),))
-            db.execute('INSERT INTO receipts VALUES(?,?,?,?)',(user['id'],receipt_id,__import__('hashlib').sha256(digest.encode()).hexdigest(),'{}'))
+            db.execute('INSERT INTO receipts VALUES(?,?,?,?)',(user['id'],receipt_id,hashlib.sha256(digest.encode()).hexdigest(),'{}'))
             return jsonify(envelope(user,db.execute('SELECT * FROM equipment_state WHERE id=1').fetchone()))

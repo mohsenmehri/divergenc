@@ -14,9 +14,30 @@ const base=process.env.FAM_EQUIPMENT_TEST_URL;if(!base)throw Error('Disposable F
   await p.locator('#eq-live-manual-ip').fill('10.53.0.10');await p.locator('#eq-live-show-descriptions').click();await p.locator('.eq-live-command-output[data-host="10.53.0.10"]').waitFor({state:'attached'});assert.equal(await p.locator('#eq-live-report tbody tr').count(),0);assert.equal(await p.evaluate(async()=>{const state=await FamShared.api('equipment/state');return state.inventory.nodes.some(n=>['10.53.0.9','10.53.0.10'].includes(n.host));}),false);
   // RAM credentials survive tab navigation; refreshed document clears them.
   await p.locator('#equipment-tab-excel').click();await p.locator('#equipment-tab-ports').click();assert.equal(await p.locator('#eq-live-password').inputValue(),'synthetic-only');assert.equal(await p.evaluate(()=>Object.values(localStorage).some(v=>v.includes('synthetic-only'))),false);
+  // Corrected contracts: explicit status-only and stop-all on uncertain/failed recovery.
+  for(const id of await p.locator('input[id^=eq-live-node-]:checked').evaluateAll(ns=>ns.map(n=>n.id)))await p.locator('#'+id).uncheck();
+  await p.locator('#eq-live-node-fixture-1').check();
+  let statusOnlyCalls=0;
+  await p.route('**/api/equipment/check',r=>{statusOnlyCalls++;return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({host:'10.53.0.1',source:'server-ssh',checkedAt:Date.now(),errDisabledPorts:[],recoveryTickets:{}})});});
+  await p.locator('#eq-live-status-only').click();
+  await p.waitForFunction(()=>!document.querySelector('.eq-live-workspace fieldset').disabled&&document.querySelector('#eq-live-report').textContent.includes('بررسی پایان یافت'));
+  assert.equal(statusOnlyCalls,1);assert.equal(await p.locator('.eq-live-command-output').count(),0);
+  assert.doesNotMatch(await p.locator('#eq-live-descriptions').textContent(),/قابل تأیید نیست/);
+  await p.route('**/api/equipment/inspect',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({host:'10.53.0.1',source:'server-ssh',checkedAt:Date.now(),errDisabledPorts:[{interface:'Gi0/7',description:'Fixture 7'},{interface:'Gi0/8',description:'Fixture 8'}],recoveryTickets:{'Gi0/7':'synthetic-7','Gi0/8':'synthetic-8'},descriptions:{output:'Interface Status Protocol Description\nGi0/7 down down Fixture\n'}})}));
+  for(const failure of ['uncertain','still_errdisabled']){
+   await p.locator('#eq-live-scan').click();await p.waitForFunction(()=>!document.querySelector('.eq-live-workspace fieldset').disabled&&document.querySelector('#eq-live-report').textContent.includes('Gi0/8'));
+   let attempts=0;await p.route('**/api/equipment/recover',r=>{attempts++;return r.fulfill({status:failure==='uncertain'?502:200,contentType:'application/json',body:JSON.stringify(failure==='uncertain'?{error:'Synthetic uncertain recovery',code:'recovery_uncertain',requiresRecheck:true}:{host:'10.53.0.1',interface:'Gi0/7',recovery:'still_errdisabled'})});});
+   for(const cb of await row(1).locator('input[type=checkbox]').all())await cb.check();
+   await p.locator('#eq-live-review').click();await p.locator('#eq-live-apply').click();
+   await p.waitForFunction(()=>!document.querySelector('.eq-live-workspace fieldset').disabled&&document.querySelector('#eq-live-report').textContent.includes('به علت توقف دسته اجرا نشد'));
+   assert.equal(attempts,1);assert.equal(await p.locator('#eq-live-review').isDisabled(),true);
+   assert.equal(await row(1).locator('input[type=checkbox]:enabled').count(),0);
+   await p.unroute('**/api/equipment/recover');
+  }
+  assert.equal(repairs,4);
   // An incomplete successful HTTP reply is unknown, never clean.
-  await p.route('**/api/equipment/inspect',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({host:'10.53.0.1',errDisabledPorts:[],recoveryTickets:{}})}));await p.locator('#eq-live-scan').click();await p.waitForFunction(()=>!document.querySelector('.eq-live-workspace fieldset').disabled&&document.querySelector('#eq-live-report').textContent.includes('بررسی پایان یافت'));assert.equal(await p.locator('#eq-live-report tbody tr').filter({hasText:'بررسی موفق'}).count(),0);assert.equal(repairs,2);
+  await p.route('**/api/equipment/inspect',r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({host:'10.53.0.1',errDisabledPorts:[],recoveryTickets:{}})}));await p.locator('#eq-live-scan').click();await p.waitForFunction(()=>!document.querySelector('.eq-live-workspace fieldset').disabled&&document.querySelector('#eq-live-report').textContent.includes('بررسی پایان یافت'));assert.equal(await p.locator('#eq-live-report tbody tr').filter({hasText:'بررسی موفق'}).count(),0);assert.equal(repairs,4);
   await p.route('**/api/fixture-session-expired',r=>r.fulfill({status:401,contentType:'application/json',body:JSON.stringify({error:'Synthetic session expired'})}));await p.evaluate(()=>FamShared.api('fixture-session-expired').catch(()=>{}));assert.equal(await p.locator('#eq-live-password').inputValue(),'');await p.locator('#eq-live-password').fill('synthetic-only');
-  await p.reload();await p.locator('#workspace-enter-equipment').click();await p.locator('#equipment-tab-ports').click();assert.equal(await p.locator('#eq-live-password').inputValue(),'');assert.deepEqual(errors,[]);console.log('PASS: real tools UI → authenticated API → synthetic executor; 3 switch ownership/statuses, manual private IP check/repair, exact safe description output and HTML escaping, explicit repair/cancel, malformed reply unknown, credentials RAM-only/navigation/reload; browser errors 0. No real device contacted.');
+  await p.reload();await p.locator('#workspace-enter-equipment').click();await p.locator('#equipment-tab-ports').click();assert.equal(await p.locator('#eq-live-password').inputValue(),'');assert.deepEqual(errors,[]);console.log('PASS: real tools UI → authenticated API → synthetic executor; 3 switch ownership/statuses, manual private IP check/repair, exact safe description output and HTML escaping, explicit repair/cancel, status-only, uncertain/still-error stop-all and approval invalidation, malformed reply unknown, credentials RAM-only/navigation/reload; browser errors 0. No real device contacted.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

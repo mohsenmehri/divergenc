@@ -15,9 +15,14 @@ import secrets
 import sqlite3
 import time
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from datetime import datetime
-from flask import Flask, request, jsonify, g, redirect, send_file
+from flask import Flask, request, jsonify, g, redirect, send_file, has_app_context, current_app
+
+try:
+    from .account_policy import is_custom_user, may_manage_users
+except ImportError:
+    from account_policy import is_custom_user, may_manage_users
 
 try:
     from .manage import backup as verified_backup
@@ -93,9 +98,6 @@ def assigned_region(name, state):
     assignments=dict((state.get('regionConfig') or {}).get('assignments',[]))
     return assignments.get(p[0],p[1] if not state.get('regionConfig') else 'unassigned')
 
-def is_custom_user(user):
-    """Custom access records have both explicit lists; legacy role rows do not."""
-    return isinstance(user.get('categories'),list) and isinstance(user.get('permissions'),list)
 
 def category_ids(state):
     config=state.get('categoryConfig') or {}
@@ -145,8 +147,6 @@ def has_full_data_scope(user,state):
         assigned_region(name,state) in user['regions'] for name in state['order'] if province(name)
     )
 
-def may_manage_users(user):
-    return has_permission(user,'manage-users') if is_custom_user(user) else user['role']==1
 
 def may_manage_metadata(user,key):
     if not is_custom_user(user):return user['role']<=2
@@ -462,6 +462,7 @@ def public_user(row):
 
 def credentials(password,salt=None):
     if not isinstance(password,str) or not 4<=len(password)<=128:fail(400,'رمز باید بین ۴ تا ۱۲۸ نویسه باشد.')
+    if salt is None and has_app_context() and not current_app.config['TESTING'] and len(password)<12:fail(400,'رمز جدید باید حداقل ۱۲ نویسه باشد؛ رمز قبلی تغییر نکرد.')
     salt=salt or secrets.token_hex(16)
     return salt,hashlib.pbkdf2_hmac('sha256',password.encode(),bytes.fromhex(salt),210000).hex()
 
@@ -486,7 +487,7 @@ def create_app(config=None):
       EQUIPMENT_HELPER=str(ROOT/'equipment_probe.py'),
       EQUIPMENT_SSH=os.environ.get('FAM_EQUIPMENT_SSH',''),
       EQUIPMENT_KNOWN_HOSTS=os.environ.get('FAM_EQUIPMENT_KNOWN_HOSTS',str(ROOT/'private'/'equipment'/'known_hosts')),
-      EQUIPMENT_HOST_KEY_POLICY=os.environ.get('FAM_EQUIPMENT_HOST_KEY_POLICY','accept-new'),
+      EQUIPMENT_HOST_KEY_POLICY=os.environ.get('FAM_EQUIPMENT_HOST_KEY_POLICY','strict'),
       EQUIPMENT_RUNTIME_DIR=os.environ.get('FAM_EQUIPMENT_RUNTIME_DIR',''),
       EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32))
     if config:app.config.update(config)
@@ -499,6 +500,16 @@ def create_app(config=None):
     # visible names so an administrator can find a date quickly in Explorer.
     backupdir=Path(app.config.get('BACKUP_DIR') or dbpath.parent/'backups').resolve()
     if backupdir.is_relative_to(ROOT/'www'):raise RuntimeError('The backup directory must be outside the public www directory.')
+    # Validate fresh bootstrap BEFORE creating schema/files. A missing secret
+    # must not leave an uninitialised schema which cannot safely be reseeded.
+    needs_bootstrap=not dbpath.exists() or dbpath.stat().st_size==0
+    if not needs_bootstrap:
+        with closing(sqlite3.connect(dbpath.as_uri()+'?mode=ro',uri=True)) as existing_db:
+            needs_bootstrap=not existing_db.execute("SELECT 1 FROM sqlite_master WHERE type='table'").fetchone()
+    if needs_bootstrap and not app.config['TESTING']:
+        initial=os.environ.get('FAM_INITIAL_PASSWORD')
+        if not isinstance(initial,str) or not 12<=len(initial)<=128:
+            raise RuntimeError('Fresh initialization requires a unique bootstrap password (12+ characters); run bootstrap_admin.py.')
     dbpath.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
     backupdir.mkdir(parents=True,exist_ok=True,mode=0o700)
     try:
@@ -541,7 +552,11 @@ def create_app(config=None):
     with transaction() as db:
         if not db.execute('SELECT 1 FROM state').fetchone():
             if not fresh:raise RuntimeError('Existing database has lost its state; refusing to reseed accounts.')
-            salt,digest=credentials(os.environ.get('FAM_INITIAL_PASSWORD','1109'))
+            initial = os.environ.get('FAM_INITIAL_PASSWORD')
+            if initial is None and app.config['TESTING']: initial = '1109'  # isolated fixtures only
+            if not isinstance(initial,str) or (not app.config['TESTING'] and (len(initial)<12 or initial=='1109')):
+                raise RuntimeError('Fresh initialization requires a unique bootstrap password (12+ characters); run bootstrap_admin.py. Existing databases are never reset.')
+            salt,digest=credentials(initial)
             db.execute('INSERT INTO state VALUES(1,0,?,?,0)',(str(uuid.uuid4()),packed(EMPTY)))
             db.execute('INSERT INTO settings(id,users_revision) VALUES(1,0)')
             db.execute('INSERT INTO users(id,username,name,role,enabled,regions,sheets,categories,permissions,revision,salt,hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -592,11 +607,17 @@ def create_app(config=None):
     def equipment_allowed(user,operation=None,host=None):
         if not eq_inventory.permitted(user,'equipment-repair' if operation=='recover' else 'equipment-scan'):return False
         if host is None:return True
-        if all('*' in user['equipmentScope'][k] for k in eq_inventory.FIELDS):return True
         with connect() as db:
             row=db.execute('SELECT payload FROM equipment_state WHERE id=1').fetchone()
-            nodes=eq_inventory.view(user,json.loads(row['payload'])['inventory'])['nodes']
+            inventory=json.loads(row['payload'])['inventory']
+            known=[n for n in inventory['nodes'] if n['host']==host]
+            # Even wildcard accounts may not run this switch-only workflow on a
+            # known router. Unknown manual IPv4 still requires all five scopes.
+            if known and (len(known)!=1 or not any(t['id']==known[0]['typeId'] and t['kind']=='switch' for t in inventory['catalog']['types'])):return False
+            if all('*' in user['equipmentScope'][k] for k in eq_inventory.FIELDS):return True
+            nodes=eq_inventory.view(user,inventory)['nodes']
         return sum(n['host']==host for n in nodes)==1
+
     def backup_allowed(user):
         if is_custom_user(user):
             if not has_permission(user,'backup-server'):fail(403,'مجوز پشتیبان‌گیری لازم است.')

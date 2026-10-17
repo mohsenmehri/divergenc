@@ -42,7 +42,7 @@ s=s.replace('localStorage.setItem(LS_KEY_UI,',"localStorage.setItem(LS_KEY_UI+':
 s=s.replace(' — Passwords and sheet locks in this app only SIMULATE the Excel workbook behavior. They are NOT real security. All data lives in the browser; anyone with the file/data can read it.',' — Central mode: the server enforces authentication, permissions and versioned writes; HTTPS and private database storage are required.')
 s=s.replace('data-default-theme="original"','data-default-theme="original" data-fam-variant="shared"',1)
 s=s.replace('<title>','<title>فام مرکزی — ',1)
-s=re.sub(r'<meta name="fam-release" content="[^"]*">','<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-20261017">',s,count=1)
+s=re.sub(r'<meta name="fam-release" content="[^"]*">','<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-FIX-20261017">',s,count=1)
 s=s.replace('\n</head>','\n<style id="fam-shared-css">\n'+(root/'src/shared-sync.css').read_text()+'\n</style>\n</head>',1)
 s=s.replace('\n</body>','\n<script id="fam-shared-js">\n'+(root/'src/shared-sync.js').read_text()+'\n</script>\n</body>',1)
 p=root/'server/private_ui/FAM.html';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)

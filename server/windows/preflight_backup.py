@@ -7,6 +7,14 @@ import json
 import sqlite3
 import sys
 
+if __package__:
+    from ..account_policy import has_active_manager
+else:
+    directory=Path(__file__).resolve().parent
+    trusted=directory if (directory/'account_policy.py').is_file() else directory.parent
+    sys.path.insert(0,str(trusted))
+    from account_policy import has_active_manager
+
 def backup(source,destination):
     source=Path(source).resolve();destination=Path(destination).resolve()
     if not source.is_file():raise ValueError('Source database does not exist')
@@ -24,7 +32,11 @@ def backup(source,destination):
         row=dst.execute('SELECT payload FROM state WHERE id=1').fetchone()
         payload=json.loads(row[0]) if row else None
         if not isinstance(payload,dict) or not isinstance(payload.get('order'),list) or not isinstance(payload.get('sheets'),dict):raise ValueError('Not an initialized FAM workbook')
-        if not dst.execute('SELECT 1 FROM users WHERE role=1 AND enabled=1').fetchone():raise ValueError('No active administrator')
+        if not has_active_manager(dst):raise ValueError('No active administrator')
+    except BaseException:
+        src.close();dst.close()
+        partial.unlink(missing_ok=True)
+        raise
     finally:src.close();dst.close()
     partial.replace(destination)
     print('Verified pre-install database backup:',destination)
