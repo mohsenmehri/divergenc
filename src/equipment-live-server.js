@@ -1,39 +1,45 @@
-/* Existing bounded real SSH path, intentionally separate from demo tools. */
-document.addEventListener('DOMContentLoaded',()=>{
- const box=document.createElement('details');box.id='equipment-live-panel';box.className='eq-tool-card';const title=document.createElement('summary');title.textContent='SSH واقعی — مسیر محدود قبلی (مستقل از ابزارهای نمایشی)';box.append(title);const text=document.createElement('p');text.textContent='این بخش واقعاً به تجهیز وصل می‌شود. فقط IP خصوصی و حساب موقت مجاز؛ نمایش و رفع همان پورت با تأیید صریح، بدون Enable یا ذخیرهٔ تنظیمات.';box.append(text);const content=document.createElement('div');content.innerHTML="<form id=\"live-equipment-check-form\" class=\"live-equipment-form\" autocomplete=\"off\">\n          <div class=\"field\"><label for=\"live-equipment-host\">IP تجهیز</label><input id=\"live-equipment-host\" class=\"inp\" inputmode=\"decimal\" placeholder=\"مثال: 10.2.52.2\" maxlength=\"15\" required></div>\n          <div class=\"field\"><label for=\"live-equipment-username\">نام کاربری SSH / RADIUS</label><input id=\"live-equipment-username\" class=\"inp\" maxlength=\"128\" autocomplete=\"off\" required></div>\n          <div class=\"field\"><label for=\"live-equipment-password\">رمز SSH</label><input id=\"live-equipment-password\" class=\"inp\" type=\"password\" maxlength=\"512\" autocomplete=\"off\" required></div>\n          <button id=\"live-equipment-check-submit\" class=\"btn btn-primary\" type=\"submit\">بررسی وضعیت پورت‌ها</button>\n        </form>\n        <div id=\"live-equipment-status\" class=\"live-equipment-status\" role=\"status\">IP، نام کاربری و رمز را وارد کنید؛ بررسی بلافاصله انجام می‌شود.</div>";box.append(content);document.querySelector('#view-equipment .content').append(box);
- document.addEventListener('fam-access-changed',()=>{box.hidden=!Access.can('equipment-scan');box.querySelectorAll('input').forEach(i=>i.value='');});window.addEventListener('pagehide',()=>box.querySelectorAll('input').forEach(i=>i.value=''));
-});
-
-/* Direct Equipment Management: credentials remain only in this document and
-   the single HTTPS request/one-shot server helper.  No storage API is used. */
-document.addEventListener('DOMContentLoaded',()=>{
-  const by=id=>document.getElementById(id), form=by('live-equipment-check-form'), status=by('live-equipment-status');
-  if(!form)return;
-  const show=(message,type='')=>{status.className='live-equipment-status '+type;status.replaceChildren(document.createTextNode(message));};
-  const submit=by('live-equipment-check-submit');
-  const values=()=>({host:by('live-equipment-host').value.trim(),username:by('live-equipment-username').value.trim(),password:by('live-equipment-password').value});
-  const recover=async(port,ticket)=>{
-    if(!Access.require('equipment-repair'))return;
-    if(!confirm('رفع Err-disabled فقط روی پورت '+port+' اجرا شود؟\nابتدا وضعیت همین پورت دوباره بررسی می‌شود؛ فقط اگر هنوز err-disabled باشد shutdown / no shutdown روی همان Interface اجرا و سپس دوباره بررسی می‌شود. هیچ تنظیمی ذخیره نخواهد شد.'))return;
-    const current=values(); if(!current.password){show('برای تأیید رفع، رمز SSH را دوباره وارد کنید.','error');by('live-equipment-password').focus();return;}
-    show('در حال بررسی و رفع کنترل‌شدهٔ '+port+'…');
-    try{
-      const result=await FamShared.api('equipment/recover',{...current,interface:port,ticket},110000);
-      by('live-equipment-password').value='';
-      const text={recovered:'پورت '+port+' بازیابی شد و در بررسی پس از عملیات دیگر Err-disabled نبود.',still_errdisabled:'پورت '+port+' همچنان Err-disabled است؛ علت خطا را روی تجهیز بررسی کنید.',not_errdisabled:'پورت '+port+' پیش از اعمال تغییر دیگر Err-disabled نبود؛ تغییری اعمال نشد.'}[result.recovery]||'عملیات پایان یافت.';
-      show(text,result.recovery==='recovered'?'ok':'error');
-    }catch(error){by('live-equipment-password').value='';show(error.message||'رفع پورت انجام نشد.','error');}
-  };
-  form.addEventListener('submit',async event=>{
-    event.preventDefault();if(!Access.require('equipment-scan'))return;
-    const current=values(); submit.disabled=true;show('سرور FAM در حال اتصال مستقیم SSH به تجهیز و بررسی وضعیت پورت‌ها است…');
-    try{
-      const result=await FamShared.api('equipment/check',current,110000), ports=result.errDisabledPorts||[];
-      by('live-equipment-password').value='';
-      if(!ports.length){show('وضعیت پاک: اتصال SSH برقرار شد و هیچ پورتی با وضعیت Err-disabled روی این تجهیز وجود ندارد. (پورت‌های disabled، connected و notconnect خطا محسوب نمی‌شوند.)','ok');return;}
-      status.className='live-equipment-status error';status.replaceChildren(document.createTextNode('پورت‌های Err-disabled یافت شد. برای هر پورت، در صورت تأیید شما فقط همان پورت رفع می‌شود.'));
-      const list=document.createElement('div');list.className='live-equipment-ports';
-      ports.forEach(port=>{const row=document.createElement('div');row.className='live-equipment-port';const name=document.createElement('b');name.textContent=port.interface;row.append(name);if(port.description){const description=document.createElement('span');description.className='live-equipment-description';description.textContent=port.description;row.append(description)}const button=document.createElement('button');button.type='button';button.className='btn btn-amber btn-sm';button.textContent='تأیید رفع خطا';button.addEventListener('click',()=>recover(port.interface,result.recoveryTickets[port.interface]));row.append(button);list.append(row)});status.append(list);
-    }catch(error){by('live-equipment-password').value='';show(error.message||'بررسی تجهیز انجام نشد.','error');}finally{submit.disabled=false;}
-  });
-});
+/* Real, serial server-to-switch SSH. No scenarios, browser storage, CLI or
+   credentials in reports. Existing single-device endpoints enforce scope,
+   operation permission, fixed commands, host keys and recovery pre/post checks. */
+window.FamEquipmentLive=(()=>{
+ 'use strict';const MAX=5,IFACE=/^[A-Za-z][A-Za-z0-9/.-]{0,63}$/;
+ let pane=null,selected=new Set(),results=[],chosen=new Set(),auth={username:'',password:''},busy=false,epoch=0,search='',signature='',dialog=null,message='';
+ const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+ const button=(text,fn,id)=>{const b=el('button','btn btn-primary btn-sm',text);b.type='button';if(id)b.id=id;b.onclick=fn;return b;};
+ const inventory=()=>Access.equipmentView(FamEquipmentServer.inventory());
+ const switches=()=>{const d=inventory();return d.nodes.filter(n=>d.catalog.types.some(t=>t.id===n.typeId&&t.kind==='switch'));};
+ const stamp=()=>JSON.stringify(inventory()),key=(r,p)=>r.node.id+':'+p.interface;
+ function allowed(op){if(!Access.can(op)||FamEquipmentServer.blocked())throw Error('مجوز یا وضعیت ثبت تغییر کرده؛ دوباره وارد شوید.');}
+ function close(){if(dialog){dialog.close();dialog.remove();dialog=null;}}
+ function invalidate(){epoch++;close();results=[];chosen.clear();signature='';message='موجودی یا انتخاب تغییر کرده؛ دوباره بررسی کنید.';}
+ function valid(){if(signature&&signature!==stamp()){invalidate();return false;}return true;}
+ function checkbox(text,checked,fn,id){const label=el('label','eq-tool-checkbox'),input=el('input');input.type='checkbox';input.checked=checked;input.disabled=busy;if(id)input.id=id;input.onchange=()=>fn(input.checked);label.append(input,el('span','',text));return label;}
+ function report(){const root=pane?.querySelector('#eq-live-report');if(!root)return;root.replaceChildren();root.append(el('p','eq-notice',message||'هنوز بررسی نشده است. نتیجه فقط از اتصال واقعی SSH خوانده می‌شود.'));
+  if(!results.length)return;const wrap=el('div','eq-table-wrap'),table=el('table','eq-table');const header=el('tr');['سوئیچ','IP','نتیجهٔ بررسی','پورت خطادار / نتیجهٔ رفع'].forEach(t=>header.append(el('th','',t)));const head=el('thead');head.append(header);table.append(head);const body=el('tbody');
+  for(const r of results){const tr=el('tr');tr.append(el('td','',r.node.name),el('td','',r.node.host),el('td','',r.error||({waiting:'در صف بررسی',checking:'در حال اتصال SSH…',checked:r.ports.length?'Err-disabled یافت شد':'بررسی موفق؛ پورت Err-disabled یافت نشد.',unknown:'نامشخص؛ دوباره بررسی کنید.'})[r.state]));const cell=el('td');
+   for(const p of r.ports){const label=checkbox(p.interface+(p.description?' · '+p.description:''),chosen.has(key(r,p)),value=>{value?chosen.add(key(r,p)):chosen.delete(key(r,p));report();});label.querySelector('input').disabled=busy||!!p.outcome||!Access.can('equipment-repair');cell.append(label);if(p.outcome)cell.append(el('p','eq-notice',p.outcome));}if(!r.ports.length)cell.textContent='—';tr.append(cell);body.append(tr);
+  }table.append(body);wrap.append(table);root.append(wrap);
+  const review=button('تأیید و رفع پورت‌های انتخاب‌شده',reviewRepair,'eq-live-review');review.disabled=busy||!chosen.size||!Access.can('equipment-repair');root.append(review);
+ }
+ function draw(){if(!pane)return;pane.replaceChildren();const title=el('h3','','بررسی و رفع خطای پورت‌ها');pane.append(title,el('p','eq-notice','۱. انتخاب سوئیچ‌ها  ←  ۲. بررسی پورت‌ها  ←  ۳. تأیید و رفع خطا'));
+  const fieldset=el('fieldset');fieldset.disabled=busy;const legend=el('legend','','انتخاب سوئیچ یا سوئیچ‌ها');fieldset.append(legend);const query=el('input','inp');query.id='eq-live-search';query.placeholder='جست‌وجوی نام یا IP سوئیچ';query.setAttribute('aria-label',query.placeholder);query.value=search;const list=el('div','eq-tool-switch-list');Object.assign(list.style,{maxHeight:'280px',overflow:'auto'});
+  const listDraw=()=>{list.replaceChildren();const nodes=switches().filter(n=>(n.name+' '+n.host).toLowerCase().includes(search.toLowerCase()));for(const n of nodes){list.append(checkbox(n.name+' · '+n.host,selected.has(n.id),value=>{if(value&&selected.size>=MAX){message='در هر نوبت حداکثر '+MAX+' سوئیچ انتخاب کنید.';report();listDraw();return;}value?selected.add(n.id):selected.delete(n.id);invalidate();report();},'eq-live-node-'+n.id));}if(!nodes.length)list.append(el('p','eq-notice','سوئیچی در موجودی مجاز پیدا نشد. ابتدا نود را با نوع «سوئیچ» و IP درست ثبت کنید.'));};query.oninput=()=>{search=query.value;listDraw();};listDraw();fieldset.append(query,list,button('پاک‌کردن انتخاب‌ها',()=>{selected.clear();invalidate();draw();},'eq-live-clear-selection'),el('p','eq-muted','حداکثر ۵ سوئیچ در هر نوبت؛ بررسی‌ها یکی‌یکی از سرور FAM انجام می‌شوند.'));
+  const account=el('div','eq-node-fields');for(const [field,label,type]of [['username','نام کاربری سوئیچ (SSH / RADIUS)','text'],['password','رمز ورود سوئیچ','password']]){const wrap=el('label','eq-field',label),input=el('input','inp');input.id='eq-live-'+field;input.type=type;input.value=auth[field];input.autocomplete=type==='password'?'new-password':'off';input.maxLength=field==='password'?512:64;input.oninput=()=>{auth[field]=input.value;invalidate();report();};wrap.append(input);account.append(wrap);}fieldset.append(account,el('p','eq-muted','حساب مشترک سوئیچ‌های انتخاب‌شده؛ فقط در حافظه تا خروج از FAM. رمز ارسال‌شده به سرور ذخیره نمی‌شود.'));
+  const run=button('بررسی پورت‌ها',scan,'eq-live-scan');run.disabled=!Access.can('equipment-scan');fieldset.append(run);pane.append(fieldset);if(busy)pane.append(el('p','eq-notice','عملیات واقعی در حال اجراست؛ درخواست خودکار تکرار نمی‌شود.'));const out=el('section');out.id='eq-live-report';out.setAttribute('aria-live','polite');pane.append(out);report();
+ }
+ async function scan(){if(busy)return;try{allowed('equipment-scan');const nodes=switches().filter(n=>selected.has(n.id));if(!nodes.length||nodes.length!==selected.size||nodes.length>MAX)throw Error('بین یک تا پنج سوئیچ مجاز انتخاب کنید.');if(!auth.username.trim()||!auth.password)throw Error('نام کاربری و رمز ورود سوئیچ را وارد کنید.');invalidate();signature=stamp();const token=epoch;busy=true;results=nodes.map(node=>({node:structuredClone(node),state:'waiting',ports:[]}));message='بررسی واقعی SSH از سرور FAM؛ اتصال ناموفق هرگز «بدون خطا» گزارش نمی‌شود.';draw();
+   try{for(const r of results){if(token!==epoch||!valid())break;allowed('equipment-scan');r.state='checking';report();try{const data=await FamShared.api('equipment/check',{host:r.node.host,username:auth.username.trim(),password:auth.password},110000);if(token!==epoch||!valid())break;
+     if(data.source!=='server-ssh'||data.host!==r.node.host||!Number.isFinite(data.checkedAt)||!Array.isArray(data.errDisabledPorts)||!data.recoveryTickets)throw Error('پاسخ بررسی قابل تأیید نیست؛ وضعیت نامشخص است.');const ids=new Set();r.ports=data.errDisabledPorts.map(p=>{if(!p||!IFACE.test(p.interface)||ids.has(p.interface)||typeof p.description!=='string'||typeof data.recoveryTickets[p.interface]!=='string')throw Error('پاسخ پورت‌ها معتبر نیست؛ دوباره بررسی کنید.');ids.add(p.interface);return {interface:p.interface,description:p.description,ticket:data.recoveryTickets[p.interface],outcome:''};});r.state='checked';r.checkedAt=data.checkedAt;
+    }catch(error){if(token!==epoch)break;r.state='unknown';r.error='بررسی ناموفق / نامشخص: '+error.message;r.ports=[];if(error.status===401||error.status===403)break;}report();}}
+   finally{busy=false;for(const r of results)if(r.state==='checking'||r.state==='waiting')r.state='unknown';message=token===epoch?'بررسی پایان یافت؛ فقط پورت‌های خطادار را برای رفع انتخاب کنید.':'بررسی متوقف شد؛ برای نتیجهٔ قطعی دوباره بررسی کنید.';draw();}
+  }catch(error){message=error.message;report();}}
+ function targets(){return results.flatMap(r=>r.ports.filter(p=>chosen.has(key(r,p))&&!p.outcome).map(p=>({r,p})));}
+ function reviewRepair(){try{allowed('equipment-repair');if(busy||!valid())return;const plan=targets();if(!plan.length||plan.length>MAX)throw Error('بین یک تا پنج پورت خطادار برای هر نوبت رفع انتخاب کنید.');close();const token=epoch,selection=JSON.stringify(plan.map(({r,p})=>key(r,p)));dialog=el('dialog','eq-dialog');dialog.id='eq-live-confirm';dialog.append(el('h3','','تأیید رفع خطا'),el('p','eq-notice warning','این عملیات واقعی است: بررسی مجدد همان پورت، shutdown / no shutdown و بررسی نتیجه. هیچ تنظیمی ذخیره نمی‌شود.'));
+   for(const {r,p}of plan)dialog.append(el('p','',r.node.name+' · '+r.node.host+' · '+p.interface));const apply=button('تأیید و رفع خطا',async()=>{if(busy)return;if(token!==epoch||!valid()||selection!==JSON.stringify(targets().map(({r,p})=>key(r,p)))){close();return;}close();await repair(plan,token);},'eq-live-apply');const cancel=button('انصراف',close,'eq-live-cancel');dialog.append(apply,cancel);dialog.addEventListener('cancel',e=>{e.preventDefault();close();});document.body.append(dialog);dialog.showModal();
+  }catch(error){message=error.message;report();}}
+ async function repair(plan,token){busy=true;message='در حال رفع پورت‌های تأییدشده…';draw();try{for(const {r,p}of plan){if(token!==epoch||!valid())break;allowed('equipment-repair');p.outcome='رفع در حال اجرا؛ نتیجه هنوز تأیید نشده.';report();try{const result=await FamShared.api('equipment/recover',{host:r.node.host,username:auth.username.trim(),password:auth.password,interface:p.interface,ticket:p.ticket},110000);if(token!==epoch||!valid())break;if(result.host!==r.node.host||result.interface!==p.interface||!['recovered','still_errdisabled','not_errdisabled'].includes(result.recovery))throw Error('پاسخ رفع قابل تأیید نیست.');p.outcome=({recovered:'رفع شد؛ بررسی پس از عملیات نشان داد این پورت دیگر Err-disabled نیست.',still_errdisabled:'خطا باقی است؛ پورت هنوز Err-disabled است.',not_errdisabled:'پورت پیش از عملیات دیگر Err-disabled نبود؛ تغییری اعمال نشد.'})[result.recovery];}catch(error){if(token!==epoch)break;p.outcome='نتیجهٔ رفع تأیید نشد: '+error.message+' برای ادامه دوباره بررسی کنید.';if(error.status===401||error.status===403)break;}chosen.delete(key(r,p));report();}}catch(error){message=error.message;}finally{busy=false;message=token===epoch?'عملیات پایان یافت. نتیجهٔ هر پورت کنار نام و IP سوئیچ نمایش داده شده است.':'نتیجهٔ درخواست ارسال‌شده پس از ترک/تغییر صفحه تأیید نشده؛ ممکن است اجرا شده باشد. پیش از هر اقدام دوباره پورت‌ها را بررسی کنید.';draw();}}
+ function suspend(){pane=null;close();if(busy)invalidate();}
+ function clear(){invalidate();auth={username:'',password:''};selected.clear();search='';if(pane?.isConnected)draw();}
+ document.addEventListener('fam-access-changed',clear);window.addEventListener('pagehide',clear);document.addEventListener('click',e=>{if(e.target.closest?.('#account-logout,#workspace-logout'))clear();},true);
+ return Object.freeze({mount(parent,nodeId){valid();pane=el('section','eq-live-workspace');parent.append(pane);if(nodeId&&!busy&&!selected.has(nodeId)){selected=new Set([nodeId]);invalidate();}draw();},suspend,invalidate,clear});
+})();

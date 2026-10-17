@@ -210,12 +210,12 @@ def errdisabled_interfaces(output: str):
     """Return only an interface and its displayed status-name/description.
 
     Statuses such as ``disabled``, ``connected`` and ``notconnect`` are never
-    reported; only the exact ``err-disabled`` status counts.  This deliberately
+    reported; only explicit err-disabled status variants count.  This deliberately
     returns no raw CLI line or other device data.
     """
     ports = {}
     for interface, name, status in _table_rows(output):
-        if status.lower() != "err-disabled":
+        if status.lower() not in {"err-disabled", "errdisable", "errdisabled"}:
             continue
         ports.setdefault(interface, _clean_description(name))
     return [{"interface": interface, "description": ports[interface]} for interface in sorted(ports)]
@@ -418,9 +418,18 @@ def session_output(job, commands, deadline: Deadline) -> str:
 def status_table(job, deadline: Deadline) -> str:
     output = session_output(job, STATUS_COMMANDS, deadline)
     rows = list(_table_rows(output))
-    if not has_status_table(output) or cli_errors(output) or not rows:
-        # Malformed/unexpected output must never be reported as "clean".
-        raise ProbeError("connection_failed")
+    # Never call a partially parsed table clean. A single unknown/truncated
+    # interface row can be the failing port even if other rows parsed normally.
+    parsed=[row[0] for row in rows]
+    candidates=[];in_table=False;unparsed_error=False
+    for raw in output.splitlines():
+        line=_strip_prompt(raw.rstrip("\r"));fields=line.split()
+        if _header_columns(line):in_table=True;continue
+        if in_table and fields and INTERFACE.fullmatch(fields[0]) and any(c.isdigit() for c in fields[0]):candidates.append(fields[0])
+        if in_table and fields and fields[0] not in parsed and re.search(r"\b(?:err-disabled|errdisable|errdisabled)\b",line,re.I):unparsed_error=True
+    if (not has_status_table(output) or cli_errors(output) or not rows or "--More--" in output
+            or unparsed_error or set(candidates)!=set(parsed) or len(candidates)!=len(parsed) or len(parsed)!=len(set(parsed))):
+        raise ProbeError("status_unreadable")
     return output
 
 
@@ -448,13 +457,17 @@ def recovery_commands(interface: str):
 def recover(job):
     interface = job["interface"]
     deadline = Deadline(HELPER_DEADLINE["recover"])
-    if interface not in errdisabled_ports(status_table(job, deadline)):
+    before=status_table(job, deadline)
+    if interface not in {row[0] for row in _table_rows(before)}:raise ProbeError("status_unreadable")
+    if interface not in errdisabled_ports(before):
         return {"ok": True, "recovery": "not_errdisabled"}
     config_output = session_output(job, recovery_commands(interface), deadline)
     if cli_errors(config_output):
         # e.g. insufficient privilege: do not claim recovery succeeded. Never save.
         raise ProbeError("connection_failed")
-    after = errdisabled_ports(status_table(job, deadline))
+    after_table=status_table(job, deadline)
+    if interface not in {row[0] for row in _table_rows(after_table)}:raise ProbeError("status_unreadable")
+    after = errdisabled_ports(after_table)
     return {"ok": True, "recovery": "still_errdisabled" if interface in after else "recovered"}
 
 

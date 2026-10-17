@@ -56,6 +56,8 @@ class EquipmentOpsTests(unittest.TestCase):
         result = self.post("/api/equipment/check", {"host": "10.2.52.2", "username": "radius.user", "password": password})
         self.assertEqual(result.status_code, 200, result.json)
         self.assertEqual(result.json["host"], "10.2.52.2")
+        self.assertEqual(result.json["source"],"server-ssh")
+        self.assertIsInstance(result.json["checkedAt"],int)
         self.assertEqual(result.json["errDisabledPorts"], [
             {"interface": "Gi0/1", "description": "ATM 17"},
             {"interface": "Gi0/2", "description": "Uplink core"},
@@ -149,6 +151,11 @@ class EquipmentOpsTests(unittest.TestCase):
     def test_old_worker_screen_and_api_are_not_registered(self):
         self.assertEqual(self.client.get("/network-operations").status_code, 404)
         self.assertEqual(self.client.post("/api/network/worker/claim", json={}, headers={"Origin": ORIGIN, "X-FAM-CSRF": self.csrf}).status_code, 404)
+
+    def test_unreadable_table_has_actionable_unknown_error_without_raw_output(self):
+        self.app.config['EQUIPMENT_EXECUTOR']=lambda value:{'ok':False,'error':'status_unreadable','raw':'PRIVATE CLI'}
+        result=self.post('/api/equipment/check',{'host':'10.2.52.2','username':'fixture','password':'temporary'})
+        self.assertEqual(result.status_code,502);self.assertIn('نامشخص',result.json['error']);self.assertNotIn('PRIVATE CLI',result.get_data(as_text=True))
 
     def test_errdisabled_parser_discards_raw_cli_output(self):
         output = """Port Name Status Vlan Duplex Speed Type

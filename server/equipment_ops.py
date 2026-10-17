@@ -134,6 +134,7 @@ def _failure(value):
         "authentication_failed": "نام کاربری یا رمز تجهیز پذیرفته نشد.",
         "connection_timeout": "اتصال SSH به تجهیز در زمان مجاز پاسخ نداد.",
         "connection_failed": "بررسی تجهیز انجام نشد؛ دسترسی SSH و وضعیت تجهیز را بررسی کنید.",
+        "status_unreadable": "اتصال انجام شد اما جدول کامل وضعیت پورت‌ها قابل تأیید نیست؛ وضعیت نامشخص است، نه بدون خطا.",
     }.get(code, "بررسی تجهیز انجام نشد.")
 
 
@@ -174,7 +175,7 @@ def register_equipment_ops(app, *, data, fail, allowed):
         result = _execute(app, {"operation": "status", **value})
         ports = _ports_or_fail(result, fail)
         tickets = {item["interface"]: _ticket(app, user_id=g.user["id"], host=value["host"], username=value["username"], interface=item["interface"]) for item in ports}
-        return jsonify(host=value["host"], errDisabledPorts=ports, recoveryTickets=tickets)
+        return jsonify(host=value["host"], source="server-ssh", checkedAt=int(time.time()*1000), errDisabledPorts=ports, recoveryTickets=tickets)
 
     @app.post("/api/equipment/recover")
     def equipment_recover():

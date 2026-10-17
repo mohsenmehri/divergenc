@@ -112,3 +112,10 @@ test('original XLSM bytes remain untouched',()=>{
  const sha=crypto.createHash('sha256').update(fs.readFileSync('Mohsen_FINAL_v5.xlsm')).digest('hex');
  assert.equal(sha,'bf1d5519e8e47b79212ef7bfbb7f0a6585faf6ae8604fd1f73a3af2a3b89ed66');
 });
+
+test('SERVER tools and device pages use one simple real SSH workflow, never LOCAL error scenarios',()=>{
+ const html=read(CENTRAL),tools=html.match(/<script id="fam-equipment-tools-js">([\s\S]*?)<\/script>/)[1],device=html.match(/<script id="fam-equipment-local-preview-js">([\s\S]*?)<\/script>/)[1];
+ assert.match(tools,/FamEquipmentLive.mount\(content\)/);assert.doesNotMatch(tools,/simulateErr|سناریوی ساختگی|errdisabledUI/);
+ assert.match(device,/FamEquipmentLive.mount\(main,node.id\)/);assert.doesNotMatch(device,/equipment-demo-scenario|async function runCheck/);
+ const live=read('src/equipment-live-server.js');assert.match(live,/equipment\/check/);assert.match(live,/equipment\/recover/);assert.match(live,/data.source!==\'server-ssh\'/);assert.doesNotMatch(live,/localStorage|sessionStorage/);
+});

@@ -46,6 +46,14 @@ class EquipmentInventoryTests(api.CentralTests):
         self.assertEqual(self.eq(w).json['standards']['items'],[]);self.assertEqual(self.write(w,self.eq(w).json,'standards',s).status_code,403)
         p=self.eq().json;p['inventory']['nodes']=[n for n in p['inventory']['nodes'] if n['modelId']!='model-2960'];p['inventory']['catalog']['models']=[m for m in p['inventory']['catalog']['models'] if m['id']!='model-2960']
         self.assertEqual(self.write(self.a,p).status_code,400)
+    def test_real_ssh_entrypoints_deny_out_of_scope_hosts_before_executor(self):
+        self.populated();scope={k:['*'] for k in DEFAULT_INVENTORY['catalog']};scope['regions']=['region-1'];w=self.worker(['equipment-scan'],scope)
+        calls=[]
+        self.app.config.update(EQUIPMENT_OPS_ENABLED=True,EQUIPMENT_EXECUTOR=lambda job:(calls.append(job['host']) or {'ok':True,'ports':[]}))
+        value={'host':'10.44.0.2','username':'fixture','password':'synthetic'}
+        self.assertEqual(self.post(w,'equipment/check',value).status_code,403);self.assertEqual(calls,[])
+        value['host']='10.44.0.1';self.assertEqual(self.post(w,'equipment/check',value).status_code,200);self.assertEqual(calls,['10.44.0.1'])
+
     def test_history_clear_rechecks_authority_and_preserves_other_data_and_undo_snapshots(self):
         before=self.state()['state'];self.assertTrue(len(before['sheets']['CHANGE_LOG']['rows'])>1);w=self.worker([]);self.assertEqual(self.post(w,'history/clear',{'confirm':True}).status_code,403);self.assertEqual(self.post(self.a,'history/clear',{'confirm':True}).status_code,200);after=self.state()['state'];self.assertEqual(self.a.get('/api/status').json['historyFloor'],self.state()['historyFloor']);self.assertEqual(len(after['sheets']['CHANGE_LOG']['rows']),1);self.assertEqual(before['sheets']['Network'],after['sheets']['Network'])
 

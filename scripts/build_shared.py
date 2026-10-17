@@ -15,10 +15,25 @@ for module in ('equipment-local-preview','equipment-tools'):
     source=(root/f'src/{module}.js').read_text().replace('localStorage','FamEquipmentServer.storage')
     if module=='equipment-local-preview':
         source=source.replace("if(!credentials){gate();return;}","if(!credentials)credentials={userId:Access.current()?.id,username:'demo-only',password:''};")
-        source=source.replace("'RADIUS آماده است'","'نشست کاربری سرور'").replace("'معتبر تا خروج از حساب FAM · فقط در حافظه'","'تجهیزات مرکزی · ابزارهای بررسی و پیکربندی نمایشی'").replace("'تغییر اطلاعات RADIUS'","'بازنشانی پیش‌نویس‌های نمایشی'")
+        source=source.replace("'RADIUS آماده است'","'نشست کاربری سرور'").replace("'معتبر تا خروج از حساب FAM · فقط در حافظه'","'تجهیزات مرکزی · بررسی پورت‌ها با SSH واقعی'").replace("'تغییر اطلاعات RADIUS'","'بازنشانی پیش‌نویس‌های نمایشی'")
         source=source.replace('load();fullInventory=inventory;render();','load();fullInventory=inventory;loadCards();render();')
-        source=source.replace('پیش‌نمایش محلی · مشخصات تجهیزات و استانداردهای بدون رمز ذخیره می‌شوند؛ رمز و متن کانفیگ ذخیره یا ارسال نمی‌شوند.','نسخه مرکزی · مشخصات و استانداردها روی سرور ثبت می‌شوند؛ بررسی/رفع گروهی و پیکربندی همچنان نمایشی‌اند. مسیر SSH واقعی در بخش جداگانه است.')
+        source=source.replace('پیش‌نمایش محلی · مشخصات تجهیزات و استانداردهای بدون رمز ذخیره می‌شوند؛ رمز و متن کانفیگ ذخیره یا ارسال نمی‌شوند.','نسخه مرکزی · مشخصات و استانداردها روی سرور ثبت می‌شوند؛ بررسی و رفع خطای پورت‌ها در ابزارها با SSH واقعی انجام می‌شود؛ پیکربندی و تطبیق کانفیگ همچنان آفلاین/نمایشی‌اند.')
+        a=source.index('  async function runCheck(){');b=source.index('  function render(){',a)
+        source=source[:a]+'''  function deviceView(main){
+    const {node}=selected();main.append(heading(node.name,node.host),button('ویرایش مشخصات نود',()=>editNode(node)));
+    FamEquipmentLive.mount(main,node.id);
+  }
+'''+source[b:]
+        source=source.replace('configuration.suspend();equipmentTools.suspend();root.replaceChildren();','FamEquipmentLive.suspend();configuration.suspend();equipmentTools.suspend();root.replaceChildren();')
     else:
+        a=source.index('  const errLabel=');b=source.index('  function draw(){',a)
+        source=source[:a]+'''  function closeRepair(){FamEquipmentLive.suspend();}
+  function invalidateErr(){FamEquipmentLive.invalidate();}
+'''+source[b:]
+        source=source.replace("mode='excel'","mode='errdisabled'")
+        source=source.replace("['errdisabled','بررسی Err-disabled']","['errdisabled','بررسی و رفع خطای پورت‌ها']")
+        source=source.replace("[['excel','ورود و خروج اکسل'],['standards','استانداردها و چک‌لیست'],['errdisabled','بررسی و رفع خطای پورت‌ها']]", "[['errdisabled','بررسی و رفع خطای پورت‌ها'],['excel','ورود و خروج اکسل'],['standards','استانداردها و چک‌لیست']]")
+        source=source.replace('else errdisabledUI(content);','else FamEquipmentLive.mount(content);')
         marker='  return Object.freeze({mount,suspend,clear,exportInventory});'
         source=source.replace(marker,"  window.addEventListener('storage',event=>{if(event.key===KEY){try{standards=T.validateStandards(JSON.parse(FamEquipmentServer.storage.getItem(KEY)||'{\"version\":1,\"items\":[]}'));standardIssue='';draft=null;auditResult=null;}catch(e){standardIssue='استانداردهای سرور معتبر نیستند؛ ویرایش غیرفعال است.';}}});\n"+marker)
     s,n=re.subn(r'<script id="fam-'+module+r'-js">.*?</script>',lambda _: '<script id="fam-'+module+'-js">\n'+source+'</script>',s,flags=re.S);assert n==1

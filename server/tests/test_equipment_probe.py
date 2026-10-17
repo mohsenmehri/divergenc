@@ -205,7 +205,25 @@ class SshExeTransportTests(ProbeHarness):
         for output in ("Port Name Status Vlan Duplex Speed Type\n", "Port Name Status Vlan Duplex Speed Type\nGi0/1 malformed\n", "", "% Invalid input detected at '^' marker.\n", "garbage without any table\nGi1/0/1 something\n"):
             self.calls.clear()
             result = self.run_probe(self.status_job(), [{"out": output}])
-            self.assertEqual(result, {"ok": False, "error": "connection_failed"}, output)
+            self.assertEqual(result, {"ok": False, "error": "status_unreadable"}, output)
+
+    def test_errdisabled_status_variants_are_not_reported_clean(self):
+        for variant in ('err-disabled','errdisable','errdisabled'):
+            result=self.run_probe(self.status_job(), [{'out':TABLE_ERRDISABLED.replace('err-disabled',variant)}])
+            self.assertTrue(result['ok']);self.assertEqual([p['interface'] for p in result['ports']],['Gi1/0/1','Gi1/0/7'])
+
+    def test_partially_parsed_error_row_must_not_be_clean(self):
+        for broken in ('Gi1/0/99 bad-format err-disabled','Gi1/0/99 -- unknown-state 1 auto auto 10/100','Gi1/0/99: -- err-disabled','Gi1/0/1 bad-format err-disabled','--More--'):
+            result=self.run_probe(self.status_job(), [{'out':TABLE_CLEAN+broken+'\n'}])
+            self.assertEqual(result, {'ok':False,'error':'status_unreadable'})
+
+    def test_recovery_requires_target_in_precheck_and_postcheck(self):
+        missing=TABLE_CLEAN.replace('Gi1/0/1','Gi1/0/99')
+        result=self.run_probe(self.recover_job(), [{'out':missing}])
+        self.assertEqual(result, {'ok':False,'error':'status_unreadable'})
+        self.calls.clear()
+        result=self.run_probe(self.recover_job(), [{'out':TABLE_ERRDISABLED},{'out':''},{'out':missing}])
+        self.assertEqual(result, {'ok':False,'error':'status_unreadable'})
 
     def test_password_is_only_in_child_environment_never_argv_or_askpass_file(self):
         self.run_probe(self.status_job(), [{"out": TABLE_CLEAN}])

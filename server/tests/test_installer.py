@@ -118,7 +118,7 @@ class IISConfigurationCheck(unittest.TestCase):
         fam=(server_root/'private_ui'/'FAM.html').read_text(encoding='utf8')
         self.assertIn('data-view="equipment"',fam)
         self.assertIn('equipment/check',fam)
-        self.assertIn('port.description',fam)
+        self.assertIn('p.description',fam)
         self.assertNotIn('equipment-ack',fam)
         self.assertNotIn('network-operations',fam)
 

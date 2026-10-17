@@ -1,12 +1,12 @@
 # Central equipment test release — 2026-10-17
 
-Scope selected: latest LOCAL inventory, categories, cards, per-model/location standards, dynamic Excel, configuration and simulated scan/recovery UX, with central metadata persistence and server-authorized operation permissions and stable-ID scopes. No expansion of the real single-device SSH executor.
+Scope selected: latest LOCAL inventory, categories, cards, per-model/location standards, dynamic Excel, configuration and simulated scan/recovery UX, with central metadata persistence and server-authorized operation permissions and stable-ID scopes. Latest correction explicitly requested a simple real multi-selection port workflow. The existing single-device executor is reused serially (up to five switches/ports per round); no freeform command, background worker or persistent job system was added.
 
 ## Deployment
 
 Use `releases/FAM-Custom-Access-SERVER-Patch.zip` on a **test copy** of the existing Windows/IIS deployment. Extract, take an independent verified FAM SQLite backup, and run `APPLY-CUSTOM-ACCESS-UPDATE.cmd` as administrator. Read bundled `README_FA.txt`. A code rollback is not a substitute for a database backup. Additive schema migration does not reseed existing accounts or replace the workbook.
 
-Package: 1,775,186 bytes. SHA256: `d4207121b49f1b8825d98de61a203785f67888612d99ac5d501b710c70b05162`.
+Package: 1,774,043 bytes. SHA256: `fe939260bec0e95c32fc014a49d2bf2d5386bb616d7e11c9a5d60e983b5d5b74`.
 
 The ten-file payload is checksum verified; the new `equipment_inventory.py` participates in installation, presence-aware backup and rollback. The full-install source allowlist also includes equipment backend modules; the historical full-install ZIP was not rebuilt in this release. No runtime DB, credentials, keys, known_hosts, logs, environment, or node_modules are shipped. Root SERVER ZIP mirrors the release ZIP. LOCAL release bytes and hash are unchanged.
 
@@ -21,14 +21,24 @@ The ten-file payload is checksum verified; the new `equipment_inventory.py` part
 
 ## Simulation versus real SSH
 
-New configuration/audit/group scan/repair features remain explicitly simulated; their working configurations/results are RAM-only. Central FAM authentication replaces the LOCAL dummy RADIUS gate. The existing real single-device form is a separately labeled panel with prefixed IDs. Its real checks require equipment-scan; recovery requires equipment-repair; scoped users can target only an IP in their permitted inventory. Users with all five wildcard scopes retain the previous private-IP flow.
+Configuration and configuration-audit tools remain offline/simulated. SERVER port scanning and recovery now have **one simple real SSH workflow** in Tools and device pages: select switches → scan → list owning switch/IP and error ports → explicit confirmation → controlled repair. The LOCAL scenario controls and separate legacy live panel are absent in SERVER. There is no dummy RADIUS authentication step. The device credentials are held only in document RAM until main logout/refresh, survive in-page navigation, and are sent only to the existing authenticated HTTPS endpoints.
 
-The constrained Windows SSH helper is unchanged: strict host-key handling, only the narrow aes128-cbc exception, no enable/freeform/save commands, transient credentials and secret-free temporary ASKPASS. The shared request helper now honors the existing bounded 110-second caller timeout, rather than silently aborting at 20 seconds.
+At most five switches are scanned serially; at most five selected ports are repaired serially. Every call reuses the existing bounded helper and server permission/scope checks. A successful check includes a server-SSH source marker, host and check timestamp. Missing/malformed replies, authentication failure, timeout or unreadable/partially parsed tables are unknown, never clean. The parser recognizes explicit err-disabled/errdisable/errdisabled variants, not administrative disabled/notconnect states. Pre/post recovery must both contain the exact target interface; disappearance is not success.
+
+Real checks require equipment-scan; recovery requires equipment-repair. Scoped users can target only an IP in their permitted inventory; all-five-wildcard users retain the previous private-IP API flow. Recovery requires review of exact switch/IP/interface and a short-lived server ticket; cancel sends no mutation. Unknown outcomes and expired tickets require a new check, with no automatic retry. Leaving an active operation stops subsequent calls, but cannot guarantee cancellation of the already-sent device request; the UI requires rechecking its outcome.
+
+The constrained Windows SSH transport/command allowlist remains unchanged; only status interpretation/completeness checking was tightened: strict host-key handling, only the narrow aes128-cbc exception, no enable/freeform/save commands, transient credentials and secret-free temporary ASKPASS. The shared request helper now honors the existing bounded 110-second caller timeout, rather than silently aborting at 20 seconds.
 
 ## Validation
 
-- Backend: **107 cases, 106 passed, 1 environment-specific skipped** using `.venv/bin/python -m unittest discover -s server/tests -p 'test_*.py'`. Includes 10 new central equipment cases: persistence/restart, receipts/stale writes, scoped reads/merges, hidden dependencies, private-IP collision, operation denial, import capability, standards validation/parent privacy, scope session revocation, central history cleanup.
-- JavaScript: **56/56** shared-build and pure inventory/access/Excel/configuration/tools model tests.
-- Chromium integration: `FAM_EQUIPMENT_TEST_URL=http://localhost:8765 node scripts/smoke_equipment_server.cjs` against a disposable synthetic TESTING server. Actual private client, two isolated sessions, browser form save and reload, no equipment localStorage, live SSH/demo separation, category rename and unsaved account draft preservation, central history broadcast, pending acknowledgment, coordinated workbook/equipment blocking and stale-write freeze. **Zero uncaught browser errors.**
+- Backend: **112 cases, 111 passed, 1 environment-specific skipped** using `.venv/bin/python -m unittest discover -s server/tests -p 'test_*.py'`. Includes central equipment coverage: persistence/restart, receipts/stale writes, scoped reads/merges, hidden dependencies, private-IP collision, operation denial, import capability, standards validation/parent privacy, scope session revocation, central history cleanup.
+- JavaScript: **57/57** shared-build and pure inventory/access/Excel/configuration/tools model tests.
+- Chromium integration: `FAM_EQUIPMENT_TEST_URL=http://localhost:8765 node scripts/smoke_equipment_server.cjs` against a disposable synthetic TESTING server. Actual private client, two isolated sessions, browser form save and reload, no equipment localStorage, shared real workflow presence, category rename and unsaved account draft preservation, central history broadcast, pending acknowledgment, coordinated workbook/equipment blocking and stale-write freeze. **Zero uncaught browser errors.**
 - Historical LOCAL full regression remains 110/110 from the preceding release; it was not rerun in full here because LOCAL source/artifact bytes are unchanged.
 - Windows/IIS installation, Microsoft Excel desktop and a real device connection were **not run**. No real device credentials were used.
+
+### Simple SSH workflow correction checks
+
+`FAM_EQUIPMENT_FIXTURE=SYNTHETIC_ONLY .venv/bin/python scripts/serve_equipment_test_fixture.py` starts a disposable TESTING fixture; `FAM_EQUIPMENT_TEST_URL=http://localhost:8765 node scripts/smoke_equipment_live.cjs` runs the actual private UI/authenticated API with a **synthetic executor**. Three selected switches return err-disabled, clean, timeout respectively. Assertions cover switch/IP/port ownership, cancel without a repair call, exactly one explicitly confirmed recovery, malformed HTTP-success reply treated as unknown, password absent from storage, preserved across tab changes and cleared by refresh and a 401 session-expiration response; zero browser errors. The generic two-session central integration smoke also passed again. Its stale-write check uses the independent API context to avoid a page-route/poll timing dependency.
+
+Additional mocked-OpenSSH tests cover errdisable status variants, a mixed clean/unparseable error table, pagination, missing recovery target in pre/post checks and actionable sanitized unreadable-table errors. Existing Windows SSH cipher, ASKPASS, command restrictions and host-key tests still pass. **No claim is made that the user's actual switch is reachable or fixed; live Windows/server-to-switch verification remains pending.**
