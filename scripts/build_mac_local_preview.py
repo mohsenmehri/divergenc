@@ -6,9 +6,12 @@ ROOT=Path(__file__).resolve().parents[1]
 html=(ROOT/'FAM.html').read_text()
 needle='main.append(card);}'
 assert html.count(needle)==1
-html=html.replace(needle,"main.append(card);FamLocalPortPreview.mount(main,inventory.nodes.filter(n=>find('types',n.typeId)?.kind==='switch'));}")
+html=html.replace(needle,"main.append(card);FamLocalPortPreview.mount(main,inventory.nodes.filter(n=>find('types',n.typeId)?.kind==='switch'),inventory.catalog,nodeId);}")
 html=html.replace('<head>','<head>\n<meta name="fam-local-mac-preview" content="FAM-LOCAL-MAC-PREVIEW-20261018">',1)
 html=html.replace('<title>','<title>پیش‌نمایش محلی تعویض MAC — ',1)
+css=(ROOT/'src/equipment-mac-local-preview.css').read_text()
+assert '</style' not in css.lower()
+html=html.replace('</head>','<style id="fam-local-mac-preview-css">\n'+css+'\n</style>\n</head>',1)
 script=(ROOT/'src/equipment-mac-local-preview.js').read_text()
 assert '</script' not in script.lower()
 assert html.count('\n</body>')==1
@@ -19,11 +22,11 @@ readme='''پیش‌نمایش LOCAL فرم پورت و تعویض MAC — ۲۰۲
 فایل FAM-Client-MAC-LOCAL-Preview.html را استخراج و با Chrome یا Edge باز کنید.
 برای فایل تازه و بدون حساب قبلی: نام کاربری admin و رمز 1109؛ این فقط ورود محلی برنامه است، نه رمز تجهیز. حساب‌های موجود مرورگر تغییر نمی‌کنند.
 مسیر: ورود → تجهیزات → بررسی پورت‌ها.
-سوئیچ‌های ثبت‌شدهٔ مجاز در لیست ظاهر می‌شوند. اگر موجودی خالی است، IP سوئیچ را در کادر «فقط برای پیش‌نمایش» وارد کنید؛ اتصال یا ثبت موجودی انجام نمی‌شود.
-کنار هر سوئیچ پورت اختیاری و تیک IP دستی را امتحان کنید و «نمایش مسیر انتخاب‌شده — بدون اجرا» را بزنید.
+یک کادر IP/نام دارید. روی آن کلیک کنید: منطقه ← نوع محل (ساختمان/شعبه) ← محل ← تیک سوئیچ. یا IP داخلی را در همین کادر بنویسید و Enter بزنید. فقط انتخاب‌شده‌ها زیر کادر ظاهر می‌شوند؛ تاریخچه/فهرست دائمی وجود ندارد و IP دستی در موجودی ذخیره نمی‌شود.
+کنار هر سوئیچ پورت اختیاری (مثلاً 6,10) و تیک IP دستی را امتحان کنید و «نمایش مسیر انتخاب‌شده — بدون اجرا» را بزنید.
 پورت خالی: شرح مسیر Err-disabled فعلی. پورت ۷: پیش‌نمایش مسیر Fa0/7. تیک دستی: همان IP قبلی و فقط MAC جدید در binding و Inspection.
 LOCAL هیچ SSH، خواندن جدول، گرفتن MAC، رفع خطا یا تغییر سوئیچی انجام نمی‌دهد. نتایج ساختگی سالم/موفق تولید نمی‌شوند. رمز واقعی تجهیز وارد نکنید؛ این فرم اصلاً رمز تجهیز نمی‌گیرد.
-در پیش‌نمایش، IP واقعی کلاینت از سوئیچ قابل دریافت نیست و مقداری حدس زده نمی‌شود. عملیات واقعی فقط در SERVER با پیش‌بررسی و تأیید جداگانه است. Sticky قبلی خودکار پاک نمی‌شود.
+در پیش‌نمایش، IP واقعی کلاینت از سوئیچ قابل دریافت نیست و مقداری حدس زده نمی‌شود. عملیات واقعی نیازمند SERVER با پیش‌بررسی و تأیید جداگانه است. پاک‌سازی محدود MAC از پورت قبلی و interface range در این فایل فقط طرح درخواستی هستند و هنوز در SERVER فعلی پیاده نشده‌اند. تشخیص تاریخی یا MAC روی uplink مجوز حذف نیست. بخش ۳ برای یافتن پورت احتمالی در حالت پورت نامعلوم است؛ توضیح آن در راهنمای جمع‌شوندهٔ فرم آمده است.
 اطلاعات قبلی برنامه حذف/ریست نمی‌شوند. مثل نسخهٔ محلی معمول، پیش از استفادهٔ کاری از داده‌های مرورگر خروجی/بکاپ مستقل بگیرید. انتخاب‌های این فرم و IPهای موقت فقط در RAM هستند و با refresh پاک می‌شوند.
 '''
 data=html.encode();release=ROOT/'releases';release.mkdir(exist_ok=True)

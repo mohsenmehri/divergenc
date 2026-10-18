@@ -1,0 +1,18 @@
+.eq-local-mac-v2{max-width:1050px;margin:20px auto;text-align:start}
+.eq-local-switch-picker{position:relative}
+.eq-local-switch-picker .eq-field{margin-bottom:6px}
+.eq-local-switch-dropdown{position:relative;inset-inline:auto;top:auto;z-index:25;max-height:360px;overflow:auto;padding:12px;border:1px solid var(--eq-line,var(--border));border-radius:12px;background:var(--eq-surface,#182238);box-shadow:0 14px 35px #0004;isolation:isolate}
+.eq-local-switch-dropdown[hidden]{display:none}
+.eq-local-picker-top,.eq-local-picker-crumbs{display:flex;gap:6px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}
+.eq-local-picker-crumbs{justify-content:flex-start;border-bottom:1px solid var(--eq-line,var(--border));padding-bottom:8px}
+.eq-local-picker-branch,.eq-local-switch-option{display:flex;gap:10px;align-items:center;width:100%;min-height:42px;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--eq-text,inherit);text-align:start;cursor:pointer;overflow-wrap:anywhere}
+.eq-local-picker-branch:hover,.eq-local-switch-option:hover{background:var(--hover,#ffffff10)}
+.eq-local-switch-option input{flex:0 0 auto;accent-color:var(--accent,#6a9df5)}
+.eq-local-mac-v2 .eq-live-switch-row{margin-block:10px;border:1px solid var(--eq-line,var(--border));border-radius:12px}
+.eq-local-mac-v2 .eq-live-switch-row p{margin:5px 0}
+.eq-local-mac-v2 .eq-live-command-output{white-space:pre-wrap;overflow:auto;text-align:left;unicode-bidi:plaintext;padding:14px;border:1px solid var(--eq-line,var(--border));border-radius:10px}
+.eq-local-mac-v2 #eq-local-mac-review{margin-block:12px}
+.eq-local-mac-v2 #eq-local-diagnosis-help{margin-top:18px;padding:12px;border:1px solid var(--eq-line,var(--border));border-radius:12px}
+.eq-local-mac-v2 #eq-local-diagnosis-help p{line-height:2}
+.eq-local-mac-v2 button:focus-visible,.eq-local-mac-v2 input:focus-visible{outline:2px solid var(--accent,#6a9df5);outline-offset:2px}
+:root[data-ui-theme=light] .eq-local-switch-dropdown{background:#fff;color:#1c2940}
