@@ -43,7 +43,7 @@ window.FamShared=(()=>{
       const headers={};if(body!==undefined){headers['Content-Type']='application/json';if(csrf)headers['X-FAM-CSRF']=csrf;}
       const response=await fetch(new URL('api/'+path,location.href),{method:body===undefined?'GET':'POST',headers,credentials:'same-origin',cache:'no-store',signal:controller.signal,...(body===undefined?{}:{body:JSON.stringify(body)})});
       const value=await response.json().catch(()=>({error:'پاسخ سرور معتبر نیست؛ مسیر API و تنظیم IIS را بررسی کنید.'}));
-      if(!response.ok||value.error){if(response.status===401)window.FamEquipmentLive?.clear();const error=Error(value.error||'خطای سرور');error.status=response.ok?502:response.status;throw error;}
+      if(!response.ok||value.error){if(response.status===401){window.FamEquipmentSession?.clear();window.FamEquipmentLive?.clear();}const error=Error(value.error||'خطای سرور');error.status=response.ok?502:response.status;throw error;}
       return value;
     }catch(e){if(e.status)throw e;throw Error('ارتباط با سرور برقرار نشد؛ هیچ ذخیره‌ای تأیید نشده است.');}
     finally{clearTimeout(timer);}

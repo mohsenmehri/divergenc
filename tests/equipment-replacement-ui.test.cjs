@@ -1,6 +1,6 @@
 /* New real SERVER controller/picker with synthetic API. No equipment access. */
 const {test,before,after}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
-const {launch}=require('./helpers/equipment-browser.cjs');let browser,page;const errors=[];
+const {launch,equipmentLogin}=require('./helpers/equipment-browser.cjs');let browser,page;const errors=[];
 before(async()=>{browser=await launch();});after(async()=>{await browser?.close();assert.deepEqual(errors,[]);});
 async function setup(options={}){
  if(page)await page.close();page=await browser.newPage();page.setDefaultTimeout(8000);page.on('pageerror',e=>errors.push(e.message));await page.setContent('<div id="mount"></div>');
@@ -16,17 +16,17 @@ async function setup(options={}){
    return {host:job.host,source:'server-ssh',checkedAt:Date.now(),errDisabledPorts:[{interface:'Fa0/6',description:'fixture 6'},{interface:'Fa0/10',description:'fixture 10'}],recoveryTickets:{'Fa0/6':'old-6','Fa0/10':'old-10'},descriptions:{output:'Interface Status Protocol Description\nFa0/6 down down fixture\n'}};
   }};
  },options);
- await page.addScriptTag({content:fs.readFileSync('src/equipment-switch-picker.js','utf8')});await page.addScriptTag({content:fs.readFileSync('src/equipment-live-server.js','utf8')});await page.evaluate(()=>FamEquipmentLive.mount(document.getElementById('mount')));
- await pick('100.100.1.22');await page.locator('#eq-live-username').fill('synthetic-user');await page.locator('#eq-live-password').fill('synthetic-secret');
+ await page.addScriptTag({content:fs.readFileSync('src/equipment-session.js','utf8')});await page.addScriptTag({content:fs.readFileSync('src/equipment-switch-picker.js','utf8')});await page.addScriptTag({content:fs.readFileSync('src/equipment-live-server.js','utf8')});await page.evaluate(()=>FamEquipmentLive.mount(document.getElementById('mount')));
+ await pick('100.100.1.22');await equipmentLogin(page);
 }
 async function pick(ip){await page.locator('#eq-live-search').fill(ip);await page.locator('#eq-live-search').press('Enter');}
 async function prepare(staticIp=true,ports='7'){await page.locator('#eq-live-port-a').fill(ports);if(staticIp)await page.locator('#eq-live-static-a').check();await page.locator('#eq-live-scan').click();await page.getByRole('button',{name:'تأیید و اجرای همین گروه'}).waitFor();}
 async function apply(){await page.getByRole('button',{name:'تأیید و اجرای همین گروه'}).click();assert.equal(await page.locator('#eq-live-apply').isDisabled(),true);await page.locator('#eq-live-group-approve').check();await page.locator('#eq-live-apply').click();}
 test('scoped hierarchy, same combo for manual IP, no permanent switch/history list',async()=>{
  await setup();assert.equal(await page.locator('#eq-live-manual-ip').count(),0);assert.equal(await page.locator('[data-selected-node]').count(),1);assert.equal(await page.locator('#eq-live-picker-dropdown').isHidden(),true);
- await page.locator('#eq-live-search').click();await page.locator('[data-level=region]').click();await page.locator('[data-level=kind]').click();await page.locator('[data-level=site]').click();await page.locator('#eq-live-node-b').check();assert.equal(await page.locator('[data-selected-node]').count(),2);await page.locator('#eq-live-remove-b').click();assert.equal(await page.locator('[data-selected-node]').count(),1);
+ await page.locator('#eq-live-search').fill('');await page.locator('#eq-live-search').click();await page.locator('.eq-tree-row[data-category=type] .eq-tree-title').click();await page.locator('.eq-tree-row[data-category=region] .eq-tree-title').click();await page.locator('.eq-tree-row[data-category=site] .eq-tree-title').click();await page.locator('#eq-live-node-b').check();assert.equal(await page.locator('[data-selected-node]').count(),2);await page.locator('#eq-live-remove-b').click();assert.equal(await page.locator('[data-selected-node]').count(),1);
  await pick('100.107.1.22');assert.equal(await page.locator('[data-selected-node]').count(),2);assert.equal(await page.evaluate(()=>calls.length),0);
- for(const end of [23,24,25])await pick('100.107.1.'+end);assert.equal(await page.locator('[data-selected-node]').count(),5);await pick('100.107.1.26');assert.equal(await page.locator('[data-selected-node]').count(),5);assert.match(await page.locator('#eq-live-report').textContent(),/حداکثر پنج/);await page.locator('#eq-live-remove-manual-1').click();await page.locator('#eq-live-search').fill('100.107.1.22');assert.equal(await page.locator('#eq-live-node-manual-1').count(),0);await page.locator('#eq-live-search').press('Enter');assert.equal(await page.locator('[data-selected-node]').count(),5);assert.equal(await page.evaluate(()=>calls.length),0);
+ for(const end of [23,24,25])await pick('100.107.1.'+end);assert.equal(await page.locator('[data-selected-node]').count(),5);await pick('100.107.1.26');assert.equal(await page.locator('[data-selected-node]').count(),6);assert.equal(await page.locator('#eq-live-scan').isDisabled(),true);assert.match(await page.locator('#eq-live-selection-note').textContent(),/حداکثر پنج/);await page.locator('#eq-live-remove-manual-1').click();await page.locator('#eq-live-search').fill('100.107.1.22');assert.equal(await page.locator('#eq-live-node-manual-1').count(),0);await page.locator('#eq-live-search').press('Enter');assert.equal(await page.locator('[data-selected-node]').count(),6);assert.equal(await page.evaluate(()=>calls.length),0);
 });
 test('blank optional port preserves inspect; multiple errors on same host produce one group request',async()=>{
  await setup();await page.locator('#eq-live-scan').click();await page.getByText('Fa0/6 · fixture 6',{exact:true}).waitFor();for(const cb of await page.locator('#eq-live-report tbody input').all())await cb.check();await page.locator('#eq-live-review').click();await page.locator('#eq-live-confirm').waitFor();
@@ -46,7 +46,7 @@ test('no static checkbox supplies no IP; invalid or stale plan and uncertain suc
 });
 test('scan-only cannot prepare changes; invalid ports stop before API; logout clears picker RAM, scopes restrict unknown manual host',async()=>{
  await setup({noRepair:true});await page.locator('#eq-live-port-a').fill('7');await page.locator('#eq-live-scan').click();assert.equal(await page.evaluate(()=>calls.length),0);
- await setup();await page.locator('#eq-live-port-a').fill('6-10');await page.locator('#eq-live-scan').click();assert.equal(await page.evaluate(()=>calls.length),0);await page.evaluate(()=>FamEquipmentLive.clear());assert.equal(await page.locator('[data-selected-node]').count(),0);assert.equal(await page.locator('#eq-live-password').inputValue(),'');
+ await setup();await page.locator('#eq-live-port-a').fill('6-10');await page.locator('#eq-live-scan').click();assert.equal(await page.evaluate(()=>calls.length),0);await page.evaluate(()=>{FamEquipmentSession.clear();FamEquipmentLive.clear();});assert.equal(await page.locator('[data-selected-node]').count(),0);assert.equal(await page.evaluate(()=>FamEquipmentSession.ready()),false);
  await setup({scoped:true});await pick('100.107.1.22');assert.equal(await page.locator('[data-selected-node]').count(),1);assert.match(await page.locator('#eq-live-report').textContent(),/محدوده/);assert.doesNotMatch(fs.readFileSync('src/equipment-live-server.js','utf8'),/localStorage|sessionStorage/);
 });
 test('failed first group stops other switches; approvals are invalidated and diagnosis is optional/collapsed',async()=>{

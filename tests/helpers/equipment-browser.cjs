@@ -1,4 +1,9 @@
 const fs=require('node:fs'),path=require('node:path'),zlib=require('node:zlib'),{execFileSync}=require('node:child_process'),{chromium}=require('playwright'),binary=require('@sparticuz/chromium');
 async function launch(){if(!process.env.CHROMIUM_PATH){const libs=path.resolve('.cache/chromium-libs');fs.mkdirSync(libs,{recursive:true});const pkg=path.resolve(path.dirname(require.resolve('@sparticuz/chromium')),'../..');execFileSync('tar',['xf','-','-C',libs],{input:zlib.brotliDecompressSync(fs.readFileSync(path.join(pkg,'bin/al2023.tar.br')))});process.env.LD_LIBRARY_PATH=libs+'/lib';}return chromium.launch({executablePath:process.env.CHROMIUM_PATH||await binary.executablePath(),args:binary.args.filter(x=>!['--single-process','--disable-web-security','--allow-running-insecure-content'].includes(x)),headless:true});}
 async function login(page){await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await page.locator('#workspace-enter-equipment').click();}
-module.exports={launch,login};
+async function equipmentLogin(page,username='synthetic-user',password='synthetic-secret'){
+ if(await page.evaluate(()=>FamEquipmentSession.ready()))return;
+ await page.evaluate(()=>{void FamEquipmentSession.request();});
+ await page.locator('#eq-session-username').fill(username);await page.locator('#eq-session-password').fill(password);await page.locator('#eq-session-submit').click();
+}
+module.exports={launch,login,equipmentLogin};

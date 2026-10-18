@@ -12,8 +12,10 @@ from waitress import serve
 if os.environ.get('FAM_EQUIPMENT_FIXTURE')!='SYNTHETIC_ONLY':
     raise SystemExit('Explicit disposable synthetic fixture flag required')
 with tempfile.TemporaryDirectory() as directory:
+    layout=os.environ.get('FAM_LAYOUT_PREVIEW')=='1'
     repaired=set()
     def executor(job):
+        if layout:return {'ok':False,'error':'equipment_ops_disabled'}
         if job['operation'] in {'group-plan','group-apply'}:
             from server.tests.test_equipment_group import preflight,NEW,TARGETS
             if job['interfaces']!=TARGETS:return {'ok':False,'error':'group_preflight'}
@@ -42,17 +44,42 @@ with tempfile.TemporaryDirectory() as directory:
     app=create_app({'TESTING':True,'COOKIE_SECURE':False,'PUBLIC_ORIGIN':origin,'DB_PATH':str(Path(directory)/'synthetic.sqlite3'),'EQUIPMENT_OPS_ENABLED':True,'EQUIPMENT_EXECUTOR':executor})
     # Only this disposable fixture marks its UI as synthetic. Production files,
     # host/origin/CSRF policy and packaged service are not modified.
-    from flask import request
+    from flask import request,make_response,redirect
     @app.after_request
     def mark_fixture(response):
-        if response.mimetype=='text/html' and request.path in {'/app','/FAM.html'}:
+        if layout:
+            # Embeddable only for this explicit, synthetic, no-SSH layout preview.
+            response.headers.pop('X-Frame-Options',None)
+            policy=response.headers.get('Content-Security-Policy','')
+            if policy:response.headers['Content-Security-Policy']=policy.replace("frame-ancestors 'none'",'frame-ancestors *')
+        if response.status_code==200 and response.mimetype=='text/html' and request.path in {'/app','/FAM.html'}:
             response.direct_passthrough=False
-            response.set_data(response.get_data(as_text=True).replace("central()?'نسخهٔ مرکزی'", "central()?'محیط آزمایشی · نتیجه‌ها ساختگی‌اند'"))
+            text=response.get_data(as_text=True)
+            if layout:
+                banner='<aside style="padding:10px 18px;text-align:center;background:#fff8dc;color:#765b16;font:12px/1.9 sans-serif;position:relative;z-index:100">پیش‌نمایش چیدمان · داده‌ها آزمایشی‌اند · اتصال به تجهیزات غیرفعال است · رمز واقعی وارد نکنید</aside>'
+                boot="""<script>document.documentElement.dataset.uiTheme='light';window.addEventListener('load',()=>{const timer=setInterval(()=>{if(typeof Access==='undefined'||!Access.current()||document.querySelector('#shared-block'))return;clearInterval(timer);document.getElementById('workspace-enter-equipment')?.click();const u=document.getElementById('eq-session-username'),p=document.getElementById('eq-session-password');if(u&&p){u.value='demo';p.value='demo';document.getElementById('eq-session-submit').click();}setTimeout(()=>document.getElementById('equipment-tab-ports')?.click(),100);},150);setTimeout(()=>clearInterval(timer),20000);});</script>"""
+                before,after=text.rsplit('</body>',1);text=before+boot+'</body>'+after
+                import re
+                text=re.sub(r'(<body[^>]*>)',lambda m:m[1]+banner,text,count=1)
+            response.set_data(text)
         return response
+    if layout:
+        def layout_entry():
+            with app.test_client() as entry_client:
+                signed=entry_client.post('/api/login',json={'username':'admin','password':'1109'},headers={'Origin':origin})
+                response=make_response(redirect('/app'));response.headers['Cache-Control']='no-store'
+                for cookie in signed.headers.getlist('Set-Cookie'):response.headers.add('Set-Cookie',cookie.replace('SameSite=Strict','SameSite=None')+'; Secure; Partitioned')
+                return response
+        app.view_functions['root']=layout_entry
     client=app.test_client();login=client.post('/api/login',json={'username':'admin','password':'1109'},headers={'Origin':origin}).json
     env=client.get('/api/equipment/state').json
     env['inventory']['nodes']=[{'id':'fixture-'+str(i),'name':'Fixture switch '+str(i),'host':'10.53.0.'+str(i),'typeId':'type-switch','modelId':'model-2960','regionId':'region-1','siteKindId':'kind-building','siteId':'building-0'} for i in (1,2,3)]
+    if layout:
+        next(r for r in env['inventory']['catalog']['regions'] if r['id']=='region-1')['name']='خراسان'
+        next(r for r in env['inventory']['catalog']['regions'] if r['id']=='region-2')['name']='تهران'
+        env['inventory']['catalog']['sites'].extend([{'id':'review-mashhad','name':'مشهد','siteKindId':'kind-branch'},{'id':'review-neyshabur','name':'نیشابور','siteKindId':'kind-branch'}])
+        env['inventory']['nodes']=[{'id':'review-'+str(i),'name':name,'host':'100.100.'+str(1+i//200)+'.'+str(1+i%200),'typeId':'type-switch','modelId':'model-2960','regionId':region,'siteKindId':'kind-branch','siteId':site} for i,(name,region,site) in enumerate([('تجهیز ۲۳۵ · شعبه مشهد','region-1','review-mashhad'),('تجهیز ۲۳۶ · شعبه نیشابور','region-1','review-neyshabur'),('تجهیز ۲۳۷ · مشهد مرکزی','region-1','review-mashhad'),('تجهیز ۱۰۸ · تهران','region-2','review-mashhad')])]
     import uuid
     response=client.post('/api/equipment/state',json={'revision':env['revision'],'requestId':str(uuid.uuid4()),'kind':'inventory','value':env['inventory']},headers={'Origin':origin,'X-FAM-CSRF':login['csrf']})
     assert response.status_code==200
-    serve(app,host='0.0.0.0',port=8765,threads=8)
+    serve(app,host='0.0.0.0',port=int(os.environ.get('FAM_EQUIPMENT_FIXTURE_PORT','8765')),threads=8)
