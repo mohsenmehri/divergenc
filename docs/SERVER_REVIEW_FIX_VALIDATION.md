@@ -1,59 +1,49 @@
-# SERVER release validation — 2026-10-18
+# SERVER group-recovery release validation — 2026-10-18
 
-Current release retains the SERVER security review fixes, branding/background update and read-only diagnosis, and adds **explicitly approved port-scoped MAC replacement with unchanged IP**. This is not a production/device acceptance report.
+Current release: **FAM-EQUIPMENT-GROUP-20261018**. Real SERVER implementation, not the LOCAL mock. This is a code/packaging acceptance report, **not production, physical-device or Windows/IIS acceptance**. Previous single-port API remains available for compatibility; the actual SERVER form now uses group endpoints.
 
-## Artifacts
+## Deliverable
 
-- SERVER: `releases/FAM-Custom-Access-SERVER-Patch.zip`, **22 allowlisted payload files**, 30 total archive entries.
-- New module `equipment_replacement.py` is included in packaging, fresh-install copy list, updater and same-version rollback manifests.
-- LOCAL: `releases/FAM-Custom-Access-LOCAL-Patch.zip`; styling only, no SSH/replacement capability.
-- Exact reproducible ZIP digests are in adjacent `.zip.sha256` files.
-- Three byte-identical Persian guides inside SERVER: `README_FA.txt`, `CLIENT-MOVE-DIAGNOSIS-FA.txt`, `CLIENT-MAC-REPLACEMENT-FA.txt`, corresponding to the installation, read-only diagnosis and new replacement guides in `docs/`.
-- New SERVER-only marker: `FAM-CLIENT-MAC-REPLACEMENT-20261018`. Existing branding/security/diagnosis markers retained.
+- `releases/FAM-Custom-Access-SERVER-Patch.zip`: **1,908,389 bytes**, 32 archive entries, 23 allowlisted payload files plus manifest/updater and four Persian guides.
+- SHA256: `5e27a43afea71ea50e28e6165eb32d0f286c9eebb4697d3642f73176c0ab16d1` (also adjacent `.zip.sha256`).
+- New engine `server/equipment_group.py` included in ZIP, fresh-install file list, updater targets and same-version rollback manifests. No new runtime dependencies.
+- New picker `src/equipment-switch-picker.js` embedded before actual SERVER controller; existing scoped central persistence, categories, user permissions and history mechanisms retained.
+- Four guides checked byte-for-byte against source: `README_FA.txt`, `GROUP-RECOVERY-FA.txt`, `CLIENT-MOVE-DIAGNOSIS-FA.txt`, `CLIENT-MAC-REPLACEMENT-FA.txt`. The last guide explicitly describes the retained legacy single-port API, not the new form.
 
-## Executed checks
+## Executed final checks
 
 | Check | Result |
 | --- | --- |
-| Full `python -m unittest discover -s server/tests -v` | **186 run: 185 passed, 1 skipped** |
-| Skip | Offline carried-wheel bytes absent; offline wheel preparation remains separate |
-| New `server.tests.test_equipment_replacement` | **23 passed**, pure parser/command, mocked SSH process and authenticated API contracts |
-| `scripts/verify_server_fix_release.py` | **115 isolated extracted-runtime tests passed**, plus ZIP checksum, all 22 payload hashes, source parity and all three guide comparisons |
-| New `tests/equipment-replacement-ui.test.cjs` | **6 passed**, synthetic browser/API only |
-| Final replacement + diagnosis UI + shared-build focused run | **26 passed, 0 failed** |
-| Initial full `npm test` | **111 passed, 11 failed**: all 11 failures share the LOCAL equipment suite's before-hook login timeout (10 seconds); not a claim of a green full invocation |
-| Unchanged LOCAL equipment suite rerun separately | **11 passed, 0 failed**; all tests blocked by that hook were exercised successfully |
-| `scripts/smoke_equipment_replacement.cjs` | Authenticated real SERVER UI/API → synthetic executor: per-switch port/static checkbox, old IP/MAC preview, cancel, explicit approval, unchanged-IP result, ticket invalidation, RAM/navigation/reload; **zero browser errors** |
-| `scripts/smoke_equipment_live.cjs` | Existing authenticated inspect/status/descriptions/recovery/diagnosis regression smoke passed; **zero browser errors** |
-| `scripts/smoke_equipment_server.cjs` | Central two-session persistence/history/scopes/drafts/pending/conflict smoke passed; **zero browser errors** |
-| Syntax | Changed Python compiled, JavaScript checked; two changed PowerShell files parsed by tree-sitter, **not executed on Windows** |
-| Build/packaging | Canonical generated HTML, exact payload source parity, duplicate/traversal checks, deterministic ZIP and guide parity |
-| Hygiene | No runtime DB/settings/known_hosts, credentials, private keys/certificates, logs, venv, wheels, executables or dependency directories in the patch |
-| Diff | `git diff --check` passed |
+| Full Python `unittest discover -s server/tests -v` | **213 run: 212 passed, 1 skipped** |
+| Skip | Existing optional carried-wheel hash check: wheel artifacts absent; no offline wheels added to this patch |
+| New `server.tests.test_equipment_group` | **27 passed**, strict parser/range/cleanup contracts, mocked actual SSH subprocess protocol, real authenticated Flask guards |
+| Isolated extracted ZIP runtime `scripts/verify_server_fix_release.py` | **142 passed**, plus ZIP SHA256, all 23 payload hashes/source parity, traversal/duplicates and all four guide comparisons |
+| Full `npm test` (all 18 test files, serial) | **132 passed, 0 failed**, including unchanged LOCAL equipment suite and LOCAL preview tests |
+| Focused real-controller/diagnosis/shared-build suite | **30 passed**, synthetic API/browser only |
+| Authenticated browser smoke `scripts/smoke_equipment_replacement.cjs` | Real SERVER HTML/API with disposable synthetic executor: unified picker/manual target, inspect, exact escaped descriptions, 6/10 in one group apply, explicit old-MAC/old-port and conditional discovery consent, cancel, rejected replay, unchanged per-port IP replacement, removal report, read-only diagnosis, RAM/navigation/reload. **Zero browser errors.** |
+| Authenticated central smoke `scripts/smoke_equipment_server.cjs` | Two sessions/reload, central persistence, no browser equipment storage, scope editor draft preservation, central history broadcast, pending/conflict gates. **Zero browser errors.** |
+| `scripts/smoke_equipment_live.cjs` | Now delegates to the unified current live/group smoke instead of obsolete checkbox/single-recover harness; not counted as a third independent run |
+| Syntax/static installer contracts | Changed Python compiled; changed JavaScript parsed; installer allowlist/manifest tests passed. PowerShell and Windows tasks **not executed on Windows** |
+| Build/packaging | Canonical generated HTML; deterministic rebuild/repack; exact source/payload and guide parity |
+| Hygiene/invariance | No runtime secrets/settings/DB/keys/certificates/known_hosts/logs/venv/wheels in ZIP; no changes to approved LOCAL HTML/ZIPs or original XLSM; `git diff --check` passed |
 
-The full JavaScript invocation's hook timeout occurred while other browser/CPU checks were also running. The successful unchanged separate rerun is reported separately, rather than relabeling that original invocation as passed. No application login behavior or test timeout was weakened.
+The first broad JavaScript pass exposed five obsolete test-harness assertions (new picker dependency and legacy single-recover patterns). Those harnesses were updated to load/test the actual new controller; focused tests and the subsequent **complete 132-test invocation** passed. No failing tests were skipped or removed.
 
-## Replacement coverage and safety boundaries
+## Specific safety evidence
 
-- Empty optional port uses the existing inspect/error-recovery workflow. Per-branch port is independent, access-only `Fa0/1`–`Fa0/24`; explicit status-only remains read-only regardless of optional port.
-- Static checkbox reads exactly one matching static VLAN 100 binding and exact simple `Inspection` permit. IP is never entered, allocated or derived from port number. Old/new pair commands preserve the actual old IP, including an IP whose last octet is not the port number.
-- No static checkbox: no write to source binding or ARP ACL; a configured static binding blocks this mode rather than silently leaving stale policy.
-- Preflight gates model/IOS/access configuration, single client, IPSG, admin state, bindings/ACL, command boundaries and output bounds. Explicit existing configured/sticky secure addresses block before writes; no clear-all or automatic sticky removal.
-- Plan/apply require both scan and repair permissions plus all five current scopes. API tests deny either missing permission and each missing scope; Origin/CSRF/session and existing shared per-host/global admission remain enforced.
-- One-use 300-second approval binds operation purpose, user, SSH identity, host, port, static checkbox and configuration fingerprint. Tampering, cross-purpose recovery, stale snapshots, replay, public/invalid hosts, uplinks, input commands/new IP and malformed helper output are rejected.
-- Application shuts the target before removing IPSG/policy, verifies closed/unprotected state, then opens for bounded learning. It does not assume an err-disable must occur; at most one observed error is bounced.
-- Single unicast new MAC must agree in CAM/secure observations, differ from recorded old MAC and not conflict with other binding/secure identities. Multiple MACs, missing traffic and repeated failures do not produce success.
-- Restoration happens while shutdown; unchanged-IP binding/new permit and IPSG are checked before opening. Final link, CAM and secure identity are checked. This is **not end-to-end client IP connectivity verification**.
-- Failure after possible writes attempts a bounded shutdown-only compensation with known old IP/MAC policy and IPSG. Confirmed shutdown/protection yields a manual-review/quarantined failure; failed cleanup or transport loss yields **uncertain protection, immediate operator review**, never success/retry/reopen.
-- Helper/apply deadline 150 seconds, executor 160 seconds, browser 170 seconds, existing lease 180 seconds. Leaving the page or browser timeout does not promise physical cancellation.
-- Credentials, plans/results and raw switch output are not persisted. Only existing lease ownership and consumed-ticket digests/expiry are stored. No enable/save/free-form CLI/debug was added.
+- Exact 6 and 10 => `interface range FastEthernet0/6 , FastEthernet0/10`, never implicit 7–9. Adjacent explicit members only are compacted; five clauses maximum per range command.
+- Source binding/Inspection commands use the existing independently read IP per port, not a port-number-derived address. Without static checkbox there is no static binding/ARP modification.
+- All targets closed before cleanup; only exact reviewed Sticky/Configured records, or globally unique Dynamic address, are removed. Dynamic disappearance skips the clear; relocation/mismatch aborts without widening cleanup.
+- Old connected ports, uplinks, other VLANs, selected-target ambiguity, multiple clients, static references and unknown output fail closed. No clear-all, blanket Sticky deletion, ACL deletion, enable, freeform CLI or save commands.
+- When a replacement MAC is first visible only after reopening: fresh Secure-shutdown and increased violation counter, same-switch unique record, idle access VLAN100 old port, no static reference, recheck after range shutdown, exact clear/proof, at most one additional grouped recovery. Explicit conditional consent is visible in the confirmation.
+- New-MAC evidence must be coherent for **all members in the same poll**; disappearing evidence cannot carry forward into a stale binding write.
+- Scope, scan+repair permissions, session/Origin/CSRF, target/mode/static/fingerprint/policy-bound one-use tickets, shared host/global leases and deadlines retained. Unknown manual hosts require all five wildcard dimensions; manual targets never write inventory.
+- Any uncertain/partial member stops remaining switch groups and invalidates approvals. After possible changes, only one bounded shutdown/protection attempt is made; previous foreign/target secure MACs are not blindly re-authorized. Typed failure metadata names old ports when known. A timeout can leave their identity/state unknown and requires immediate manual inspection.
+- UI reports only verified replacement/protection or absence of err-disable, **not end-to-end client IP reachability or physical identity**.
+- Full guide: `docs/GROUP_RECOVERY_FA.md` / `GROUP-RECOVERY-FA.txt` in ZIP.
 
-## Preserved behavior and staging limits
+## Still required before rollout
 
-Read-only diagnosis remains separate and never repairs or confirms movement; historical DAI and configured binding/sticky entries remain nonproof of current location. Existing branding/company name, theme, account/data/scopes, LOCAL offline boundary, direct server SSH, strict host keys, single aes128-cbc exception and safe description display are retained.
+No real switch, RADIUS/SSH, branch network, Windows installer, Task Scheduler or IIS was exercised; no real credentials received, no production DB reset, no production deployment. The authenticated fixture was explicitly synthetic, disposable, and stopped after testing.
 
-No real switch, production database, real device credentials, RADIUS or Windows/IIS deployment was accessed. All CLI/SSH data is synthetic. Windows Job Object/ASKPASS/IIS/Task Scheduler and exact branch IOS remain staging acceptance tasks. The 2960 profile and strict parser are not certification of all firmware/output variants.
-
-**Important functional limit:** this patch does not automatically remove an old Sticky/Configured secure address. Such a port is stopped before changes and needs an independently authorized operator decision. Lack of new MAC traffic can leave the target deliberately shutdown; SSH loss can leave protection unconfirmed. Do not roll out across branches without a maintenance/staging acceptance procedure and independent management access.
-
-Existing data/settings/accounts/scopes are not reset. Rollback restores application code only, not device configuration or the current database; use updater and backup from the same release (manifest expanded from 21 to 22 payload files). KDF/proxy-rate-limit/CSP redesign remains separate work.
+Staging acceptance must cover exact classic IOS/model/output and range/clear syntax, independently trusted host fingerprints, RADIUS privilege/command authorization, permitted maintenance ports, old-port active/idle and concurrent-change scenarios, Sticky/Configured/Dynamic, DHCP/static traffic, multiple ports, MAC learning/fresh-counter behavior, missing traffic, disconnect/timeout and manual restoration. Preserve independent management access and verified backups. Rollback restores application code, not actual switch configuration.

@@ -14,6 +14,13 @@ if os.environ.get('FAM_EQUIPMENT_FIXTURE')!='SYNTHETIC_ONLY':
 with tempfile.TemporaryDirectory() as directory:
     repaired=set()
     def executor(job):
+        if job['operation'] in {'group-plan','group-apply'}:
+            from server.tests.test_equipment_group import preflight,NEW,TARGETS
+            if job['interfaces']!=TARGETS:return {'ok':False,'error':'group_preflight'}
+            plan=preflight(job['mode'],job['staticIp'])
+            if job['operation']=='group-plan':return {'ok':True,'plan':plan}
+            repaired.add((job['host'],'group'))
+            return {'ok':True,'mode':job['mode'],'interfaces':TARGETS,'protectionRestored':True,'removed':plan['removals'],'rows':[{**row,'state':'replaced' if job['mode']=='replace' else 'recovered','newMac':NEW[row['interface']] if job['mode']=='replace' else ''} for row in plan['items']]}
         if job['operation'] in {'replacement-plan','replacement-apply'}:
             from server.tests.test_equipment_replacement import plan,IP,OLD,NEW
             if job['operation']=='replacement-plan':return {'ok':True,'plan':plan(job['staticIp'])}
@@ -27,7 +34,7 @@ with tempfile.TemporaryDirectory() as directory:
         if job['operation']=='recover':
             repaired.add((job['host'],job['interface']))
             return {'ok':True,'recovery':'recovered'}
-        ports=[{'interface':'Gi0/7','description':'Fixture port'}] if job['host'] in {'10.53.0.1','10.53.0.9'} and (job['host'],'Gi0/7') not in repaired else []
+        ports=[{'interface':'Fa0/6','description':'Fixture 6'},{'interface':'Fa0/10','description':'Fixture 10'}] if job['host'] in {'10.53.0.1','10.53.0.9'} and (job['host'],'Gi0/7') not in repaired and (job['host'],'group') not in repaired else []
         result={'ok':True,'ports':ports}
         if job['operation']=='inspect':result.update(descriptions=executor({**job,'operation':'descriptions'}),timings={'preparationMs':10,'sshMs':20})
         return result

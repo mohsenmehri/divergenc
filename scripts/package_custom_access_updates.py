@@ -56,6 +56,7 @@ FILES=(
     (ROOT/'server'/'equipment_guard.py','equipment_guard.py'),
     (ROOT/'server'/'equipment_diagnostics.py','equipment_diagnostics.py'),
     (ROOT/'server'/'equipment_replacement.py','equipment_replacement.py'),
+    (ROOT/'server'/'equipment_group.py','equipment_group.py'),
     (ROOT/'server'/'manage.py','manage.py'),
     (ROOT/'server'/'bootstrap_admin.py','bootstrap_admin.py'),
     (ROOT/'server'/'windows'/'preflight_backup.py','preflight_backup.py'),
@@ -78,7 +79,9 @@ for source,name in FILES:
     (payload/name).write_bytes(source.read_bytes())
 expected=''.join(f'{hashlib.sha256((payload/name).read_bytes()).hexdigest()}  {name}\n' for _,name in FILES)
 (payload/'SHA256SUMS.txt').write_text(expected,encoding='utf8')
+(server/'README_FA.txt').write_bytes((ROOT/'docs'/'SERVER_REVIEW_FIX_PATCH_FA.md').read_bytes())
 (server/'CLIENT-MOVE-DIAGNOSIS-FA.txt').write_bytes((ROOT/'docs'/'CLIENT_MOVE_DIAGNOSIS_FA.md').read_bytes())
+(server/'GROUP-RECOVERY-FA.txt').write_bytes((ROOT/'docs'/'GROUP_RECOVERY_FA.md').read_bytes())
 (server/'CLIENT-MAC-REPLACEMENT-FA.txt').write_bytes((ROOT/'docs'/'CLIENT_MAC_REPLACEMENT_FA.md').read_bytes())
 local=ROOT/'patches'/'fam-custom-access-local'
 local.mkdir(parents=True,exist_ok=True)

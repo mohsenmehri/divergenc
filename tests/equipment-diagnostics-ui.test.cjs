@@ -8,11 +8,12 @@ async function setup(value=report(),permitted=true){
  await page.evaluate(({value,permitted})=>{
   window.calls=[];window.Access={can:()=>permitted,current:()=>({equipmentScope:Object.fromEntries(['types','models','regions','siteKinds','sites'].map(k=>[k,['*']]))}),equipmentView:v=>v};
   const data={catalog:{types:[{id:'switch',kind:'switch'}]},nodes:[{id:'test',name:'Synthetic branch',host:'100.100.1.22',typeId:'switch'}]};
-  window.FamEquipmentServer={inventory:()=>data,blocked:()=>false};window.FamShared={api:async(path,job)=>{calls.push({path,...job});if(value.error)throw Error(value.error);return {host:job.host,source:'server-ssh',checkedAt:Date.now(),report:value};}};
+  window.FamEquipmentInventory={privateIP:v=>/^100\.100\.1\.22$/.test(v)};window.FamEquipmentServer={inventory:()=>data,blocked:()=>false};window.FamShared={api:async(path,job)=>{calls.push({path,...job});if(value.error)throw Error(value.error);return {host:job.host,source:'server-ssh',checkedAt:Date.now(),report:value};}};
  },{value,permitted});
+ await page.addScriptTag({content:fs.readFileSync('src/equipment-switch-picker.js','utf8')});
  await page.addScriptTag({content:fs.readFileSync('src/equipment-live-server.js','utf8')});await page.evaluate(()=>FamEquipmentLive.mount(document.getElementById('mount')));
 }
-async function credentials(){await page.locator('#eq-live-node-test').check();await page.locator('#eq-live-username').fill('synthetic-user');await page.locator('#eq-live-password').fill('synthetic-secret');}
+async function credentials(){await page.locator('#eq-live-search').fill('100.100.1.22');await page.locator('#eq-live-search').press('Enter');await page.locator('#eq-client-diagnosis-details').evaluate(n=>n.open=true);await page.locator('#eq-live-username').fill('synthetic-user');await page.locator('#eq-live-password').fill('synthetic-secret');}
 async function run(){await credentials();await page.locator('#eq-client-ip').fill('10.4.86.7');await page.locator('#eq-client-diagnose').click();}
 test('diagnosis is opt-in and requires client identity but never a port number',async()=>{
  await setup();await credentials();assert.equal(await page.evaluate(()=>calls.length),0);await page.locator('#eq-client-diagnose').click();assert.equal(await page.evaluate(()=>calls.length),0);

@@ -12,7 +12,7 @@ s=(root/'FAM.html').read_text()
 # One shared equipment UI, with a central storage adapter and canonical SSH UI.
 # No text-rewrite fork of the workspace or nested LOCAL scenario controller.
 s=s.replace('<script id="fam-equipment-workspace-js">','<script id="fam-equipment-server-store-js">\n'+(root/'src/equipment-server-store.js').read_text()+'</script>\n<script id="fam-equipment-workspace-js">',1)
-s=s.replace('\n</body>','\n<script id="fam-equipment-management-js">\n'+(root/'src/equipment-live-server.js').read_text()+'\n</script>\n</body>',1)
+s=s.replace('\n</body>','\n<script id="fam-equipment-switch-picker-js">\n'+(root/'src/equipment-switch-picker.js').read_text()+'\n</script>\n<script id="fam-equipment-management-js">\n'+(root/'src/equipment-live-server.js').read_text()+'\n</script>\n</body>',1)
 a=s.index('function clearLog() {');b=s.index('/* ---------- results',a)
 s=s[:a]+"""function clearLog(){
  if(!Access.require('clear-history'))return false;
@@ -43,8 +43,8 @@ s=s.replace(' — Passwords and sheet locks in this app only SIMULATE the Excel 
 s=s.replace('data-default-theme="original"','data-default-theme="original" data-fam-variant="shared"',1)
 s=s.replace('<title>','<title>فام مرکزی — ',1)
 s=re.sub(r'<meta name="fam-release" content="[^"]*">','<meta name="fam-release" content="FAM-EQUIPMENT-V2-SERVER-FIX-20261017">',s,count=1)
-s=s.replace('<head>', '<head>\n<meta name="fam-client-mac-replacement-release" content="FAM-CLIENT-MAC-REPLACEMENT-20261018">\n<meta name="fam-client-diagnosis-release" content="FAM-CLIENT-DIAGNOSIS-20261018">',1)
-s=s.replace('\n</head>','\n<style id="fam-shared-css">\n'+(root/'src/shared-sync.css').read_text()+'\n</style>\n</head>',1)
+s=s.replace('<head>', '<head>\n<meta name="fam-equipment-group-release" content="FAM-EQUIPMENT-GROUP-20261018">\n<meta name="fam-client-mac-replacement-release" content="FAM-CLIENT-MAC-REPLACEMENT-20261018">\n<meta name="fam-client-diagnosis-release" content="FAM-CLIENT-DIAGNOSIS-20261018">',1)
+s=s.replace('\n</head>','\n<style id="fam-equipment-picker-css">\n'+(root/'src/equipment-mac-local-preview.css').read_text()+'\n</style>\n<style id="fam-shared-css">\n'+(root/'src/shared-sync.css').read_text()+'\n</style>\n</head>',1)
 s=s.replace('\n</body>','\n<script id="fam-shared-js">\n'+(root/'src/shared-sync.js').read_text()+'\n</script>\n</body>',1)
 p=root/'server/private_ui/FAM.html';p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s)
 print('Built protected central two-theme client:',p.relative_to(root))

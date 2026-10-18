@@ -59,7 +59,7 @@ SECRET_ENV = "FAM_EQUIPMENT_SSH_SECRET"
 CONNECT_TIMEOUT = 10
 SESSION_TIMEOUT = 25
 INSPECT_SESSION_TIMEOUT = 2 * SESSION_TIMEOUT
-HELPER_DEADLINE = {"status": 30, "inspect": 55, "descriptions": 30, "recover": 85, "diagnose": 85, "replacement-plan": 70, "replacement-apply": 150}
+HELPER_DEADLINE = {"status": 30, "inspect": 55, "descriptions": 30, "recover": 85, "diagnose": 85, "replacement-plan": 70, "replacement-apply": 150, "group-plan": 100, "group-apply": 150}
 MAX_OUTPUT_BYTES = 1024 * 1024
 
 STATUS_COMMANDS = ("terminal length 0", "show interfaces status", "exit")
@@ -596,6 +596,24 @@ def diagnose(job):
 
 def execute(value):
     """Run one already-decoded, bounded job and return only its safe result."""
+    if isinstance(value,dict) and value.get('operation') in ('group-plan','group-apply'):
+        try:
+            if __package__:from . import equipment_group as group
+            else:import equipment_group as group
+            base={'operation','host','username','password','interfaces','mode','staticIp'}
+            if set(value)!=(base|({'planHash'} if value['operation']=='group-apply' else set())):raise ValueError('schema')
+            group.interfaces(value['interfaces'])
+            if not isinstance(value['mode'],str) or value['mode'] not in ('recover','replace') or type(value['staticIp']) is not bool or (value['mode']=='recover' and value['staticIp']):raise ValueError('mode')
+            if value['operation']=='group-apply' and (not isinstance(value['planHash'],str) or not group.r.HASH.fullmatch(value['planHash'])):raise ValueError('hash')
+            if not isinstance(value['host'],str):raise ValueError('host')
+            address=ipaddress.IPv4Address(value['host'])
+            if not any(address in n for n in ALLOWED_IPV4_NETWORKS) or not isinstance(value['username'],str) or not USERNAME.fullmatch(value['username']):raise ValueError('host/user')
+            password=value['password']
+            if not isinstance(password,str) or not 1<=len(password)<=512 or not all(0x20<=ord(c)<=0x7e for c in password):raise ValueError('password')
+        except (ValueError,TypeError,KeyError):return {'ok':False,'error':'invalid_request'}
+        try:return group.run(value,apply=value['operation']=='group-apply')
+        except ProbeError as exc:return {'ok':False,'error':exc.code}
+        except Exception:return {'ok':False,'error':'group_preflight'}
     if isinstance(value,dict) and value.get('operation') in ('replacement-plan','replacement-apply'):
         try:
             if __package__:from . import equipment_replacement as replacement

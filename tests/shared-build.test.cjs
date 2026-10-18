@@ -115,16 +115,17 @@ test('original XLSM bytes remain untouched',()=>{
 
 test('new equipment workspace is flat, shared and contains no legacy scenario UI',()=>{
  const html=read(CENTRAL),local=read('FAM.html'),workspace=read('src/equipment-workspace.js');
+ assert.match(html,/<meta name="fam-equipment-group-release" content="FAM-EQUIPMENT-GROUP-20261018">/);assert.equal((html.match(/id="fam-equipment-switch-picker-js"/g)||[]).length,1);
  for(const doc of [html,local]){assert.match(doc,/id="fam-equipment-workspace-js"/);assert.doesNotMatch(doc,/id="fam-equipment-local-preview-(?:js|css)"/);assert.ok(doc.includes(workspace));}
  assert.doesNotMatch(workspace,/runCheck|equipment-demo-scenario|credentials=/);assert.match(workspace,/equipmentTools.mount\(main,section\)/);
  const tools=read('src/equipment-tools.js');assert.doesNotMatch(tools,/simulateErr|سناریوی ساختگی|errdisabledUI|eq-tool-errdisabled/);
- const live=read('src/equipment-live-server.js');assert.match(live,/equipment\/inspect/);assert.match(live,/equipment\/recover/);assert.doesNotMatch(live,/localStorage|sessionStorage|innerHTML/);
+ const live=read('src/equipment-live-server.js');assert.match(live,/equipment\/inspect/);assert.match(live,/equipment\/group\/apply/);assert.doesNotMatch(live,/localStorage|sessionStorage|innerHTML/);
  assert.doesNotMatch(read('scripts/build_shared.py'),/needle_result|source.replace|needle_scan/);
 });
 
 test('SERVER manual-IP and description output use the scoped API and text-only rendering',()=>{
  const html=read(CENTRAL),live=html.match(/<script id="fam-equipment-management-js">([\s\S]*?)<\/script>/)[1];
- assert.match(live,/eq-live-manual-ip/);assert.match(live,/FamEquipmentInventory.privateIP/);assert.match(live,/equipment\/descriptions/);assert.match(live,/pre=el\('pre','eq-live-command-output',item.output\)/);assert.match(live,/whiteSpace:'pre'/);assert.doesNotMatch(live,/innerHTML|localStorage|sessionStorage/);
+ assert.doesNotMatch(live,/eq-live-manual-ip/);assert.match(live,/FamEquipmentSwitchPicker.mount/);assert.ok(html.includes(read('src/equipment-switch-picker.js')));assert.match(read('src/equipment-switch-picker.js'),/eq-live-search/);assert.match(live,/FamEquipmentInventory.privateIP/);assert.match(live,/equipment\/descriptions/);assert.match(live,/pre=el\('pre','eq-live-command-output',item.output\)/);assert.match(live,/whiteSpace:'pre'/);assert.doesNotMatch(live,/innerHTML|localStorage|sessionStorage/);
  const helper=read('server/equipment_probe.py');assert.match(helper,/DESCRIPTION_COMMANDS = \("terminal length 0", "show interfaces description", "exit"\)/);
 });
 
@@ -136,6 +137,6 @@ test('SERVER inspection uses one combined request and no automatic second descri
 
 test('SERVER recovery errors stop the batch and invalidate remaining approvals',()=>{
  const live=read('src/equipment-live-server.js');
- assert.match(live,/if\(result.recovery==='still_errdisabled'\)throw Error/);
- assert.match(live,/port.ticket=''/);assert.match(live,/report\(\);break;\}chosen.delete/);
+ assert.match(live,/data.rows.some\(row=>row.state==='still_errdisabled'\)\)throw Error/);
+ assert.match(live,/r.groupTicket=''/);assert.match(live,/p.ticket=''/);assert.match(live,/message=r.groupOutcome;break;/);assert.match(live,/chosen.clear\(\)/);
 });

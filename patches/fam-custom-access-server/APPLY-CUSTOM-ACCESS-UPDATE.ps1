@@ -10,9 +10,9 @@ $Server=Join-Path $InstallRoot 'server';$StartPath=Join-Path $Server 'windows\st
 $FAMPython=Join-Path $Server '.venv\Scripts\python.exe'
 $SshClient=Join-Path $env:SystemRoot 'System32\OpenSSH\ssh.exe'
 $EquipmentDir=Join-Path $DataDir 'equipment';$BackupDir=Join-Path $DataDir 'backups'
-$ExpectedNames=@('app.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','equipment_replacement.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py','FAM.html','login.html','login.css','login.js','web.config')
+$ExpectedNames=@('app.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','equipment_replacement.py','equipment_group.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py','FAM.html','login.html','login.css','login.js','web.config')
 $Target=@{}
-foreach($Name in @('app.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','equipment_replacement.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py')){$Target[$Name]=Join-Path $Server $Name}
+foreach($Name in @('app.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','equipment_replacement.py','equipment_group.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py')){$Target[$Name]=Join-Path $Server $Name}
 foreach($Name in @('start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py')){$Target[$Name]=Join-Path $Server ('windows\'+$Name)}
 foreach($Name in @('login.html','login.css','login.js','web.config')){$Target[$Name]=Join-Path $Server ('www\'+$Name)}
 $Target['FAM.html']=Join-Path $Server 'private_ui\FAM.html'

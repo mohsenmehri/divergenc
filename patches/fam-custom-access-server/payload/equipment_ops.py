@@ -36,7 +36,7 @@ USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 # equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
 # helper while it is still supervising an ssh.exe child. Replacement allows
 # 150s helper / 160s executor, below the existing 180s admission lease.
-EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95, "diagnose": 95, "replacement-plan": 80, "replacement-apply": 160}
+EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95, "diagnose": 95, "replacement-plan": 80, "replacement-apply": 160, "group-plan": 110, "group-apply": 160}
 # RFC1918 plus the user-authorized building/shared-address range (RFC6598).
 # Deliberately not all of 100/8 or arbitrary public targets.
 ALLOWED_IPV4_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"))
@@ -139,15 +139,20 @@ def _execute(app, payload):
         )
         result = json.loads(completed.stdout.decode("utf-8"))
     except subprocess.TimeoutExpired:
-        return {"ok": False, "error": ("replacement_uncertain" if payload.get("operation")=="replacement-apply" else "recovery_uncertain") if payload.get("operation") in {"recover","replacement-apply"} else "connection_timeout"}
+        return {"ok": False, "error": (("group_uncertain" if payload.get("operation")=="group-apply" else "replacement_uncertain") if payload.get("operation") in {"replacement-apply","group-apply"} else "recovery_uncertain") if payload.get("operation") in {"recover","replacement-apply","group-apply"} else "connection_timeout"}
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return {"ok": False, "error": ("replacement_uncertain" if payload.get("operation")=="replacement-apply" else "recovery_uncertain") if payload.get("operation") in {"recover","replacement-apply"} else "connection_failed"}
+        return {"ok": False, "error": (("group_uncertain" if payload.get("operation")=="group-apply" else "replacement_uncertain") if payload.get("operation") in {"replacement-apply","group-apply"} else "recovery_uncertain") if payload.get("operation") in {"recover","replacement-apply","group-apply"} else "connection_failed"}
     return result if isinstance(result, dict) else {"ok": False, "error": "connection_failed"}
 
 
 def _failure(value):
     code = value.get("error") if isinstance(value, dict) else ""
     return {
+        "group_preflight": "پیش‌بررسی گروهی کامل نیست؛ فقط پورت access تک‌کلاینت VLAN 100 و رکورد MAC قابل تأیید پشتیبانی می‌شود. پورت قبلی باید خالی/بسته و فاقد binding ثابت برای MAC جابه‌جاشده باشد. تغییری اعمال نشد.",
+        "group_old_port_active": "پورت قبلی MAC هنوز متصل یا خطادار است؛ برای جلوگیری از قطع کلاینت فعال حذف انجام نشد. ابتدا جابه‌جایی را با کارشناس بررسی کنید.",
+        "group_changed": "شواهد یا تنظیمات گروه از زمان تأیید تغییر کرده؛ تغییری اعمال نشد. دوباره پیش‌بررسی کنید.",
+        "group_quarantined": "عملیات گروه کامل نشد؛ همهٔ پورت‌های هدف در shutdown و حفاظت مورد انتظار بررسی شدند. پورت قبلی یا رکوردهای حذف‌شده خودکار برنمی‌گردند؛ بررسی کارشناس لازم است.",
+        "group_uncertain": "اثر عملیات گروه نامشخص است؛ ممکن است MAC، IPSG یا binding تغییر کرده باشد. بسته‌بودن/حفاظت همهٔ اعضا تأیید نشد. فوراً پورت‌های هدف و پورت‌های قبلی احتمالی همان سوئیچ را بررسی کنید؛ تکرار خودکار انجام نمی‌شود.",
         "replacement_preflight": "پیش‌بررسی تعویض MAC قابل تأیید نیست: پورت باید access VLAN 100، تک‌کلاینت و دارای IPSG باشد؛ در حالت IP دستی دقیقاً یک binding ثابت و مجوز متناظر Inspection لازم است. تغییری اعمال نشد.",
         "replacement_sticky": "MAC قبلی به‌صورت Sticky/Configured روی پورت ثبت شده است؛ حذف آن در این مسیر مجاز نیست. کارشناس باید همان رکورد را بررسی کند؛ تغییری اعمال نشد.",
         "replacement_changed": "تنظیمات نسبت به پیش‌نمایش تغییر کرده است؛ دوباره بررسی و تأیید کنید. تغییری اعمال نشد.",
@@ -341,4 +346,85 @@ def register_equipment_ops(app, *, data, fail, allowed):
             safe={'equipment_busy','ticket_consumed','replacement_changed','replacement_preflight','replacement_sticky','unsupported_platform','replacement_quarantined'}
             code=code if code in safe else 'replacement_uncertain'
             return jsonify(error=_failure({'error':code}),code=code,requiresRecheck=True), (429 if code=='equipment_busy' else 409 if code=='ticket_consumed' else 502)
+        return jsonify(host=value['host'],**{k:v for k,v in result.items() if k!='ok'})
+
+
+    def group_input(apply=False):
+        raw=data();fields={'host','username','password','interfaces','mode','staticIp'}|({'ticket','planHash'} if apply else set())
+        try:
+            if not isinstance(raw,dict) or set(raw)!=fields:raise ValueError('schema')
+            if __package__:from . import equipment_group as group
+            else:import equipment_group as group
+            value=_input({k:raw[k] for k in ('host','username','password')})
+            ports=group.interfaces(raw['interfaces'])
+            if not isinstance(raw['mode'],str) or raw['mode'] not in ('recover','replace') or type(raw['staticIp']) is not bool or (raw['mode']=='recover' and raw['staticIp']):raise ValueError('mode')
+            value.update(interfaces=ports,mode=raw['mode'],staticIp=raw['staticIp'])
+            if apply:
+                if not isinstance(raw['planHash'],str) or not group.r.HASH.fullmatch(raw['planHash']) or not isinstance(raw['ticket'],str) or not 40<=len(raw['ticket'])<=1024:raise ValueError('approval')
+                value.update(ticket=raw['ticket'],planHash=raw['planHash'])
+            return value
+        except (ValueError,TypeError,KeyError):fail(400,'فهرست دقیق پورت‌های Fa0/1 تا Fa0/24 و حالت عملیات معتبر لازم است؛ IP/MAC جدید یا فرمان آزاد پذیرفته نمی‌شود.')
+
+    @app.post('/api/equipment/group/plan')
+    def group_plan():
+        authorize('recover');value=group_input()
+        authorize('status',value['host']);authorize('recover',value['host'])
+        result=run({'operation':'group-plan',**value})
+        if not isinstance(result,dict) or result.get('ok') is not True:fail(429 if isinstance(result,dict) and result.get('error')=='equipment_busy' else 502,_failure(result))
+        try:
+            if __package__:from . import equipment_group as group
+            else:import equipment_group as group
+            plan=group.validate_plan(result.get('plan'))
+            if (plan['interfaces'],plan['mode'],plan['staticIp'])!=(value['interfaces'],value['mode'],value['staticIp']):raise ValueError('wrong target')
+            if any(secret.casefold() in json.dumps(plan).casefold() for secret in (value['username'],value['password'])):raise ValueError('secret')
+        except (ValueError,TypeError,KeyError):fail(502,_failure({'error':'group_preflight'}))
+        context='group:'+value['mode']+':'+str(int(value['staticIp']))+':'+plan['planHash']
+        ticket=_ticket(app,user_id=g.user['id'],host=value['host'],username=value['username'],interface=','.join(value['interfaces']),context=context)
+        return jsonify(host=value['host'],source='server-ssh',plan=plan,ticket=ticket)
+
+    @app.post('/api/equipment/group/apply')
+    def group_apply():
+        authorize('recover');value=group_input(True)
+        authorize('status',value['host']);authorize('recover',value['host'])
+        ticket=value.pop('ticket');context='group:'+value['mode']+':'+str(int(value['staticIp']))+':'+value['planHash']
+        if not _verify_ticket(app,ticket,user_id=g.user['id'],host=value['host'],username=value['username'],interface=','.join(value['interfaces']),context=context):fail(409,'تأیید گروه منقضی یا نامعتبر است؛ دوباره همان اعضا را بررسی کنید.')
+        result=run({'operation':'group-apply',**value},ticket)
+        if __package__:from . import equipment_group as group
+        else:import equipment_group as group
+        code=result.get('error') if isinstance(result,dict) else None
+        try:
+            if not isinstance(result,dict) or set(result)!={'ok','mode','interfaces','rows','protectionRestored','removed'} or result['ok'] is not True or result['protectionRestored'] is not True or result['mode']!=value['mode'] or result['interfaces']!=value['interfaces']:raise ValueError('result')
+            if not isinstance(result['rows'],list) or len(result['rows'])!=len(value['interfaces']):raise ValueError('rows')
+            if __package__:from . import equipment_group as group
+            else:import equipment_group as group
+            for port,row in zip(value['interfaces'],result['rows']):
+                if not isinstance(row,dict) or set(row)!={'interface','ip','oldMac','expectedMac','newMac','state'} or row['interface']!=port:raise ValueError('row')
+                for key in ('oldMac','expectedMac','newMac'):
+                    if not isinstance(row[key],str) or (row[key] and group.r.unicast(row[key])!=row[key]):raise ValueError('MAC')
+                if value['mode']=='recover':
+                    if row['state'] not in ('recovered','still_errdisabled') or row['ip']!='' or row['newMac']!='':raise ValueError('state')
+                else:
+                    if row['state']!='replaced' or not row['newMac'] or row['newMac']==row['oldMac'] or (row['expectedMac'] and row['expectedMac']!=row['newMac']):raise ValueError('new MAC')
+                    if value['staticIp']:
+                        if not row['oldMac'] or str(ipaddress.IPv4Address(row['ip']))!=row['ip']:raise ValueError('IP')
+                    elif row['ip']!='':raise ValueError('IP')
+            # Validate actual cleanup identities too, including narrowly approved
+            # fresh discoveries during replacement (same switch/idle access policy).
+            check_items=[{k:row[k] for k in ('interface','ip','oldMac','expectedMac')} for row in result['rows']]
+            if value['mode']=='replace':
+                for item,row in zip(check_items,result['rows']):item['expectedMac']=row['newMac']
+            group.validate_plan({'mode':value['mode'],'interfaces':value['interfaces'],'staticIp':value['staticIp'],'items':check_items,'removals':result['removed'],'planHash':value['planHash'],'relocationPolicy':'idle-access-vlan100'})
+            if value['mode']=='replace' and len({row['newMac'] for row in result['rows']})!=len(result['rows']):raise ValueError('duplicate new MAC')
+            if any(secret.casefold() in json.dumps(result).casefold() for secret in (value['username'],value['password'])):raise ValueError('secret')
+        except (ValueError,TypeError,KeyError):
+            safe={'equipment_busy','ticket_consumed','group_changed','group_preflight','group_old_port_active','unsupported_platform','group_quarantined'}
+            code=code if code in safe else 'group_uncertain'
+            old_ports=result.get('affectedOldPorts',[]) if isinstance(result,dict) else []
+            try:
+                if not isinstance(old_ports,list) or len(old_ports)>24:raise ValueError('ports')
+                if old_ports:old_ports=group.interfaces(old_ports)
+                if any(port in value['interfaces'] for port in old_ports):raise ValueError('target')
+            except (ValueError,TypeError,NameError):old_ports=[]
+            message=_failure({'error':code})+(' پورت قبلی احتمالاً تغییرکرده: '+', '.join(old_ports) if old_ports else '')
+            return jsonify(error=message,code=code,requiresRecheck=True,affectedOldPorts=old_ports), (429 if code=='equipment_busy' else 409 if code=='ticket_consumed' else 502)
         return jsonify(host=value['host'],**{k:v for k,v in result.items() if k!='ok'})
