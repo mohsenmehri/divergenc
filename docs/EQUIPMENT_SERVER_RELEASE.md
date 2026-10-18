@@ -1,3 +1,11 @@
+# Current SERVER package — Equipment review tree, 2026-10-18
+
+The approved equipment review redesign is now shipped in `releases/FAM-Custom-Access-SERVER-Patch.zip`, mirrored at the repository root. See [the installation/container assessment guide](SERVER_EQUIPMENT_REVIEW_RELEASE_FA.md) and [release validation](SERVER_EQUIPMENT_REVIEW_RELEASE_VALIDATION.md). This is an update for an existing Windows/IIS installation, not a fresh installer or a container image. LOCAL artifacts are unchanged.
+
+The earlier dated release narrative below is historical; its sizes, payload counts and UI descriptions are not the current package specification.
+
+---
+
 # Central equipment test release — 2026-10-17
 
 **Current UI: Equipment v2.** The old nested equipment interface has been replaced. See [EQUIPMENT_V2_REDESIGN.md](EQUIPMENT_V2_REDESIGN.md) for the active six-section navigation, data-preservation contract and full 103-test UI validation. The earlier workflow descriptions below document the transport/security evolution; «Tools» and the old device screen are now replaced by the direct «بررسی پورت‌ها» destination.

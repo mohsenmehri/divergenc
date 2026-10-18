@@ -23,6 +23,7 @@ WEB = {'login.html', 'login.css', 'login.js', 'web.config'}
 def main():
     expected = RELEASE.with_suffix('.zip.sha256').read_text().split()[0]
     assert hashlib.sha256(RELEASE.read_bytes()).hexdigest() == expected
+    assert (ROOT/'FAM-Custom-Access-SERVER-Patch.zip').read_bytes() == RELEASE.read_bytes()
     with tempfile.TemporaryDirectory(prefix='fam-extracted-release-') as temp:
         base = Path(temp)
         server = base / 'server'
@@ -47,6 +48,8 @@ def main():
             assert archive.read('CLIENT-MOVE-DIAGNOSIS-FA.txt') == (ROOT / 'docs/CLIENT_MOVE_DIAGNOSIS_FA.md').read_bytes()
             assert archive.read('README_FA.txt') == (ROOT / 'docs/SERVER_REVIEW_FIX_PATCH_FA.md').read_bytes()
             assert archive.read('CLIENT-MAC-REPLACEMENT-FA.txt') == (ROOT / 'docs/CLIENT_MAC_REPLACEMENT_FA.md').read_bytes()
+            assert b'FAM-EQUIPMENT-REVIEW-20261018' in archive.read('payload/FAM.html')
+            assert archive.read('EQUIPMENT-REVIEW-FA.txt') == (ROOT/'docs/SERVER_EQUIPMENT_REVIEW_RELEASE_FA.md').read_bytes()
             assert archive.read('GROUP-RECOVERY-FA.txt') == (ROOT/'docs/GROUP_RECOVERY_FA.md').read_bytes()
         tests = server / 'tests'
         tests.mkdir()

@@ -1,8 +1,13 @@
 """Build reproducible offline/reference and central IIS custom-access ZIPs."""
 from pathlib import Path
 import hashlib
+import argparse
 import re
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
+
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--server-only',action='store_true',help='Rebuild only the central SERVER patch; leave LOCAL artifacts untouched.')
+args=parser.parse_args()
 
 ROOT=Path(__file__).resolve().parents[1]
 STAMP=(2026,10,18,0,0,0)
@@ -83,10 +88,15 @@ expected=''.join(f'{hashlib.sha256((payload/name).read_bytes()).hexdigest()}  {n
 (server/'CLIENT-MOVE-DIAGNOSIS-FA.txt').write_bytes((ROOT/'docs'/'CLIENT_MOVE_DIAGNOSIS_FA.md').read_bytes())
 (server/'GROUP-RECOVERY-FA.txt').write_bytes((ROOT/'docs'/'GROUP_RECOVERY_FA.md').read_bytes())
 (server/'CLIENT-MAC-REPLACEMENT-FA.txt').write_bytes((ROOT/'docs'/'CLIENT_MAC_REPLACEMENT_FA.md').read_bytes())
-local=ROOT/'patches'/'fam-custom-access-local'
-local.mkdir(parents=True,exist_ok=True)
-(local/'FAM.html').write_bytes((ROOT/'FAM.html').read_bytes())
-local_expected=hashlib.sha256((local/'FAM.html').read_bytes()).hexdigest()+'  FAM.html\n'
-(local/'SHA256SUMS.txt').write_text(local_expected,encoding='utf8')
-add_archive(local,ROOT/'releases'/'FAM-Custom-Access-LOCAL-Patch.zip')
+(server/'EQUIPMENT-REVIEW-FA.txt').write_bytes((ROOT/'docs'/'SERVER_EQUIPMENT_REVIEW_RELEASE_FA.md').read_bytes())
+if not args.server_only:
+    local=ROOT/'patches'/'fam-custom-access-local'
+    local.mkdir(parents=True,exist_ok=True)
+    (local/'FAM.html').write_bytes((ROOT/'FAM.html').read_bytes())
+    local_expected=hashlib.sha256((local/'FAM.html').read_bytes()).hexdigest()+'  FAM.html\n'
+    (local/'SHA256SUMS.txt').write_text(local_expected,encoding='utf8')
+    add_archive(local,ROOT/'releases'/'FAM-Custom-Access-LOCAL-Patch.zip')
 add_archive(server,ROOT/'releases'/'FAM-Custom-Access-SERVER-Patch.zip')
+
+if args.server_only:
+    (ROOT/'FAM-Custom-Access-SERVER-Patch.zip').write_bytes((ROOT/'releases'/'FAM-Custom-Access-SERVER-Patch.zip').read_bytes())
