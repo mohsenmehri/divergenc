@@ -1,7 +1,7 @@
 """Atomic cross-process SSH admission and one-use confirmation metadata.
 
 Only digests/expiry/lease ownership are persisted, never credentials, raw IPs,
-full tickets, commands, results or jobs. Leases outlive the 95s executor bound.
+full tickets, commands, results or jobs. Leases outlive the 160s maximum replacement executor bound.
 """
 from contextlib import contextmanager
 import hashlib

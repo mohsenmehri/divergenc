@@ -203,7 +203,7 @@ class IISConfigurationCheck(unittest.TestCase):
         self.assertIn('max-age=31536000',(payload/'web.config').read_text(encoding='utf8'))
         import hashlib
         entries={name:digest for digest,name in (line.split('  ',1) for line in (payload/'SHA256SUMS.txt').read_text(encoding='utf8').splitlines())}
-        self.assertEqual(set(entries),{'app.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py','FAM.html','login.html','login.css','login.js','web.config'})
+        self.assertEqual(set(entries),{'app.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','equipment_replacement.py','manage.py','bootstrap_admin.py','equipment_ops.py','equipment_inventory.py','equipment_probe.py','start.ps1','preflight_backup.py','install.ps1','setup-ertebatat.ps1','setup-common.psm1','backup-daily.ps1','verify_deployment.py','FAM.html','login.html','login.css','login.js','web.config'})
         for name,digest in entries.items():self.assertEqual(digest,hashlib.sha256((payload/name).read_bytes()).hexdigest())
         self.assertEqual((payload/'app.py').read_bytes(),(root/'server'/'app.py').read_bytes())
         self.assertEqual((payload/'equipment_ops.py').read_bytes(),(root/'server'/'equipment_ops.py').read_bytes())
@@ -218,7 +218,7 @@ class IISConfigurationCheck(unittest.TestCase):
         from zipfile import ZipFile
         with ZipFile(release) as archive:
             names=set(archive.namelist())
-            self.assertEqual(names,{'APPLY-CUSTOM-ACCESS-UPDATE.cmd','APPLY-CUSTOM-ACCESS-UPDATE.ps1','README_FA.txt','CLIENT-MOVE-DIAGNOSIS-FA.txt','ROLLBACK-CUSTOM-ACCESS-UPDATE.ps1','ROLLBACK-CUSTOM-ACCESS-UPDATE.cmd','payload/SHA256SUMS.txt',*('payload/'+n for n in entries)})
+            self.assertEqual(names,{'APPLY-CUSTOM-ACCESS-UPDATE.cmd','APPLY-CUSTOM-ACCESS-UPDATE.ps1','README_FA.txt','CLIENT-MOVE-DIAGNOSIS-FA.txt','CLIENT-MAC-REPLACEMENT-FA.txt','ROLLBACK-CUSTOM-ACCESS-UPDATE.ps1','ROLLBACK-CUSTOM-ACCESS-UPDATE.cmd','payload/SHA256SUMS.txt',*('payload/'+n for n in entries)})
             for name in entries:self.assertEqual(hashlib.sha256(archive.read('payload/'+name)).hexdigest(),entries[name])
             for name in names:
                 self.assertFalse(name.endswith(('.whl','.pfx','.key','.pem','.sqlite3','.log')),name)

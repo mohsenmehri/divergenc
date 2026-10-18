@@ -14,6 +14,10 @@ if os.environ.get('FAM_EQUIPMENT_FIXTURE')!='SYNTHETIC_ONLY':
 with tempfile.TemporaryDirectory() as directory:
     repaired=set()
     def executor(job):
+        if job['operation'] in {'replacement-plan','replacement-apply'}:
+            from server.tests.test_equipment_replacement import plan,IP,OLD,NEW
+            if job['operation']=='replacement-plan':return {'ok':True,'plan':plan(job['staticIp'])}
+            return {'ok':True,'replacement':'replaced','interface':job['interface'],'staticIp':job['staticIp'],'ip':IP if job['staticIp'] else '', 'oldMac':OLD if job['staticIp'] else '', 'newMac':NEW,'protectionRestored':True}
         if job['operation']=='diagnose':
             from server import equipment_diagnostics as diagnosis
             from server.tests.test_equipment_diagnostics import VERSION,transcript

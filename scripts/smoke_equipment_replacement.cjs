@@ -1,0 +1,17 @@
+/* Disposable fixture only. Authenticated browser/API; synthetic executor. */
+const assert=require('node:assert/strict');const {launch}=require('../tests/helpers/equipment-browser.cjs');
+const base=process.env.FAM_EQUIPMENT_TEST_URL;if(!base)throw Error('Explicit disposable fixture URL required');
+(async()=>{const browser=await launch();try{
+ const context=await browser.newContext({viewport:{width:1440,height:1100}}),page=await context.newPage(),errors=[];page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));let plans=0,applies=0;
+ page.on('request',request=>{if(request.url().endsWith('/api/equipment/replacement/plan'))plans++;if(request.url().endsWith('/api/equipment/replacement/apply'))applies++;});
+ assert.equal((await context.request.post(base+'/api/login',{data:{username:'admin',password:'1109'},headers:{Origin:base}})).status(),200);
+ await page.goto(base+'/app');await page.waitForFunction(()=>typeof Access!=='undefined'&&Access.current()&&!document.querySelector('#shared-block'));await page.locator('#workspace-enter-equipment').click();await page.locator('#equipment-tab-ports').click();
+ await page.locator('#eq-live-node-fixture-1').check();await page.locator('#eq-live-username').fill('fixture.user');await page.locator('#eq-live-password').fill('synthetic-only');await page.locator('#eq-live-port-fixture-1').fill('7');await page.locator('#eq-live-static-fixture-1').check();await page.locator('#eq-live-scan').click();
+ await page.getByRole('button',{name:'تأیید و تعویض MAC همین پورت'}).waitFor();assert.equal(plans,1);assert.equal(applies,0);assert.match(await page.locator('#eq-live-report').textContent(),/10\.4\.86\.7.*0001\.08f1\.31a6/);
+ await page.getByRole('button',{name:'تأیید و تعویض MAC همین پورت'}).click();assert.equal(await page.locator('#eq-live-replacement-apply').isDisabled(),true);await page.getByRole('button',{name:'انصراف',exact:true}).click();assert.equal(applies,0);
+ await page.getByRole('button',{name:'تأیید و تعویض MAC همین پورت'}).click();await page.locator('#eq-live-replacement-approve').check();await page.locator('#eq-live-replacement-apply').click();await page.getByText(/MAC جدید: 0002\.2222\.2222/).waitFor();assert.equal(applies,1);assert.match(await page.locator('#eq-live-report').textContent(),/IP بدون تغییر: 10\.4\.86\.7/);assert.equal(await page.getByRole('button',{name:'تأیید و تعویض MAC همین پورت'}).count(),0);
+ assert.equal(await page.evaluate(()=>Object.values(localStorage).some(v=>/synthetic-only|0002\.2222\.2222|10\.4\.86\.7/.test(v))),false);
+ await page.locator('#equipment-tab-excel').click();await page.locator('#equipment-tab-ports').click();assert.equal(await page.locator('#eq-live-port-fixture-1').inputValue(),'7');assert.equal(await page.locator('#eq-live-static-fixture-1').isChecked(),true);assert.equal(await page.locator('#eq-live-password').inputValue(),'synthetic-only');
+ await page.reload();await page.locator('#workspace-enter-equipment').click();await page.locator('#equipment-tab-ports').click();assert.equal(await page.locator('#eq-live-port-fixture-1').inputValue(),'');assert.equal(await page.locator('#eq-live-password').inputValue(),'');assert.deepEqual(errors,[]);
+ console.log('PASS: authenticated real SERVER UI/API, port 7 + static checkbox, preview old MAC/IP, separate approval/cancel, one-use apply, new MAC with same IP, invalidated approvals, RAM-only/navigation/reload; synthetic executor, zero browser errors. No real equipment.');
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

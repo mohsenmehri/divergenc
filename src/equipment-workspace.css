@@ -67,3 +67,9 @@ html:has(#view-equipment.active) #topbar .page-title{min-width:0}
 html[data-ui-theme="light"]:has(#view-equipment.active) #topbar #top-title{color:#1e2e48}
 html[data-ui-theme="light"]:has(#view-equipment.active) #topbar :is(.icon-btn,.stat-pill){background:#f5f7fb;color:#4e6180;border-color:#e3e8f0}
 @media(max-width:760px){html:has(#view-equipment.active) #topbar{padding:10px;gap:7px}html:has(#view-equipment.active) #topbar #top-sub{display:none}html:has(#view-equipment.active) #topbar .spacer{min-width:0;flex:1}html:has(#view-equipment.active) #topbar #stat-line{max-width:65px;overflow:hidden}html:has(#view-equipment.active) #topbar .top-actions{width:auto;flex-wrap:nowrap}}
+
+/* Optional per-branch physical access port; SERVER controller only. */
+.eq-live-switch-row{display:grid;grid-template-columns:minmax(190px,1fr) minmax(125px,180px);gap:8px 12px;padding:12px;border-bottom:1px solid var(--border);align-items:center}
+.eq-live-switch-row>.eq-tool-checkbox:last-child{grid-column:1/-1}
+.eq-live-switch-row .eq-field{margin:0}
+@media(max-width:640px){.eq-live-switch-row{grid-template-columns:1fr}.eq-live-switch-row>.eq-tool-checkbox:last-child{grid-column:auto}}

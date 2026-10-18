@@ -18,7 +18,7 @@ Security contract
   policy is ``strict`` (requires an independently pre-trusted key);
   explicit ``accept-new`` is TOFU, not equivalent to strict.  Host-key checking is never
   disabled.
-* Only fixed status / interface-description / bounded recovery sequences exist. There is
+* Only fixed reads / bounded recovery / separately confirmed port-MAC replacement exist. There is
   no terminal, free-form command, ``enable``, ``write memory`` or ``copy``.
 * Banners, prompts, arbitrary CLI and ssh diagnostics never leave this process.
   The explicitly requested interface-description table alone may be displayed,
@@ -59,7 +59,7 @@ SECRET_ENV = "FAM_EQUIPMENT_SSH_SECRET"
 CONNECT_TIMEOUT = 10
 SESSION_TIMEOUT = 25
 INSPECT_SESSION_TIMEOUT = 2 * SESSION_TIMEOUT
-HELPER_DEADLINE = {"status": 30, "inspect": 55, "descriptions": 30, "recover": 85, "diagnose": 85}
+HELPER_DEADLINE = {"status": 30, "inspect": 55, "descriptions": 30, "recover": 85, "diagnose": 85, "replacement-plan": 70, "replacement-apply": 150}
 MAX_OUTPUT_BYTES = 1024 * 1024
 
 STATUS_COMMANDS = ("terminal length 0", "show interfaces status", "exit")
@@ -596,6 +596,24 @@ def diagnose(job):
 
 def execute(value):
     """Run one already-decoded, bounded job and return only its safe result."""
+    if isinstance(value,dict) and value.get('operation') in ('replacement-plan','replacement-apply'):
+        try:
+            if __package__:from . import equipment_replacement as replacement
+            else:import equipment_replacement as replacement
+            base={'operation','host','username','password','interface','staticIp'}
+            if set(value)!=(base|({'planHash'} if value['operation']=='replacement-apply' else set())):raise ValueError('schema')
+            replacement.interface(value['interface'])
+            if type(value['staticIp']) is not bool:raise ValueError('static')
+            if value['operation']=='replacement-apply' and (not isinstance(value['planHash'],str) or not replacement.HASH.fullmatch(value['planHash'])):raise ValueError('hash')
+            if not isinstance(value['host'],str):raise ValueError('host')
+            address=ipaddress.IPv4Address(value['host'])
+            if not any(address in n for n in ALLOWED_IPV4_NETWORKS) or not isinstance(value['username'],str) or not USERNAME.fullmatch(value['username']):raise ValueError('host/user')
+            password=value['password']
+            if not isinstance(password,str) or not 1<=len(password)<=512 or not all(0x20<=ord(c)<=0x7e for c in password):raise ValueError('password')
+        except (ValueError,TypeError,KeyError):return {'ok':False,'error':'invalid_request'}
+        try:return replacement.run(value,apply=value['operation']=='replacement-apply')
+        except ProbeError as exc:return {'ok':False,'error':exc.code}
+        except Exception:return {'ok':False,'error':'replacement_preflight'}
     if not isinstance(value, dict) or set(value) not in ({"operation", "host", "username", "password"}, {"operation", "host", "username", "password", "interface"}, {"operation", "host", "username", "password", "clientIp", "clientMac"}):
         return {"ok": False, "error": "invalid_request"}
     if not isinstance(value.get("operation"), str) or value["operation"] not in {"status", "inspect", "descriptions", "recover", "diagnose"} or not all(isinstance(value.get(key), str) for key in ("host", "username", "password")):

@@ -268,7 +268,7 @@ try {
     }
     # Explicit deployment allowlist: never copy/delete settings.json, .venv,
     # live data, or an accidental extra executable/source file in the kit.
-    $ServerFiles=@('app.py','manage.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','bootstrap_admin.py','equipment_inventory.py','equipment_ops.py','equipment_probe.py','requirements.txt')
+    $ServerFiles=@('app.py','manage.py','account_policy.py','equipment_guard.py','equipment_diagnostics.py','equipment_replacement.py','bootstrap_admin.py','equipment_inventory.py','equipment_ops.py','equipment_probe.py','requirements.txt')
     $WindowsFiles=@('install.ps1','start.ps1','backup-daily.ps1','trust-client.ps1',
         'preflight_backup.py','verify_deployment.py','prepare-offline.ps1',
         'setup-common.psm1','setup-ertebatat.ps1','dependencies.json','offline-wheels.json')

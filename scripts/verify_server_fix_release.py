@@ -34,7 +34,7 @@ def main():
                 assert not path.is_absolute() and '..' not in path.parts
             manifest = dict((name, digest) for digest, name in
                             (line.split('  ', 1) for line in archive.read('payload/SHA256SUMS.txt').decode().splitlines()))
-            assert len(manifest) == 21
+            assert len(manifest) == 22
             assert {n for n in names if n.startswith('payload/')} == {'payload/SHA256SUMS.txt', *('payload/' + n for n in manifest)}
             for name, digest in manifest.items():
                 data = archive.read('payload/' + name)
@@ -46,10 +46,11 @@ def main():
                 assert data == source.read_bytes(), name
             assert archive.read('CLIENT-MOVE-DIAGNOSIS-FA.txt') == (ROOT / 'docs/CLIENT_MOVE_DIAGNOSIS_FA.md').read_bytes()
             assert archive.read('README_FA.txt') == (ROOT / 'docs/SERVER_REVIEW_FIX_PATCH_FA.md').read_bytes()
+            assert archive.read('CLIENT-MAC-REPLACEMENT-FA.txt') == (ROOT / 'docs/CLIENT_MAC_REPLACEMENT_FA.md').read_bytes()
         tests = server / 'tests'
         tests.mkdir()
         # These are the repository's test harness, NOT replacements for payload code.
-        modules = ['test_api', 'test_equipment_inventory', 'test_equipment_ops', 'test_review_fixes', 'test_equipment_diagnostics']
+        modules = ['test_api', 'test_equipment_inventory', 'test_equipment_ops', 'test_review_fixes', 'test_equipment_diagnostics', 'test_equipment_replacement']
         for module in modules + ['test_equipment_probe']:
             shutil.copy2(ROOT / 'server/tests' / (module + '.py'), tests)
         env = dict(os.environ)
@@ -57,7 +58,7 @@ def main():
         env['PYTHONPATH'] = str(base)
         subprocess.run([PYTHON, '-m', 'unittest', *('server.tests.' + n for n in modules), '-v'],
                        cwd=base, env=env, check=True, timeout=90)
-    print('PASS: ZIP hash, 21 shipped files, source parity, Persian guide parity and isolated extracted-runtime acceptance. No real SSH.')
+    print('PASS: ZIP hash, 22 shipped files, source parity, Persian guide parity and isolated extracted-runtime acceptance. No real SSH.')
 
 
 if __name__ == '__main__':

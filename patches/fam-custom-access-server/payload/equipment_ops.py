@@ -34,8 +34,9 @@ INTERFACE = re.compile(r"[A-Za-z][A-Za-z0-9/.-]{0,63}\Z")
 USERNAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._@\\-]{0,63}\Z")
 # Outer wall clock for the helper process per operation.  It must exceed
 # equipment_probe.HELPER_DEADLINE (30 / 85 s) so the backend never kills the
-# helper while it is still supervising an ssh.exe child.
-EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95, "diagnose": 95}
+# helper while it is still supervising an ssh.exe child. Replacement allows
+# 150s helper / 160s executor, below the existing 180s admission lease.
+EXECUTOR_TIMEOUT = {"status": 40, "inspect": 65, "descriptions": 40, "recover": 95, "diagnose": 95, "replacement-plan": 80, "replacement-apply": 160}
 # RFC1918 plus the user-authorized building/shared-address range (RFC6598).
 # Deliberately not all of 100/8 or arbitrary public targets.
 ALLOWED_IPV4_NETWORKS = tuple(ipaddress.ip_network(value) for value in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"))
@@ -84,15 +85,17 @@ def _input(value, *, recovery=False, diagnosis=False):
     return result
 
 
-def _ticket(app, *, user_id, host, username, interface):
+def _ticket(app, *, user_id, host, username, interface, context=None):
     # The browser needs an opaque one-time ticket, not a copy of its username.
     user_digest = hashlib.sha256(username.encode("utf-8")).hexdigest()
-    payload = json.dumps({"u": user_id, "h": host, "n": user_digest, "i": interface, "e": int(time.time()) + 300, "j": secrets.token_hex(16)}, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    body={"u": user_id, "h": host, "n": user_digest, "i": interface, "e": int(time.time()) + 300, "j": secrets.token_hex(16)}
+    if context is not None:body["context"]=context
+    payload = json.dumps(body, separators=(",", ":"), sort_keys=True).encode("utf-8")
     tag = hmac.new(app.config["EQUIPMENT_TICKET_KEY"], payload, hashlib.sha256).digest()
     return _b64(payload) + "." + _b64(tag)
 
 
-def _verify_ticket(app, value, *, user_id, host, username, interface):
+def _verify_ticket(app, value, *, user_id, host, username, interface, context=None):
     try:
         encoded, signature = value.split(".", 1)
         payload, tag = _unb64(encoded), _unb64(signature)
@@ -102,7 +105,7 @@ def _verify_ticket(app, value, *, user_id, host, username, interface):
         return False
     user_digest = hashlib.sha256(username.encode("utf-8")).hexdigest()
     return (hmac.compare_digest(tag, expected) and isinstance(decoded, dict) and
-            decoded == {"u": user_id, "h": host, "n": user_digest, "i": interface, "e": decoded.get("e"), "j": decoded.get("j")} and
+            decoded == {"u": user_id, "h": host, "n": user_digest, "i": interface, "e": decoded.get("e"), "j": decoded.get("j"), **({"context":context} if context is not None else {})} and
             type(decoded.get("e")) is int and int(time.time()) <= decoded["e"] <= int(time.time())+300 and
             isinstance(decoded.get("j"),str) and re.fullmatch(r"[a-f0-9]{32}",decoded["j"]) is not None)
 
@@ -136,15 +139,20 @@ def _execute(app, payload):
         )
         result = json.loads(completed.stdout.decode("utf-8"))
     except subprocess.TimeoutExpired:
-        return {"ok": False, "error": "recovery_uncertain" if payload.get("operation")=="recover" else "connection_timeout"}
+        return {"ok": False, "error": ("replacement_uncertain" if payload.get("operation")=="replacement-apply" else "recovery_uncertain") if payload.get("operation") in {"recover","replacement-apply"} else "connection_timeout"}
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return {"ok": False, "error": "recovery_uncertain" if payload.get("operation")=="recover" else "connection_failed"}
+        return {"ok": False, "error": ("replacement_uncertain" if payload.get("operation")=="replacement-apply" else "recovery_uncertain") if payload.get("operation") in {"recover","replacement-apply"} else "connection_failed"}
     return result if isinstance(result, dict) else {"ok": False, "error": "connection_failed"}
 
 
 def _failure(value):
     code = value.get("error") if isinstance(value, dict) else ""
     return {
+        "replacement_preflight": "پیش‌بررسی تعویض MAC قابل تأیید نیست: پورت باید access VLAN 100، تک‌کلاینت و دارای IPSG باشد؛ در حالت IP دستی دقیقاً یک binding ثابت و مجوز متناظر Inspection لازم است. تغییری اعمال نشد.",
+        "replacement_sticky": "MAC قبلی به‌صورت Sticky/Configured روی پورت ثبت شده است؛ حذف آن در این مسیر مجاز نیست. کارشناس باید همان رکورد را بررسی کند؛ تغییری اعمال نشد.",
+        "replacement_changed": "تنظیمات نسبت به پیش‌نمایش تغییر کرده است؛ دوباره بررسی و تأیید کنید. تغییری اعمال نشد.",
+        "replacement_quarantined": "تعویض MAC کامل نشد؛ پورت در shutdown و IPSG فعال بررسی شد. پورت را خودکار باز نکنید؛ بررسی کارشناس لازم است.",
+        "replacement_uncertain": "اثر عملیات نامشخص است؛ ممکن است IPSG یا binding موقتاً برداشته شده باشد. حفاظت/بسته‌بودن پورت تأیید نشد. فوراً همان پورت را با کارشناس بررسی کنید؛ عملیات تکرار نمی‌شود.",
         "unsupported_platform": "مدل یا نسخهٔ IOS این تجهیز با پروفایل تشخیص WS-C2960-24TT-L قابل تأیید نیست؛ تغییری اعمال نشد.",
         "diagnosis_unreadable": "شواهد تشخیص کامل یا قابل تأیید نیست؛ محل کلاینت نامشخص است. هیچ تغییری اعمال نشد.",
         "recovery_uncertain": "اثر عملیات روی پورت نامشخص است؛ ممکن است shutdown اجرا شده باشد. عملیات متوقف شد؛ پیش از هر اقدام، وضعیت همان پورت را با اپراتور مجاز بررسی کنید. فعال‌سازی خودکار انجام نمی‌شود.",
@@ -276,3 +284,61 @@ def register_equipment_ops(app, *, data, fail, allowed):
             code=code if code in {'equipment_busy','ticket_consumed'} else 'recovery_uncertain'
             return jsonify(error=_failure({'error':code}),code=code,requiresRecheck=True), (409 if code=='ticket_consumed' else 429 if code=='equipment_busy' else 502)
         return jsonify(host=value["host"], interface=value["interface"], recovery=result["recovery"])
+
+
+    def replacement_input(apply=False):
+        raw=data(); fields={'host','username','password','interface','staticIp'}|({'ticket','planHash'} if apply else set())
+        try:
+            if not isinstance(raw,dict) or set(raw)!=fields:raise ValueError('schema')
+            value=_input({k:raw[k] for k in ('host','username','password')})
+            if __package__:from . import equipment_replacement as r
+            else:import equipment_replacement as r
+            r.interface(raw['interface'])
+            if type(raw['staticIp']) is not bool:raise ValueError('static')
+            value.update(interface=raw['interface'],staticIp=raw['staticIp'])
+            if apply:
+                if not isinstance(raw['planHash'],str) or not r.HASH.fullmatch(raw['planHash']) or not isinstance(raw['ticket'],str) or not 40<=len(raw['ticket'])<=1024:raise ValueError('ticket')
+                value.update(ticket=raw['ticket'],planHash=raw['planHash'])
+            return value
+        except (ValueError,TypeError,KeyError):fail(400,'پورت access معتبر و گزینهٔ IP دستی لازم است؛ IP جدید یا دستور آزاد پذیرفته نمی‌شود.')
+
+    @app.post('/api/equipment/replacement/plan')
+    def replacement_plan():
+        authorize('recover');value=replacement_input()
+        authorize('status',value['host']);authorize('recover',value['host'])
+        result=run({'operation':'replacement-plan',**value})
+        if not isinstance(result,dict) or result.get('ok') is not True:fail(429 if isinstance(result,dict) and result.get('error')=='equipment_busy' else 502,_failure(result))
+        try:
+            if __package__:from . import equipment_replacement as r
+            else:import equipment_replacement as r
+            plan=r.validate_plan(result.get('plan'))
+            if plan['interface']!=value['interface'] or plan['staticIp']!=value['staticIp']:raise ValueError('target')
+            if any(secret.casefold() in json.dumps(plan).casefold() for secret in (value['username'],value['password'])):raise ValueError('secret')
+        except (ValueError,TypeError,KeyError):fail(502,_failure({'error':'replacement_preflight'}))
+        context='replacement:'+str(int(value['staticIp']))+':'+plan['planHash']
+        ticket=_ticket(app,user_id=g.user['id'],host=value['host'],username=value['username'],interface=value['interface'],context=context)
+        return jsonify(host=value['host'],source='server-ssh',plan=plan,ticket=ticket)
+
+    @app.post('/api/equipment/replacement/apply')
+    def replacement_apply():
+        authorize('recover');value=replacement_input(True)
+        authorize('status',value['host']);authorize('recover',value['host'])
+        ticket=value.pop('ticket');context='replacement:'+str(int(value['staticIp']))+':'+value['planHash']
+        if not _verify_ticket(app,ticket,user_id=g.user['id'],host=value['host'],username=value['username'],interface=value['interface'],context=context):fail(409,'پیش‌بررسی و تأیید همین پورت منقضی یا نامعتبر است.')
+        result=run({'operation':'replacement-apply',**value},ticket)
+        code=result.get('error') if isinstance(result,dict) else None
+        try:
+            if not isinstance(result,dict) or set(result)!={'ok','replacement','interface','staticIp','ip','oldMac','newMac','protectionRestored'} or result['ok'] is not True or result['replacement']!='replaced' or result['protectionRestored'] is not True:raise ValueError('result')
+            if __package__:from . import equipment_replacement as r
+            else:import equipment_replacement as r
+            if result['interface']!=value['interface'] or type(result['staticIp']) is not bool or result['staticIp']!=value['staticIp'] or r.unicast(result['newMac'])!=result['newMac']:raise ValueError('target')
+            if result['oldMac'] and r.unicast(result['oldMac'])!=result['oldMac']:raise ValueError('MAC')
+            if value['staticIp']:
+                if not result['oldMac'] or result['oldMac']==result['newMac'] or str(ipaddress.IPv4Address(result['ip']))!=result['ip']:raise ValueError('IP')
+            elif result['ip']!='':raise ValueError('IP')
+            if any(secret.casefold() in json.dumps(result).casefold() for secret in (value['username'],value['password'])):raise ValueError('secret')
+        except (ValueError,TypeError,KeyError):
+            safe={'equipment_busy','ticket_consumed','replacement_changed','replacement_preflight','replacement_sticky','unsupported_platform','replacement_quarantined'}
+            code=code if code in safe else 'replacement_uncertain'
+            return jsonify(error=_failure({'error':code}),code=code,requiresRecheck=True), (429 if code=='equipment_busy' else 409 if code=='ticket_consumed' else 502)
+        return jsonify(host=value['host'],**{k:v for k,v in result.items() if k!='ok'})

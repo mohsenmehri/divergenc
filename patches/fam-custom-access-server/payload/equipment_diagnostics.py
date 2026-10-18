@@ -63,7 +63,7 @@ def sections(output):
     return {name:'\n'.join(lines[marks[i][0]+1:marks[i+1][0]]) for i,name in enumerate(SOURCE_IDS)}
 
 
-def table(kind, text):
+def table(kind, text, *, all_vlans=False):
     """All-or-unavailable per source, with strict schemas and bounded rows."""
     rows=[];header=False
     for line in text.splitlines():
@@ -103,7 +103,7 @@ def table(kind, text):
         rows.append(row)
         if len(rows)>4096:raise ValueError('too many rows')
     if not header:raise ValueError('missing table header')
-    return [r for r in rows if r['vlan']==100]
+    return rows if all_vlans else [r for r in rows if r['vlan']==100]
 
 
 def assess(hardware, target, output):
