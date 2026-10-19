@@ -66,6 +66,21 @@ STATUS_COMMANDS = ("terminal length 0", "show interfaces status", "exit")
 DESCRIPTION_COMMANDS = ("terminal length 0", "show interfaces description", "exit")
 INSPECT_COMMANDS = ("terminal length 0", "show interfaces status", "show interfaces description", "exit")
 
+# POSIX OpenSSH can execute a tiny /bin/sh helper directly.
+# Neither its source nor its executable contains a credential. The source is
+# constant; the password is read only by the child from its environment and is
+# printed only for prompts containing "password" -- never a host-key question.
+ASKPASS_SH_SOURCE = r'''#!/bin/sh
+[ "$#" -eq 1 ] || exit 1
+case "$1" in
+  *[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]*)
+    [ -n "$FAM_EQUIPMENT_SSH_SECRET" ] || exit 1
+    printf '%s\n' "$FAM_EQUIPMENT_SSH_SECRET"
+    ;;
+  *) exit 1 ;;
+esac
+'''
+
 # Win32 OpenSSH uses CreateProcess, which cannot directly execute a .cmd/.ps1
 # file. Build a tiny .NET Framework executable in the per-session directory.
 # Neither its source nor its executable contains a credential. The source is
@@ -88,7 +103,19 @@ class FamAskpass {
 
 
 def prepare_askpass(workdir):
-    """Compile a secret-free, executable Windows ASKPASS helper (bounded 5 s)."""
+    """Build a secret-free, executable ASKPASS helper (bounded 5 s).
+
+    Windows: compile a tiny .NET Framework executable with csc.exe.
+    POSIX (Linux): install a tiny /bin/sh helper.  Both variants contain no
+    credential; the secret is read only from the child environment and is
+    printed only for password prompts, never host-key questions.
+    """
+    if os.name != "nt":
+        source = os.path.join(workdir, "askpass.sh")
+        with open(source, "w", encoding="ascii") as handle:
+            handle.write(ASKPASS_SH_SOURCE)
+        os.chmod(source, 0o700)
+        return source
     root = os.environ.get("SystemRoot", r"C:\Windows")
     compiler = next((os.path.join(root, "Microsoft.NET", framework, "v4.0.30319", "csc.exe")
                      for framework in ("Framework64", "Framework")
@@ -110,12 +137,18 @@ def prepare_askpass(workdir):
     return executable
 
 
-# Only this subset of the parent environment is visible to ssh.exe / cmd.exe.
-ENV_PASSTHROUGH = (
+# Only this subset of the parent environment is visible to ssh.exe / the askpass
+# helper.  Windows and POSIX need different minimal sets; neither set ever
+# includes a device credential.
+ENV_PASSTHROUGH_WINDOWS = (
     "SystemRoot", "SystemDrive", "windir", "ComSpec", "PATHEXT", "Path", "PATH",
     "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "HOME", "USERNAME",
     "ProgramData", "APPDATA", "LOCALAPPDATA", "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS",
 )
+ENV_PASSTHROUGH_POSIX = (
+    "PATH", "HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "TZ", "TMPDIR",
+)
+ENV_PASSTHROUGH = ENV_PASSTHROUGH_WINDOWS if os.name == "nt" else ENV_PASSTHROUGH_POSIX
 
 
 def respond(value):
@@ -285,7 +318,7 @@ def ssh_arguments(executable: str, host: str, username: str, known_hosts: str, p
     options = (
         LEGACY_CIPHER_OPTION,
         "StrictHostKeyChecking=" + policy,
-        "UserKnownHostsFile=" + (('"%s"' % known_hosts) if any(char.isspace() for char in known_hosts) else known_hosts),
+        "UserKnownHostsFile=" + ('"%s"' % known_hosts if os.name == "nt" and any(char.isspace() for char in known_hosts) else known_hosts),
         "UpdateHostKeys=no",
         "CheckHostIP=no",
         "HashKnownHosts=no",
@@ -335,6 +368,10 @@ def _child_environment(askpass_path: str, password: str):
         "SSH_ASKPASS_REQUIRE": "force",
         SECRET_ENV: password,
     })
+    # Deterministic English prompts regardless of the server locale, so the
+    # askpass password check and the output parsing never depend on LANG.
+    env["LC_ALL"] = "C"
+    env["LANG"] = "C"
     return env
 
 
@@ -375,6 +412,7 @@ def run_ssh(job, commands, timeout: float):
             env=_child_environment(askpass, job["password"]),
             cwd=workdir,
             creationflags=_creation_flags(),
+            start_new_session=(os.name != "nt"),
         )
         try:
             out, err = process.communicate(script, timeout=max(1.0, timeout - (time.monotonic() - started)))

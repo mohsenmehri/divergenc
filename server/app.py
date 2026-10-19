@@ -483,7 +483,7 @@ def create_app(config=None):
       # ssh.exe; the legacy VDI connector broker stays disabled.
       EQUIPMENT_OPS_ENABLED=os.environ.get('FAM_EQUIPMENT_OPS_ENABLED','0')=='1',
       EQUIPMENT_CONNECTOR_ENABLED=False,
-      EQUIPMENT_PYTHON=os.environ.get('FAM_EQUIPMENT_PYTHON',str(ROOT/'.venv'/'Scripts'/'python.exe')),
+      EQUIPMENT_PYTHON=os.environ.get('FAM_EQUIPMENT_PYTHON',str(ROOT/'.venv'/'Scripts'/'python.exe') if os.name=='nt' else str(ROOT/'.venv'/'bin'/'python3')),
       EQUIPMENT_HELPER=str(ROOT/'equipment_probe.py'),
       EQUIPMENT_SSH=os.environ.get('FAM_EQUIPMENT_SSH',''),
       EQUIPMENT_KNOWN_HOSTS=os.environ.get('FAM_EQUIPMENT_KNOWN_HOSTS',str(ROOT/'private'/'equipment'/'known_hosts')),

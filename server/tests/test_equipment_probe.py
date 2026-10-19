@@ -386,6 +386,8 @@ class SshExeTransportTests(ProbeHarness):
         self.assertEqual(result, {"ok": False, "error": "connection_failed"})
 
     def test_compiler_never_receives_secret_and_has_bounded_timeout(self):
+        if os.name != "nt":
+            self.skipTest("Windows csc.exe path")
         with tempfile.TemporaryDirectory() as directory:
             def compile(argv, **kwargs):
                 self.assertNotIn(PASSWORD, " ".join(argv))
@@ -399,6 +401,37 @@ class SshExeTransportTests(ProbeHarness):
                  mock.patch.object(equipment_probe.subprocess, "run", side_effect=compile):
                 result = self.real_prepare(directory)
             self.assertTrue(result.endswith("askpass.exe"))
+
+    def test_posix_askpass_helper_is_secret_free_and_answers_only_passwords(self):
+        if os.name == "nt":
+            self.skipTest("POSIX /bin/sh helper path")
+        with tempfile.TemporaryDirectory() as directory:
+            helper = self.real_prepare(directory)
+            self.assertTrue(helper.endswith("askpass.sh"))
+            self.assertTrue(os.access(helper, os.X_OK))
+            body = Path(helper).read_text(encoding="ascii")
+            self.assertNotIn(PASSWORD, body)
+            self.assertIn(equipment_probe.SECRET_ENV, body)
+            self.assertIn(equipment_probe.SECRET_ENV, equipment_probe.ASKPASS_SH_SOURCE)
+            self.assertNotIn("%1", body)
+            env = {equipment_probe.SECRET_ENV: PASSWORD, "PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+            # A password prompt is answered with the transient secret.
+            answered = subprocess.run([helper, "mohsen@10.0.35.2's password:"], env=env,
+                                     capture_output=True, text=True, timeout=5)
+            self.assertEqual(answered.returncode, 0)
+            self.assertEqual(answered.stdout.strip(), PASSWORD)
+            # A host-key question or any other prompt is never answered.
+            for prompt in ("Are you sure you want to continue connecting (yes/no/[fingerprint])?",
+                           "Enter passphrase for key", ""):
+                refused = subprocess.run([helper, prompt], env=env,
+                                         capture_output=True, text=True, timeout=5)
+                self.assertNotEqual(refused.returncode, 0, prompt)
+                self.assertNotIn(PASSWORD, refused.stdout)
+            # Without the secret in the environment the helper stays silent.
+            empty = subprocess.run([helper, "password:"], env={"PATH": env["PATH"]},
+                                   capture_output=True, text=True, timeout=5)
+            self.assertNotEqual(empty.returncode, 0)
+            self.assertNotIn(PASSWORD, empty.stdout)
 
     def test_source_has_no_netmiko_paramiko_or_preferred_ciphers_workaround(self):
         source = Path(equipment_probe.__file__).read_text(encoding="utf-8")
