@@ -18,12 +18,14 @@ def main():
                 print('Existing database preserved; bootstrap skipped.');return
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table'").fetchone():
                 raise SystemExit('Existing incomplete database: restore a verified backup; no reset performed.')
+    try:minimum=min(128,max(4,int(os.environ.get('FAM_PASSWORD_MIN_LENGTH','12') or 12)))
+    except ValueError:minimum=12
     secret=os.environ.get('FAM_INITIAL_PASSWORD')
     if secret is None:
         if not sys.stdin.isatty():raise SystemExit('Secure interactive console required for bootstrap; no plaintext fallback.')
-        secret=getpass.getpass('New FAM administrator password (12+ characters): ')
+        secret=getpass.getpass('New FAM administrator password (%d+ characters): '%minimum)
         if secret!=getpass.getpass('Repeat new administrator password: '):raise SystemExit('Passwords do not match.')
-    if len(secret)<12 or len(secret)>128:raise SystemExit('Bootstrap password must have 12 to 128 characters.')
+    if len(secret)<minimum or len(secret)>128:raise SystemExit('Bootstrap password must have %d to 128 characters.'%minimum)
     os.environ['FAM_INITIAL_PASSWORD']=secret
     try:
         if __package__:from .app import create_app

@@ -18,6 +18,10 @@ services:
       FAM_EQUIPMENT_SSH: /usr/local/bin/ssh
       FAM_EQUIPMENT_KNOWN_HOSTS: /data/equipment_known_hosts
       FAM_EQUIPMENT_RUNTIME_DIR: /data/tmp
+      # Temporary lab-only convenience (the owner finalizes the policy later):
+      # accept 4-character passwords in this lab. Delete this line to restore
+      # the product default of 12 characters without any code change.
+      FAM_PASSWORD_MIN_LENGTH: "4"
     volumes:
       - ./data:/data
     expose:

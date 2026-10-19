@@ -218,7 +218,7 @@ class IISConfigurationCheck(unittest.TestCase):
         from zipfile import ZipFile
         with ZipFile(release) as archive:
             names=set(archive.namelist())
-            self.assertEqual(names,{'APPLY-CUSTOM-ACCESS-UPDATE.cmd','APPLY-CUSTOM-ACCESS-UPDATE.ps1','README_FA.txt','CLIENT-MOVE-DIAGNOSIS-FA.txt','CLIENT-MAC-REPLACEMENT-FA.txt','GROUP-RECOVERY-FA.txt','ROLLBACK-CUSTOM-ACCESS-UPDATE.ps1','ROLLBACK-CUSTOM-ACCESS-UPDATE.cmd','payload/SHA256SUMS.txt',*('payload/'+n for n in entries)})
+            self.assertEqual(names,{'APPLY-CUSTOM-ACCESS-UPDATE.cmd','APPLY-CUSTOM-ACCESS-UPDATE.ps1','README_FA.txt','EQUIPMENT-REVIEW-FA.txt','CLIENT-MOVE-DIAGNOSIS-FA.txt','CLIENT-MAC-REPLACEMENT-FA.txt','GROUP-RECOVERY-FA.txt','ROLLBACK-CUSTOM-ACCESS-UPDATE.ps1','ROLLBACK-CUSTOM-ACCESS-UPDATE.cmd','payload/SHA256SUMS.txt',*('payload/'+n for n in entries)})
             for name in entries:self.assertEqual(hashlib.sha256(archive.read('payload/'+name)).hexdigest(),entries[name])
             for name in names:
                 self.assertFalse(name.endswith(('.whl','.pfx','.key','.pem','.sqlite3','.log')),name)

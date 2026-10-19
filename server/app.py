@@ -460,9 +460,24 @@ def public_user(row):
     except (ValueError,TypeError,KeyError):fail(500,'سیاست تجهیزات حساب معتبر نیست؛ مدیر باید آن را بررسی کند.')
     return value
 
+_FA_DIGITS=str.maketrans('0123456789','۰۱۲۳۴۵۶۷۸۹')
+
+def password_min_length(raw=None):
+    """Minimum length for new passwords.
+
+    The product default is 12 characters. A lab deployment may temporarily
+    lower it with FAM_PASSWORD_MIN_LENGTH (clamped to the hard 4-128 floor)
+    until the owner approves a final password policy.
+    """
+    try:value=int(os.environ.get('FAM_PASSWORD_MIN_LENGTH','12') if raw is None else raw)
+    except (TypeError,ValueError):value=12
+    return min(128,max(4,value))
+
 def credentials(password,salt=None):
     if not isinstance(password,str) or not 4<=len(password)<=128:fail(400,'رمز باید بین ۴ تا ۱۲۸ نویسه باشد.')
-    if salt is None and has_app_context() and not current_app.config['TESTING'] and len(password)<12:fail(400,'رمز جدید باید حداقل ۱۲ نویسه باشد؛ رمز قبلی تغییر نکرد.')
+    minimum=password_min_length()
+    if has_app_context():minimum=current_app.config.get('PASSWORD_MIN_LENGTH',minimum)
+    if salt is None and has_app_context() and not current_app.config['TESTING'] and len(password)<minimum:fail(400,'رمز جدید باید حداقل '+str(minimum).translate(_FA_DIGITS)+' نویسه باشد؛ رمز قبلی تغییر نکرد.')
     salt=salt or secrets.token_hex(16)
     return salt,hashlib.pbkdf2_hmac('sha256',password.encode(),bytes.fromhex(salt),210000).hex()
 
@@ -489,7 +504,10 @@ def create_app(config=None):
       EQUIPMENT_KNOWN_HOSTS=os.environ.get('FAM_EQUIPMENT_KNOWN_HOSTS',str(ROOT/'private'/'equipment'/'known_hosts')),
       EQUIPMENT_HOST_KEY_POLICY=os.environ.get('FAM_EQUIPMENT_HOST_KEY_POLICY','strict'),
       EQUIPMENT_RUNTIME_DIR=os.environ.get('FAM_EQUIPMENT_RUNTIME_DIR',''),
-      EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32))
+      EQUIPMENT_TICKET_KEY=os.environ.get('FAM_EQUIPMENT_TICKET_KEY','').encode('utf-8') or secrets.token_bytes(32),
+      # New-password minimum length (12 = product default; a lab install may
+      # lower it through FAM_PASSWORD_MIN_LENGTH until the policy is final).
+      PASSWORD_MIN_LENGTH=password_min_length())
     if config:app.config.update(config)
     if not app.config['PUBLIC_ORIGIN']:raise RuntimeError('Set FAM_PUBLIC_ORIGIN to the HTTPS origin (no trailing slash).')
     if not app.config['TESTING'] and not app.config['PUBLIC_ORIGIN'].startswith('https://'):raise RuntimeError('Production requires HTTPS.')
@@ -507,9 +525,9 @@ def create_app(config=None):
         with closing(sqlite3.connect(dbpath.as_uri()+'?mode=ro',uri=True)) as existing_db:
             needs_bootstrap=not existing_db.execute("SELECT 1 FROM sqlite_master WHERE type='table'").fetchone()
     if needs_bootstrap and not app.config['TESTING']:
-        initial=os.environ.get('FAM_INITIAL_PASSWORD')
-        if not isinstance(initial,str) or not 12<=len(initial)<=128:
-            raise RuntimeError('Fresh initialization requires a unique bootstrap password (12+ characters); run bootstrap_admin.py.')
+        initial=os.environ.get('FAM_INITIAL_PASSWORD');minimum=app.config['PASSWORD_MIN_LENGTH']
+        if not isinstance(initial,str) or not minimum<=len(initial)<=128:
+            raise RuntimeError('Fresh initialization requires a unique bootstrap password (%d+ characters); run bootstrap_admin.py.'%minimum)
     dbpath.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
     backupdir.mkdir(parents=True,exist_ok=True,mode=0o700)
     try:
@@ -554,8 +572,9 @@ def create_app(config=None):
             if not fresh:raise RuntimeError('Existing database has lost its state; refusing to reseed accounts.')
             initial = os.environ.get('FAM_INITIAL_PASSWORD')
             if initial is None and app.config['TESTING']: initial = '1109'  # isolated fixtures only
-            if not isinstance(initial,str) or (not app.config['TESTING'] and (len(initial)<12 or initial=='1109')):
-                raise RuntimeError('Fresh initialization requires a unique bootstrap password (12+ characters); run bootstrap_admin.py. Existing databases are never reset.')
+            minimum=app.config['PASSWORD_MIN_LENGTH']
+            if not isinstance(initial,str) or (not app.config['TESTING'] and (len(initial)<minimum or initial=='1109')):
+                raise RuntimeError('Fresh initialization requires a unique bootstrap password (%d+ characters); run bootstrap_admin.py. Existing databases are never reset.'%minimum)
             salt,digest=credentials(initial)
             db.execute('INSERT INTO state VALUES(1,0,?,?,0)',(str(uuid.uuid4()),packed(EMPTY)))
             db.execute('INSERT INTO settings(id,users_revision) VALUES(1,0)')
