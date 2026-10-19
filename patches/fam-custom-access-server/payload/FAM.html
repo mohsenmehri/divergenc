@@ -8934,7 +8934,7 @@ const Access = (() => {
     const old=field('رمز عبور فعلی','password-current','password'),fresh=field('رمز عبور جدید','password-new','password'),repeat=field('تکرار رمز عبور جدید','password-confirm','password');
     old.input.autocomplete='current-password';[old,fresh,repeat].forEach(f=>{f.input.maxLength=128;f.input.dir='ltr';});
     let saving=false;
-    const close=()=>{if(saving)return;document.removeEventListener('fam-equipment-changed',equipmentChanged);ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
+    const close=()=>{if(saving)return;ov.classList.remove('show');clear(ov);previous?.isConnected&&previous.focus();};
     const save=el('button',{type:'submit',id:'password-save',class:'btn btn-primary',text:'ثبت روی سرور'}),cancel=el('button',{type:'button',id:'password-cancel',class:'btn btn-ghost',text:'انصراف',onclick:close});
     form.append(old.node,fresh.node,repeat.node,error,el('div',{class:'f'},save,cancel));
     form.addEventListener('submit',async e=>{
