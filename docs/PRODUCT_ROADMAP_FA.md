@@ -116,4 +116,6 @@
 3. تست‌های حساسِ 2960 (IPSG/DAI/Port-Security/errdisable) فقط روی سخت‌افزار واقعیِ **آزمایشی/خارج از سرویس** — هرگز روی سوئیچِ در حال کارِ شبکه.
 4. رمز تجهیز فقط هنگام ورود تایپ و فقط در RAM نگه داشته می‌شود؛ کلید میزبان با تطبیق از کنسول تأیید می‌شود (هرگز `StrictHostKeyChecking=no`).
 
+**وضعیت Mock (۲۰۲۶/۱۰/۲۰):** ابزار ساخته و با parserهای واقعیِ محصول تست شد — `lab/mock/mock_switch.py` (سرورِ SSHِ پشتِ ForceCommand با خروجی‌های IOS-مانندِ `show interfaces status/description/version` + بازیابیِ err-disabled) و `lab/mock/selftest.py` (نتیجه: `mock selftest: OK`). راهنمای اجرا: `docs/MOCK_LAB_FA.md` (گام‌های ۱ تا ۹: IP آزمایشی `192.168.97.140` → نصب → کاربر `mocksw` → sshd → تأیید کلید میزبان → ثبت در FAM → اولین بررسی فقط‌خواندنی).
+
 **تصاویر IOS فقط از منابع مجاز (مثلاً CML سازمان)؛ ما تصویر سیسکو توزیع نمی‌کنیم.**
