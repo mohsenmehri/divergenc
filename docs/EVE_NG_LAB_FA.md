@@ -136,7 +136,7 @@ OK - the file is valid and it is Freemium 7.2.0-18.
 
 ## ۴. گام C — نصب EVE-NG (ترمینال VM)
 
-> **مشاهدهٔ عملی (۲۰۲۶/۱۰/۲۰):** ISO نسخهٔ 7.2.0-18 بدون نصابِ متنیِ تعاملی بالا آمد و مستقیم به پرامپت ورود `localhost login:` رسید. پیام‌های boot طبیعی بودند: «Eve-NG (default root password is 'eve')» (ورود: `root` با رمز `eve`)، «WARNING: neither Intel VT-x or AMD-V found» (Nested VT در دسترس نیست و برای نود IOL لازم نیست) و «No IP address on interface eth0» (VMnet1 معمولاً DHCP ندارد؛ با IP ثابت حل می‌شود). سیستم‌عامل پایه Ubuntu 24.04 با cloud-init است. وضعیت دیسک/شبکه با `ip a` و `lsblk` بررسی می‌شود.
+> **مشاهدهٔ عملی (۲۰۲۶/۱۰/۲۰):** ISO نسخهٔ 7.2.0-18 بدون نصابِ متنیِ تعاملی بالا آمد و مستقیم به پرامپت ورود `localhost login:` رسید. پیام‌های boot طبیعی بودند: «Eve-NG (default root password is 'eve')» (ورود: `root` با رمز `eve`)، «WARNING: neither Intel VT-x or AMD-V found» (Nested VT در دسترس نیست و برای نود IOL لازم نیست) و «No IP address on interface eth0» (VMnet1 معمولاً DHCP ندارد؛ با IP ثابت حل می‌شود). سیستم‌عامل پایه Ubuntu 24.04 با cloud-init است. پس از ورود، ابزار «Eve-NG Setup 7.2.0-18» (فرم آبی) باز می‌شود: Hostname / Domain / Use DHCP / NTP / Root Password — «Use DHCP» باید برداشته شود و IP ثابت `192.168.97.130` داده شود؛ تأیید نهایی با `ip a` و `lsblk`.
 
 1. VM را روشن کنید (Power on). نصاب متنی EVE-NG بالا می‌آید؛ با Enter روی **Install** (یا همان گزینهٔ نصب) بروید جلو.
 2. به پرسش‌ها تقریباً همین‌طور جواب دهید (اگر صفحه‌ای متفاوت دیدید، اسکرین‌شات بفرستید):
