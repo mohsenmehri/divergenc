@@ -46,14 +46,18 @@ ip a | grep 192.168.97
 ## ۳. گام ۲ — دانلود و نصبِ ابزار (ترمینال اوبونتو)
 
 ```sh
+sudo rm -rf /opt/fam-mock
 sudo mkdir -p /opt/fam-mock
-sudo curl -L -o /opt/fam-mock/mock_switch.py https://raw.githubusercontent.com/mohsenmehri/divergenc/arena/06b5f68a-divergenc/lab/mock/mock_switch.py
-sudo chmod 755 /opt/fam-mock/mock_switch.py
-python3 -m py_compile /opt/fam-mock/mock_switch.py
+sudo bash -c 'U="$1"; U="${U#\[}"; U="${U%%\]\(*}"; curl -fsSL -o /opt/fam-mock/mocksw "$U"' _ https://raw.githubusercontent.com/mohsenmehri/divergenc/arena/06b5f68a-divergenc/lab/mock/mock_switch.py
+sudo chmod 755 /opt/fam-mock/mocksw
+python3 -m py_compile /opt/fam-mock/mocksw
+ls -la /opt/fam-mock
 ```
 
-- آدرسِ داخلِ بلوک را **چشمی** تطبیق دهید (آدرس‌ها گاهی در چت خراب می‌شوند).
-- دستورِ آخر اگر چیزی ننویسد یعنی فایل سالم است. ✅
+- نامِ فایل روی سرور **`mocksw`** (بدونِ نقطه) است؛ چون رندرِ چت نام‌هایی مثل `mock_switch.py` را تبدیل به لینک می‌کند و هنگامِ copy خراب می‌شوند.
+- دستورِ سوم طوری نوشته شده که اگر چت آدرس را به `[...](...)` تبدیل کرد، **خودش آن را تمیز می‌کند** — فقط copy کنید و Enter بزنید.
+- خروجیِ `ls -la`: فقط یک فایلِ `mocksw` (حدود ۱۵ کیلوبایت) باید دیده شود.
+- `python3 -m py_compile` اگر چیزی ننویسد = فایل سالم است. ✅
 
 ## ۴. گام ۳ — کاربرِ «سوئیچ» با رمزِ مستقلِ آزمایشگاهی (ترمینال اوبونتو)
 
@@ -72,7 +76,7 @@ sudo adduser --gecos "" mocksw
 
 ```sh
 echo "Match User mocksw" | sudo tee /etc/ssh/sshd_config.d/mocksw.conf
-echo "ForceCommand /opt/fam-mock/mock_switch.py" | sudo tee -a /etc/ssh/sshd_config.d/mocksw.conf
+echo "ForceCommand /opt/fam-mock/mocksw" | sudo tee -a /etc/ssh/sshd_config.d/mocksw.conf
 echo "PasswordAuthentication yes" | sudo tee -a /etc/ssh/sshd_config.d/mocksw.conf
 echo "PubkeyAuthentication no" | sudo tee -a /etc/ssh/sshd_config.d/mocksw.conf
 echo "DisableForwarding yes" | sudo tee -a /etc/ssh/sshd_config.d/mocksw.conf
@@ -151,11 +155,13 @@ show interfaces status
 
 | مشکل | احتمالاً کجاست؟ |
 |---|---|
-| پیام `sudo is not recognized` یا `grep` پیدا نشد | دستور را در PowerShell ویندوز زده‌اید؛ **همهٔ دستورهای این راهنما فقط در ترمینالِ FAM-Ubuntu (کنسولِ ماشینِ مجازی در VMware) اجرا می‌شوند** — نه در ویندوز |
+| پیام `sudo is not recognized` یا `grep` پیدا نشد | دستور را در PowerShell ویندوز زده‌اید؛ **همهٔ دستورهای این راهنما فقط در ترمینالِ FAM-Ubuntu (کنسولِ ماشینِ مجازی در VMware یا همان SSH) اجرا می‌شوند** — نه در ویندوز |
+| در دستورها `[` یا `]` می‌بینید (مثل `[switch.py](...)`) | رندرِ چت متن را به لینک تبدیل کرده؛ آن خط را اجرا نکنید و دوباره از راهنما copy کنید (دستورِ دانلودِ گام ۲ خودش این خرابی را درست می‌کند) |
+| `Error: ipv4: Address already assigned` | طبیعی است ✅ — یعنی IP `192.168.97.140` از قبل روی سیستم هست؛ فقط با `ip a` مطمئن شوید دیده می‌شود |
 | `connection_failed` / اتصال رد می‌شود | IP `.140` بعد از reboot پاک شده — گام ۱ را دوباره بزنید. یا `sudo ufw status` — اگر فعال بود: `sudo ufw allow from 172.17.0.0/16 to any port 22 proto tcp` |
 | `authentication_failed` | نام کاربری/رمز اشتباه؛ رمز را با `sudo passwd mocksw` دوباره بگذارید |
 | `host key verification failed` | کلید بدونِ تطبیق ثبت شده یا سیستم عوض شده؛ فایل `~/FAM-Linux-Lab/data/equipment_known_hosts` را بررسی کنید |
-| «خروجی show int des قابل تأیید نیست» | خروجیِ mock خراب است — `python3 /opt/fam-mock/mock_switch.py` را دستی امتحان و اسکرین‌شات بفرستید |
+| «خروجی show int des قابل تأیید نیست» | خروجیِ mock خراب است — `python3 /opt/fam-mock/mocksw` را دستی امتحان و اسکرین‌شات بفرستید |
 | بعد از ری‌استارتِ FAM-Ubuntu، پورتِ `Fa0/3` دوباره خراب شد | طبیعی است؛ وضعیتِ mock در `/tmp` نگه داشته می‌شود و با ری‌استارت به حالتِ اول برمی‌گردد |
 
 ## ۱۲. یادآوریِ کوتاهِ قواعد
