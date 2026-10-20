@@ -1,8 +1,12 @@
-# FAM lab helper — تأیید SHA256 فایل ISO نسخهٔ Freemium 7.2.0-18
-# این ابزار فقط برای آزمایشگاه است و هرگز در بستهٔ مشتری قرار نمی‌گیرد.
-# اجرا در PowerShell ویندوز:
-#   powershell -ExecutionPolicy Bypass -File .\verify_eve_iso.ps1 -Path "مسیر فایل.iso"
-# اگر -Path ندهید، فایل‌های ISO پوشهٔ Downloads بررسی می‌شوند.
+# FAM lab helper - verify the EVE-NG Freemium 7.2.0-18 ISO SHA256 before install.
+# ASCII-only on purpose: Windows PowerShell 5.1 reads a .ps1 without BOM as ANSI
+# and breaks on non-ASCII text. Keep this file plain ASCII. Lab-only tool;
+# never shipped to customers.
+#
+# Run in Windows PowerShell:
+#   powershell -ExecutionPolicy Bypass -File .\verify_eve_iso.ps1
+#   powershell -ExecutionPolicy Bypass -File .\verify_eve_iso.ps1 -Path "C:\path\to\eve.iso"
+# If -Path is omitted, the single .iso file in Downloads is checked.
 
 param(
     [string]$Path = ""
@@ -14,35 +18,35 @@ if ($Path -eq "") {
     $candidates = @(Get-ChildItem -Path "$env:USERPROFILE\Downloads" -Filter *.iso -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
     if ($candidates.Count -eq 1) {
         $Path = $candidates[0].FullName
-        Write-Host "فایل ISO در پوشهٔ Downloads پیدا شد:"
+        Write-Host "ISO file found in Downloads:"
         Write-Host ("  " + $Path)
     }
     elseif ($candidates.Count -gt 1) {
-        Write-Host "چند فایل ISO در Downloads است؛ مسیر دقیق را با -Path بدهید. فایل‌های موجود:"
+        Write-Host "More than one ISO in Downloads. Pass the exact file with -Path. Files found:"
         foreach ($item in $candidates) { Write-Host ("  " + $item.FullName) }
         exit 2
     }
     else {
-        Write-Host "فایل ISO در Downloads پیدا نشد؛ مسیر فایل را با -Path بدهید."
+        Write-Host "No ISO file found in Downloads. Pass the file path with -Path."
         exit 2
     }
 }
 
 if (-not (Test-Path -LiteralPath $Path)) {
-    Write-Host ("فایل وجود ندارد: " + $Path)
+    Write-Host ("File not found: " + $Path)
     exit 2
 }
 
-Write-Host "در حال محاسبهٔ SHA256 (چند لحظه صبر کنید) ..."
+Write-Host "Computing SHA256 (please wait) ..."
 $actual = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLower()
-Write-Host ("SHA256 محاسبه‌شده : " + $actual)
-Write-Host ("SHA256 مورد انتظار: " + $expected)
+Write-Host ("SHA256 computed : " + $actual)
+Write-Host ("SHA256 expected : " + $expected)
 
 if ($actual -eq $expected) {
-    Write-Host "تایید شد — فایل سالم است و همان نسخهٔ Freemium 7.2.0-18 است."
+    Write-Host "OK - the file is valid and it is Freemium 7.2.0-18."
     exit 0
 }
 else {
-    Write-Host "هشدار: فایل با هش مورد انتظار مطابقت ندارد! از آن استفاده نکنید و دوباره دانلود کنید."
+    Write-Host "WARNING: hash mismatch! Do not use this file. Download it again."
     exit 1
 }

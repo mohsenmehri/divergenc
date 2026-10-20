@@ -70,12 +70,28 @@ Get-FileHash -Algorithm SHA256 "$env:USERPROFILE\Downloads\eve-7.2.0-18.iso"
 curl.exe --ssl-no-revoke -L -o "$env:USERPROFILE\Downloads\verify_eve_iso.ps1" https://raw.githubusercontent.com/mohsenmehri/divergenc/arena/06b5f68a-divergenc/lab/eve/verify_eve_iso.ps1
 ```
 
+اگر فایل ISO داخل پوشهٔ Downloads است، می‌توانید بدون `-Path` اجرا کنید (خودش فایل را پیدا می‌کند):
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\verify_eve_iso.ps1" -Path "$env:USERPROFILE\Downloads\eve-7.2.0-18.iso"
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\verify_eve_iso.ps1"
 ```
 
-- خروجی مورد انتظار: پیام «تایید شد — فایل سالم است و همان نسخهٔ Freemium 7.2.0-18 است.»
-- اگر هش متفاوت بود: از فایل استفاده نکنید و دوباره دانلود کنید.
+اگر فایل ISO جای دیگری است یا چند فایل ISO در Downloads دارید، مسیر دقیق را بدهید (نام واقعی فایل را با Tab یا `dir *.iso` پیدا کنید):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Downloads\verify_eve_iso.ps1" -Path "C:\Users\Mohsen\Downloads\نام-واقعی-فایل.iso"
+```
+
+- خروجی مورد انتظار (اسکریپت عمداً انگلیسی/ASCII است تا در Windows PowerShell بدون مشکل نویسه‌ای اجرا شود):
+
+```text
+SHA256 computed : 47add8c2...
+SHA256 expected : 47add8c2...
+OK - the file is valid and it is Freemium 7.2.0-18.
+```
+
+- یعنی: «تأیید شد — فایل سالم است و همان نسخهٔ Freemium 7.2.0-18 است.»
+- اگر `WARNING: hash mismatch` دیدید: از فایل استفاده نکنید و دوباره دانلود کنید.
 
 > ✅ اسکرین‌شات خروجی تأیید را بفرستید تا به گام B برویم.
 
