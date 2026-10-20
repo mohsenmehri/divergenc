@@ -38,6 +38,7 @@
 
 **اطلاعاتِ آزمایشگاه خانگی (VMware):**
 - ماشین **FAM-Ubuntu** (fam-lab)، Ubuntu 24.04.5، کاربر `mohsen` — SSH: `ssh mohsen@192.168.97.128` (اثرانگشت `SHA256:z7TUjqArmuStR4byuoOjUpfjbwcTOOy0TUXtExqNSzM`)
+- ⚠️ **FAM-Ubuntu با DHCP آدرس می‌گیرد (نه static)** — عملاً همیشه اولین آدرس استخر VMnet1 یعنی `192.168.97.128` را می‌گیرد؛ پس از تغییر زیرشبکهٔ VMnet1 باید ری‌استارت شود تا دوباره `.128` بگیرد (درس ۲۰۲۶/۱۰/۲۰ — بعد از ریستِ VMnet1، موقتاً `192.168.198.129` گرفته بود). گزینهٔ تقویت آینده: static کردن `.128` (با netplan) تا از تداخل با استخر DHCP (EVE با `.130` داخل استخر است) هم در امان بماند.
 - شبکه: VMnet1 Host-only `192.168.97.0/24` (ویندوز میزبان `.1`، مهمان `.128`)؛ **بدون اینترنت** (شبیه‌سازی سرور شرکت)
 - کیت در `~/FAM-Linux-Lab/`؛ کانتینرها `fam-linux-lab-app-1` و `fam-linux-lab-nginx-1`؛ دیتابیس `~/FAM-Linux-Lab/data/fam.sqlite3` (**هرگز Reset نشود**)؛ گواهی TLS در `certs/`
 - ویندوز کاربر: `C:\Users\Mohsen` — دانلودها با `curl.exe --ssl-no-revoke`
