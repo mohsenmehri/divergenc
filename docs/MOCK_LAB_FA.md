@@ -137,6 +137,7 @@ show interfaces status
 
 | مشکل | احتمالاً کجاست؟ |
 |---|---|
+| پیام `sudo is not recognized` یا `grep` پیدا نشد | دستور را در PowerShell ویندوز زده‌اید؛ **همهٔ دستورهای این راهنما فقط در ترمینالِ FAM-Ubuntu (کنسولِ ماشینِ مجازی در VMware) اجرا می‌شوند** — نه در ویندوز |
 | `connection_failed` / اتصال رد می‌شود | IP `.140` بعد از reboot پاک شده — گام ۱ را دوباره بزنید. یا `sudo ufw status` — اگر فعال بود: `sudo ufw allow from 172.17.0.0/16 to any port 22 proto tcp` |
 | `authentication_failed` | نام کاربری/رمز اشتباه؛ رمز را با `sudo passwd mocksw` دوباره بگذارید |
 | `host key verification failed` | کلید بدونِ تطبیق ثبت شده یا سیستم عوض شده؛ فایل `~/FAM-Linux-Lab/data/equipment_known_hosts` را بررسی کنید |
