@@ -1,0 +1,100 @@
+/* Static contract tests for the standalone (browser-local) permission model.
+   The HTML-only package is intentionally not represented as server security. */
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const read=p=>fs.readFileSync(p,'utf8');
+
+test('user form has dynamic scope before individually selected capabilities',()=>{
+  const access=read('src/local-access.js');
+  const scope=access.indexOf("id:'user-scopes'"),operations=access.indexOf("id:'user-permissions'");
+  assert.ok(scope>=0&&operations>scope,'scope must precede operations');
+  assert.match(access,/managedCategories\(\),CAT_OTHER/);
+  assert.match(access,/data-user-category/);
+  assert.match(access,/data-user-region/);
+  assert.match(access,/id:'user-all-regions'/);
+  assert.match(access,/data-user-permission/);
+  assert.doesNotMatch(access,/id:'user-role'/);
+  assert.doesNotMatch(access,/text:'سطح [۱-۴]'/);
+  for(const capability of ['view-sheets','search','view-history','edit-cells','save-results','add-record','remove-record','undo-remove','refresh-panel','refresh-index','import-data','export-xlsx','backup-server','restore-data','empty-data','reset-data','manage-regions','manage-categories','manage-users']) assert.ok(access.includes("'"+capability+"'"),capability);
+});
+
+test('category identifiers and regions are persisted and missing categories fail closed',()=>{
+  const access=read('src/local-access.js');
+  assert.match(access,/categories:\[\.\.\.cs\]/);
+  assert.match(access,/regions:cs\.has\('provinces'\)\?\[\.\.\.rs\]:\[\]/);
+  assert.match(access,/const category=categoryOf\(sheet\)\?\.id\|\|'other'/);
+  assert.match(access,/if\(!u\.categories\.includes\(category\)\)return false/);
+  assert.match(access,/if\(category!==\'provinces\'\)return true/);
+  assert.match(access,/deleted is deliberately fail-closed/);
+  assert.match(access,/دسترسی به دستهٔ حذف‌شده مسدود است/);
+  assert.match(access,/permissions:\[\.\.\.ps\]/);
+});
+
+test('standalone entry points check the capability and selected sheet scope',()=>{
+  const html=read('FAM.html');
+  assert.match(html,/BuildSheetList\(includeAll, operation = "search-read"\)/);
+  assert.match(html,/BuildSheetList\(false, "add"\)/);
+  assert.match(html,/BuildSheetList\(true, "remove"\)/);
+  assert.match(html,/Access\.can\(\"remove\", TrimText\(String\(idx\[0\]/);
+  assert.match(html,/Access\.require\(\"manual\", name\)/);
+  assert.match(html,/Access\.require\(\"save-results\", blk\.sheet\)/);
+  assert.match(html,/Access\.require\(\"add\", sheetName\)/);
+  assert.match(html,/Access\.can\(\"remove\", srcSheetName\)/);
+  assert.match(html,/Access\.require\(\"remove\", dSheet\)/);
+  assert.match(html,/Access\.can\(\"export\", name\)/);
+  assert.match(html,/Access\.can\(\"backup\",name\)/);
+  assert.match(html,/function canViewLogEntry\(row\)/);
+  assert.match(html,/!!WB\.sheets\[sheet\] && IsDataSheet\(sheet\)/);
+  assert.match(html,/Access\.can\(\"global-history\"\)/);
+  assert.match(html,/Access\.require\(\"manage-regions\"\)/);
+  assert.match(html,/Access\.require\(\"manage-categories\"\)/);
+});
+
+test('user-form buttons and requested theme-two/destructive styling are explicit',()=>{
+  const access=read('src/local-access.js'),css=read('src/local-access.css'),light=read('src/light-palette.css');
+  for(const id of ['user-save','user-cancel','user-save-new'])assert.ok(access.includes("id:'"+id+"'"),id);
+  assert.match(access,/if\(original\)area\.appendChild\(button\('حذف کاربر'/);
+  assert.match(css,/#user-delete\{display:inline-flex!important;width:max-content!important/);
+  assert.match(css,/#user-delete\{[^}]*color:#111!important/);
+  assert.match(light,/#user-cancel\{background-color:#dce8ef!important;background-image:none!important/);
+  assert.match(light,/#user-delete\{background-color:#e55c66!important;background-image:none!important;color:#111!important/);
+});
+
+test('ordinary categories have region-like editable sections without deleting their worksheets',()=>{
+  const html=read('FAM.html'),access=read('src/local-access.js');
+  assert.match(html,/sections: \[\], sectionAssignments: \[\]/);
+  assert.match(html,/function managedCategorySections\(categoryId/);
+  assert.match(html,/function categorySectionOf\(name/);
+  assert.match(html,/function manageCategorySections\(categoryId\)/);
+  assert.match(html,/مدیریت بخش‌های «/);
+  assert.match(html,/sectionInitialized/);
+  assert.match(html,/عنوان‌های فعلی این دسته/);
+  assert.doesNotMatch(html,/ساخت بخش از این شیت/);
+  assert.match(html,/حذف بخش، شیت یا سلول‌های داده را حذف نمی‌کند/);
+  assert.match(html,/data-act':'manage-category-sections'/);
+  assert.match(access,/\['manage-categories','manage-category-sections'\]/);
+});
+
+test('search, add, and remove controls have an explicit shared action row',()=>{
+  const html=read('FAM.html');
+  const actionRows=html.match(/class="[^"]*operation-primary-action[^"]*"/g)||[];
+  assert.equal(actionRows.length,3);
+  assert.match(html,/\.grid-add \.card-body > \.operation-primary-action\{margin-top:auto;\}/);
+  assert.doesNotMatch(html,/\.grid-add \.card-body > :last-child\{margin-top:auto;\}/);
+});
+
+test('denied dashboard sections retain their heading but reveal only the explicit access notice',()=>{
+  const access=read('src/local-access.js'),css=read('src/local-access.css'),html=read('FAM.html');
+  assert.match(access,/const DENIED_TEXT='شما دسترسی به این بخش ندارید\.'/);
+  assert.match(access,/function setAccessNotice\(container,allowed\)/);
+  assert.match(access,/setAccessNotice\(operationCards\[0\],can\('search'\)\)/);
+  assert.match(access,/setAccessNotice\(operationCards\[1\],can\('add'\)\)/);
+  assert.match(access,/setAccessNotice\(operationCards\[2\],can\('remove'\)\)/);
+  assert.match(access,/setAccessNotice\(document\.querySelector\('#fold-cats \.fold-inner'\),can\('view-sheets'\)\)/);
+  assert.match(access,/setAccessNotice\(document\.querySelector\('#fold-nav \.fold-inner'\),can\('workspace'\)\)/);
+  assert.match(access,/setAccessNotice\(document\.querySelector\('#fold-status \.grid-2 > \.card:first-child'\),can\('view-history'\)\)/);
+  assert.match(css,/\.card\.access-denied-card > \.card-body > :not\(\.access-denied-note\)/);
+  assert.match(css,/\.fold-inner\.access-denied-card > :not\(\.access-denied-note\)/);
+  for(const title of ['جستجوی هوشمند','افزودن داده','حذف ردیف','باز کردن مستقیم بخش','آخرین رویدادهای سیستم'])assert.ok(html.includes(`<h3>${title}</h3>`),title);
+});

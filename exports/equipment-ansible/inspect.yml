@@ -1,0 +1,59 @@
+---
+- name: Prepare an explicit read-only plan on the trusted controller
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_prompt:
+    - name: fam_targets
+      prompt: "Switch IPv4s, comma separated, at most five (example 100.100.1.22)"
+      private: true
+    - name: fam_username
+      prompt: "Transient SSH / RADIUS username"
+      private: true
+    - name: fam_password
+      prompt: "Transient SSH / RADIUS password"
+      private: true
+  tasks:
+    - name: Prepare read-only inventory
+      ansible.builtin.import_tasks: tasks/prepare.yml
+      vars:
+        fam_recovery: false
+
+- name: Inspect switches serially without changing their configuration
+  hosts: fam_ephemeral_switches
+  gather_facts: false
+  serial: 1
+  ignore_unreachable: true
+  tasks:
+    - name: Read and parse status, treating every incomplete reply as unknown
+      block:
+        - name: Read only the fixed IOS status command
+          cisco.ios.ios_command:
+            commands:
+              - show interfaces status
+          register: fam_status_raw
+          changed_when: false
+        - name: Parse complete table, retaining only interface IDs and status
+          ansible.builtin.set_fact:
+            fam_checked: "{{ fam_status_raw.stdout[0] | fam_status }}"
+            fam_failed: false
+            cacheable: false
+      rescue:
+        - name: Mark inspection unknown without reflecting transport diagnostics
+          ansible.builtin.set_fact:
+            fam_failed: true
+            cacheable: false
+      always:
+        - name: Close the persistent SSH channel after this switch
+          ansible.builtin.meta: reset_connection
+      no_log: true
+    - name: Fail closed, never report a failed connection as a clean switch
+      ansible.builtin.fail:
+        msg: "Inspection failed or table unreadable; no clean result and no automatic retry."
+      when: fam_failed | default(true)
+    - name: Report sanitized port status, never raw CLI, banners or credentials
+      ansible.builtin.debug:
+        msg:
+          host: "{{ ansible_host }}"
+          source: ansible-network-cli
+          errdisabled_ports: "{{ fam_checked.errdisabled }}"

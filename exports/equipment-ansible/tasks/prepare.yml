@@ -1,0 +1,57 @@
+---
+- name: Validate all targets and transient credentials before any connection
+  ansible.builtin.assert:
+    that:
+      - fam_username | fam_credentials(fam_password)
+      - not ansible_check_mode
+      - not ansible_diff_mode
+    fail_msg: Invalid credentials or unsupported check/diff mode
+  no_log: true
+
+- name: Parse bounded plan in controller memory only
+  ansible.builtin.set_fact:
+    fam_plan: "{{ fam_targets | fam_plan(fam_recovery | default(false)) }}"
+    cacheable: false
+  no_log: true
+
+- name: Show only validated destination IP and interface for operator review
+  ansible.builtin.debug:
+    msg: "{{ fam_plan }}"
+
+- name: Require exact typed confirmation of the entire repair plan
+  ansible.builtin.pause:
+    prompt: "Type REPAIR followed by the exact comma-separated IP:interface plan above; Enter alone cancels"
+    echo: false
+  register: fam_confirmation
+  when: fam_recovery | default(false)
+  no_log: true
+
+- name: Refuse unconfirmed changes before any network operation
+  ansible.builtin.assert:
+    that:
+      - fam_confirmation.user_input == 'REPAIR ' ~ (fam_plan | map(attribute='host') | zip(fam_plan | map(attribute='interface')) | map('join', ':') | join(','))
+    fail_msg: Repair was not confirmed
+  when: fam_recovery | default(false)
+  no_log: true
+
+- name: Create ephemeral inventory, never an inventory/password/targets file
+  ansible.builtin.add_host:
+    name: "{{ item.host }}"
+    groups: fam_ephemeral_switches
+    ansible_host: "{{ item.host }}"
+    ansible_user: "{{ fam_username }}"
+    ansible_password: "{{ fam_password }}"
+    ansible_connection: ansible.netcommon.network_cli
+    ansible_network_os: fam_ios
+    ansible_network_cli_ssh_type: libssh
+    ansible_libssh_config_file: "{{ playbook_dir }}/ssh_config"
+    ansible_host_key_checking: true
+    ansible_become: false
+    ansible_connect_timeout: 10
+    ansible_command_timeout: 25
+    ansible_network_cli_retries: 1
+    ansible_persistent_log_messages: false
+    ansible_terminal_errors: fail
+    fam_requested_ports: "{{ fam_plan | selectattr('host','equalto',item.host) | map(attribute='interface') | reject('equalto',none) | list }}"
+  loop: "{{ fam_plan | unique(attribute='host') }}"
+  no_log: true

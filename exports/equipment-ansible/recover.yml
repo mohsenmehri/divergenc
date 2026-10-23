@@ -1,0 +1,58 @@
+---
+- name: Prepare and explicitly confirm a bounded repair plan
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_prompt:
+    - name: fam_targets
+      prompt: "Exact IP:interface pairs, comma separated, at most five (example 100.100.1.22:Gi0/7)"
+      private: true
+    - name: fam_username
+      prompt: "Transient SSH / RADIUS username"
+      private: true
+    - name: fam_password
+      prompt: "Transient SSH / RADIUS password"
+      private: true
+  tasks:
+    - name: Prepare and confirm recovery inventory
+      ansible.builtin.import_tasks: tasks/prepare.yml
+      vars:
+        fam_recovery: true
+
+- name: Repair only explicitly confirmed ports, one switch and port at a time
+  hosts: fam_ephemeral_switches
+  gather_facts: false
+  serial: 1
+  any_errors_fatal: true
+  ignore_unreachable: true
+  tasks:
+    - name: Execute verified repairs with unconditional connection cleanup
+      block:
+        - name: Initialize RAM-only outcomes
+          ansible.builtin.set_fact:
+            fam_outcomes: []
+            fam_failed: false
+            cacheable: false
+        - name: Pre-check, cycle exact port if needed, then post-check
+          ansible.builtin.include_tasks: tasks/recover_port.yml
+          loop: "{{ fam_requested_ports }}"
+          loop_control:
+            loop_var: fam_interface
+      rescue:
+        - name: Stop further writes after any unknown or failed operation
+          ansible.builtin.set_fact:
+            fam_failed: true
+            cacheable: false
+      always:
+        - name: Close the persistent SSH channel on success or failure
+          ansible.builtin.meta: reset_connection
+      no_log: true
+    - name: Report only validated host, port and outcome
+      ansible.builtin.debug:
+        msg:
+          host: "{{ ansible_host }}"
+          outcomes: "{{ fam_outcomes | default([]) }}"
+    - name: Require review and a new explicit run after any unresolved outcome
+      ansible.builtin.fail:
+        msg: "Recovery result unresolved or still err-disabled; no automatic retry or configuration save. Inspect before proceeding."
+      when: fam_failed | default(true)

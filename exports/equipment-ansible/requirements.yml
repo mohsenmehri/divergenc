@@ -1,0 +1,12 @@
+---
+# Git sources keep dependency retrieval explicit; install with --no-deps.
+collections:
+  - name: https://github.com/ansible-collections/ansible.utils.git
+    type: git
+    version: v6.1.1
+  - name: https://github.com/ansible-collections/ansible.netcommon.git
+    type: git
+    version: v8.7.1
+  - name: https://github.com/ansible-collections/cisco.ios.git
+    type: git
+    version: v11.6.0

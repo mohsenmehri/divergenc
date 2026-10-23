@@ -1,0 +1,79 @@
+const {test,before,after}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),zlib=require('node:zlib'),{pathToFileURL}=require('node:url'),{execFileSync}=require('node:child_process');
+const {chromium}=require('playwright'),binary=require('@sparticuz/chromium');
+let browser,page,header,ids,exported;const errors=[],requests=[],marker='OBSERVED-DEMO-ONLY-9085';
+before(async()=>{
+ if(!process.env.CHROMIUM_PATH){const libs=path.resolve('.cache/chromium-libs');fs.mkdirSync(libs,{recursive:true});const pkg=path.resolve(path.dirname(require.resolve('@sparticuz/chromium')),'../..');execFileSync('tar',['xf','-','-C',libs],{input:zlib.brotliDecompressSync(fs.readFileSync(path.join(pkg,'bin/al2023.tar.br')))});process.env.LD_LIBRARY_PATH=[path.join(libs,'lib'),process.env.LD_LIBRARY_PATH].filter(Boolean).join(':');}
+ browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||await binary.executablePath(),args:binary.args.filter(a=>a!=='--disable-web-security'),headless:true});page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(12000);page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
+ await page.goto(pathToFileURL(path.resolve('FAM.html')).href);await page.locator('#auth-username').fill('admin');await page.locator('#auth-password').fill('1109');await page.locator('#auth-submit').click();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await page.locator('#workspace-enter-equipment').click();await radius();await page.locator('#equipment-tab-excel').click();header=await page.evaluate(()=>FamEquipmentToolsModel.columns);
+});
+after(async()=>await browser?.close());
+async function radius(){} // Metadata tools do not request device credentials.
+
+async function upload(rows,formula=false){const bytes=await page.evaluate(({rows,formula})=>{const book=XLSX.utils.book_new(),sheet=XLSX.utils.aoa_to_sheet(rows);if(formula)sheet.B2={t:'n',v:2,f:'1+1'};XLSX.utils.book_append_sheet(book,sheet,'تجهیزات');const d=JSON.parse(localStorage.getItem('fam.equipment.inventory.v3'))||FamEquipmentInventory.defaults();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet(FamEquipmentToolsModel.catalogSnapshot(d)),'اطلاعات قالب');return Array.from(new Uint8Array(XLSX.write(book,{type:'array',bookType:'xlsx'})));},{rows,formula});await page.locator('#eq-inventory-file').setInputFiles({name:'equipment-demo.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(bytes)});}
+async function download(click,sheet){const pending=page.waitForEvent('download');await click();const d=await pending,p=await d.path(),bytes=[...fs.readFileSync(p)];return page.evaluate(({bytes,sheet})=>{const book=XLSX.read(new Uint8Array(bytes),{type:'array'});return {bytes,names:book.SheetNames,rows:XLSX.utils.sheet_to_json(book.Sheets[sheet],{header:1,defval:'',raw:true})};},{bytes,sheet});}
+const rows=()=>[header,['Router DEMO','10.55.0.1','روتر','router','1841','منطقه 2','ساختمان اداره','building','ساختمان مرکزی رضوان',''],['Switch DEMO A','10.55.0.2','سوئیچ','switch','2960','منطقه 1','دیتا سنتر','datacenter','تهران',''],['Switch DEMO B','10.55.0.3','سوئیچ','switch','9200 DEMO','منطقه 2','شعبه','branch','شعبه آزمایشی','']];
+test('tools provides a downloadable metadata-only XLSX form with examples, guide and current categories',async()=>{
+ const out=await download(()=>page.getByRole('button',{name:'دریافت فرم ورود از دسته‌های فعلی',exact:true}).click(),'تجهیزات');assert.deepEqual(out.rows[0],header);assert.ok(out.names.includes('مثال'));assert.ok(out.names.includes('دسته‌ها'));assert.equal(out.rows.length,1);
+
+});
+test('formula workbooks and unknown categories fail without partial inventory writes',async()=>{
+ await upload(rows(),true);await page.getByText('فایل قابل ورود نیست؛ برگهٔ تجهیزات، اندازه و نبود فرمول را بررسی کنید.',{exact:true}).waitFor();assert.equal(await page.locator('#eq-import-apply').count(),0);
+ await upload(rows());await page.getByText(/دستهٔ تعریف‌نشده وجود دارد/).waitFor();assert.equal(await page.locator('#eq-import-apply').count(),0);assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3')),null);
+});
+async function defineImportCategories(){
+ await page.locator('#equipment-tab-catalog').click();
+ for(const [key,name,parent]of [['models','9200 DEMO','type-switch'],['sites','شعبه آزمایشی','kind-branch']]){await page.locator('#eq-catalog-dimension').selectOption(key);await page.getByRole('button',{name:'＋ افزودن دسته',exact:true}).click();await page.locator('#eq-catalog-parent').selectOption(parent);await page.locator('#eq-catalog-name').fill(name);await page.getByRole('button',{name:'ذخیره دسته',exact:true}).click();}
+ await page.locator('#equipment-tab-excel').click();
+}
+test('failed inventory storage write leaves all rows and new categories uncommitted',async()=>{
+ await defineImportCategories();const baseline=await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3'));
+ await upload(rows());await page.locator('#eq-import-apply').waitFor();
+ await page.evaluate(()=>{window.__toolSet=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='fam.equipment.inventory.v3')throw new DOMException('Fake quota','QuotaExceededError');return window.__toolSet.call(this,key,value);};});
+ page.once('dialog',d=>d.accept());await page.locator('#eq-import-apply').click();assert.match(await page.locator('.eq-tool-content').innerText(),/هیچ ردیفی ثبت نشد/);assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3')),baseline);
+ await page.evaluate(()=>{Storage.prototype.setItem=window.__toolSet;delete window.__toolSet;});
+});
+test('predefined permitted categories and confirmed import classify all nodes; export and explicit update preserve IDs',async()=>{
+ await upload(rows());await page.locator('#eq-import-apply').waitFor();page.once('dialog',d=>d.accept());await page.locator('#eq-import-apply').click();
+ let d=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.equipment.inventory.v3')));assert.equal(d.nodes.length,3);assert.ok(d.catalog.models.some(x=>x.name==='9200 DEMO'));assert.ok(d.catalog.sites.some(x=>x.name==='شعبه آزمایشی'));ids=Object.fromEntries(d.nodes.map(n=>[n.name,n.id]));
+ await page.locator('#equipment-tab-inventory').click();assert.match(await page.locator('.eq-table').innerText(),/Switch DEMO B/);
+ const out=await download(()=>page.locator('#eq-inventory-export-all').click(),'تجهیزات');assert.equal(out.rows.length,4);exported=out.rows;exported[1][0]='Router EDITED';
+ await page.locator('#equipment-tab-excel').click();await upload(exported);await page.getByText(/تجهیز موجود است/).first().waitFor();assert.equal(await page.locator('#eq-import-apply').count(),0);
+ await page.locator('#eq-import-update').check();await upload(exported);await page.locator('#eq-import-apply').waitFor();page.once('dialog',d=>d.accept());await page.locator('#eq-import-apply').click();d=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.equipment.inventory.v3')));assert.equal(d.nodes.length,3);assert.equal(d.nodes.find(n=>n.name==='Router EDITED').id,ids['Router DEMO']);
+});
+test('model/location standards produce an exact checklist and a report without raw observed text',async()=>{
+ await page.locator('#equipment-tab-standards').click();await page.locator('#eq-standard-name').fill('Clock and timestamp demo');await page.locator('#eq-standard-model').selectOption('model-1841');await page.locator('#eq-standard-kind').selectOption('kind-building');await page.locator('#eq-standard-site').selectOption('building-0');
+ await page.locator('#eq-standard-check-0').fill('NTP check');await page.locator('#eq-standard-pattern-0').fill('ntp server 10.0.0.8');await page.getByRole('button',{name:'＋ آیتم چک‌لیست',exact:true}).click();await page.locator('#eq-standard-check-1').fill('Timestamp check');await page.locator('#eq-standard-pattern-1').fill('service timestamps log datetime msec');await page.locator('#eq-standard-save').click();assert.equal(await page.locator('.eq-tool-policy').count(),1);
+ await page.locator('#eq-audit-node').selectOption(ids['Router DEMO']);await page.locator('#eq-audit-observed').fill('ntp server 10.0.0.8\n! '+marker);await page.locator('#eq-audit-run').click();assert.ok(!(await page.evaluate(()=>JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)]))).includes(marker));const text=await page.locator('#eq-audit-report').innerText();assert.match(text,/منطبق \(آزمایشی\)/);assert.match(text,/نامنطبق \(آزمایشی\)/);
+ const out=await download(()=>page.locator('#eq-audit-export').click(),'چک‌لیست');assert.equal(out.rows.length,3);assert.ok(!JSON.stringify(out.rows).includes(marker));assert.ok(out.rows[1][0].includes('بدون اتصال'));
+ await page.locator('#eq-audit-node').selectOption(ids['Switch DEMO A']);assert.equal(await page.locator('#eq-audit-observed').inputValue(),'');await page.locator('#eq-audit-run').click();assert.match(await page.locator('#eq-audit-report').innerText(),/استاندارد متناسب/);assert.ok(await page.locator('#eq-audit-export').isDisabled());
+});
+test('tool definitions persist but raw samples, reports and selections do not survive refresh; mobile has no page overflow',async()=>{
+ const storage=await page.evaluate(()=>JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)]));for(const secret of [marker,'fake-tools-radius-secret','fake-tools-radius-user'])assert.ok(!storage.includes(secret));
+ await page.setViewportSize({width:390,height:844});for(const theme of ['light','original']){await page.evaluate(x=>FamTheme.set(x),theme);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:'/tmp/fam-tools-switches-mobile.png',fullPage:true});
+ await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await page.locator('#workspace-enter-equipment').click();await radius();await page.locator('#equipment-tab-excel').click();await page.locator('#equipment-tab-standards').click();assert.equal(await page.locator('.eq-tool-policy').count(),1);assert.equal(await page.locator('#eq-audit-observed').inputValue(),'');assert.equal(await page.locator('#eq-audit-report tbody tr').count(),0);
+ await page.locator('#equipment-tab-ports').click();assert.equal(await page.locator('.eq-tool-switch-list input[type=checkbox]:checked').count(),0);assert.equal(await page.locator('#eq-live-scan').count(),0);assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
+});
+
+test('corrupt standard storage is visible and read-only without silently overwriting definitions',async()=>{
+ const original=await page.evaluate(()=>localStorage.getItem('fam.equipment.standards.v1'));
+ await page.evaluate(()=>localStorage.setItem('fam.equipment.standards.v1','{bad-standards'));
+ await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.famReady==='true');await page.locator('#workspace-enter-equipment').click();await radius();await page.locator('#equipment-tab-excel').click();await page.locator('#equipment-tab-standards').click();
+ assert.match(await page.locator('.eq-tool-content').innerText(),/ویرایش غیرفعال است/);assert.ok(await page.locator('#eq-standard-save').isDisabled());assert.ok(await page.locator('#eq-audit-run').isDisabled());assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.standards.v1')),'{bad-standards');
+ await page.evaluate(value=>localStorage.setItem('fam.equipment.standards.v1',value),original);assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
+});
+
+test('category CRUD through the UI changes every downloaded form; stale or unmarked files cannot resurrect removed categories',async()=>{
+ await page.setViewportSize({width:1440,height:1000});await page.locator('#equipment-tab-excel').click();
+ const old=await download(()=>page.locator('#eq-download-template').click(),'دسته‌ها');
+ await page.locator('#equipment-tab-catalog').click();await page.locator('#eq-catalog-dimension').selectOption('regions');
+ await page.locator('.eq-table tbody tr').filter({hasText:'منطقه 4'}).getByRole('button',{name:'ویرایش',exact:true}).click();await page.locator('#eq-catalog-name').fill('منطقه ویرایش جدید');await page.getByRole('button',{name:'ذخیره دسته',exact:true}).click();
+ await page.getByRole('button',{name:'＋ افزودن دسته',exact:true}).click();await page.locator('#eq-catalog-name').fill('منطقه افزوده جدید');await page.getByRole('button',{name:'ذخیره دسته',exact:true}).click();
+ await page.locator('.eq-table tbody tr').filter({hasText:'منطقه 3'}).getByRole('button',{name:'حذف',exact:true}).click();await page.locator('.eq-dialog').getByRole('button',{name:'حذف',exact:true}).click();
+ await page.locator('#equipment-tab-excel').click();const fresh=await download(()=>page.locator('#eq-download-template').click(),'دسته‌ها');const text=JSON.stringify(fresh.rows);for(const value of ['منطقه ویرایش جدید','منطقه افزوده جدید'])assert.ok(text.includes(value));for(const value of ['منطقه 3','منطقه 4'])assert.ok(!text.includes(value));
+ assert.equal(await page.locator('#eq-import-create').count(),0);const before=await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3'));
+ await page.locator('#eq-inventory-file').setInputFiles({name:'old.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(old.bytes)});await page.getByText(/دسته‌بندی‌ها پس از دریافت فایل تغییر کرده‌اند/).waitFor();assert.equal(await page.locator('#eq-import-apply').count(),0);assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3')),before);
+ // Fill the actual newly downloaded workbook, preserving its hidden snapshot.
+ const filled=await page.evaluate(bytes=>{const book=XLSX.read(new Uint8Array(bytes),{type:'array'});XLSX.utils.sheet_add_aoa(book.Sheets['تجهیزات'],[['Fresh FORM node','10.55.0.91','روتر','router','1841','منطقه افزوده جدید','ساختمان اداره','building','ساختمان مرکزی رضوان','']],{origin:'A2'});return Array.from(new Uint8Array(XLSX.write(book,{type:'array',bookType:'xlsx'})));},fresh.bytes);
+ await page.locator('#eq-inventory-file').setInputFiles({name:'fresh-filled.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(filled)});await page.locator('#eq-import-apply').waitFor();assert.equal(await page.evaluate(()=>localStorage.getItem('fam.equipment.inventory.v3')),before);page.once('dialog',d=>d.accept());await page.locator('#eq-import-apply').click();const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('fam.equipment.inventory.v3')));assert.equal(after.nodes.length,4);assert.equal(after.nodes.find(n=>n.name==='Fresh FORM node').regionId,after.catalog.regions.find(r=>r.name==='منطقه افزوده جدید').id);
+ const unmarked=await page.evaluate(()=>{const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.aoa_to_sheet([FamEquipmentToolsModel.columns]),'تجهیزات');return Array.from(new Uint8Array(XLSX.write(book,{type:'array',bookType:'xlsx'})));});await page.locator('#eq-inventory-file').setInputFiles({name:'unmarked.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(unmarked)});await page.getByText(/این فایل فرم پویای تجهیزات نیست/).waitFor();assert.equal(await page.locator('#eq-import-apply').count(),0);assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);
+});
